@@ -1,4 +1,4 @@
-import { Entity, Relation } from '../domain/types.js';
+import { Entity, Relation, RelationType } from '../domain/types.js';
 import { SqliteGraphRepository } from '../repositories/SqliteGraphRepository.js';
 import { SearchEngine } from './SearchEngine.js';
 
@@ -6,6 +6,14 @@ export interface PathStep {
   fromEntity: Entity;
   relation: Relation;
   toEntity: Entity;
+  stepCost: number;
+}
+
+export interface PathFilterOptions {
+  maxDepth?: number;
+  minConfidence?: number;
+  allowedRelationTypes?: RelationType[];
+  excludeNodeIds?: string[];
 }
 
 export interface GraphPathResult {
@@ -15,8 +23,9 @@ export interface GraphPathResult {
   startEntity?: Entity;
   targetEntity?: Entity;
   pathLength: number;
-  steps: PathStep[];
+  totalCost: number;
   overallConfidence: number;
+  steps: PathStep[];
   explanation: string[];
 }
 
@@ -27,7 +36,18 @@ export class PathFinder {
     this.searchEngine = new SearchEngine(repo);
   }
 
-  public async explainPath(fromTerm: string, toTerm: string, maxDepth: number = 4): Promise<GraphPathResult> {
+  /**
+   * Weighted Dijkstra Shortest Path Search Engine
+   * Edge Cost Formula: cost = 1.0 / (relation.weight * relation.confidence * relationTypeFactor)
+   * Combined Path Confidence: C_path = PROD(step.relation.confidence * step.relation.weight)
+   */
+  public async explainPath(
+    fromTerm: string,
+    toTerm: string,
+    options: PathFilterOptions = {}
+  ): Promise<GraphPathResult> {
+    const { maxDepth = 4, minConfidence = 0.3, allowedRelationTypes, excludeNodeIds = [] } = options;
+
     const startResults = await this.searchEngine.search(fromTerm, { limit: 1 });
     const targetResults = await this.searchEngine.search(toTerm, { limit: 1 });
 
@@ -37,8 +57,9 @@ export class PathFinder {
         fromTerm,
         toTerm,
         pathLength: 0,
-        steps: [],
+        totalCost: Infinity,
         overallConfidence: 0,
+        steps: [],
         explanation: [
           `Nie znaleziono odpowiednika dla "${startResults.length === 0 ? fromTerm : toTerm}" w grafie wiedzy.`,
         ],
@@ -56,56 +77,75 @@ export class PathFinder {
         startEntity,
         targetEntity,
         pathLength: 0,
-        steps: [],
+        totalCost: 0,
         overallConfidence: startEntity.confidence,
+        steps: [],
         explanation: [`Pojęcia "${fromTerm}" i "${toTerm}" odnoszą się do tego samego obiektu: "${startEntity.name}" [${startEntity.type}].`],
       };
     }
 
-    const queue: Array<{ entityId: string; path: PathStep[] }> = [{ entityId: startEntity.id, path: [] }];
-    const visited = new Set<string>([startEntity.id]);
+    // Dijkstra Priority Queue & Distance Maps
+    const distances = new Map<string, number>();
+    const previous = new Map<string, { entityId: string; relation: Relation }>();
+    const unvisited = new Set<string>();
 
-    let foundSteps: PathStep[] | null = null;
+    const allEntities = await this.repo.getAllEntities();
+    const excludeSet = new Set(excludeNodeIds);
 
-    while (queue.length > 0) {
-      const current = queue.shift()!;
-
-      if (current.path.length >= maxDepth) {
-        continue;
+    allEntities.forEach((e) => {
+      if (!excludeSet.has(e.id)) {
+        distances.set(e.id, Infinity);
+        unvisited.add(e.id);
       }
+    });
 
-      const relations = await this.repo.getRelationsForEntity(current.entityId);
+    distances.set(startEntity.id, 0);
+
+    while (unvisited.size > 0) {
+      // Pick unvisited node with smallest distance
+      let currentId: string | null = null;
+      let minDistance = Infinity;
+
+      unvisited.forEach((nodeId) => {
+        const dist = distances.get(nodeId) ?? Infinity;
+        if (dist < minDistance) {
+          minDistance = dist;
+          currentId = nodeId;
+        }
+      });
+
+      if (!currentId || minDistance === Infinity) break;
+      if (currentId === targetEntity.id) break;
+
+      unvisited.delete(currentId);
+
+      // Check depth limit from start
+      const currentPathLen = this.getPathLengthToNode(currentId, previous);
+      if (currentPathLen >= maxDepth) continue;
+
+      const relations = await this.repo.getRelationsForEntity(currentId);
 
       for (const rel of relations) {
-        const neighborId = rel.fromEntityId === current.entityId ? rel.toEntityId : rel.fromEntityId;
+        if (rel.confidence < minConfidence) continue;
+        if (allowedRelationTypes && !allowedRelationTypes.includes(rel.type)) continue;
 
-        if (visited.has(neighborId)) continue;
+        const neighborId = rel.fromEntityId === currentId ? rel.toEntityId : rel.fromEntityId;
+        if (!unvisited.has(neighborId)) continue;
 
-        const fromNode = (await this.repo.getEntityById(current.entityId))!;
-        const toNode = (await this.repo.getEntityById(neighborId))!;
+        // Calculate Edge Cost
+        const relTypeFactor = this.getRelationPriorityWeight(rel.type);
+        const edgeCost = 1.0 / (Math.max(0.1, rel.weight) * Math.max(0.1, rel.confidence) * relTypeFactor);
+        const altDist = minDistance + edgeCost;
 
-        const newPath = [
-          ...current.path,
-          {
-            fromEntity: fromNode,
-            relation: rel,
-            toEntity: toNode,
-          },
-        ];
-
-        if (neighborId === targetEntity.id) {
-          foundSteps = newPath;
-          break;
+        if (altDist < (distances.get(neighborId) ?? Infinity)) {
+          distances.set(neighborId, altDist);
+          previous.set(neighborId, { entityId: currentId, relation: rel });
         }
-
-        visited.add(neighborId);
-        queue.push({ entityId: neighborId, path: newPath });
       }
-
-      if (foundSteps) break;
     }
 
-    if (!foundSteps) {
+    // Reconstruct Dijkstra Path
+    if (!previous.has(targetEntity.id)) {
       return {
         found: false,
         fromTerm,
@@ -113,22 +153,48 @@ export class PathFinder {
         startEntity,
         targetEntity,
         pathLength: 0,
-        steps: [],
+        totalCost: Infinity,
         overallConfidence: 0,
-        explanation: [`Brak bezpośredniego lub pośredniego połączenia w granicach głębokości ${maxDepth} kroków pomiędzy "${startEntity.name}" a "${targetEntity.name}".`],
+        steps: [],
+        explanation: [
+          `Brak bezpośredniego lub ważącego połączenia w granicach głębokości ${maxDepth} kroków pomiędzy "${startEntity.name}" a "${targetEntity.name}".`,
+        ],
       };
+    }
+
+    const steps: PathStep[] = [];
+    let curr = targetEntity.id;
+
+    while (previous.has(curr)) {
+      const prevInfo = previous.get(curr)!;
+      const fromNode = (await this.repo.getEntityById(prevInfo.entityId))!;
+      const toNode = (await this.repo.getEntityById(curr))!;
+      const rel = prevInfo.relation;
+      const relTypeFactor = this.getRelationPriorityWeight(rel.type);
+      const stepCost = 1.0 / (Math.max(0.1, rel.weight) * Math.max(0.1, rel.confidence) * relTypeFactor);
+
+      steps.unshift({
+        fromEntity: fromNode,
+        relation: rel,
+        toEntity: toNode,
+        stepCost: Math.round(stepCost * 100) / 100,
+      });
+
+      curr = prevInfo.entityId;
     }
 
     let overallConfidence = 1.0;
     const explanationLines: string[] = [];
 
-    foundSteps.forEach((step, idx) => {
-      overallConfidence *= step.relation.confidence;
+    steps.forEach((step, idx) => {
+      overallConfidence *= step.relation.confidence * step.relation.weight;
       const relationText = this.formatRelationName(step.relation.type);
       explanationLines.push(
-        `Krok ${idx + 1}: [${step.fromEntity.type}] "${step.fromEntity.name}" --(${relationText})--> [${step.toEntity.type}] "${step.toEntity.name}" (pewność: ${Math.round(step.relation.confidence * 100)}%)`
+        `Krok ${idx + 1}: [${step.fromEntity.type}] "${step.fromEntity.name}" --(${relationText})--> [${step.toEntity.type}] "${step.toEntity.name}" (Koszt: ${step.stepCost}, Pewność: ${Math.round(step.relation.confidence * 100)}%)`
       );
     });
+
+    const totalCost = Math.round((distances.get(targetEntity.id) ?? 0) * 100) / 100;
 
     return {
       found: true,
@@ -136,11 +202,44 @@ export class PathFinder {
       toTerm,
       startEntity,
       targetEntity,
-      pathLength: foundSteps.length,
-      steps: foundSteps,
+      pathLength: steps.length,
+      totalCost,
       overallConfidence: Math.round(overallConfidence * 100) / 100,
+      steps,
       explanation: explanationLines,
     };
+  }
+
+  private getPathLengthToNode(nodeId: string, previousMap: Map<string, { entityId: string; relation: Relation }>): number {
+    let count = 0;
+    let curr = nodeId;
+    while (previousMap.has(curr)) {
+      count++;
+      curr = previousMap.get(curr)!.entityId;
+    }
+    return count;
+  }
+
+  private getRelationPriorityWeight(type: RelationType): number {
+    const weights: Record<RelationType, number> = {
+      alias_of: 1.5,
+      manufactures: 1.3,
+      services: 1.2,
+      installs: 1.2,
+      requires_skill: 1.1,
+      works_in: 1.0,
+      used_by: 1.0,
+      used_for: 1.0,
+      repairs: 1.1,
+      subtype_of: 1.2,
+      belongs_to: 1.0,
+      compatible_with: 0.9,
+      produces: 1.0,
+      sells: 0.9,
+      certifies: 1.1,
+      related_to: 0.8,
+    };
+    return weights[type] || 1.0;
   }
 
   private formatRelationName(type: string): string {
