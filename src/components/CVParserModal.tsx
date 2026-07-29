@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { MasterVault, ConsistencyCheckIssue } from '../types';
 import { FileText, Upload, Sparkles, AlertTriangle, CheckCircle2, ShieldAlert, ArrowRight, Layout, Image, Check, X, Info, FileCode, Briefcase, GraduationCap } from 'lucide-react';
 import { eliminateSlogans } from '../lib/slotFillingEngine';
+import { extractTextFromAnyFile } from '../lib/cvUniversalParser';
 import * as pdfjsLib from 'pdfjs-dist';
 import mammoth from 'mammoth';
 
@@ -227,20 +228,7 @@ export const CVParserModal: React.FC<CVParserModalProps> = ({
     setErrorMsg(null);
 
     try {
-      const fileName = file.name.toLowerCase();
-      let text = '';
-
-      if (fileName.endsWith('.pdf')) {
-        text = await extractPdfText(file);
-      } else if (fileName.endsWith('.docx') || fileName.endsWith('.doc')) {
-        try {
-          text = await extractDocxText(file);
-        } catch {
-          text = await file.text();
-        }
-      } else {
-        text = await file.text();
-      }
+      const { text, format } = await extractTextFromAnyFile(file);
 
       if (!text || !text.trim()) {
         throw new Error('Plik nie zawiera tekstu do odczytu lub jest plikiem skanowanym (obrazowym).');
@@ -300,7 +288,7 @@ export const CVParserModal: React.FC<CVParserModalProps> = ({
 
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
           <label className="text-xs font-semibold text-slate-700">
-            Wklej treść lub wgraj plik <span className="text-indigo-600 font-bold">.pdf .docx .txt</span>
+            Wklej treść lub wgraj plik <span className="text-indigo-600 font-bold">.pdf .docx .rtf .txt .json .csv</span>
           </label>
           <label className={`cursor-pointer px-3.5 py-2 rounded-xl border border-indigo-200 bg-indigo-50/80 hover:bg-indigo-100 text-indigo-700 font-bold text-xs flex items-center space-x-1.5 transition-all active:scale-95 shrink-0 ${isFileReading ? 'opacity-50 pointer-events-none' : ''}`}>
             {isFileReading ? (
@@ -310,16 +298,15 @@ export const CVParserModal: React.FC<CVParserModalProps> = ({
               </>
             ) : (
               <>
-                <Upload className="w-3.5 h-3.5" />
-                <span>Wgraj plik</span>
+                <Upload className="w-3.5 h-3.5 text-indigo-600" />
+                <span>Wybierz Plik (PDF/DOCX/RTF/JSON)</span>
               </>
             )}
             <input
               type="file"
-              accept=".pdf,.docx,.doc,.txt,.text,.md,.csv"
-              onChange={handleFileUpload}
-              disabled={isFileReading}
               className="hidden"
+              accept=".pdf,.docx,.doc,.rtf,.txt,.text,.md,.csv,.json"
+              onChange={handleFileUpload}
             />
           </label>
         </div>
