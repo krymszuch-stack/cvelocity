@@ -1,6 +1,7 @@
 import { Entity, EntityType } from '../domain/types.js';
 import { SqliteGraphRepository } from '../repositories/SqliteGraphRepository.js';
 import { normalizeTerm, calculateHybridSimilarity } from './normalizer.js';
+import { LinguisticEngine } from './LinguisticEngine.js';
 
 export interface SearchOptions {
   type?: EntityType;
@@ -11,16 +12,24 @@ export interface SearchOptions {
 export interface SearchResult {
   entity: Entity;
   score: number;
-  matchType: 'exact' | 'alias' | 'stem' | 'fuzzy' | 'tag';
+  matchType: 'exact' | 'alias' | 'jargon' | 'verbal' | 'stem' | 'fuzzy' | 'tag';
   reason: string;
 }
 
 export class SearchEngine {
-  constructor(private repo: SqliteGraphRepository) {}
+  private linguisticEngine: LinguisticEngine;
+
+  constructor(private repo: SqliteGraphRepository) {
+    this.linguisticEngine = new LinguisticEngine();
+  }
 
   public async search(query: string, options: SearchOptions = {}): Promise<SearchResult[]> {
     const { type, minConfidence = 0.0, limit = 20 } = options;
-    const { normalized: normQuery, searchVariant: variantQuery, stemVariant } = normalizeTerm(query);
+
+    // Linguistic Pipeline processing
+    const lingRes = this.linguisticEngine.processQuery(query);
+    const effectiveQuery = lingRes.canonicalJargon;
+    const { normalized: normQuery, searchVariant: variantQuery, stemVariant } = normalizeTerm(effectiveQuery);
 
     const allEntities = (await this.repo.getAllEntities()).filter((e) => {
       if (type && e.type !== type) return false;
@@ -47,7 +56,7 @@ export class SearchEngine {
         continue;
       }
 
-      // 2. Alias Exact Match
+      // 2. Alias Match
       let aliasMatched: string | null = null;
       for (const alias of entity.aliases) {
         const normAlias = normalizeTerm(alias).normalized;
@@ -68,7 +77,34 @@ export class SearchEngine {
         continue;
       }
 
-      // 3. Stemming / Grammar Inflection Match
+      // 3. Jargon & Anglicism Canonical Match
+      if (lingRes.canonicalJargon !== query && normalizeTerm(entity.name).searchVariant.includes(normalizeTerm(lingRes.canonicalJargon).searchVariant)) {
+        results.push({
+          entity,
+          score: 0.94,
+          matchType: 'jargon',
+          reason: `Dopasowanie słownictwa branżowego/anglicyzmu: "${query}" -> "${lingRes.canonicalJargon}"`,
+        });
+        continue;
+      }
+
+      // 4. Verbal-Noun & Actor Transformation Match
+      let verbalMatched = false;
+      for (const actor of lingRes.actorProfessions) {
+        if (normalizeTerm(entity.name).searchVariant.includes(actor)) {
+          results.push({
+            entity,
+            score: 0.92,
+            matchType: 'verbal',
+            reason: `Dopasowanie morphologiczno-przypadkowe (aktor/czynność): "${query}" -> "${entity.name}"`,
+          });
+          verbalMatched = true;
+          break;
+        }
+      }
+      if (verbalMatched) continue;
+
+      // 5. Stemming / Grammar Inflection Match
       if (entityStemName === stemVariant || entityStemName.includes(stemVariant) || stemVariant.includes(entityStemName)) {
         results.push({
           entity,
@@ -79,7 +115,7 @@ export class SearchEngine {
         continue;
       }
 
-      // 4. Tag Match
+      // 6. Tag Match
       const tagMatched = entity.tags.find((tag) => normalizeTerm(tag).searchVariant === variantQuery);
       if (tagMatched) {
         results.push({
@@ -91,7 +127,7 @@ export class SearchEngine {
         continue;
       }
 
-      // 5. Advanced Hybrid Similarity Score (Jaro-Winkler + Trigram N-gram + Levenshtein)
+      // 7. Advanced Hybrid Similarity Score (Jaro-Winkler + Trigram N-gram + Levenshtein)
       const nameHybridScore = calculateHybridSimilarity(variantQuery, variantName);
       let bestAliasHybridScore = 0;
       let bestAliasName = '';
@@ -114,7 +150,7 @@ export class SearchEngine {
           matchType: 'fuzzy',
           reason:
             bestAliasHybridScore > nameHybridScore
-              ? `Podobieństwo hybrydowe (Jaro-Winkler+Trigram) z aliasem "${bestAliasName}" (${Math.round(bestAliasHybridScore * 100)}%)`
+              ? `Podobieństwo hybrydowe z aliasem "${bestAliasName}" (${Math.round(bestAliasHybridScore * 100)}%)`
               : `Podobieństwo hybrydowe z nazwą "${entity.name}" (${Math.round(nameHybridScore * 100)}%)`,
         });
       }

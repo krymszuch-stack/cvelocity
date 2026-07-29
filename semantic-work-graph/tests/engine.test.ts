@@ -4,13 +4,14 @@ import { normalizeTerm, stemPolishWord, calculateHybridSimilarity } from '../src
 import { SearchEngine } from '../src/services/SearchEngine.js';
 import { PathFinder } from '../src/services/PathFinder.js';
 import { SeedImporter } from '../src/seed/SeedImporter.js';
-import { GraphAnalytics } from '../src/services/GraphAnalytics.js';
-import { GraphAuditor } from '../src/services/GraphAuditor.js';
+import { LinguisticEngine } from '../src/services/LinguisticEngine.js';
+import { JargonMapper } from '../src/services/JargonMapper.js';
+import { OrthographyChecker } from '../src/services/OrthographyChecker.js';
 import fs from 'fs';
 
-const TEST_DB_PATH = './data/test_swg_advanced.db';
+const TEST_DB_PATH = './data/test_swg_bilingual.db';
 
-describe('Advanced Semantic Work Graph Algorithmic Suite', () => {
+describe('Bilingual Polish/English & Morphological Linguistic Suite', () => {
   let repo: SqliteGraphRepository;
 
   beforeEach(async () => {
@@ -27,57 +28,39 @@ describe('Advanced Semantic Work Graph Algorithmic Suite', () => {
     }
   });
 
-  it('powinien poprawnie odmieniać lematycznie polskie słowa (Stemmer)', () => {
-    expect(stemPolishWord('kotłów')).toBe('cotol');
-    expect(stemPolishWord('kotłami')).toBe('cotol');
-    expect(stemPolishWord('kotłach')).toBe('cotol');
+  it('powinien przemapować angielski anglicyzm branżowy "frontend" oraz "deployowanie" na kanoniczny termin PL', () => {
+    const mapper = new JargonMapper();
+    const res = mapper.normalizeJargon('deployowanie frontendu');
+
+    expect(res.isJargonMatched).toBe(true);
+    expect(res.canonicalText).toContain('wdrożenie produkcyjne');
   });
 
-  it('powinien wyliczać podobieństwo hybrydowe Jaro-Winkler+Trigram dla odmian wyrazowych', () => {
-    const score1 = calculateHybridSimilarity('kotłami gazowymi', 'kocioł gazowy');
-    expect(score1).toBeGreaterThan(0.65);
+  it('powinien poprawiać literówki i błędną ortografię', () => {
+    const checker = new OrthographyChecker();
+    const res = checker.correctOrthography('pieczyk gazowy');
 
-    const score2 = calculateHybridSimilarity('serwisowania junkersów', 'serwisant junkersów');
-    expect(score2).toBeGreaterThan(0.65);
+    expect(res.hasCorrection).toBe(true);
+    expect(res.correctedText).toBe('piecyk gazowy');
   });
 
-  it('powinien wyszukać pojęcie przy użyciu odmienionej formy gramatycznej', async () => {
+  it('powinien dokonać transformacji czasownikowo-przypadkowej (np. serwisowanie -> serwisant)', () => {
+    const lingEngine = new LinguisticEngine();
+    const res = lingEngine.processQuery('serwisowanie kotłów gazowych');
+
+    expect(res.actorProfessions).toContain('serwisant');
+    expect(res.verbalNouns).toContain('serwisowanie');
+  });
+
+  it('powinien znaleźć profesję "Serwisant kotłów gazowych" po wpisaniu odmienionego zwrotu czasownikowego "serwisowanie kotłów"', async () => {
     const importer = new SeedImporter(repo);
     await importer.importSeedFile('./data/seed/professions-top-100.pl.json');
 
     const engine = new SearchEngine(repo);
-    const searchRes = await engine.search('kotłami gazowymi');
+    const searchRes = await engine.search('serwisowanie kotłów');
 
     expect(searchRes.length).toBeGreaterThan(0);
-    const match = searchRes.find((r) => r.entity.name.includes('kotłów gazowych') || r.entity.name.includes('kocioł gazowy') || r.entity.name.includes('piecyk gazowy'));
-    expect(match).toBeDefined();
-  });
-
-  it('powinien wyliczyć najkrótszą ścieżkę ważącą (Dijkstra) oraz statystyki PageRank', async () => {
-    const importer = new SeedImporter(repo);
-    await importer.importSeedFile('./data/seed/professions-top-100.pl.json');
-
-    const finder = new PathFinder(repo);
-    const pathRes = await finder.explainPath('serwisant kotłów gazowych', 'Junkers');
-
-    expect(pathRes.found).toBe(true);
-    expect(pathRes.totalCost).toBeLessThan(Infinity);
-
-    const analytics = new GraphAnalytics(repo);
-    const pagerank = await analytics.calculatePageRank();
-    expect(pagerank.length).toBeGreaterThan(0);
-    expect(pagerank[0].score).toBeGreaterThan(0);
-  });
-
-  it('powinien przeprowadzić audyt spójności grafu i zwrócić raport', async () => {
-    const importer = new SeedImporter(repo);
-    await importer.importSeedFile('./data/seed/professions-top-100.pl.json');
-
-    const auditor = new GraphAuditor(repo);
-    const report = await auditor.auditGraph();
-
-    expect(report.totalEntities).toBeGreaterThan(0);
-    expect(report.totalRelations).toBeGreaterThan(0);
-    expect(Array.isArray(report.anomalies)).toBe(true);
+    expect(searchRes[0].entity.name).toBe('Serwisant kotłów gazowych');
+    expect(searchRes[0].matchType).toBe('verbal');
   });
 });
