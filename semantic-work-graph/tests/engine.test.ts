@@ -8,6 +8,7 @@ import { LinguisticEngine } from '../src/services/LinguisticEngine.js';
 import { JargonMapper } from '../src/services/JargonMapper.js';
 import { OrthographyChecker } from '../src/services/OrthographyChecker.js';
 import fs from 'fs';
+import path from 'path';
 
 const TEST_DB_PATH = './data/test_swg_bilingual.db';
 
@@ -54,7 +55,8 @@ describe('Bilingual Polish/English & Morphological Linguistic Suite', () => {
 
   it('powinien znaleźć profesję "Serwisant kotłów gazowych" po wpisaniu odmienionego zwrotu czasownikowego "serwisowanie kotłów"', async () => {
     const importer = new SeedImporter(repo);
-    await importer.importSeedFile('./data/seed/professions-top-100.pl.json');
+    const seedPath = path.resolve(__dirname, '../data/seed/professions-top-100.pl.json');
+    await importer.importSeedFile(seedPath);
 
     const engine = new SearchEngine(repo);
     const searchRes = await engine.search('serwisowanie kotłów');
