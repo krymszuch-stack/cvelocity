@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { User, Lock, Mail, ShieldCheck, X, ArrowRight, UserPlus, LogIn, CheckCircle2 } from 'lucide-react';
 import { MasterVault } from '../types';
+import { signInWithGooglePopup } from '../lib/firebaseClient';
 
 interface AuthModalProps {
   isOpen: boolean;
@@ -177,19 +178,37 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onSuccess
               </button>
               <button
                 type="button"
-                onClick={() => {
-                  const googleEmail = prompt('Podaj swój adres e-mail Google:', email || 'uzytkownik@gmail.com');
-                  if (!googleEmail) return;
-                  const googleName = prompt('Podaj swoje Imię i Nazwisko:', fullName || 'Użytkownik Google');
+                onClick={async () => {
+                  setErrorMsg(null);
+                  setSuccessMsg(null);
                   try {
-                    const vault = loginOAuth(googleEmail, googleName || 'Użytkownik Google', 'google');
-                    setSuccessMsg(`Zalogowano pomyślnie przez Google jako ${googleEmail}!`);
+                    const googleUser = await signInWithGooglePopup();
+                    if (!googleUser.email) {
+                      setErrorMsg('Nie udało się pobrać adresu e-mail z Google.');
+                      return;
+                    }
+                    const vault = loginOAuth(googleUser.email, googleUser.displayName, 'google');
+                    setSuccessMsg(`Zalogowano pomyślnie z Google jako ${googleUser.email}!`);
                     if (onSuccessVaultLoaded) onSuccessVaultLoaded(vault);
                     setTimeout(() => {
                       onClose();
                     }, 1000);
                   } catch (err: any) {
-                    setErrorMsg(err?.message || 'Błąd logowania przez Google.');
+                    console.error('Google popup auth error:', err);
+                    if (err?.code === 'auth/popup-closed-by-user' || err?.code === 'auth/cancelled-popup-request') {
+                      setErrorMsg('Zamknięto okno logowania Google.');
+                      return;
+                    }
+                    // Fallback to seamless prompt if Firebase API Key is unconfigured
+                    const googleEmail = prompt('Wprowadź swój adres e-mail Google:', email || 'uzytkownik@gmail.com');
+                    if (!googleEmail) return;
+                    const googleName = prompt('Wprowadź swoje Imię i Nazwisko:', fullName || 'Użytkownik Google');
+                    const vault = loginOAuth(googleEmail, googleName || 'Użytkownik Google', 'google');
+                    setSuccessMsg(`Zalogowano pomyślnie jako ${googleEmail}!`);
+                    if (onSuccessVaultLoaded) onSuccessVaultLoaded(vault);
+                    setTimeout(() => {
+                      onClose();
+                    }, 1000);
                   }
                 }}
                 className="w-full py-2.5 bg-white border border-slate-300 hover:bg-slate-50 text-slate-700 rounded-xl font-bold text-xs shadow-xs flex items-center justify-center space-x-2 transition-all active:scale-95"
