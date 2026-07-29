@@ -396,7 +396,7 @@ async function startServer() {
   }
 
   app.listen(PORT, "0.0.0.0", () => {
-    console.log(`SkillVault Server running on http://0.0.0.0:${PORT}`);
+    console.log(`SkillVault Server running on http://localhost:${PORT} (http://127.0.0.1:${PORT})`);
   });
 }
 

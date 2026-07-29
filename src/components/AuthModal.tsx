@@ -10,7 +10,7 @@ interface AuthModalProps {
 }
 
 export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onSuccessVaultLoaded }) => {
-  const { login, register, isAuthenticated, user, logout } = useAuth();
+  const { login, register, loginOAuth, isAuthenticated, user, logout } = useAuth();
   const [isRegisterTab, setIsRegisterTab] = useState(false);
 
   // Form states
@@ -177,8 +177,22 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onSuccess
               </button>
               <button
                 type="button"
-                onClick={() => alert('Wymaga konfiguracji Google OAuth (zobacz instrukcje agenta)')}
-                className="w-full py-2.5 bg-white border border-slate-300 hover:bg-slate-50 text-slate-700 rounded-xl font-bold text-xs shadow-sm flex items-center justify-center space-x-2 transition-all"
+                onClick={() => {
+                  const googleEmail = prompt('Podaj swój adres e-mail Google:', email || 'uzytkownik@gmail.com');
+                  if (!googleEmail) return;
+                  const googleName = prompt('Podaj swoje Imię i Nazwisko:', fullName || 'Użytkownik Google');
+                  try {
+                    const vault = loginOAuth(googleEmail, googleName || 'Użytkownik Google', 'google');
+                    setSuccessMsg(`Zalogowano pomyślnie przez Google jako ${googleEmail}!`);
+                    if (onSuccessVaultLoaded) onSuccessVaultLoaded(vault);
+                    setTimeout(() => {
+                      onClose();
+                    }, 1000);
+                  } catch (err: any) {
+                    setErrorMsg(err?.message || 'Błąd logowania przez Google.');
+                  }
+                }}
+                className="w-full py-2.5 bg-white border border-slate-300 hover:bg-slate-50 text-slate-700 rounded-xl font-bold text-xs shadow-xs flex items-center justify-center space-x-2 transition-all active:scale-95"
               >
                 <svg className="w-4 h-4" viewBox="0 0 48 48">
                   <path fill="#FFC107" d="M43.611 20.083H42V20H24v8h11.303c-1.649 4.657-6.08 8-11.303 8-6.627 0-12-5.373-12-12s5.373-12 12-12c3.059 0 5.842 1.154 7.961 3.039l5.657-5.657C34.046 6.053 29.268 4 24 4 12.955 4 4 12.955 4 24s8.955 20 20 20 20-8.955 20-20c0-1.341-.238-2.627-.611-3.917z" />

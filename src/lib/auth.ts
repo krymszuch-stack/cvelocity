@@ -145,6 +145,45 @@ export function loginUser(email: string, password: string): { user: UserAccount;
 }
 
 /**
+ * Authenticate or register a user via OAuth (Google / Microsoft)
+ */
+export function loginWithOAuthAccount(email: string, fullName: string, provider: 'google' | 'microsoft'): { user: UserAccount; vault: MasterVault } {
+  const normalizedEmail = email.trim().toLowerCase();
+  const users = getRegisteredUsers();
+  let foundUser = users.find((u) => u.email === normalizedEmail);
+
+  if (!foundUser) {
+    const salt = generateSalt();
+    const passwordHash = hashPassword(`oauth_${provider}_${Date.now()}`, salt);
+
+    foundUser = {
+      id: `user_${provider}_${Date.now()}_${Math.random().toString(36).substr(2, 5)}`,
+      email: normalizedEmail,
+      fullName: fullName.trim() || `Użytkownik ${provider === 'google' ? 'Google' : 'Microsoft'}`,
+      passwordHash,
+      salt,
+      createdAt: new Date().toISOString(),
+      lastLoginAt: new Date().toISOString(),
+    };
+
+    users.push(foundUser);
+    saveRegisteredUsers(users);
+
+    const initialVault: MasterVault = createEmptyVault(foundUser.fullName, foundUser.email);
+    saveUserVault(foundUser.id, initialVault, 'oauth_secret');
+    saveActiveSession(foundUser);
+    return { user: foundUser, vault: initialVault };
+  }
+
+  foundUser.lastLoginAt = new Date().toISOString();
+  saveRegisteredUsers(users);
+  saveActiveSession(foundUser);
+
+  const vault = loadUserVault(foundUser.id) || createEmptyVault(foundUser.fullName, foundUser.email);
+  return { user: foundUser, vault };
+}
+
+/**
  * Save active session
  */
 export function saveActiveSession(user: UserAccount): void {

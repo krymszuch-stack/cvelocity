@@ -4,6 +4,7 @@ import {
   getActiveSessionUser,
   loginUser as authLogin,
   registerUser as authRegister,
+  loginWithOAuthAccount,
   logoutUser as authLogout,
   saveUserVault,
   loadUserVault,
@@ -16,6 +17,7 @@ interface AuthContextType {
   userVault: MasterVault | null;
   login: (email: string, pass: string) => MasterVault;
   register: (email: string, pass: string, fullName: string) => MasterVault;
+  loginOAuth: (email: string, fullName: string, provider: 'google' | 'microsoft') => MasterVault;
   logout: () => void;
   saveUserVault: (vault: MasterVault, userSecret?: string) => void;
   saveCurrentVault: (vault: MasterVault, userSecret?: string) => void;
@@ -68,6 +70,16 @@ export const AuthProvider: React.FC<{ children: React.ReactNode; onVaultLoaded?:
     return result.initialVault;
   }, [onVaultLoaded]);
 
+  const loginOAuth = useCallback((email: string, fullName: string, provider: 'google' | 'microsoft'): MasterVault => {
+    const result = loginWithOAuthAccount(email, fullName, provider);
+    setUser(result.user);
+    setUserVault(result.vault);
+    if (onVaultLoaded) {
+      onVaultLoaded(result.vault);
+    }
+    return result.vault;
+  }, [onVaultLoaded]);
+
   const logout = useCallback(() => {
     authLogout();
     setUser(null);
@@ -87,11 +99,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode; onVaultLoaded?:
       userVault,
       login,
       register,
+      loginOAuth,
       logout,
       saveUserVault: saveUserVaultFunc,
       saveCurrentVault: saveUserVaultFunc,
     }),
-    [user, userVault, login, register, logout, saveUserVaultFunc]
+    [user, userVault, login, register, loginOAuth, logout, saveUserVaultFunc]
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
