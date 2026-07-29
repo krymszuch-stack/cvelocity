@@ -45,6 +45,26 @@ const VOCAB_REPLACEMENTS: Array<{
   reason: string;
 }> = [
   {
+    pattern: /kodowanie|pisanie kodu/gi,
+    replacement: 'projektowanie i implementacja skalowalnego kodu źródłowego',
+    reason: 'Podnosi jakość opisu tworzenia oprogramowania do poziomu inżynieryjnego',
+  },
+  {
+    pattern: /tworzenie stron|robienie aplikacji/gi,
+    replacement: 'rozwój nowoczesnych aplikacji internetowych i architektury systemowej',
+    reason: 'Używa profesjonalnej terminologii inżynierii oprogramowania',
+  },
+  {
+    pattern: /poprawianie błędów|szukanie błędów/gi,
+    replacement: 'refaktoryzacja, debugowanie i optymalizacja wydajnościowa kodu',
+    reason: 'Wskazuje na zaawansowany proces dbałości o jakość oprogramowania',
+  },
+  {
+    pattern: /praca w zespole|praca zespołowa/gi,
+    replacement: 'ścisła współpraca w zespole interdyscyplinarnym w zwinnej metodyce (Agile/Scrum)',
+    reason: 'Podkreśla znajomość wiodących metodyk zarządzania projektami',
+  },
+  {
     pattern: /pracownik biurowy/gi,
     replacement: 'Koordynator Obsługi Zgłoszeń i Działań Serwisowych',
     reason: 'Podnosi rangę stanowiska do poziomu koordynatora działań operacyjnych',
@@ -197,23 +217,26 @@ export const CVWordBuilder: React.FC<CVWordBuilderProps> = ({
       });
     });
 
-    // 4. JD keyword injection suggestions
-    const jdKeywords: string[] = lowerJd.match(/\b[a-zA-Z0-9#+.-]{4,}\b/g) || [];
-    const uniqueJdKeywords: string[] = Array.from(new Set(jdKeywords));
-    const missingHard: string[] = uniqueJdKeywords.filter(
-      (kw: string) =>
-        ['sla', 'crm', 'contact center', 'ticketing', 'excel', 'onboarding', 'deeskalacja'].includes(kw.toLowerCase()) &&
-        !vault.skillsMatrix.hardSkills.some((s) => s.toLowerCase().includes(kw.toLowerCase()))
-    );
+    // 4. Dynamic JD keyword injection suggestions
+    const rawTokens = jobDescription.match(/\b[a-zA-Z0-9#+.-]{3,}\b/g) || [];
+    const stopWords = new Set(['oraz', 'pracy', 'dla', 'firme', 'firmy', 'jest', 'naszym', 'szukamy', 'osoby', 'opisie', 'stanowiska', 'wymagania', 'oferujemy', 'praca', 'współpraca', 'będziesz', 'zespół', 'prosimy']);
+    const candidateKeywords = Array.from(new Set(rawTokens.filter(t => !stopWords.has(t.toLowerCase()) && t.length > 2)));
 
-    if (missingHard.length > 0) {
-      missingHard.slice(0, 3).forEach((kw: string, idx: number) => {
+    const existingSkills = new Set([
+      ...vault.skillsMatrix.hardSkills.map(s => s.toLowerCase()),
+      ...vault.skillsMatrix.tools.map(t => t.toLowerCase()),
+    ]);
+
+    const missingInVault = candidateKeywords.filter(kw => !existingSkills.has(kw.toLowerCase()));
+
+    if (missingInVault.length > 0) {
+      missingInVault.slice(0, 4).forEach((kw: string, idx: number) => {
         list.push({
           id: `sub_skill_${idx}`,
           section: 'skills',
-          originalPhrase: '[Brakujące Słowo Kluczowe w Umiejętnościach]',
-          suggestedPhrase: kw.toUpperCase(),
-          reason: `Wykryto słowo kluczowe w opisie stanowiska: "${kw.toUpperCase()}"`,
+          originalPhrase: '[Słowo Kluczowe z Oferty Pracy]',
+          suggestedPhrase: kw,
+          reason: `Wykryto słowo kluczowe w ogłoszeniu: "${kw}" - zalecane wstrzyknięcie do sekcji Umiejętności`,
           accepted: null,
         });
       });
