@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { MasterVault, TokenStats } from './types';
-import { INITIAL_SAMPLE_VAULT, createEmptyVault } from './lib/sampleVault';
-import { loadVaultFromLocalStorage, saveVaultToLocalStorage } from './lib/vaultCrypto';
+import { createEmptyVault } from './lib/sampleVault';
+import { loadVaultFromLocalStorage, saveVaultToLocalStorage, clearVaultLocalStorage } from './lib/vaultCrypto';
 import { getActiveSessionUser, loadUserVault } from './lib/auth';
 import { semanticCacheInstance } from './lib/semanticCache';
 import { AuthProvider, useAuth } from './context/AuthContext';
@@ -22,17 +22,32 @@ function MainApp() {
   const [advisorInitialQuestion, setAdvisorInitialQuestion] = useState<string | undefined>(undefined);
 
   const [vault, setVault] = useState<MasterVault>(() => {
-    // If user is already authenticated, load their personal vault (never sample data)
+    const SAMPLE_EMAIL = 'jan.kowalski@example.com';
+
+    // Authenticated user: always load their personal vault
     const sessionUser = getActiveSessionUser();
     if (sessionUser) {
       const userVaultData = loadUserVault(sessionUser.id);
+      // If stored vault is still the old sample data, clear it and return empty
+      if (userVaultData && userVaultData.personalInfo.email === SAMPLE_EMAIL) {
+        clearVaultLocalStorage();
+        return createEmptyVault(sessionUser.fullName, sessionUser.email);
+      }
       if (userVaultData) return userVaultData;
-      // Authenticated but no vault yet - return clean empty vault
       return createEmptyVault(sessionUser.fullName, sessionUser.email);
     }
-    // Unauthenticated: show demo sample vault
+
+    // Unauthenticated: check global cache but never return sample data
     const loaded = loadVaultFromLocalStorage();
-    return loaded || INITIAL_SAMPLE_VAULT;
+    if (loaded && loaded.personalInfo.email !== SAMPLE_EMAIL) {
+      return loaded;
+    }
+    // Clear polluted localStorage with sample data
+    if (loaded && loaded.personalInfo.email === SAMPLE_EMAIL) {
+      clearVaultLocalStorage();
+    }
+    // Return a fresh empty vault for unauthenticated view
+    return createEmptyVault();
   });
 
   const lastUserVaultRef = useRef<MasterVault | null>(null);
