@@ -1064,7 +1064,7 @@ export const MasterVaultEditor: React.FC<MasterVaultEditorProps> = ({ vault, onC
                     type="text"
                     value={draftVault.personalInfo.fullName}
                     onChange={(e) => updatePersonalInfo('fullName', e.target.value)}
-                    placeholder="np. Jan Kowalski"
+                    placeholder="Wpisz imię i nazwisko"
                     className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs text-slate-900 focus:bg-white focus:outline-none focus:border-indigo-500"
                   />
                 </div>

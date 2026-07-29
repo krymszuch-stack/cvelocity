@@ -302,7 +302,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onSuccess
                       required
                       value={fullName}
                       onChange={(e) => setFullName(e.target.value)}
-                      placeholder="np. Jan Kowalski"
+                      placeholder="Wpisz imię i nazwisko"
                       className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5 text-xs text-slate-900 focus:outline-none focus:border-indigo-500 focus:bg-white pl-9"
                     />
                     <User className="w-4 h-4 text-slate-400 absolute left-3 top-3" />
@@ -320,7 +320,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onSuccess
                     required
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
-                    placeholder="jan.kowalski@example.com"
+                    placeholder="twoj.email@domain.com"
                     className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5 text-xs text-slate-900 focus:outline-none focus:border-indigo-500 focus:bg-white pl-9"
                   />
                   <Mail className="w-4 h-4 text-slate-400 absolute left-3 top-3" />
