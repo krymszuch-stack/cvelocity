@@ -537,7 +537,7 @@ export const DocumentRenderer: React.FC<DocumentRendererProps> = ({ resume, vaul
           <div className="flex items-center space-x-3 flex-wrap gap-y-2">
             <button
               onClick={handleRandomizeDesign}
-              className="px-4 py-2 bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white font-extrabold text-xs rounded-xl shadow-md flex items-center space-x-2 transition-transform active:scale-95 shrink-0"
+              className="px-4 py-2 bg-gradient-to-r from-emerald-600 to-teal-700 hover:from-emerald-700 hover:to-teal-800 text-white font-extrabold text-xs rounded-xl shadow-md flex items-center space-x-2 transition-transform active:scale-95 shrink-0"
             >
               <Dices className="w-4 h-4 text-amber-300 animate-bounce" />
               <span>🎲 LOSUJ DESIGN</span>
@@ -548,14 +548,14 @@ export const DocumentRenderer: React.FC<DocumentRendererProps> = ({ resume, vaul
               onClick={() => setIsPhotoModalOpen(true)}
               className="px-3 py-1.5 bg-white hover:bg-slate-100 border border-slate-300 text-slate-800 rounded-lg text-xs font-bold flex items-center space-x-1.5 transition-colors shrink-0"
             >
-              <Camera className="w-3.5 h-3.5 text-indigo-600" />
-              <span>Zmień Zdjęcie Kandidata</span>
+              <Camera className="w-3.5 h-3.5 text-emerald-600" />
+              <span>Zmień Zdjęcie Kandydata</span>
             </button>
 
             {/* Current Active Style Badges */}
             <div className="flex items-center space-x-2 text-[11px] text-slate-600 flex-wrap gap-y-1">
               <span className="font-semibold text-slate-800 flex items-center space-x-1">
-                <Palette className="w-3 h-3 text-indigo-500" />
+                <Palette className="w-3 h-3 text-emerald-600" />
                 <span>Styl:</span>
               </span>
               <span
@@ -601,9 +601,30 @@ export const DocumentRenderer: React.FC<DocumentRendererProps> = ({ resume, vaul
           className={`w-[210mm] min-h-[297mm] p-10 shadow-2xl printable-area transition-all ${activeFont.cssClass} ${activePaper.bgClass}`}
           style={{ boxSizing: 'border-box' }}
         >
-          {/* ========================================================
-              VARIANT 1: ATS_SAFE (Classic 1-Column, Pure OCR Readability)
-             ======================================================== */}
+          {/* Empty Vault State Guidance */}
+          {!vault.personalInfo.fullName && vault.history.length === 0 && (!vault.skillsMatrix?.hardSkills || vault.skillsMatrix.hardSkills.length === 0) ? (
+            <div className="h-full min-h-[250mm] flex flex-col items-center justify-center text-center p-8 border-2 border-dashed border-slate-300 rounded-2xl bg-slate-50/50 my-auto">
+              <div className="w-16 h-16 rounded-2xl bg-emerald-100 border border-emerald-200 flex items-center justify-center text-emerald-600 mb-4 shadow-sm">
+                <Sparkles className="w-8 h-8" />
+              </div>
+              <h3 className="text-xl font-bold text-slate-900">Twój Vault jest jeszcze pusty</h3>
+              <p className="text-sm text-slate-600 max-w-md mt-2">
+                Uzupełnij swoje dane zawodowe w zakładce <strong className="text-emerald-700">„Baza CV”</strong> lub wczytaj istniejący plik PDF/Word w <strong className="text-emerald-700">„Wczytaj Plik”</strong>.
+              </p>
+              <div className="mt-6 flex flex-wrap justify-center gap-3">
+                <div className="px-4 py-2 bg-emerald-600 text-white text-xs font-bold rounded-xl shadow-sm">
+                  1. Wypełnij dane w Bazie CV ✍️
+                </div>
+                <div className="px-4 py-2 bg-slate-800 text-white text-xs font-bold rounded-xl shadow-sm">
+                  2. Dopasuj do oferty pracy 🎯
+                </div>
+              </div>
+            </div>
+          ) : (
+            <>
+              {/* ========================================================
+                  VARIANT 1: ATS_SAFE (Classic 1-Column, Pure OCR Readability)
+                 ======================================================== */}
           {renderVariant === 'ATS_SAFE' && (
             <div className="space-y-6 text-slate-900 text-xs leading-relaxed">
               {/* Header */}
@@ -1059,6 +1080,8 @@ export const DocumentRenderer: React.FC<DocumentRendererProps> = ({ resume, vaul
                 </div>
               </div>
             </div>
+          )}
+          </>
           )}
         </div>
       </div>

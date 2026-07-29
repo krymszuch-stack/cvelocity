@@ -343,15 +343,15 @@ Wymagania kluczowe:
                 value={jdUrlInput}
                 onChange={(e) => setJdUrlInput(e.target.value)}
                 placeholder="https://www.pracuj.pl/praca/senior-developer..."
-                className="w-full bg-slate-950 border border-slate-700 rounded-xl pl-9 pr-4 py-2.5 text-xs text-white placeholder:text-slate-500 focus:outline-hidden focus:ring-2 focus:ring-indigo-500 font-mono shadow-xs"
+                className="w-full bg-slate-950 border border-emerald-900/60 rounded-xl pl-9 pr-4 py-2.5 text-xs text-white placeholder:text-slate-500 focus:outline-hidden focus:ring-2 focus:ring-emerald-500 font-mono shadow-xs"
               />
-              <Link className="w-4 h-4 text-slate-500 absolute left-3 top-3" />
+              <Link className="w-4 h-4 text-emerald-600 absolute left-3 top-3" />
             </div>
 
             <button
               onClick={handleFetchOfferUrl}
               disabled={isFetchingUrl}
-              className="px-5 py-2.5 bg-indigo-600 hover:bg-indigo-500 active:scale-95 text-white rounded-xl font-bold text-xs shadow-md shadow-indigo-600/30 flex items-center justify-center space-x-2 transition-all disabled:opacity-50 shrink-0"
+              className="px-5 py-2.5 bg-emerald-600 hover:bg-emerald-500 active:scale-95 text-white rounded-xl font-bold text-xs shadow-md shadow-emerald-900/30 flex items-center justify-center space-x-2 transition-all disabled:opacity-50 shrink-0"
             >
               {isFetchingUrl ? (
                 <>
@@ -360,7 +360,7 @@ Wymagania kluczowe:
                 </>
               ) : (
                 <>
-                  <Sparkles className="w-4 h-4 text-cyan-300" />
+                  <Sparkles className="w-4 h-4 text-emerald-200" />
                   <span>Pobierz & Dopasuj</span>
                 </>
               )}

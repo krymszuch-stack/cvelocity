@@ -68,7 +68,7 @@ export const ProfilerSection: React.FC<ProfilerSectionProps> = ({ profiler, onCh
       {/* Header */}
       <div className="flex items-center justify-between border-b border-slate-100 pb-4">
         <div className="flex items-center space-x-3">
-          <div className="p-2.5 bg-indigo-50 border border-indigo-200 rounded-lg text-indigo-600">
+          <div className="p-2.5 bg-emerald-50 border border-emerald-200 rounded-lg text-emerald-700 shadow-2xs">
             <Settings className="w-5 h-5" />
           </div>
           <div>
@@ -83,7 +83,7 @@ export const ProfilerSection: React.FC<ProfilerSectionProps> = ({ profiler, onCh
       {/* 1. Flag Matrix */}
       <div>
         <label className="block text-xs font-bold text-slate-800 mb-1 flex items-center space-x-2">
-          <Shield className="w-4 h-4 text-indigo-600" />
+          <Shield className="w-4 h-4 text-emerald-600" />
           <span>Matryca Flag Preferencji: Wielokrotny Wybór</span>
         </label>
         <p className="text-xs text-slate-500 mb-4">
@@ -99,13 +99,13 @@ export const ProfilerSection: React.FC<ProfilerSectionProps> = ({ profiler, onCh
                 onClick={() => toggleFlag(flag.id)}
                 className={`cursor-pointer p-4 rounded-xl border transition-all flex items-start space-x-3 ${
                   isSelected
-                    ? 'bg-indigo-50/70 border-indigo-500 shadow-2xs ring-1 ring-indigo-500/30'
+                    ? 'bg-emerald-50/70 border-emerald-500 shadow-2xs ring-1 ring-emerald-500/30'
                     : 'bg-slate-50 border-slate-200 hover:border-slate-300'
                 }`}
               >
                 <div
                   className={`w-5 h-5 rounded flex items-center justify-center shrink-0 mt-0.5 border ${
-                    isSelected ? 'bg-indigo-600 border-indigo-600 text-white' : 'border-slate-300 bg-white'
+                    isSelected ? 'bg-emerald-600 border-emerald-600 text-white' : 'border-slate-300 bg-white'
                   }`}
                 >
                   {isSelected && <Check className="w-3.5 h-3.5 stroke-[3]" />}

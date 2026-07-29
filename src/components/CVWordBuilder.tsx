@@ -468,6 +468,7 @@ export const CVWordBuilder: React.FC<CVWordBuilderProps> = ({
               onClick={generateSubstitutions}
               className="p-2 bg-slate-100 hover:bg-slate-200 active:scale-95 text-slate-700 rounded-xl transition-all border border-slate-300"
               title="Odśwież propozycje"
+              aria-label="Odśwież propozycje podmieniające frazy"
             >
               <RefreshCw className="w-4 h-4" />
             </button>

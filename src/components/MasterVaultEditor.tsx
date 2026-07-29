@@ -802,7 +802,7 @@ export const MasterVaultEditor: React.FC<MasterVaultEditorProps> = ({ vault, onC
       {/* Vault Header Bar */}
       <div className="flex flex-wrap items-center justify-between border-b border-slate-100 pb-4 gap-4">
         <div className="flex items-center space-x-3">
-          <div className="p-2.5 bg-indigo-50 border border-indigo-200 rounded-xl text-indigo-600 relative">
+          <div className="p-2.5 bg-emerald-50 border border-emerald-200 rounded-xl text-emerald-700 relative shadow-xs">
             <User className="w-5 h-5" />
             {isDirty && (
               <span className="absolute -top-1 -right-1 w-3 h-3 bg-amber-500 rounded-full animate-ping" />
@@ -813,7 +813,7 @@ export const MasterVaultEditor: React.FC<MasterVaultEditorProps> = ({ vault, onC
               <h2 className="text-xl font-extrabold text-slate-900 tracking-tight">
                 Mój Profil Zawodowy & Quiz Kwalifikacji
               </h2>
-              <span className="text-xs px-2.5 py-0.5 rounded-full bg-indigo-50 text-indigo-700 border border-indigo-200 font-bold">
+              <span className="text-xs px-2.5 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200 font-bold">
                 Wypełnij Dane
               </span>
             </div>
@@ -822,11 +822,11 @@ export const MasterVaultEditor: React.FC<MasterVaultEditorProps> = ({ vault, onC
             <div className="flex items-center space-x-3 mt-1.5">
               <div className="flex items-center space-x-1.5 text-xs text-slate-500">
                 <span className="font-semibold text-slate-700">Kompletność Profilu:</span>
-                <span className="font-bold text-indigo-600 font-mono">{completenessScore}%</span>
+                <span className="font-bold text-emerald-600 font-mono">{completenessScore}%</span>
               </div>
-              <div className="w-32 bg-slate-100 rounded-full h-2 overflow-hidden border border-slate-200">
+              <div className="w-36 bg-slate-100 rounded-full h-2 overflow-hidden border border-slate-200">
                 <div
-                  className="bg-gradient-to-r from-indigo-500 via-purple-500 to-emerald-500 h-full transition-all duration-300 rounded-full"
+                  className="bg-gradient-to-r from-emerald-600 via-teal-500 to-emerald-400 h-full transition-all duration-300 rounded-full"
                   style={{ width: `${completenessScore}%` }}
                 />
               </div>
@@ -858,8 +858,8 @@ export const MasterVaultEditor: React.FC<MasterVaultEditorProps> = ({ vault, onC
             disabled={!isDirty}
             className={`flex items-center space-x-2 px-4 py-2 rounded-xl text-xs font-bold transition-all shadow-md ${
               isDirty
-                ? 'bg-indigo-600 hover:bg-indigo-700 text-white ring-2 ring-indigo-400 ring-offset-1 animate-pulse'
-                : 'bg-slate-100 text-slate-400 cursor-not-allowed border border-slate-200'
+                ? 'bg-emerald-600 hover:bg-emerald-700 text-white ring-2 ring-emerald-400 ring-offset-1 animate-pulse'
+                : 'bg-slate-100 text-slate-400 opacity-60 cursor-not-allowed border border-slate-200'
             }`}
           >
             <Save className="w-4 h-4" />
@@ -876,79 +876,81 @@ export const MasterVaultEditor: React.FC<MasterVaultEditorProps> = ({ vault, onC
         </div>
       </div>
 
-      {/* Sub-tabs / User Friendly Step Categories */}
-      <div className="flex border-b border-slate-200 space-x-2 overflow-x-auto pb-1">
-        <button
-          onClick={() => setActiveSubTab('quiz')}
-          className={`flex items-center space-x-2 px-3.5 py-2 border-b-2 font-bold text-xs sm:text-sm whitespace-nowrap transition-colors ${
-            activeSubTab === 'quiz'
-              ? 'border-indigo-600 text-indigo-600'
-              : 'border-transparent text-slate-500 hover:text-slate-800'
-          }`}
-        >
-          <Sparkles className="w-4 h-4 text-amber-500" />
-          <span>🧩 Szybki Quiz CV od Zera</span>
-        </button>
+      {/* Sub-tabs / User Friendly Step Categories with Scroll Indicator */}
+      <div className="relative">
+        <div className="flex border-b border-slate-200 space-x-2 overflow-x-auto pb-1 scrollbar-thin scrollbar-thumb-emerald-200">
+          <button
+            onClick={() => setActiveSubTab('quiz')}
+            className={`flex items-center space-x-2 px-3.5 py-2 border-b-2 font-bold text-xs sm:text-sm whitespace-nowrap transition-colors ${
+              activeSubTab === 'quiz'
+                ? 'border-emerald-600 text-emerald-700 bg-emerald-50/50 rounded-t-lg'
+                : 'border-transparent text-slate-500 hover:text-slate-800'
+            }`}
+          >
+            <Sparkles className="w-4 h-4 text-amber-500" />
+            <span>🧩 Szybki Quiz CV od Zera</span>
+          </button>
 
-        <button
-          onClick={() => setActiveSubTab('info')}
-          className={`flex items-center space-x-2 px-3.5 py-2 border-b-2 font-bold text-xs sm:text-sm whitespace-nowrap transition-colors ${
-            activeSubTab === 'info'
-              ? 'border-indigo-600 text-indigo-600'
-              : 'border-transparent text-slate-500 hover:text-slate-800'
-          }`}
-        >
-          <User className="w-4 h-4 text-indigo-500" />
-          <span>1. Dane Osobowe & LinkedIn</span>
-        </button>
+          <button
+            onClick={() => setActiveSubTab('info')}
+            className={`flex items-center space-x-2 px-3.5 py-2 border-b-2 font-bold text-xs sm:text-sm whitespace-nowrap transition-colors ${
+              activeSubTab === 'info'
+                ? 'border-emerald-600 text-emerald-700 bg-emerald-50/50 rounded-t-lg'
+                : 'border-transparent text-slate-500 hover:text-slate-800'
+            }`}
+          >
+            <User className="w-4 h-4 text-emerald-600" />
+            <span>1. Dane Osobowe & LinkedIn</span>
+          </button>
 
-        <button
-          onClick={() => setActiveSubTab('skills')}
-          className={`flex items-center space-x-2 px-3.5 py-2 border-b-2 font-bold text-xs sm:text-sm whitespace-nowrap transition-colors ${
-            activeSubTab === 'skills'
-              ? 'border-indigo-600 text-indigo-600'
-              : 'border-transparent text-slate-500 hover:text-slate-800'
-          }`}
-        >
-          <Wrench className="w-4 h-4 text-amber-500" />
-          <span>2. Quiz Umiejętności: {draftVault.skillsMatrix.hardSkills.length + draftVault.skillsMatrix.softSkills.length + draftVault.skillsMatrix.toolsAndTech.length}</span>
-        </button>
+          <button
+            onClick={() => setActiveSubTab('skills')}
+            className={`flex items-center space-x-2 px-3.5 py-2 border-b-2 font-bold text-xs sm:text-sm whitespace-nowrap transition-colors ${
+              activeSubTab === 'skills'
+                ? 'border-emerald-600 text-emerald-700 bg-emerald-50/50 rounded-t-lg'
+                : 'border-transparent text-slate-500 hover:text-slate-800'
+            }`}
+          >
+            <Wrench className="w-4 h-4 text-teal-600" />
+            <span>2. Quiz Umiejętności: {draftVault.skillsMatrix.hardSkills.length + draftVault.skillsMatrix.softSkills.length + draftVault.skillsMatrix.toolsAndTech.length}</span>
+          </button>
 
-        <button
-          onClick={() => setActiveSubTab('history')}
-          className={`flex items-center space-x-2 px-3.5 py-2 border-b-2 font-bold text-xs sm:text-sm whitespace-nowrap transition-colors ${
-            activeSubTab === 'history'
-              ? 'border-indigo-600 text-indigo-600'
-              : 'border-transparent text-slate-500 hover:text-slate-800'
-          }`}
-        >
-          <Briefcase className="w-4 h-4 text-blue-500" />
-          <span>3. Doświadczenie & Metryki: {draftVault.history.length}</span>
-        </button>
+          <button
+            onClick={() => setActiveSubTab('history')}
+            className={`flex items-center space-x-2 px-3.5 py-2 border-b-2 font-bold text-xs sm:text-sm whitespace-nowrap transition-colors ${
+              activeSubTab === 'history'
+                ? 'border-emerald-600 text-emerald-700 bg-emerald-50/50 rounded-t-lg'
+                : 'border-transparent text-slate-500 hover:text-slate-800'
+            }`}
+          >
+            <Briefcase className="w-4 h-4 text-emerald-600" />
+            <span>3. Doświadczenie & Metryki: {draftVault.history.length}</span>
+          </button>
 
-        <button
-          onClick={() => setActiveSubTab('edu')}
-          className={`flex items-center space-x-2 px-3.5 py-2 border-b-2 font-bold text-xs sm:text-sm whitespace-nowrap transition-colors ${
-            activeSubTab === 'edu'
-              ? 'border-indigo-600 text-indigo-600'
-              : 'border-transparent text-slate-500 hover:text-slate-800'
-          }`}
-        >
-          <GraduationCap className="w-4 h-4 text-emerald-500" />
-          <span>4. Wykształcenie & Certyfikaty: {draftVault.education.length + draftVault.skillsMatrix.certifications.length}</span>
-        </button>
+          <button
+            onClick={() => setActiveSubTab('edu')}
+            className={`flex items-center space-x-2 px-3.5 py-2 border-b-2 font-bold text-xs sm:text-sm whitespace-nowrap transition-colors ${
+              activeSubTab === 'edu'
+                ? 'border-emerald-600 text-emerald-700 bg-emerald-50/50 rounded-t-lg'
+                : 'border-transparent text-slate-500 hover:text-slate-800'
+            }`}
+          >
+            <GraduationCap className="w-4 h-4 text-teal-600" />
+            <span>4. Wykształcenie & Certyfikaty: {draftVault.education.length + draftVault.skillsMatrix.certifications.length}</span>
+          </button>
 
-        <button
-          onClick={() => setActiveSubTab('security')}
-          className={`flex items-center space-x-2 px-3.5 py-2 border-b-2 font-bold text-xs sm:text-sm whitespace-nowrap transition-colors ${
-            activeSubTab === 'security'
-              ? 'border-indigo-600 text-indigo-600'
-              : 'border-transparent text-slate-500 hover:text-slate-800'
-          }`}
-        >
-          <Lock className="w-4 h-4 text-slate-500" />
-          <span>5. Bezpieczeństwo & Eksport</span>
-        </button>
+          <button
+            onClick={() => setActiveSubTab('security')}
+            className={`flex items-center space-x-2 px-3.5 py-2 border-b-2 font-bold text-xs sm:text-sm whitespace-nowrap transition-colors ${
+              activeSubTab === 'security'
+                ? 'border-emerald-600 text-emerald-700 bg-emerald-50/50 rounded-t-lg'
+                : 'border-transparent text-slate-500 hover:text-slate-800'
+            }`}
+          >
+            <Lock className="w-4 h-4 text-emerald-600" />
+            <span>5. Szyfrowanie & Kopia (AES-256)</span>
+          </button>
+        </div>
       </div>
 
       {/* SUB-TAB: Interactive Quiz Builder & AI Audit */}

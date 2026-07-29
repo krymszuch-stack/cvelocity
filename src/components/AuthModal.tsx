@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useAuth } from '../context/AuthContext';
-import { User, Lock, Mail, ShieldCheck, X, ArrowRight, UserPlus, LogIn, CheckCircle2, Trash2, AlertTriangle } from 'lucide-react';
+import { User, Lock, Mail, ShieldCheck, X, ArrowRight, UserPlus, LogIn, CheckCircle2, Trash2, AlertTriangle, Eye, EyeOff } from 'lucide-react';
 import { MasterVault } from '../types';
 import { signInWithGooglePopup } from '../lib/firebaseClient';
 
@@ -13,6 +13,7 @@ interface AuthModalProps {
 export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onSuccessVaultLoaded }) => {
   const { login, register, loginOAuth, isAuthenticated, user, logout, deleteAccount } = useAuth();
   const [isRegisterTab, setIsRegisterTab] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
 
@@ -69,7 +70,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onSuccess
         {isAuthenticated && user ? (
           /* Logged In View */
           <div className="space-y-6 text-center py-4">
-            <div className="w-16 h-16 bg-indigo-50 border border-indigo-200 rounded-full flex items-center justify-center mx-auto text-indigo-600 font-bold text-xl">
+            <div className="w-16 h-16 bg-emerald-50 border border-emerald-200 rounded-full flex items-center justify-center mx-auto text-emerald-700 font-bold text-xl shadow-xs">
               {user.fullName.slice(0, 2).toUpperCase()}
             </div>
             <div>
@@ -165,7 +166,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onSuccess
           <div className="space-y-5">
             {/* Modal Header */}
             <div className="flex items-center space-x-3">
-              <div className="p-2.5 bg-indigo-50 border border-indigo-200 rounded-xl text-indigo-600">
+              <div className="p-2.5 bg-emerald-50 border border-emerald-200 rounded-xl text-emerald-700">
                 <User className="w-5 h-5" />
               </div>
               <div>
@@ -187,7 +188,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onSuccess
                   setErrorMsg(null);
                 }}
                 className={`flex-1 py-2 rounded-lg transition-all flex items-center justify-center space-x-1.5 ${
-                  !isRegisterTab ? 'bg-white text-indigo-600 shadow-2xs' : 'text-slate-600 hover:text-slate-900'
+                  !isRegisterTab ? 'bg-white text-emerald-700 shadow-2xs' : 'text-slate-600 hover:text-slate-900'
                 }`}
               >
                 <LogIn className="w-3.5 h-3.5" />
@@ -201,7 +202,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onSuccess
                   setErrorMsg(null);
                 }}
                 className={`flex-1 py-2 rounded-lg transition-all flex items-center justify-center space-x-1.5 ${
-                  isRegisterTab ? 'bg-white text-indigo-600 shadow-2xs' : 'text-slate-600 hover:text-slate-900'
+                  isRegisterTab ? 'bg-white text-emerald-700 shadow-2xs' : 'text-slate-600 hover:text-slate-900'
                 }`}
               >
                 <UserPlus className="w-3.5 h-3.5" />
@@ -327,20 +328,39 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onSuccess
               </div>
 
               <div>
-                <label className="block text-xs font-semibold text-slate-700 mb-1">
-                  Hasło
-                </label>
+                <div className="flex items-center justify-between mb-1">
+                  <label className="block text-xs font-semibold text-slate-700">
+                    Hasło
+                  </label>
+                  {!isRegisterTab && (
+                    <button
+                      type="button"
+                      onClick={() => alert('W przypadku zgubienia hasła lub konta lokalnego, możesz zalogować się z Google lub utwożyć nowe konto z tym samym e-mailem.')}
+                      className="text-[11px] font-medium text-emerald-700 hover:underline"
+                    >
+                      Nie pamiętasz hasła?
+                    </button>
+                  )}
+                </div>
                 <div className="relative">
                   <input
-                    type="password"
+                    type={showPassword ? 'text' : 'password'}
                     required
                     minLength={6}
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
                     placeholder="••••••••"
-                    className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5 text-xs text-slate-900 focus:outline-none focus:border-indigo-500 focus:bg-white pl-9"
+                    className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5 text-xs text-slate-900 focus:outline-none focus:border-emerald-600 focus:bg-white pl-9 pr-9"
                   />
                   <Lock className="w-4 h-4 text-slate-400 absolute left-3 top-3" />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword(!showPassword)}
+                    className="absolute right-3 top-3 text-slate-400 hover:text-slate-700 transition-colors"
+                    title={showPassword ? 'Ukryj hasło' : 'Pokaż hasło'}
+                  >
+                    {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                  </button>
                 </div>
                 {isRegisterTab && (
                   <p className="text-[10px] text-slate-500 mt-1">
@@ -351,7 +371,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onSuccess
 
               <button
                 type="submit"
-                className="w-full py-3 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl font-bold text-xs shadow-2xs flex items-center justify-center space-x-2 transition-all mt-2"
+                className="w-full py-3 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl font-bold text-xs shadow-2xs flex items-center justify-center space-x-2 transition-all mt-2"
               >
                 <span>{isRegisterTab ? 'Utwórz Konto i Zaloguj' : 'Zaloguj się'}</span>
                 <ArrowRight className="w-4 h-4" />
