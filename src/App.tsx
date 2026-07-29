@@ -1,7 +1,8 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { MasterVault, TokenStats } from './types';
-import { INITIAL_SAMPLE_VAULT } from './lib/sampleVault';
+import { INITIAL_SAMPLE_VAULT, createEmptyVault } from './lib/sampleVault';
 import { loadVaultFromLocalStorage, saveVaultToLocalStorage } from './lib/vaultCrypto';
+import { getActiveSessionUser, loadUserVault } from './lib/auth';
 import { semanticCacheInstance } from './lib/semanticCache';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { AuthModal } from './components/AuthModal';
@@ -21,6 +22,15 @@ function MainApp() {
   const [advisorInitialQuestion, setAdvisorInitialQuestion] = useState<string | undefined>(undefined);
 
   const [vault, setVault] = useState<MasterVault>(() => {
+    // If user is already authenticated, load their personal vault (never sample data)
+    const sessionUser = getActiveSessionUser();
+    if (sessionUser) {
+      const userVaultData = loadUserVault(sessionUser.id);
+      if (userVaultData) return userVaultData;
+      // Authenticated but no vault yet - return clean empty vault
+      return createEmptyVault(sessionUser.fullName, sessionUser.email);
+    }
+    // Unauthenticated: show demo sample vault
     const loaded = loadVaultFromLocalStorage();
     return loaded || INITIAL_SAMPLE_VAULT;
   });
@@ -38,11 +48,19 @@ function MainApp() {
   const [tokenStats, setTokenStats] = useState<TokenStats>(() => semanticCacheInstance.getStats());
   const [isTokenModalOpen, setIsTokenModalOpen] = useState(false);
 
-  // Auto-save vault on changes
+  // Auto-save vault on changes - only save to user storage if authenticated
+  // and the vault is NOT the sample/demo vault (prevents overwriting new user's clean slate)
+  const { isAuthenticated } = useAuth();
   useEffect(() => {
+    if (!isAuthenticated) {
+      // Only save to global localStorage for unauthenticated/demo mode
+      saveVaultToLocalStorage(vault);
+      return;
+    }
+    // Authenticated: save to both storages
     saveVaultToLocalStorage(vault);
     saveUserVault(vault);
-  }, [vault, saveUserVault]);
+  }, [vault, saveUserVault, isAuthenticated]);
 
   const refreshStats = () => {
     setTokenStats(semanticCacheInstance.getStats());
