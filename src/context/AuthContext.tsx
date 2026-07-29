@@ -107,7 +107,20 @@ export const AuthProvider: React.FC<{ children: React.ReactNode; onVaultLoaded?:
 
   const saveUserVaultFunc = useCallback((vault: MasterVault, userSecret: string = 'default_key') => {
     if (user) {
-      saveUserVault(user.id, vault, userSecret);
+      // Security Sanitization check
+      const sanitizedVault: MasterVault = {
+        ...vault,
+        personalInfo: {
+          ...vault.personalInfo,
+          fullName: (vault.personalInfo.fullName || '').replace(/<[^>]+>/g, '').trim(),
+          email: (vault.personalInfo.email || '').replace(/<[^>]+>/g, '').trim(),
+          phone: (vault.personalInfo.phone || '').replace(/<[^>]+>/g, '').trim(),
+          location: (vault.personalInfo.location || '').replace(/<[^>]+>/g, '').trim(),
+        },
+      };
+
+      saveUserVault(user.id, sanitizedVault, userSecret);
+      setUserVault(sanitizedVault);
     }
   }, [user]);
 

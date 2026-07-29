@@ -1,6 +1,7 @@
 import { GoogleGenAI } from '@google/genai';
 import { Proposal, Entity, Relation } from '../domain/types.js';
 import { SqliteGraphRepository } from '../repositories/SqliteGraphRepository.js';
+import { SecurityGuardrails } from '../services/SecurityGuardrails.js';
 import fs from 'fs';
 import path from 'path';
 
@@ -85,8 +86,15 @@ Kontekst obok: ${contextStr}`;
           createdAt: now,
         };
 
-        await this.saveProposalToFileAndDb(proposal);
-        proposals.push(proposal);
+        const guardrails = new SecurityGuardrails();
+        const safetyCheck = guardrails.validateProposalSafety(proposal);
+
+        if (safetyCheck.isSafe) {
+          await this.saveProposalToFileAndDb(proposal);
+          proposals.push(proposal);
+        } else {
+          console.warn(`🛑 Odrzucono propozycję AI ze względów bezpieczeństwa: ${safetyCheck.reason}`);
+        }
       }
     }
 
