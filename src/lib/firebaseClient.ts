@@ -1,5 +1,5 @@
 import { initializeApp, getApps } from 'firebase/app';
-import { getAuth, GoogleAuthProvider, signInWithPopup } from 'firebase/auth';
+import { getAuth, GoogleAuthProvider, signInWithPopup, deleteUser } from 'firebase/auth';
 
 // Real Firebase project config for skillvault-99a72
 const firebaseConfig = {
@@ -26,3 +26,14 @@ export async function signInWithGooglePopup() {
     uid: result.user.uid,
   };
 }
+
+/**
+ * Delete current Firebase Auth user (removes account from Firebase Auth)
+ */
+export async function deleteCurrentFirebaseUser(): Promise<void> {
+  const currentUser = auth.currentUser;
+  if (currentUser) {
+    await deleteUser(currentUser);
+  }
+}
+

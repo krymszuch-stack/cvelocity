@@ -6,9 +6,11 @@ import {
   registerUser as authRegister,
   loginWithOAuthAccount,
   logoutUser as authLogout,
+  deleteUserAccount,
   saveUserVault,
   loadUserVault,
 } from '../lib/auth';
+import { deleteCurrentFirebaseUser } from '../lib/firebaseClient';
 import { MasterVault } from '../types';
 
 interface AuthContextType {
@@ -19,6 +21,7 @@ interface AuthContextType {
   register: (email: string, pass: string, fullName: string) => MasterVault;
   loginOAuth: (email: string, fullName: string, provider: 'google' | 'microsoft') => MasterVault;
   logout: () => void;
+  deleteAccount: () => Promise<void>;
   saveUserVault: (vault: MasterVault, userSecret?: string) => void;
   saveCurrentVault: (vault: MasterVault, userSecret?: string) => void;
 }
@@ -86,6 +89,22 @@ export const AuthProvider: React.FC<{ children: React.ReactNode; onVaultLoaded?:
     setUserVault(null);
   }, []);
 
+  const deleteAccount = useCallback(async () => {
+    if (!user) return;
+    // 1. Delete all localStorage data for this user
+    deleteUserAccount(user.id);
+    // 2. Delete Firebase Auth account (if logged in via Google/Firebase)
+    try {
+      await deleteCurrentFirebaseUser();
+    } catch (err) {
+      // Firebase user might not exist if registered via email/password only
+      console.warn('Firebase user deletion skipped:', err);
+    }
+    // 3. Clear local React state
+    setUser(null);
+    setUserVault(null);
+  }, [user]);
+
   const saveUserVaultFunc = useCallback((vault: MasterVault, userSecret: string = 'default_key') => {
     if (user) {
       saveUserVault(user.id, vault, userSecret);
@@ -101,10 +120,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode; onVaultLoaded?:
       register,
       loginOAuth,
       logout,
+      deleteAccount,
       saveUserVault: saveUserVaultFunc,
       saveCurrentVault: saveUserVaultFunc,
     }),
-    [user, userVault, login, register, loginOAuth, logout, saveUserVaultFunc]
+    [user, userVault, login, register, loginOAuth, logout, deleteAccount, saveUserVaultFunc]
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

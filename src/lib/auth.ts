@@ -248,3 +248,22 @@ export function loadUserVault(userId: string, userSecret?: string): MasterVault 
 
   return null;
 }
+
+/**
+ * Permanently delete a user account and ALL associated data from localStorage
+ */
+export function deleteUserAccount(userId: string): void {
+  // Remove user's encrypted vault
+  localStorage.removeItem(`skillvault_vault_encrypted_${userId}`);
+  // Remove user's active vault cache
+  localStorage.removeItem(`skillvault_vault_active_${userId}`);
+  // Remove active session
+  localStorage.removeItem(CURRENT_SESSION_KEY);
+  // Remove user from registered users list
+  const users = getRegisteredUsers();
+  const filtered = users.filter((u) => u.id !== userId);
+  saveRegisteredUsers(filtered);
+  // Remove global vault cache
+  localStorage.removeItem('skillvault_master_vault_enc');
+}
+

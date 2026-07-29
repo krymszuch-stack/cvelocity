@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useAuth } from '../context/AuthContext';
-import { User, Lock, Mail, ShieldCheck, X, ArrowRight, UserPlus, LogIn, CheckCircle2 } from 'lucide-react';
+import { User, Lock, Mail, ShieldCheck, X, ArrowRight, UserPlus, LogIn, CheckCircle2, Trash2, AlertTriangle } from 'lucide-react';
 import { MasterVault } from '../types';
 import { signInWithGooglePopup } from '../lib/firebaseClient';
 
@@ -11,8 +11,10 @@ interface AuthModalProps {
 }
 
 export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onSuccessVaultLoaded }) => {
-  const { login, register, loginOAuth, isAuthenticated, user, logout } = useAuth();
+  const { login, register, loginOAuth, isAuthenticated, user, logout, deleteAccount } = useAuth();
   const [isRegisterTab, setIsRegisterTab] = useState(false);
+  const [confirmDelete, setConfirmDelete] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   // Form states
   const [email, setEmail] = useState('');
@@ -99,6 +101,64 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onSuccess
                 Zamknij
               </button>
             </div>
+
+            {/* Delete account section */}
+            {!confirmDelete ? (
+              <div className="pt-2">
+                <button
+                  type="button"
+                  id="delete-account-btn"
+                  onClick={() => setConfirmDelete(true)}
+                  className="w-full flex items-center justify-center gap-2 px-4 py-2.5 text-xs text-slate-400 hover:text-rose-600 hover:bg-rose-50 border border-transparent hover:border-rose-200 rounded-xl transition-all duration-200"
+                >
+                  <Trash2 className="w-3.5 h-3.5" />
+                  Usuń konto i wszystkie dane
+                </button>
+              </div>
+            ) : (
+              <div className="pt-2 rounded-xl border border-rose-200 bg-rose-50 p-4 space-y-3">
+                <div className="flex items-start gap-2.5">
+                  <AlertTriangle className="w-4 h-4 text-rose-600 mt-0.5 shrink-0" />
+                  <div>
+                    <p className="text-xs font-bold text-rose-800">Tej operacji nie można cofnąć!</p>
+                    <p className="text-xs text-rose-600 mt-0.5">Twoje konto, dane vault i historia zostaną trwale usunięte z Firebase i localStorage.</p>
+                  </div>
+                </div>
+                <div className="flex gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setConfirmDelete(false)}
+                    className="flex-1 px-3 py-2 text-xs font-bold text-slate-600 bg-white border border-slate-200 rounded-lg hover:bg-slate-50 transition-colors"
+                  >
+                    Anuluj
+                  </button>
+                  <button
+                    type="button"
+                    id="confirm-delete-account-btn"
+                    disabled={isDeleting}
+                    onClick={async () => {
+                      setIsDeleting(true);
+                      try {
+                        await deleteAccount();
+                        onClose();
+                      } catch (err: any) {
+                        setErrorMsg(err.message || 'Błąd usuwania konta.');
+                        setConfirmDelete(false);
+                      } finally {
+                        setIsDeleting(false);
+                      }
+                    }}
+                    className="flex-1 px-3 py-2 text-xs font-bold text-white bg-rose-600 hover:bg-rose-700 disabled:opacity-60 rounded-lg transition-colors flex items-center justify-center gap-1.5"
+                  >
+                    {isDeleting ? (
+                      <span>Usuwanie…</span>
+                    ) : (
+                      <><Trash2 className="w-3.5 h-3.5" /> Tak, usuń konto</>  
+                    )}
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
         ) : (
           /* Authentication Form (Login / Register) */
