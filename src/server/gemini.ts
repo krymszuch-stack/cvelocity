@@ -1,5 +1,7 @@
 import { GoogleGenAI, Type } from "@google/genai";
 import { MasterVault } from "../types";
+import { UNIVERSAL_CV_REFRAMING_SYSTEM_PROMPT } from "../data/universalCvReframingPrompt";
+import { ATS_CV_REFRAMING_SYSTEM_PROMPT } from "../data/atsCvReframingPrompt";
 
 const getGeminiClient = () => {
   const apiKey = process.env.GEMINI_API_KEY;
@@ -240,16 +242,20 @@ export async function optimizeDeltaPhrases(
   const ai = getGeminiClient();
 
   const prompt = `
-Jesteś inżynierem ulepszania fraz CV dla systemów ATS.
-Masz istniejący punktor doświadczenia kandydata oraz listę brakujących słów kluczowych z oferty pracy (${targetRole}).
+${UNIVERSAL_CV_REFRAMING_SYSTEM_PROMPT}
 
-Brakujące słowa kluczowe: ${missingKeywords.join(", ")}
+${ATS_CV_REFRAMING_SYSTEM_PROMPT}
+
+ZADANIE SILNIKA REFRAMINGU FREAZY (7 KROKÓW):
+Masz istniejący punktor doświadczenia kandydata oraz listę brakujących słów kluczowych / uprawnień z oferty pracy (${targetRole}).
+
+Brakujące słowa kluczowe / uprawnienia: ${missingKeywords.join(", ")}
 Obecny punktor: "${existingBullet}"
 
-INSTRUKCJA (DELTA PROMPTING):
-1. Przekształć ten JEDEN punktor tak, aby naturalnie i zwięźle uwzględniał te brakujące słowa kluczowe, O ILE pasują kontekstowo do wykonanej pracy.
-2. ZAKAZ HALUCYNACJI: Nie wymyślaj fikcyjnych projektów ani stanowisk. Zmień jedynie terminologię i nacisk.
-3. Zachowaj liczby i wskaźniki (metrics).
+INSTRUKCJA (KROK 5 - REFRAMING FAZ):
+1. Zgodnie z KROKIEM 0-5 obu systemów: Dla korporacji (Tryb A) dopasowuj precyzyjnie słowa kluczowe. Dla rzemiosła/usług (Tryb B) zachowaj prosty, bezpośredni język fachowca.
+2. BEZWZGLĘDNY ZAKAZ HALUCYNACJI (KROK 5c): Nie wymyślaj fikcyjnych doświadczeń ani uprawnień, których kandydat nie ma.
+3. BEZWZGLĘDNE ZACHOWANIE LICZB I DOWODÓW (KROK 5d): Wszystkie wyniki i wskaźniki podawaj w formie cyfrowej (np. "4,40/5").
 4. Zwróć obiekt JSON z polem "optimizedText" oraz "keywordsMatched".
 `;
 
@@ -301,6 +307,8 @@ BEZWZGLĘDNE SELEKCJONOWANIE I FILTROWANIE NOISE/BLUFU:
    - mandatoryRequirements: Wymogi bezwzględnie konieczne (krytyczne dealbreakery).
    - salaryRange: Widełki wynagrodzenia (np. "18 000 - 24 000 PLN B2B") lub "".
    - workModel: Zdalna, Hybrydowa lub Stacjonarna.
+   - recruitmentMode: Zgodnie z KROKIEM 0 systemu ("ATS_CORPORATE" dla korporacji/masowych, "CRAFT_LOCAL" dla rzemiosła/usług/warsztatów/lokalnych, "HYBRID" dla średnich sieci).
+   - recruitmentModeReason: Krótkie uzasadnienie wyboru trybu odbiorcy.
    - cleanBodyText: Czysta, uporządkowana merytorycznie treść całego ogłoszenia (Opis firmy, Obowiązki, Wymagania, Benefity), spformatowana czytelnie z nagłówkami SEKCJONOWANYMI, całkowicie pozbawiona śmieciowych linków i przycisków!
 
 Treść Ogłoszenia do Przeanalizowania:
@@ -332,6 +340,8 @@ ${rawJdText}
           mandatoryRequirements: { type: Type.ARRAY, items: { type: Type.STRING } },
           salaryRange: { type: Type.STRING },
           workModel: { type: Type.STRING },
+          recruitmentMode: { type: Type.STRING },
+          recruitmentModeReason: { type: Type.STRING },
           cleanBodyText: { type: Type.STRING },
         },
         required: [
@@ -350,6 +360,8 @@ ${rawJdText}
           "mandatoryRequirements",
           "salaryRange",
           "workModel",
+          "recruitmentMode",
+          "recruitmentModeReason",
           "cleanBodyText",
         ],
       },

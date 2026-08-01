@@ -58,8 +58,8 @@ export const INITIAL_SAMPLE_VAULT: MasterVault = {
     ],
   },
   personalInfo: {
-    fullName: 'Jan Kowalski',
-    email: 'jan.kowalski@example.com',
+    fullName: 'Adrian Koziński',
+    email: 'krymszuch00@outlook.com',
     phone: '+48 601 234 567',
     location: 'Warszawa, Polska',
     linkedin: 'linkedin.com/in/jankowalski-dev',

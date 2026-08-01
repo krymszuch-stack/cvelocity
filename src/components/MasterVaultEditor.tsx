@@ -280,7 +280,7 @@ export const MasterVaultEditor: React.FC<MasterVaultEditorProps> = ({ vault, onC
         issues.push('⚠️ Brak wpisanej historii pracy');
         score -= 20;
       } else {
-        const hasMetrics = draftVault.history.some((h) => h.highlights && h.highlights.some((hl) => /\d+/.test(hl.metricValue || '')));
+        const hasMetrics = draftVault.history.some((h) => h.highlights && h.highlights.some((hl) => /\d+/.test(hl.metric || hl.text || '')));
         if (!hasMetrics) {
           suggestions.push('💡 Warto dodać przynajmniej jeden mierzalny wskaźnik % lub liczbowy (np. Jakość 4.40/5.00 lub obsługa SLA)');
         }

@@ -59,13 +59,33 @@ function filterTextNoiseLines(rawText: string): string {
 function cleanJobHtmlToPureText(htmlOrText: string): string {
   if (!htmlOrText) return "";
 
-  const isHtml = /<[a-z][\s\S]*>/i.test(htmlOrText);
-  if (!isHtml) {
-    return filterTextNoiseLines(htmlOrText);
-  }
-
   try {
     const $ = cheerio.load(htmlOrText);
+
+    // 1. Check for JSON-LD Schema.org/JobPosting (Cleanest data source on Pracuj.pl, NoFluffJobs, LinkedIn)
+    let jsonLdText = "";
+    $("script[type='application/ld+json']").each((_, el) => {
+      try {
+        const rawJson = $(el).contents().text();
+        const parsed = JSON.parse(rawJson);
+        const jobPosting = Array.isArray(parsed)
+          ? parsed.find((item: any) => item['@type'] === 'JobPosting')
+          : (parsed && parsed['@type'] === 'JobPosting' ? parsed : null);
+
+        if (jobPosting && jobPosting.description) {
+          const cleanDesc = cheerio.load(jobPosting.description).text();
+          const title = jobPosting.title || '';
+          const org = jobPosting.hiringOrganization?.name || '';
+          jsonLdText = `Stanowisko: ${title}\nFirma: ${org}\n\nOpis Oferty i Wymagania:\n${cleanDesc}`;
+        }
+      } catch {
+        // Skip invalid JSON-LD
+      }
+    });
+
+    if (jsonLdText.length > 100) {
+      return filterTextNoiseLines(jsonLdText);
+    }
 
     // Strip script, style, svg, header, footer, nav, aside, cookie banners, sidebars, related cards, action buttons
     $(
@@ -260,6 +280,32 @@ async function startServer() {
           }
         } catch (t3Err) {
           console.warn("Tier 3 CorsProxy failed:", t3Err);
+        }
+      }
+
+      // Tier 4: Wayback Machine Digital Archive Fallback (Bypass 404 / Expired / Deleted Job Ads)
+      if (!fetchSuccess) {
+        console.log(`Tier 4: Attempting Wayback Machine Digital Archive for 404 / Expired URL: ${url}`);
+        try {
+          const archiveUrl = `https://web.archive.org/web/2/${url}`;
+          const archiveRes = await fetch(archiveUrl, {
+            headers: {
+              "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36",
+              "Referer": "https://web.archive.org/",
+            },
+          });
+          if (archiveRes.ok) {
+            const archiveText = await archiveRes.text();
+            if (archiveText.length > 200) {
+              fetchedRawText = archiveText;
+              fetchSuccess = true;
+              console.log(`Tier 4 Wayback Machine Archive fetch succeeded (${fetchedRawText.length} bytes)`);
+            }
+          } else {
+            console.warn(`Tier 4 Wayback Machine returned status: ${archiveRes.status}`);
+          }
+        } catch (t4Err) {
+          console.warn("Tier 4 Wayback Machine failed:", t4Err);
         }
       }
 

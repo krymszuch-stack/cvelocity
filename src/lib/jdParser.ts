@@ -17,6 +17,8 @@ export interface ParsedJobDescription {
   mandatoryRequirements?: string[];
   salaryRange?: string;
   workModel?: 'REMOTE' | 'HYBRID' | 'ON_SITE' | 'FLEXIBLE' | string;
+  recruitmentMode?: 'ATS_CORPORATE' | 'CRAFT_LOCAL' | 'HYBRID';
+  recruitmentModeReason?: string;
   sourceUrl?: string;
 }
 

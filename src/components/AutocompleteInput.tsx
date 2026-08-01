@@ -116,7 +116,7 @@ export const AutocompleteInput: React.FC<AutocompleteInputProps> = ({
 
         {/* Custom Enhanced Dropdown Menu - Single unified suggestion list */}
         {isOpen && filtered.length > 0 && (
-          <div className="absolute z-50 left-0 right-0 mt-1 max-h-52 overflow-y-auto bg-white border border-slate-200 rounded-lg shadow-xl py-1 divide-y divide-slate-100 animate-in fade-in zoom-in-95 duration-100">
+          <div className="absolute z-50 left-0 right-0 mt-1 max-h-52 overflow-y-auto bg-white border border-slate-200 rounded-lg shadow-xl py-1 divide-y divide-slate-100">
             {filtered.map((item, idx) => {
               const isHighlighted = idx === highlightedIndex;
               return (

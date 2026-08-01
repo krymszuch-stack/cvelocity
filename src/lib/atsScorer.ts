@@ -41,11 +41,11 @@ export function calculateAdvancedATSScore(vault: MasterVault, jobDescription: st
   // 1. Hard Skills & Keyword Extraction
   const rawTokens = lowerJd.match(/\b[a-zA-Z0-9#+.-]{3,}\b/g) || [];
   const stopWords = new Set(['oraz', 'pracy', 'dla', 'firme', 'firmy', 'jest', 'naszym', 'szukamy', 'osoby', 'opisie', 'stanowiska', 'wymagania', 'oferujemy', 'praca', 'współpraca', 'będziesz', 'zespół', 'prosimy', 'doświadczenia']);
-  const candidateKeywords = Array.from(new Set(rawTokens.filter((t) => !stopWords.has(t) && t.length > 2)));
+  const candidateKeywords = Array.from(new Set(rawTokens.filter((t: string) => !stopWords.has(t) && t.length > 2)));
 
   const vaultSkills = new Set([
     ...vault.skillsMatrix.hardSkills.map((s) => s.toLowerCase()),
-    ...vault.skillsMatrix.tools.map((t) => t.toLowerCase()),
+    ...(vault.skillsMatrix.toolsAndTech || []).map((t) => t.toLowerCase()),
   ]);
 
   const matchedKeywords = candidateKeywords.filter((kw) => vaultSkills.has(kw));

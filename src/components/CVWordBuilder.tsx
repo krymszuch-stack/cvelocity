@@ -16,6 +16,16 @@ import {
   Info,
   CheckCircle2,
   Lightbulb,
+  Bold,
+  Italic,
+  Underline,
+  AlignLeft,
+  AlignCenter,
+  AlignRight,
+  Undo,
+  Redo,
+  Wand2,
+  Ruler,
 } from 'lucide-react';
 import { eliminateSlogans } from '../lib/slotFillingEngine';
 
@@ -148,7 +158,9 @@ export const CVWordBuilder: React.FC<CVWordBuilderProps> = ({
       if (exp.id === expId) {
         const updatedHighlights = exp.highlights.map((h, idx) => {
           if (idx === hIndex) {
-            return typeof h === 'string' ? newText : { ...h, text: newText };
+            return typeof h === 'string'
+              ? { id: 'm_' + Date.now() + '_' + idx, text: newText, action: 'Wykonanie', target: 'Zadania', tool: '', metric: '', keywords: [] }
+              : { ...h, text: newText };
           }
           return h;
         });
@@ -218,16 +230,16 @@ export const CVWordBuilder: React.FC<CVWordBuilderProps> = ({
     });
 
     // 4. Dynamic JD keyword injection suggestions
-    const rawTokens = jobDescription.match(/\b[a-zA-Z0-9#+.-]{3,}\b/g) || [];
+    const rawTokens: string[] = jobDescription.match(/\b[a-zA-Z0-9#+.-]{3,}\b/g) || [];
     const stopWords = new Set(['oraz', 'pracy', 'dla', 'firme', 'firmy', 'jest', 'naszym', 'szukamy', 'osoby', 'opisie', 'stanowiska', 'wymagania', 'oferujemy', 'praca', 'współpraca', 'będziesz', 'zespół', 'prosimy']);
-    const candidateKeywords = Array.from(new Set(rawTokens.filter(t => !stopWords.has(t.toLowerCase()) && t.length > 2)));
+    const candidateKeywords = Array.from(new Set(rawTokens.filter((t: string) => !stopWords.has(t.toLowerCase()) && t.length > 2)));
 
     const existingSkills = new Set([
       ...vault.skillsMatrix.hardSkills.map(s => s.toLowerCase()),
-      ...vault.skillsMatrix.tools.map(t => t.toLowerCase()),
+      ...(vault.skillsMatrix.toolsAndTech || []).map(t => t.toLowerCase()),
     ]);
 
-    const missingInVault = candidateKeywords.filter(kw => !existingSkills.has(kw.toLowerCase()));
+    const missingInVault = candidateKeywords.filter((kw: string) => !existingSkills.has(kw.toLowerCase()));
 
     if (missingInVault.length > 0) {
       missingInVault.slice(0, 4).forEach((kw: string, idx: number) => {
@@ -249,7 +261,7 @@ export const CVWordBuilder: React.FC<CVWordBuilderProps> = ({
   // Initial generation on component load or JD change
   React.useEffect(() => {
     generateSubstitutions();
-  }, [vault, jobDescription, jobTitle]);
+  }, [jobDescription, jobTitle]);
 
   // Handle Accept Single Substitution
   const handleAcceptSingle = (id: string) => {
@@ -277,13 +289,15 @@ export const CVWordBuilder: React.FC<CVWordBuilderProps> = ({
     } else if (target.section === 'experience' && target.experienceId) {
       updatedVault.history = updatedVault.history.map((exp) => {
         if (exp.id === target.experienceId) {
-          const updatedHighlights = exp.highlights.map((h) => {
+          const updatedHighlights = exp.highlights.map((h, idx) => {
             const hText = typeof h === 'string' ? h : h.text;
             const replaced = hText.replace(
               new RegExp(target.originalPhrase, 'gi'),
               target.suggestedPhrase
             );
-            return typeof h === 'string' ? replaced : { ...h, text: replaced };
+            return typeof h === 'string'
+              ? { id: 'm_' + Date.now() + '_' + idx, text: replaced, action: 'Wykonanie', target: 'Zadania', tool: '', metric: '', keywords: [] }
+              : { ...h, text: replaced };
           });
           return { ...exp, highlights: updatedHighlights };
         }
@@ -331,13 +345,15 @@ export const CVWordBuilder: React.FC<CVWordBuilderProps> = ({
       } else if (target.section === 'experience' && target.experienceId) {
         updatedVault.history = updatedVault.history.map((exp) => {
           if (exp.id === target.experienceId) {
-            const updatedHighlights = exp.highlights.map((h) => {
+            const updatedHighlights = exp.highlights.map((h, idx) => {
               const hText = typeof h === 'string' ? h : h.text;
               const replaced = hText.replace(
                 new RegExp(target.originalPhrase, 'gi'),
                 target.suggestedPhrase
               );
-              return typeof h === 'string' ? replaced : { ...h, text: replaced };
+              return typeof h === 'string'
+                ? { id: 'm_' + Date.now() + '_' + idx, text: replaced, action: 'Wykonanie', target: 'Zadania', tool: '', metric: '', keywords: [] }
+                : { ...h, text: replaced };
             });
             return { ...exp, highlights: updatedHighlights };
           }
@@ -441,6 +457,10 @@ export const CVWordBuilder: React.FC<CVWordBuilderProps> = ({
   const pendingCount = substitutions.filter((s) => s.accepted === null).length;
   const acceptedCount = substitutions.filter((s) => s.accepted === true).length;
 
+  const handleExecFormat = (command: string, value: string | undefined = undefined) => {
+    document.execCommand(command, false, value);
+  };
+
   return (
     <div className="space-y-6">
       {/* Control Banner - Word Style Track Changes Mode */}
@@ -520,11 +540,91 @@ export const CVWordBuilder: React.FC<CVWordBuilderProps> = ({
       </div>
 
       {/* Main Document Canvas with Tracked Changes & Live Word Editing */}
-      <div className="bg-slate-200/80 p-4 sm:p-8 rounded-2xl border border-slate-300 flex flex-col items-center overflow-x-auto space-y-3">
-        {/* Banner guidance */}
-        <div className="text-xs text-slate-600 font-medium flex items-center space-x-1 bg-white/80 px-4 py-1.5 rounded-full border border-slate-300 shadow-2xs">
-          <Edit3 className="w-3.5 h-3.5 text-indigo-600" />
-          <span>Każdy element poniżej jest w pełni edytowalny. Kliknij i pisz jak w MS Word!</span>
+      <div className="bg-slate-200/80 p-4 sm:p-8 rounded-2xl border border-slate-300 flex flex-col items-center overflow-x-auto space-y-4">
+        {/* Sticky MS Word / Paint Style Ribbon Toolbar */}
+        <div className="sticky top-4 z-30 bg-slate-900/95 backdrop-blur-md text-white px-4 py-2.5 rounded-2xl border border-slate-700 shadow-2xl flex flex-wrap items-center justify-between gap-3 max-w-[210mm] w-full">
+          <div className="flex items-center space-x-1 border-r border-slate-700 pr-3">
+            <span className="text-[10px] uppercase tracking-wider font-extrabold text-indigo-400 mr-1 flex items-center gap-1">
+              <Type className="w-3.5 h-3.5" /> Word Toolbar:
+            </span>
+            <button
+              type="button"
+              onClick={() => handleExecFormat('bold')}
+              className="p-1.5 hover:bg-slate-800 rounded-lg text-slate-200 hover:text-white transition-colors active:scale-95"
+              title="Pogrubienie (Ctrl+B)"
+            >
+              <Bold className="w-4 h-4" />
+            </button>
+            <button
+              type="button"
+              onClick={() => handleExecFormat('italic')}
+              className="p-1.5 hover:bg-slate-800 rounded-lg text-slate-200 hover:text-white transition-colors active:scale-95"
+              title="Kursywa (Ctrl+I)"
+            >
+              <Italic className="w-4 h-4" />
+            </button>
+            <button
+              type="button"
+              onClick={() => handleExecFormat('underline')}
+              className="p-1.5 hover:bg-slate-800 rounded-lg text-slate-200 hover:text-white transition-colors active:scale-95"
+              title="Podkreślenie (Ctrl+U)"
+            >
+              <Underline className="w-4 h-4" />
+            </button>
+          </div>
+
+          <div className="flex items-center space-x-1 border-r border-slate-700 pr-3">
+            <button
+              type="button"
+              onClick={() => handleExecFormat('justifyLeft')}
+              className="p-1.5 hover:bg-slate-800 rounded-lg text-slate-200 hover:text-white transition-colors active:scale-95"
+              title="Wyrównaj do lewej"
+            >
+              <AlignLeft className="w-4 h-4" />
+            </button>
+            <button
+              type="button"
+              onClick={() => handleExecFormat('justifyCenter')}
+              className="p-1.5 hover:bg-slate-800 rounded-lg text-slate-200 hover:text-white transition-colors active:scale-95"
+              title="Wyśrodkuj"
+            >
+              <AlignCenter className="w-4 h-4" />
+            </button>
+            <button
+              type="button"
+              onClick={() => handleExecFormat('justifyRight')}
+              className="p-1.5 hover:bg-slate-800 rounded-lg text-slate-200 hover:text-white transition-colors active:scale-95"
+              title="Wyrównaj do prawej"
+            >
+              <AlignRight className="w-4 h-4" />
+            </button>
+          </div>
+
+          <div className="flex items-center space-x-1 border-r border-slate-700 pr-3">
+            <button
+              type="button"
+              onClick={() => handleExecFormat('undo')}
+              className="p-1.5 hover:bg-slate-800 rounded-lg text-slate-200 hover:text-white transition-colors active:scale-95"
+              title="Cofnij (Ctrl+Z)"
+            >
+              <Undo className="w-4 h-4" />
+            </button>
+            <button
+              type="button"
+              onClick={() => handleExecFormat('redo')}
+              className="p-1.5 hover:bg-slate-800 rounded-lg text-slate-200 hover:text-white transition-colors active:scale-95"
+              title="Ponów (Ctrl+Y)"
+            >
+              <Redo className="w-4 h-4" />
+            </button>
+          </div>
+
+          <div className="flex items-center space-x-2">
+            <span className="text-[11px] font-mono text-emerald-400 bg-emerald-950/60 border border-emerald-800/80 px-2.5 py-0.5 rounded-md flex items-center space-x-1">
+              <Ruler className="w-3 h-3 text-emerald-400 shrink-0" />
+              <span>Format A4 (210 × 297 mm)</span>
+            </span>
+          </div>
         </div>
 
         <div className="w-[210mm] min-h-[297mm] p-10 bg-white shadow-2xl rounded-sm font-sans text-xs text-slate-900 space-y-6">
@@ -623,6 +723,35 @@ export const CVWordBuilder: React.FC<CVWordBuilderProps> = ({
             <h2 className="text-xs font-bold uppercase tracking-wider pb-1 mb-2 border-b-2 border-indigo-600 text-indigo-800">
               Podsumowanie Zawodowe
             </h2>
+            {/* Tracked Changes Suggestions for Summary */}
+            {substitutions
+              .filter((s) => s.section === 'summary' && s.accepted === null)
+              .map((sub) => (
+                <div key={sub.id} className="mb-2 p-2 bg-amber-50 border border-amber-300 rounded-lg flex items-center justify-between gap-2 text-xs">
+                  <div className="text-[11px]">
+                    <span className="line-through text-red-600 font-semibold">{sub.originalPhrase}</span>
+                    <ArrowRight className="inline w-3 h-3 text-slate-400 mx-1" />
+                    <span className="bg-emerald-100 text-emerald-900 font-bold px-1.5 py-0.5 rounded border border-emerald-300">
+                      {sub.suggestedPhrase}
+                    </span>
+                    <span className="text-slate-500 ml-2">- {sub.reason}</span>
+                  </div>
+                  <div className="flex items-center space-x-1 shrink-0">
+                    <button
+                      onClick={() => handleAcceptSingle(sub.id)}
+                      className="px-2 py-1 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded text-[10px]"
+                    >
+                      Zaakceptuj
+                    </button>
+                    <button
+                      onClick={() => handleRejectSingle(sub.id)}
+                      className="px-2 py-1 bg-slate-200 hover:bg-slate-300 text-slate-700 font-bold rounded text-[10px]"
+                    >
+                      Odrzuć
+                    </button>
+                  </div>
+                </div>
+              ))}
             <div
               contentEditable
               suppressContentEditableWarning
@@ -630,7 +759,7 @@ export const CVWordBuilder: React.FC<CVWordBuilderProps> = ({
               className="text-slate-800 leading-relaxed text-justify hover:bg-slate-50 focus:bg-amber-50 focus:outline-2 focus:outline-amber-400 rounded p-1 transition-colors cursor-text"
               title="Kliknij, aby swobodnie edytować treść podsumowania zawodowego"
             >
-              {renderTrackedText(vault.personalInfo.summary || '', 'summary')}
+              {vault.personalInfo.summary || ''}
             </div>
           </div>
 
@@ -651,6 +780,37 @@ export const CVWordBuilder: React.FC<CVWordBuilderProps> = ({
                     </span>
                   </div>
                   <div className="text-slate-500 text-[11px] italic">{exp.location}</div>
+
+                  {/* Tracked Changes Suggestions for Experience */}
+                  {substitutions
+                    .filter((s) => s.section === 'experience' && s.experienceId === exp.id && s.accepted === null)
+                    .map((sub) => (
+                      <div key={sub.id} className="p-2 bg-amber-50 border border-amber-300 rounded-lg flex items-center justify-between gap-2 text-xs my-1">
+                        <div className="text-[11px]">
+                          <span className="line-through text-red-600 font-semibold">{sub.originalPhrase}</span>
+                          <ArrowRight className="inline w-3 h-3 text-slate-400 mx-1" />
+                          <span className="bg-emerald-100 text-emerald-900 font-bold px-1.5 py-0.5 rounded border border-emerald-300">
+                            {sub.suggestedPhrase}
+                          </span>
+                          <span className="text-slate-500 ml-2">- {sub.reason}</span>
+                        </div>
+                        <div className="flex items-center space-x-1 shrink-0">
+                          <button
+                            onClick={() => handleAcceptSingle(sub.id)}
+                            className="px-2 py-1 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded text-[10px]"
+                          >
+                            Zaakceptuj
+                          </button>
+                          <button
+                            onClick={() => handleRejectSingle(sub.id)}
+                            className="px-2 py-1 bg-slate-200 hover:bg-slate-300 text-slate-700 font-bold rounded text-[10px]"
+                          >
+                            Odrzuć
+                          </button>
+                        </div>
+                      </div>
+                    ))}
+
                   <ul className="list-disc list-inside text-slate-800 space-y-1 pl-1">
                     {exp.highlights.map((h, i) => {
                       const text = typeof h === 'string' ? h : h.text;
@@ -663,7 +823,7 @@ export const CVWordBuilder: React.FC<CVWordBuilderProps> = ({
                             className="hover:bg-slate-50 focus:bg-amber-50 focus:outline-1 focus:outline-amber-400 rounded px-1 cursor-text"
                             title="Kliknij, aby zedytować ten punkt doświadczenia"
                           >
-                            {renderTrackedText(text, 'experience', exp.id)}
+                            {text}
                           </span>
                         </li>
                       );

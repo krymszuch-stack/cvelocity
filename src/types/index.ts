@@ -70,6 +70,7 @@ export interface WorkExperience {
   startDate: string;
   endDate: string;
   isCurrent: boolean;
+  description?: string;
   highlights: HighlightMetric[];
 }
 
@@ -219,4 +220,36 @@ export interface ConsistencyCheckIssue {
   title: string;
   description: string;
   suggestion: string;
+}
+
+export interface LayeredFactItem {
+  id: string;
+  experienceId: string;
+  sourceFactId?: string;
+  baseText: string;
+  jobReframedText: string;
+  userOverrideText?: string;
+  isUserEdited: boolean;
+  sourceType: 'VAULT_BASE' | 'AI_REFRAMED' | 'USER_EDITED';
+  keywordsMatched: string[];
+}
+
+export interface PreFlightCheckItem {
+  id: string;
+  title: string;
+  status: 'PASSED' | 'WARNING' | 'FAILED';
+  message: string;
+  category: 'FACT_ACCURACY' | 'DEALBREAKER' | 'PAGE_BUDGET' | 'METRICS' | 'LANGUAGE';
+}
+
+export interface ApplicationHistoryRecord {
+  id: string;
+  companyName: string;
+  jobTitle: string;
+  dateCreated: string;
+  recruitmentMode: 'ATS_CORPORATE' | 'CRAFT_LOCAL' | 'HYBRID';
+  atsScore: number;
+  layeredFacts: LayeredFactItem[];
+  exportedFormats: Array<'PDF' | 'DOCX' | 'TXT' | 'LINKEDIN'>;
+  jobDescriptionExcerpt: string;
 }

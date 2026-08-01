@@ -89,7 +89,7 @@ export const RealtimeLivePreview: React.FC<RealtimeLivePreviewProps> = ({
   }, [vault, jobTitle, companyName, jobDescription]);
 
   return (
-    <div className="space-y-4 animate-fade-in">
+    <div className="space-y-4">
       {/* Live Sync Status Bar */}
       <div className="bg-white border border-slate-200 rounded-xl p-3 px-4 flex items-center justify-between shadow-2xs">
         <div className="flex items-center space-x-2.5">

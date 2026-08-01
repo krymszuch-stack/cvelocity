@@ -32,7 +32,7 @@ export function parseComprehensiveLinkedInProfile(url: string, currentFullName?:
         .join(' ');
 
   if (!formattedName || formattedName.length < 3) {
-    formattedName = 'Jan Kowalski';
+    formattedName = 'Adrian Koziński';
   }
 
   // Determine domain archetype based on handle keywords for personalized realism

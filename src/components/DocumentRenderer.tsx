@@ -1,6 +1,12 @@
 import React, { useState, useRef } from 'react';
 import { MasterVault, TailoredResume } from '../types';
 import {
+  generatePreFlightChecklist,
+  generatePlainTextCvExport,
+  generateLinkedInReadyExport,
+} from '../lib/layeredVaultEngine';
+import { LayeredFactItem, ApplicationHistoryRecord } from '../types';
+import {
   Printer,
   Download,
   ShieldCheck,
@@ -17,6 +23,14 @@ import {
   X,
   Camera,
   Layers,
+  FileText,
+  Eye,
+  CheckCircle2,
+  AlertTriangle,
+  History,
+  ExternalLink,
+  HelpCircle,
+  FileCheck,
 } from 'lucide-react';
 import html2canvas from 'html2canvas';
 import jsPDF from 'jspdf';
@@ -179,6 +193,11 @@ export const DocumentRenderer: React.FC<DocumentRendererProps> = ({ resume, vaul
   const [renderVariant, setRenderVariant] = useState<RenderVariant>('ATS_SAFE');
   const [copied, setCopied] = useState(false);
   const [isExporting, setIsExporting] = useState(false);
+  const [copiedLinkedIn, setCopiedLinkedIn] = useState(false);
+  const [isPreFlightOpen, setIsPreFlightOpen] = useState(false);
+  const [isCompareOpen, setIsCompareOpen] = useState(false);
+  const [isExportMenuOpen, setIsExportMenuOpen] = useState(false);
+  const [isHistoryOpen, setIsHistoryOpen] = useState(false);
   const docRef = useRef<HTMLDivElement>(null);
 
   // Photo state (custom override or from vault)
@@ -500,7 +519,25 @@ export const DocumentRenderer: React.FC<DocumentRendererProps> = ({ resume, vaul
           </div>
 
           {/* Action Buttons */}
-          <div className="flex items-center space-x-2 shrink-0">
+          <div className="flex items-center space-x-2 shrink-0 flex-wrap gap-y-2">
+            {/* Pre-Flight Validation Modal Button */}
+            <button
+              onClick={() => setIsPreFlightOpen(true)}
+              className="flex items-center space-x-1 px-3 py-1.5 bg-amber-50 hover:bg-amber-100 text-amber-900 border border-amber-300 rounded-lg text-xs font-bold transition-colors shadow-2xs"
+            >
+              <FileCheck className="w-3.5 h-3.5 text-amber-600" />
+              <span>Raport Walidacji</span>
+            </button>
+
+            {/* Compare Side-by-Side Button */}
+            <button
+              onClick={() => setIsCompareOpen(true)}
+              className="flex items-center space-x-1 px-3 py-1.5 bg-indigo-50 hover:bg-indigo-100 text-indigo-900 border border-indigo-300 rounded-lg text-xs font-bold transition-colors shadow-2xs"
+            >
+              <Eye className="w-3.5 h-3.5 text-indigo-600" />
+              <span>Porównaj z Oryginałem</span>
+            </button>
+
             <button
               onClick={handleCopyRawText}
               className="flex items-center space-x-1 px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-800 border border-slate-200 rounded-lg text-xs font-bold transition-colors"
@@ -517,18 +554,75 @@ export const DocumentRenderer: React.FC<DocumentRendererProps> = ({ resume, vaul
               <span>Drukuj</span>
             </button>
 
-            <button
-              onClick={handleDownloadPDF}
-              disabled={isExporting}
-              className="flex items-center space-x-1.5 px-4 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-xs font-bold shadow-2xs transition-colors disabled:opacity-50"
-            >
-              {isExporting ? (
-                <div className="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-              ) : (
+            {/* Export Multi-Format Dropdown */}
+            <div className="relative inline-block text-left">
+              <button
+                onClick={() => setIsExportMenuOpen(!isExportMenuOpen)}
+                className="flex items-center space-x-1.5 px-4 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-xs font-bold shadow-2xs transition-colors"
+              >
                 <Download className="w-3.5 h-3.5" />
+                <span>Opcje Eksportu ▾</span>
+              </button>
+
+              {isExportMenuOpen && (
+                <div className="absolute right-0 mt-2 w-56 bg-white border border-slate-200 rounded-xl shadow-xl z-50 p-2 space-y-1">
+                  <button
+                    onClick={() => { setIsExportMenuOpen(false); handleDownloadPDF(); }}
+                    className="w-full text-left px-3 py-2 text-xs font-bold hover:bg-slate-100 rounded-lg flex items-center justify-between text-slate-800"
+                  >
+                    <span>📄 Pobierz PDF (Wektorowy)</span>
+                    <span className="text-[10px] bg-emerald-100 text-emerald-800 px-1.5 py-0.5 rounded">PDF</span>
+                  </button>
+
+                  <button
+                    onClick={() => {
+                      setIsExportMenuOpen(false);
+                      const plain = generatePlainTextCvExport(vault, [], resume.targetJobTitle, resume.companyName);
+                      const blob = new Blob([plain], { type: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' });
+                      const url = URL.createObjectURL(blob);
+                      const a = document.createElement('a');
+                      a.href = url;
+                      a.download = `CV_${vault.personalInfo.fullName.replace(/\s+/g, '_')}_ATS.docx`;
+                      a.click();
+                    }}
+                    className="w-full text-left px-3 py-2 text-xs font-bold hover:bg-slate-100 rounded-lg flex items-center justify-between text-slate-800"
+                  >
+                    <span>📘 Pobierz DOCX (ATS File)</span>
+                    <span className="text-[10px] bg-indigo-100 text-indigo-800 px-1.5 py-0.5 rounded">DOCX</span>
+                  </button>
+
+                  <button
+                    onClick={() => {
+                      setIsExportMenuOpen(false);
+                      const plain = generatePlainTextCvExport(vault, [], resume.targetJobTitle, resume.companyName);
+                      const blob = new Blob([plain], { type: 'text/plain;charset=utf-8' });
+                      const url = URL.createObjectURL(blob);
+                      const a = document.createElement('a');
+                      a.href = url;
+                      a.download = `CV_${vault.personalInfo.fullName.replace(/\s+/g, '_')}_Formularz.txt`;
+                      a.click();
+                    }}
+                    className="w-full text-left px-3 py-2 text-xs font-bold hover:bg-slate-100 rounded-lg flex items-center justify-between text-slate-800"
+                  >
+                    <span>📝 Czysty Tekst (TXT Korpo)</span>
+                    <span className="text-[10px] bg-blue-100 text-blue-800 px-1.5 py-0.5 rounded">TXT</span>
+                  </button>
+
+                  <button
+                    onClick={() => {
+                      setIsExportMenuOpen(false);
+                      const lkd = generateLinkedInReadyExport(vault, resume.targetJobTitle);
+                      navigator.clipboard.writeText(`${lkd.headline}\n\n${lkd.aboutSection}`);
+                      alert('Format LinkedIn skopiowany do schowka! Wklej go w sekcji O sobie na profilu.');
+                    }}
+                    className="w-full text-left px-3 py-2 text-xs font-bold hover:bg-slate-100 rounded-lg flex items-center justify-between text-slate-800"
+                  >
+                    <span>🔗 Format LinkedIn-Ready</span>
+                    <span className="text-[10px] bg-sky-100 text-sky-800 px-1.5 py-0.5 rounded">Schowek</span>
+                  </button>
+                </div>
               )}
-              <span>Pobierz PDF</span>
-            </button>
+            </div>
           </div>
         </div>
 
@@ -1138,6 +1232,147 @@ export const DocumentRenderer: React.FC<DocumentRendererProps> = ({ resume, vaul
                   Zapisz URL
                 </button>
               </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* PRE-FLIGHT VALIDATION CHECKLIST MODAL (FILAR 6) */}
+      {isPreFlightOpen && (
+        <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4 animate-fade-in">
+          <div className="bg-white border border-slate-200 rounded-2xl max-w-xl w-full p-6 text-slate-900 shadow-2xl relative space-y-4">
+            <button
+              onClick={() => setIsPreFlightOpen(false)}
+              className="absolute top-4 right-4 text-slate-400 hover:text-slate-700 transition-colors"
+            >
+              <X className="w-5 h-5" />
+            </button>
+
+            <div className="flex items-center space-x-3">
+              <div className="p-2.5 bg-amber-50 border border-amber-200 rounded-xl text-amber-600">
+                <FileCheck className="w-5 h-5" />
+              </div>
+              <div>
+                <h3 className="text-base font-bold text-slate-900">Raport Walidacji przed Eksportem</h3>
+                <p className="text-xs text-slate-500">Audyt jakościowy wygenerowanego dokumentu CV</p>
+              </div>
+            </div>
+
+            <div className="space-y-3 max-h-[60vh] overflow-y-auto pr-1">
+              {generatePreFlightChecklist(
+                vault,
+                resume.selectedHighlights.map((h) => ({
+                  id: h.experienceId,
+                  experienceId: h.experienceId,
+                  baseText: h.originalText,
+                  jobReframedText: h.optimizedText,
+                  isUserEdited: false,
+                  sourceType: 'AI_REFRAMED',
+                  keywordsMatched: h.keywordsMatched,
+                })),
+                [],
+                resume.targetJobTitle
+              ).map((chk) => (
+                <div
+                  key={chk.id}
+                  className={`p-3.5 rounded-xl border flex items-start space-x-3 text-xs ${
+                    chk.status === 'PASSED'
+                      ? 'bg-emerald-50/60 border-emerald-200 text-emerald-950'
+                      : chk.status === 'WARNING'
+                      ? 'bg-amber-50/60 border-amber-200 text-amber-950'
+                      : 'bg-rose-50/60 border-rose-200 text-rose-950'
+                  }`}
+                >
+                  {chk.status === 'PASSED' ? (
+                    <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0 mt-0.5" />
+                  ) : (
+                    <AlertTriangle className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
+                  )}
+                  <div>
+                    <div className="font-bold">{chk.title}</div>
+                    <div className="text-[11px] opacity-90 mt-0.5">{chk.message}</div>
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            <div className="pt-2 flex justify-end">
+              <button
+                onClick={() => setIsPreFlightOpen(false)}
+                className="px-4 py-2 bg-slate-900 text-white rounded-xl font-bold text-xs shadow-2xs hover:bg-slate-800 transition-colors"
+              >
+                Zamknij Raport
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* SIDE-BY-SIDE COMPARE MODAL (FILAR 5) */}
+      {isCompareOpen && (
+        <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4 animate-fade-in">
+          <div className="bg-white border border-slate-200 rounded-2xl max-w-4xl w-full p-6 text-slate-900 shadow-2xl relative space-y-4 max-h-[90vh] flex flex-col">
+            <button
+              onClick={() => setIsCompareOpen(false)}
+              className="absolute top-4 right-4 text-slate-400 hover:text-slate-700 transition-colors"
+            >
+              <X className="w-5 h-5" />
+            </button>
+
+            <div className="flex items-center space-x-3">
+              <div className="p-2.5 bg-indigo-50 border border-indigo-200 rounded-xl text-indigo-600">
+                <Eye className="w-5 h-5" />
+              </div>
+              <div>
+                <h3 className="text-base font-bold text-slate-900">Tryb: Porównaj z Oryginałem</h3>
+                <p className="text-xs text-slate-500">
+                  Weryfikacja zmian: Prawda Źródłowa MasterVault vs Reframing dla oferty ({resume.targetJobTitle})
+                </p>
+              </div>
+            </div>
+
+            <div className="flex-1 overflow-y-auto space-y-4 pr-1">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs">
+                <div className="font-bold text-slate-500 uppercase tracking-wider pb-1 border-b border-slate-200">
+                  Bazowy Fakt (MasterVault)
+                </div>
+                <div className="font-bold text-indigo-600 uppercase tracking-wider pb-1 border-b border-slate-200">
+                  Reframing pod Ofertę ({resume.companyName || 'Target Job'})
+                </div>
+              </div>
+
+              {resume.selectedHighlights.map((h, idx) => (
+                <div key={idx} className="grid grid-cols-1 md:grid-cols-2 gap-4 p-3 bg-slate-50 border border-slate-200 rounded-xl text-xs">
+                  <div className="space-y-1">
+                    <span className="inline-block px-2 py-0.5 bg-slate-200 text-slate-700 rounded text-[10px] font-bold">
+                      Źródło {h.company}
+                    </span>
+                    <p className="text-slate-700 leading-relaxed font-mono text-[11px]">{h.originalText}</p>
+                  </div>
+                  <div className="space-y-1 bg-white p-2.5 rounded-lg border border-indigo-100 shadow-2xs">
+                    <div className="flex items-center justify-between">
+                      <span className="inline-block px-2 py-0.5 bg-indigo-100 text-indigo-800 rounded text-[10px] font-bold">
+                        Reframing AI / Moduł Delta
+                      </span>
+                      {h.keywordsMatched && h.keywordsMatched.length > 0 && (
+                        <span className="text-[10px] text-emerald-600 font-bold">
+                          +{h.keywordsMatched.length} Słów Kluczowych
+                        </span>
+                      )}
+                    </div>
+                    <p className="text-slate-900 leading-relaxed font-medium">{h.optimizedText}</p>
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            <div className="pt-2 flex justify-end">
+              <button
+                onClick={() => setIsCompareOpen(false)}
+                className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl font-bold text-xs shadow-2xs transition-colors"
+              >
+                Zamknij Porównanie
+              </button>
             </div>
           </div>
         </div>

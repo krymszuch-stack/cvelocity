@@ -169,9 +169,17 @@ export function parseTextToMasterVault(text: string, format: string = 'TXT'): Pa
       location: 'Polska',
       startDate: '2021-01',
       endDate: 'Obecnie',
-      current: true,
+      isCurrent: true,
       description: expLines.slice(2, 6).join(' '),
-      highlights: [expLines[2] || 'Realizacja powierzonych zadań zawodowych'],
+      highlights: [{
+        id: `hl_1`,
+        text: expLines[2] || 'Realizacja powierzonych zadań zawodowych',
+        action: 'Realizacja',
+        target: 'zadań',
+        tool: 'Systemy IT',
+        metric: '100%',
+        keywords: []
+      }],
     });
   } else {
     history.push({
@@ -181,9 +189,17 @@ export function parseTextToMasterVault(text: string, format: string = 'TXT'): Pa
       location: 'Polska',
       startDate: '2022-01',
       endDate: 'Obecnie',
-      current: true,
+      isCurrent: true,
       description: 'Prowadzenie bieżących działań operacyjnych i technicznych.',
-      highlights: ['Optymalizacja procesów i obsługa zgłoszeń.'],
+      highlights: [{
+        id: `hl_2`,
+        text: 'Optymalizacja procesów i obsługa zgłoszeń.',
+        action: 'Optymalizacja',
+        target: 'procesów',
+        tool: 'Helpdesk',
+        metric: '100%',
+        keywords: []
+      }],
     });
   }
 
