@@ -3,6 +3,35 @@
  * Provides Polish cities, job titles, hard skills, soft skills, and tools.
  */
 
+/**
+ * Picks a representative sample across a list without favoring whatever happens to be
+ * listed first. The suggestion arrays below are authored in contiguous industry blocks
+ * (IT, then finance, then marketing, etc.) — a plain `.slice(0, N)` would always surface
+ * the same first block (IT) as "quick suggestions" for every user, regardless of profession.
+ * This splits the list into buckets and round-robins across them instead, so a blank
+ * profile sees a mix of sectors rather than an IT-only default.
+ */
+export function diversifiedSample<T>(items: T[], count: number, buckets: number = 8): T[] {
+  if (items.length <= count) return [...items];
+  const bucketCount = Math.max(1, Math.min(buckets, items.length));
+  const bucketSize = Math.ceil(items.length / bucketCount);
+  const chunks: T[][] = [];
+  for (let i = 0; i < bucketCount; i++) {
+    chunks.push(items.slice(i * bucketSize, (i + 1) * bucketSize));
+  }
+
+  const result: T[] = [];
+  for (let round = 0; result.length < count; round++) {
+    const before = result.length;
+    for (const chunk of chunks) {
+      if (result.length >= count) break;
+      if (chunk[round] !== undefined) result.push(chunk[round]);
+    }
+    if (result.length === before) break; // no chunk had anything left this round
+  }
+  return result;
+}
+
 export const SUGGESTED_LOCATIONS = [
   'Warszawa',
   'Kraków',

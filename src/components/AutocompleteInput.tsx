@@ -1,5 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { Search, Check, Sparkles } from 'lucide-react';
+import { diversifiedSample } from '../lib/autocompleteSuggestions';
 
 interface AutocompleteInputProps {
   value: string;
@@ -37,7 +38,7 @@ export const AutocompleteInput: React.FC<AutocompleteInputProps> = ({
   const query = value.trim().toLowerCase();
   const filtered = query
     ? suggestions.filter((item) => item.toLowerCase().includes(query) && item.toLowerCase() !== query)
-    : suggestions.slice(0, 10);
+    : diversifiedSample(suggestions, 10);
 
   // Close dropdown on outside click
   useEffect(() => {
@@ -81,10 +82,13 @@ export const AutocompleteInput: React.FC<AutocompleteInputProps> = ({
     }
   };
 
-  // Quick pills to show under input (items not currently equal to exact value)
-  const quickPills = suggestions
-    .filter((s) => s.toLowerCase() !== value.toLowerCase())
-    .slice(0, maxPills);
+  // Quick pills to show under input (items not currently equal to exact value),
+  // sampled across categories so the same handful of IT-flavored items doesn't
+  // dominate every profile regardless of profession.
+  const quickPills = diversifiedSample(
+    suggestions.filter((s) => s.toLowerCase() !== value.toLowerCase()),
+    maxPills
+  );
 
   return (
     <div ref={wrapperRef} className={`relative space-y-1.5 ${className}`}>

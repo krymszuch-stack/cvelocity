@@ -39,6 +39,11 @@ import {
   Code2,
   Languages,
   CheckCircle2,
+  Handshake,
+  Calculator,
+  HardHat,
+  Truck,
+  Stethoscope,
 } from 'lucide-react';
 import { AdvisorButton } from './ui/AdvisorButton';
 import * as pdfjsLib from 'pdfjs-dist';
@@ -2169,12 +2174,48 @@ export const MasterVaultEditor: React.FC<MasterVaultEditorProps> = ({ vault, onC
               </div>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-1">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 pt-1">
               {[
                 {
                   category: 'Obsługa Klienta & Contact Center',
                   icon: Phone,
                   items: ['Obsługa Klienta', 'Deeskalacja Problemów', 'Reżim procedur SLA', 'Systemy Bankowe', 'Ticketing (Jira/Zendesk)', 'Koordynacja Zgłoszeń'],
+                  targetField: 'hardSkills' as const,
+                },
+                {
+                  category: 'Sprzedaż & Handel',
+                  icon: Handshake,
+                  items: ['Negocjacje Handlowe', 'B2B Sales & Lead Generation', 'Key Account Management', 'Zarządzanie Lejkiem Sprzedażowym', 'Budowanie Relacji z Klientem'],
+                  targetField: 'hardSkills' as const,
+                },
+                {
+                  category: 'Finanse & Księgowość',
+                  icon: Calculator,
+                  items: ['Księgowość Pełna (UoR / MSSF)', 'Rozliczenia Podatkowe (PIT / CIT / VAT)', 'Analiza Wskaźnikowa i RFi', 'Modelowanie Finansowe', 'Excel Zaawansowany (VBA / Power Query)'],
+                  targetField: 'hardSkills' as const,
+                },
+                {
+                  category: 'Budownictwo & Rzemiosło',
+                  icon: HardHat,
+                  items: ['Czytanie Dokumentacji Technicznej', 'Prace Wykończeniowe', 'Uprawnienia SEP', 'Obsługa Maszyn Budowlanych', 'BHP na Budowie'],
+                  targetField: 'hardSkills' as const,
+                },
+                {
+                  category: 'Produkcja, Motoryzacja & CNC',
+                  icon: Wrench,
+                  items: ['Obsługa i Programowanie CNC', 'Spawanie TIG/MAG', 'Diagnostyka Techniczna', 'Utrzymanie Ruchu', 'Lean Manufacturing / ISO 9001'],
+                  targetField: 'hardSkills' as const,
+                },
+                {
+                  category: 'Logistyka & Transport',
+                  icon: Truck,
+                  items: ['Zarządzanie Łańcuchem Dostaw (SCM)', 'Obsługa Wózka Widłowego', 'Spedycja i Dokumentacja Transportowa', 'Zarządzanie Magazynem (WMS)', 'Planowanie Tras'],
+                  targetField: 'hardSkills' as const,
+                },
+                {
+                  category: 'Medycyna & Opieka',
+                  icon: Stethoscope,
+                  items: ['Opieka nad Pacjentem', 'Dokumentacja Medyczna', 'Procedury Sanitarno-Epidemiologiczne', 'Pierwsza Pomoc', 'Farmakologia Podstawowa'],
                   targetField: 'hardSkills' as const,
                 },
                 {
