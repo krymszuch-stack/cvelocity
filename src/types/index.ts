@@ -203,6 +203,8 @@ export interface TailoredResume {
     softSkills: string[];
   };
   atsScore: number;
+  /** Work-experience ids ordered by relevance to this job offer (see lib/relevanceRanking.ts). Falls back to vault order when absent. */
+  experienceOrder?: string[];
 }
 
 export interface CoverLetter {

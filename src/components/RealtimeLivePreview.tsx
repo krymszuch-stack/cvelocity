@@ -1,6 +1,7 @@
 import React, { useMemo } from 'react';
 import { MasterVault, TailoredResume, CoverLetter, AtsCheckResult } from '../types';
 import { fillSlotSentence, extractSlotsFromHighlight, eliminateSlogans } from '../lib/slotFillingEngine';
+import { rankExperienceByRelevance, rankHighlightsByRelevance } from '../lib/relevanceRanking';
 import { simulateAtsCheck } from '../lib/atsSimulator';
 import { generateAntiTemplateCoverLetter } from '../lib/coverLetterEngine';
 import { DocumentRenderer } from './DocumentRenderer';
@@ -42,8 +43,12 @@ export const RealtimeLivePreview: React.FC<RealtimeLivePreviewProps> = ({
   const { tailoredResume, atsResult, coverLetter } = useMemo(() => {
     const jdKeywords = (jobDescription.toLowerCase().match(/\b[a-zA-Z0-9#+.-]{3,}\b/g) || []);
 
-    const tailoredHighlights = vault.history.flatMap((exp) =>
-      exp.highlights.map((h) => {
+    // 0-token relevance ranking, same as the full hybrid pipeline in JobMatcher.tsx
+    const rankedExperience = rankExperienceByRelevance(vault.history, jdKeywords, jobTitle || '');
+    const experienceOrder = rankedExperience.map((r) => r.experience.id);
+
+    const tailoredHighlights = rankedExperience.flatMap(({ experience: exp }) =>
+      rankHighlightsByRelevance(exp.highlights, jdKeywords).map(({ highlight: h }) => {
         const slot = extractSlotsFromHighlight(h);
         const filled = fillSlotSentence(slot, jdKeywords, 'ACTION_FIRST');
         return {
@@ -69,6 +74,7 @@ export const RealtimeLivePreview: React.FC<RealtimeLivePreviewProps> = ({
         softSkills: vault.skillsMatrix.softSkills,
       },
       atsScore: 0,
+      experienceOrder,
     };
 
     const ats = simulateAtsCheck(resume, vault, jobDescription);

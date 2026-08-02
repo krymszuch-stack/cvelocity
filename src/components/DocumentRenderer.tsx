@@ -185,6 +185,19 @@ const PAPER_BACKGROUNDS = [
   { id: 'warm', name: 'Satynowy Piasek', bgClass: 'bg-[#faf8f5]', hex: '#faf8f5' },
 ];
 
+/**
+ * Renders history in relevance order for this job offer (resume.experienceOrder), computed
+ * 0-token by lib/relevanceRanking.ts — never mutates the underlying vault. Falls back to the
+ * vault's own order when no ranking is available (e.g. before the pipeline has run once).
+ */
+const getOrderedHistory = (vault: MasterVault, resume: TailoredResume) => {
+  if (!resume.experienceOrder || resume.experienceOrder.length === 0) return vault.history;
+  const byId = new Map(vault.history.map((exp) => [exp.id, exp]));
+  const ordered = resume.experienceOrder.map((id) => byId.get(id)).filter((exp): exp is (typeof vault.history)[number] => !!exp);
+  const remaining = vault.history.filter((exp) => !resume.experienceOrder!.includes(exp.id));
+  return [...ordered, ...remaining];
+};
+
 const getDeduplicatedExpHighlights = (exp: any, resume: TailoredResume): string[] => {
   const matched = (resume.selectedHighlights || []).filter(
     (h) => h.experienceId === exp.id || (h.company && exp.company && h.company.toLowerCase().trim() === exp.company.toLowerCase().trim())
@@ -612,7 +625,7 @@ export const DocumentRenderer: React.FC<DocumentRendererProps> = ({ resume, vaul
                   <button
                     onClick={() => {
                       setIsExportMenuOpen(false);
-                      downloadNativeDocxCv(vault, [], resume.targetJobTitle, resume.companyName);
+                      downloadNativeDocxCv({ ...vault, history: getOrderedHistory(vault, resume) }, [], resume.targetJobTitle, resume.companyName);
                     }}
                     className="w-full text-left px-3 py-2 text-xs font-bold hover:bg-slate-100 rounded-lg flex items-center justify-between text-slate-800"
                   >
@@ -623,7 +636,7 @@ export const DocumentRenderer: React.FC<DocumentRendererProps> = ({ resume, vaul
                   <button
                     onClick={() => {
                       setIsExportMenuOpen(false);
-                      const plain = generatePlainTextCvExport(vault, [], resume.targetJobTitle, resume.companyName);
+                      const plain = generatePlainTextCvExport({ ...vault, history: getOrderedHistory(vault, resume) }, [], resume.targetJobTitle, resume.companyName);
                       const blob = new Blob([plain], { type: 'text/plain;charset=utf-8' });
                       const url = URL.createObjectURL(blob);
                       const a = document.createElement('a');
@@ -643,7 +656,7 @@ export const DocumentRenderer: React.FC<DocumentRendererProps> = ({ resume, vaul
                   <button
                     onClick={() => {
                       setIsExportMenuOpen(false);
-                      const lkd = generateLinkedInReadyExport(vault, resume.targetJobTitle);
+                      const lkd = generateLinkedInReadyExport({ ...vault, history: getOrderedHistory(vault, resume) }, resume.targetJobTitle);
                       navigator.clipboard.writeText(`${lkd.headline}\n\n${lkd.aboutSection}`);
                       alert('Format LinkedIn skopiowany do schowka! Wklej go w sekcji O sobie na profilu.');
                     }}
@@ -779,7 +792,7 @@ export const DocumentRenderer: React.FC<DocumentRendererProps> = ({ resume, vaul
               <div>
                 {renderSectionHeader('Doświadczenie Zawodowe')}
                 <div className="space-y-4">
-                  {vault.history.map((exp) => (
+                  {getOrderedHistory(vault, resume).map((exp) => (
                     <div key={exp.id} className="space-y-1">
                       <div className="flex justify-between items-baseline font-bold text-slate-900">
                         <span>
@@ -906,7 +919,7 @@ export const DocumentRenderer: React.FC<DocumentRendererProps> = ({ resume, vaul
               <div>
                 {renderSectionHeader('Doświadczenie Zawodowe')}
                 <div className="space-y-4">
-                  {vault.history.map((exp) => (
+                  {getOrderedHistory(vault, resume).map((exp) => (
                     <div key={exp.id} className="space-y-1.5">
                       <div className="flex justify-between items-baseline font-bold">
                         <span className="text-slate-900 text-sm">{exp.role}</span>
@@ -1067,7 +1080,7 @@ export const DocumentRenderer: React.FC<DocumentRendererProps> = ({ resume, vaul
                 <div>
                   {renderSectionHeader('Doświadczenie Zawodowe')}
                   <div className="space-y-4">
-                    {vault.history.map((exp) => (
+                    {getOrderedHistory(vault, resume).map((exp) => (
                       <div key={exp.id} className="space-y-1">
                         <div className="flex justify-between font-bold text-slate-900">
                           <span>{exp.role}</span>
@@ -1151,7 +1164,7 @@ export const DocumentRenderer: React.FC<DocumentRendererProps> = ({ resume, vaul
                   <div>
                     {renderSectionHeader('Historia Kariery i Osiągnięcia')}
                     <div className="space-y-4">
-                      {vault.history.map((exp) => (
+                      {getOrderedHistory(vault, resume).map((exp) => (
                         <div key={exp.id} className="space-y-1 border-l-2 pl-3" style={{ borderColor: activePalette.primaryColor }}>
                           <div className="flex justify-between font-bold text-slate-900">
                             <span>{exp.role}</span>

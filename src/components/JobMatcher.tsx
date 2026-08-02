@@ -7,6 +7,7 @@ import { semanticCacheInstance } from '../lib/semanticCache';
 import { simulateAtsCheck } from '../lib/atsSimulator';
 import { generateAntiTemplateCoverLetter } from '../lib/coverLetterEngine';
 import { analyzeJdMatchWithVault, parseJobDescriptionLocal, JDVaultMatchAnalysis } from '../lib/jdParser';
+import { rankExperienceByRelevance, rankHighlightsByRelevance } from '../lib/relevanceRanking';
 import { AtsSimulatorView } from './AtsSimulatorView';
 import { CoverLetterView } from './CoverLetterView';
 import { DocumentRenderer } from './DocumentRenderer';
@@ -155,11 +156,18 @@ Wymagania kluczowe:
 
     const tailoredHighlights: TailoredHighlight[] = [];
 
-    // Process Work History
-    for (const exp of vault.history) {
+    // Step 0: Rank experience blocks & their bullets by JD keyword relevance (0 tokens, pure math).
+    // This decides *which* history to foreground for this offer without ever calling AI.
+    const rankedExperience = rankExperienceByRelevance(vault.history, jdKeywords, jobTitle);
+    const experienceOrder = rankedExperience.map((r) => r.experience.id);
+    addLog(`Ustalono kolejność trafności doświadczenia (0 tokenów): ${rankedExperience.map((r) => r.experience.company).join(' > ')}`);
+
+    // Process Work History, most relevant first
+    for (const { experience: exp } of rankedExperience) {
       addLog(`Przetwarzanie historii stanowiska: ${exp.role} w ${exp.company}...`);
 
-      for (const h of exp.highlights) {
+      const rankedHighlights = rankHighlightsByRelevance(exp.highlights, jdKeywords);
+      for (const { highlight: h } of rankedHighlights) {
         // Step 1: Check Local Semantic Cache (>0.88 similarity)
         const cacheHit = semanticCacheInstance.findMatch(h.text, 0.88);
 
@@ -264,6 +272,7 @@ Wymagania kluczowe:
         softSkills: vault.skillsMatrix.softSkills,
       },
       atsScore: 0,
+      experienceOrder,
     };
 
     const finalAtsResult = simulateAtsCheck(finalResume, vault, jobDescription);
