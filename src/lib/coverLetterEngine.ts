@@ -1,4 +1,5 @@
 import { CoverLetter, MasterVault } from '../types';
+import { rankExperienceByRelevance, rankHighlightsByRelevance } from './relevanceRanking';
 
 /**
  * Generates a concise, 3-section Anti-Template business cover letter with ZERO AI TOKENS,
@@ -15,12 +16,21 @@ export function generateAntiTemplateCoverLetter(
   const name = vault.personalInfo.fullName || 'Kandydat';
   const currentTitle = vault.personalInfo.title || role;
 
-  // Extract key skills and technologies
+  // 0-token relevance signal from the job offer text, reused to prioritize both skills and proof points
+  const jdKeywords = (jobDescription || '').toLowerCase().match(/\b[a-zA-Z0-9#+.-]{3,}\b/g) || [];
+  const jdKeywordSet = new Set(jdKeywords);
+
+  // Extract key skills and technologies, JD-matching ones first
   const allSkills = [
     ...(vault.skillsMatrix?.hardSkills || []),
     ...(vault.skillsMatrix?.toolsAndTech || []),
   ].filter(Boolean);
-  const topSkillsStr = allSkills.slice(0, 5).join(', ');
+  const rankedSkills = [...allSkills].sort((a, b) => {
+    const aMatch = jdKeywordSet.has(a.toLowerCase()) ? 1 : 0;
+    const bMatch = jdKeywordSet.has(b.toLowerCase()) ? 1 : 0;
+    return bMatch - aMatch;
+  });
+  const topSkillsStr = rankedSkills.slice(0, 5).join(', ');
 
   // 1. Hook (Haczyk) built dynamically from candidate profile
   let hook = `Zwracam się z propozycją współpracy na stanowisku ${role} w firmie ${company}. `;
@@ -34,10 +44,12 @@ export function generateAntiTemplateCoverLetter(
   // 2. Proof (Dowód) - Pick real highlights from Master Vault history & projects
   const proofPoints: string[] = [];
 
-  // Extract from experience history
+  // Extract from experience history, most JD-relevant blocks and bullets first (0 tokens)
   if (vault.history && vault.history.length > 0) {
-    for (const exp of vault.history) {
-      for (const h of exp.highlights) {
+    const rankedExperience = rankExperienceByRelevance(vault.history, jdKeywords, targetRole);
+    for (const { experience: exp } of rankedExperience) {
+      const rankedHighlights = rankHighlightsByRelevance(exp.highlights, jdKeywords);
+      for (const { highlight: h } of rankedHighlights) {
         const text = typeof h === 'string' ? h : h.text;
         if (text && text.length > 15) {
           const formatted = text.startsWith('•') ? text : `• W roli ${exp.role} w ${exp.company}: ${text}`;
