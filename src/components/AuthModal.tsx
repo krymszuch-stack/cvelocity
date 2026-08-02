@@ -1,7 +1,9 @@
 import React, { useState } from 'react';
 import { useAuth } from '../context/AuthContext';
-import { User, Lock, Mail, ShieldCheck, X, ArrowRight, UserPlus, LogIn, CheckCircle2, Trash2, AlertTriangle, Eye, EyeOff } from 'lucide-react';
+import { User, Lock, Mail, ShieldCheck, X, ArrowRight, UserPlus, LogIn, CheckCircle2, Trash2, AlertTriangle, Eye, EyeOff, KeyRound, Smartphone } from 'lucide-react';
 import { MasterVault } from '../types';
+import { Requires2FAError, UserAccount } from '../lib/auth';
+import { generateTwoFactorSetup, verifyTwoFactorToken, TwoFactorSetup } from '../lib/twoFactorAuth';
 import { signInWithGooglePopup } from '../lib/firebaseClient';
 
 interface AuthModalProps {
@@ -11,7 +13,7 @@ interface AuthModalProps {
 }
 
 export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onSuccessVaultLoaded }) => {
-  const { login, register, loginOAuth, isAuthenticated, user, logout, deleteAccount } = useAuth();
+  const { login, register, loginOAuth, completeTwoFactorLogin, enableTwoFactor, disableTwoFactor, isAuthenticated, user, logout, deleteAccount } = useAuth();
   const [isRegisterTab, setIsRegisterTab] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
@@ -23,6 +25,17 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onSuccess
   const [fullName, setFullName] = useState('');
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
+
+  // Login-time 2FA challenge
+  const [pendingTwoFactorUser, setPendingTwoFactorUser] = useState<UserAccount | null>(null);
+  const [twoFactorCode, setTwoFactorCode] = useState('');
+
+  // 2FA setup flow (from the logged-in account panel)
+  const [is2FASetupOpen, setIs2FASetupOpen] = useState(false);
+  const [setupData, setSetupData] = useState<TwoFactorSetup | null>(null);
+  const [setupCode, setSetupCode] = useState('');
+  const [setupError, setSetupError] = useState<string | null>(null);
+  const [confirmDisable2FA, setConfirmDisable2FA] = useState(false);
 
   if (!isOpen) return null;
 
@@ -52,8 +65,51 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onSuccess
         }, 1000);
       }
     } catch (err: any) {
+      if (err instanceof Requires2FAError) {
+        setPendingTwoFactorUser(err.user);
+        setErrorMsg(null);
+        return;
+      }
       setErrorMsg(err.message || 'Wystąpił błąd autoryzacji.');
     }
+  };
+
+  const handleTwoFactorSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!pendingTwoFactorUser) return;
+    setErrorMsg(null);
+    try {
+      const vault = completeTwoFactorLogin(pendingTwoFactorUser, password, twoFactorCode);
+      setSuccessMsg('Pomyślnie zalogowano!');
+      if (onSuccessVaultLoaded) onSuccessVaultLoaded(vault);
+      setTimeout(() => {
+        onClose();
+      }, 1000);
+    } catch (err: any) {
+      setErrorMsg(err.message || 'Nieprawidłowy kod 2FA.');
+    }
+  };
+
+  const openTwoFactorSetup = async () => {
+    if (!user) return;
+    setSetupError(null);
+    setSetupCode('');
+    const setup = await generateTwoFactorSetup(user.email);
+    setSetupData(setup);
+    setIs2FASetupOpen(true);
+  };
+
+  const confirmTwoFactorSetup = () => {
+    if (!setupData) return;
+    if (!verifyTwoFactorToken(setupData.secret, setupCode)) {
+      setSetupError('Nieprawidłowy kod. Sprawdź czas na urządzeniu i spróbuj ponownie.');
+      return;
+    }
+    enableTwoFactor(setupData.secret);
+    setIs2FASetupOpen(false);
+    setSetupData(null);
+    setSetupCode('');
+    setSuccessMsg('Weryfikacja dwuetapowa (2FA) została włączona.');
   };
 
   return (
@@ -80,6 +136,108 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onSuccess
                 <ShieldCheck className="w-3.5 h-3.5" />
                 <span>Konto aktywne & Szyfrowane AES</span>
               </div>
+            </div>
+
+            {/* Two-Factor Authentication management */}
+            <div className="text-left border-t border-slate-100 pt-4">
+              {!is2FASetupOpen ? (
+                <div className="flex items-center justify-between gap-2 p-3 rounded-xl border border-slate-200 bg-slate-50">
+                  <div className="flex items-center gap-2 min-w-0">
+                    <KeyRound className={`w-4 h-4 shrink-0 ${user.twoFactorEnabled ? 'text-success-500' : 'text-slate-400'}`} />
+                    <div className="min-w-0">
+                      <div className="text-xs font-bold text-slate-800">Weryfikacja dwuetapowa (2FA)</div>
+                      <div className="text-[11px] text-slate-500">{user.twoFactorEnabled ? 'Włączona — kod z aplikacji Authenticator' : 'Wyłączona'}</div>
+                    </div>
+                  </div>
+                  {user.twoFactorEnabled ? (
+                    !confirmDisable2FA ? (
+                      <button
+                        type="button"
+                        onClick={() => setConfirmDisable2FA(true)}
+                        className="shrink-0 px-3 py-1.5 text-xs font-bold text-danger-700 bg-white border border-danger-500/30 rounded-lg hover:bg-danger-50 transition-colors"
+                      >
+                        Wyłącz
+                      </button>
+                    ) : (
+                      <div className="shrink-0 flex items-center gap-1.5">
+                        <button
+                          type="button"
+                          onClick={() => {
+                            disableTwoFactor();
+                            setConfirmDisable2FA(false);
+                            setSuccessMsg('Weryfikacja dwuetapowa (2FA) została wyłączona.');
+                          }}
+                          className="px-2.5 py-1.5 text-xs font-bold text-white bg-danger-500 hover:bg-danger-700 rounded-lg transition-colors"
+                        >
+                          Potwierdź
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setConfirmDisable2FA(false)}
+                          className="px-2.5 py-1.5 text-xs font-bold text-slate-600 bg-white border border-slate-200 rounded-lg hover:bg-slate-50 transition-colors"
+                        >
+                          Anuluj
+                        </button>
+                      </div>
+                    )
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={openTwoFactorSetup}
+                      className="shrink-0 px-3 py-1.5 text-xs font-bold text-white bg-brand-600 hover:bg-brand-700 rounded-lg transition-colors"
+                    >
+                      Włącz
+                    </button>
+                  )}
+                </div>
+              ) : (
+                <div className="p-4 rounded-xl border border-brand-200 bg-brand-50 space-y-3">
+                  <div className="flex items-center gap-2 text-brand-700 font-bold text-xs">
+                    <Smartphone className="w-4 h-4 shrink-0" />
+                    Zeskanuj kod w aplikacji Authenticator
+                  </div>
+                  {setupData && (
+                    <>
+                      <img src={setupData.qrCodeDataUrl} alt="Kod QR 2FA" className="mx-auto rounded-lg border border-brand-200 bg-white p-2" width={180} height={180} />
+                      <p className="text-[10px] text-slate-500 text-center">
+                        Brak możliwości skanowania? Wpisz ręcznie: <span className="font-mono font-bold text-slate-700 break-all">{setupData.secret}</span>
+                      </p>
+                    </>
+                  )}
+                  {setupError && (
+                    <div className="p-2 bg-danger-50 border border-danger-500/30 text-danger-700 text-[11px] rounded-lg flex items-center gap-1.5">
+                      <AlertTriangle className="w-3.5 h-3.5 shrink-0" />
+                      {setupError}
+                    </div>
+                  )}
+                  <input
+                    type="text"
+                    inputMode="numeric"
+                    maxLength={6}
+                    value={setupCode}
+                    onChange={(e) => setSetupCode(e.target.value.replace(/\D/g, ''))}
+                    placeholder="Wpisz 6-cyfrowy kod z aplikacji"
+                    className="w-full bg-white border border-brand-200 rounded-lg px-3 py-2 text-xs text-center font-mono tracking-widest focus:outline-none focus:border-brand-500"
+                  />
+                  <div className="flex gap-2">
+                    <button
+                      type="button"
+                      onClick={() => { setIs2FASetupOpen(false); setSetupData(null); setSetupCode(''); setSetupError(null); }}
+                      className="flex-1 px-3 py-2 text-xs font-bold text-slate-600 bg-white border border-slate-200 rounded-lg hover:bg-slate-50 transition-colors"
+                    >
+                      Anuluj
+                    </button>
+                    <button
+                      type="button"
+                      onClick={confirmTwoFactorSetup}
+                      disabled={setupCode.length !== 6}
+                      className="flex-1 px-3 py-2 text-xs font-bold text-white bg-brand-600 hover:bg-brand-700 disabled:opacity-50 rounded-lg transition-colors"
+                    >
+                      Potwierdź i włącz
+                    </button>
+                  </div>
+                </div>
+              )}
             </div>
 
             <div className="pt-4 border-t border-slate-100 flex items-center justify-between">
@@ -154,13 +312,62 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onSuccess
                     {isDeleting ? (
                       <span>Usuwanie…</span>
                     ) : (
-                      <><Trash2 className="w-3.5 h-3.5" /> Tak, usuń konto</>  
+                      <><Trash2 className="w-3.5 h-3.5" /> Tak, usuń konto</>
                     )}
                   </button>
                 </div>
               </div>
             )}
           </div>
+        ) : pendingTwoFactorUser ? (
+          /* Login-time 2FA challenge */
+          <form onSubmit={handleTwoFactorSubmit} className="space-y-5">
+            <div className="flex items-center space-x-3">
+              <div className="p-2.5 bg-brand-50 border border-brand-200 rounded-xl text-brand-700">
+                <ShieldCheck className="w-5 h-5" />
+              </div>
+              <div>
+                <h3 className="text-lg font-bold text-slate-900">Weryfikacja dwuetapowa</h3>
+                <p className="text-xs text-slate-500">Wpisz kod z aplikacji Authenticator dla {pendingTwoFactorUser.email}</p>
+              </div>
+            </div>
+
+            {errorMsg && (
+              <div className="p-3 bg-danger-50 border border-danger-500/30 text-danger-700 text-xs rounded-xl font-medium flex items-start gap-1.5">
+                <AlertTriangle className="w-3.5 h-3.5 shrink-0 mt-0.5" />
+                <span>{errorMsg}</span>
+              </div>
+            )}
+
+            <input
+              type="text"
+              inputMode="numeric"
+              maxLength={6}
+              autoFocus
+              required
+              value={twoFactorCode}
+              onChange={(e) => setTwoFactorCode(e.target.value.replace(/\D/g, ''))}
+              placeholder="000000"
+              className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-3 text-center text-lg font-mono tracking-[0.5em] focus:outline-none focus:border-brand-500 focus:bg-white"
+            />
+
+            <div className="flex gap-2">
+              <button
+                type="button"
+                onClick={() => { setPendingTwoFactorUser(null); setTwoFactorCode(''); setErrorMsg(null); }}
+                className="flex-1 px-3 py-2.5 text-xs font-bold text-slate-600 bg-white border border-slate-200 rounded-xl hover:bg-slate-50 transition-colors"
+              >
+                Wróć
+              </button>
+              <button
+                type="submit"
+                disabled={twoFactorCode.length !== 6}
+                className="flex-1 py-2.5 bg-brand-600 hover:bg-brand-700 disabled:opacity-50 text-white rounded-xl font-bold text-xs shadow-2xs transition-all"
+              >
+                Zweryfikuj
+              </button>
+            </div>
+          </form>
         ) : (
           /* Authentication Form (Login / Register) */
           <div className="space-y-5">
@@ -225,19 +432,6 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onSuccess
             )}
 
             <div className="space-y-3">
-              <button
-                type="button"
-                onClick={() => alert('Wymaga konfiguracji Azure Entra ID (zobacz instrukcje agenta)')}
-                className="w-full py-2.5 bg-[#2F2F2F] hover:bg-black text-white rounded-xl font-bold text-xs shadow-sm flex items-center justify-center space-x-2 transition-all"
-              >
-                <svg className="w-4 h-4" viewBox="0 0 21 21">
-                  <path fill="#f35325" d="M0 0h10v10H0z"/>
-                  <path fill="#81bc06" d="M11 0h10v10H11z"/>
-                  <path fill="#05a6f0" d="M0 11h10v10H0z"/>
-                  <path fill="#ffba08" d="M11 11h10v10H11z"/>
-                </svg>
-                <span>Kontynuuj z Microsoft (Entra ID)</span>
-              </button>
               <button
                 type="button"
                 onClick={async () => {
@@ -365,7 +559,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onSuccess
                 </div>
                 {isRegisterTab && (
                   <p className="text-[10px] text-slate-500 mt-1">
-                    Min. 6 znaków. Hasło posłuży jako klucz szyfrujący dane AES-256.
+                    Min. 6 znaków. Hasło posłuży jako klucz szyfrujący dane AES-256. Weryfikację dwuetapową (2FA) możesz włączyć po zalogowaniu.
                   </p>
                 )}
               </div>

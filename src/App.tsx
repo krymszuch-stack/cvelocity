@@ -67,6 +67,13 @@ function MainApp() {
   // and the vault is NOT the sample/demo vault (prevents overwriting new user's clean slate)
   const { isAuthenticated } = useAuth();
   useEffect(() => {
+    // `vault` was just set FROM `userVault` by the mirror effect above (same object reference) —
+    // there's nothing new to save. Skipping this case breaks a ping-pong loop between this effect
+    // and the mirror effect that otherwise fires right when isAuthenticated flips true (React's
+    // "Maximum update depth exceeded"): mirror copies userVault into vault -> this effect saves
+    // vault and writes it back into userVault -> mirror sees a "changed" userVault -> repeat.
+    if (vault === userVault) return;
+
     if (!isAuthenticated) {
       // Only save to global localStorage for unauthenticated/demo mode
       saveVaultToLocalStorage(vault);
@@ -75,7 +82,7 @@ function MainApp() {
     // Authenticated: save to both storages
     saveVaultToLocalStorage(vault);
     saveUserVault(vault);
-  }, [vault, saveUserVault, isAuthenticated]);
+  }, [vault, userVault, saveUserVault, isAuthenticated]);
 
   const refreshStats = () => {
     setTokenStats(semanticCacheInstance.getStats());
@@ -213,6 +220,10 @@ function MainApp() {
       <AuthModal
         isOpen={isAuthModalOpen}
         onClose={() => setIsAuthModalOpen(false)}
+        onSuccessVaultLoaded={(loadedVault) => {
+          lastUserVaultRef.current = loadedVault;
+          setVault(loadedVault);
+        }}
       />
 
       {/* Footer */}

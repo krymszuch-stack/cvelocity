@@ -137,30 +137,6 @@ async function startServer() {
     res.json({ status: "ok", service: "SkillVault Core API", timestamp: new Date().toISOString() });
   });
 
-  // ==========================================
-  // OAUTH 2.0 ENDPOINTS (ENVIRONMENT PREPARED)
-  // ==========================================
-
-  // API Route: Google OAuth Login/Callback
-  app.post("/api/auth/google", (req, res) => {
-    // Tutaj weryfikujemy Google ID Token przesłany z frontendu
-    // np. przy użyciu biblioteki google-auth-library (OAuth2Client)
-    res.status(501).json({ 
-      success: false, 
-      message: "Google OAuth API przygotowane. Wymaga podpięcia Google Client ID i weryfikacji tokenu." 
-    });
-  });
-
-  // API Route: Azure Entra ID (Microsoft) OAuth Login/Callback
-  app.post("/api/auth/azure", (req, res) => {
-    // Tutaj weryfikujemy token z Azure Entra ID 
-    // np. używając @azure/msal-node
-    res.status(501).json({ 
-      success: false, 
-      message: "Azure Entra ID API przygotowane. Wymaga podpięcia Tenant ID i Client ID." 
-    });
-  });
-
   // API Route: Parse Raw Resume Text into Master Vault JSON
   app.post("/api/parse-cv", async (req, res) => {
     try {

@@ -11,6 +11,8 @@ export interface UserAccount {
   salt: string;
   createdAt: string;
   lastLoginAt: string;
+  twoFactorEnabled?: boolean;
+  twoFactorSecret?: string; // base32 TOTP secret, only present when twoFactorEnabled is true
 }
 
 const USERS_STORAGE_KEY = 'skillvault_users_db_v1';
@@ -117,9 +119,10 @@ export function registerUser(email: string, password: string, fullName: string):
 }
 
 /**
- * Authenticate existing user with email and password
+ * Verifies email + password WITHOUT starting a session. Split out from loginUser so that
+ * accounts with 2FA enabled can be challenged for a TOTP code before the session actually starts.
  */
-export function loginUser(email: string, password: string): { user: UserAccount; vault: MasterVault } {
+export function verifyPasswordCredentials(email: string, password: string): UserAccount {
   const normalizedEmail = email.trim().toLowerCase();
   const users = getRegisteredUsers();
   const foundUser = users.find((u) => u.email === normalizedEmail);
@@ -133,21 +136,82 @@ export function loginUser(email: string, password: string): { user: UserAccount;
     throw new Error('Nieprawidłowe hasło.');
   }
 
-  // Update last login timestamp
+  return foundUser;
+}
+
+/**
+ * Finalizes a login: starts the session and loads the vault. Call after
+ * verifyPasswordCredentials (and, if the account has 2FA enabled, after the TOTP
+ * code has been verified separately via verifyTwoFactorToken).
+ */
+export function completeLogin(user: UserAccount, password?: string): { user: UserAccount; vault: MasterVault } {
+  const users = getRegisteredUsers();
+  const foundUser = users.find((u) => u.id === user.id) || user;
+
   foundUser.lastLoginAt = new Date().toISOString();
   saveRegisteredUsers(users);
-
   saveActiveSession(foundUser);
 
-  const vault = loadUserVault(foundUser.id, password) || createEmptyVault(foundUser.fullName, foundUser.email);
+  const vault = (password && loadUserVault(foundUser.id, password)) || createEmptyVault(foundUser.fullName, foundUser.email);
 
   return { user: foundUser, vault };
 }
 
 /**
+ * Authenticate existing user with email and password in one step.
+ * Throws Requires2FA if the account has 2FA enabled — callers should catch it,
+ * collect a TOTP code, then call completeLogin() themselves once verified.
+ */
+export function loginUser(email: string, password: string): { user: UserAccount; vault: MasterVault } {
+  const foundUser = verifyPasswordCredentials(email, password);
+
+  if (foundUser.twoFactorEnabled) {
+    throw new Requires2FAError(foundUser);
+  }
+
+  return completeLogin(foundUser, password);
+}
+
+/** Thrown by loginUser when the account requires a TOTP code before the session can start. */
+export class Requires2FAError extends Error {
+  user: UserAccount;
+  constructor(user: UserAccount) {
+    super('Wymagany kod 2FA.');
+    this.name = 'Requires2FAError';
+    this.user = user;
+  }
+}
+
+/**
+ * Enable 2FA for a user account, storing the (already user-confirmed) TOTP secret.
+ */
+export function enableTwoFactor(userId: string, secret: string): void {
+  const users = getRegisteredUsers();
+  const user = users.find((u) => u.id === userId);
+  if (!user) throw new Error('Nie znaleziono konta.');
+  user.twoFactorEnabled = true;
+  user.twoFactorSecret = secret;
+  saveRegisteredUsers(users);
+  saveActiveSession(user);
+}
+
+/**
+ * Disable 2FA for a user account.
+ */
+export function disableTwoFactor(userId: string): void {
+  const users = getRegisteredUsers();
+  const user = users.find((u) => u.id === userId);
+  if (!user) throw new Error('Nie znaleziono konta.');
+  user.twoFactorEnabled = false;
+  delete user.twoFactorSecret;
+  saveRegisteredUsers(users);
+  saveActiveSession(user);
+}
+
+/**
  * Authenticate or register a user via OAuth (Google / Microsoft)
  */
-export function loginWithOAuthAccount(email: string, fullName: string, provider: 'google' | 'microsoft'): { user: UserAccount; vault: MasterVault } {
+export function loginWithOAuthAccount(email: string, fullName: string, provider: 'google'): { user: UserAccount; vault: MasterVault } {
   const normalizedEmail = email.trim().toLowerCase();
   const users = getRegisteredUsers();
   let foundUser = users.find((u) => u.email === normalizedEmail);
@@ -159,7 +223,7 @@ export function loginWithOAuthAccount(email: string, fullName: string, provider:
     foundUser = {
       id: `user_${provider}_${Date.now()}_${Math.random().toString(36).substr(2, 5)}`,
       email: normalizedEmail,
-      fullName: fullName.trim() || `Użytkownik ${provider === 'google' ? 'Google' : 'Microsoft'}`,
+      fullName: fullName.trim() || 'Użytkownik Google',
       passwordHash,
       salt,
       createdAt: new Date().toISOString(),
