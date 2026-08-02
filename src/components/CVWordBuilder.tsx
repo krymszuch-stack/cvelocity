@@ -963,9 +963,10 @@ export const CVWordBuilder: React.FC<CVWordBuilderProps> = ({
                   promotionPrompt.onConfirmPermanent();
                   setPromotionPrompt(null);
                 }}
-                className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-xl text-xs shadow-xs transition-colors"
+                className="px-4 py-2 bg-success-500 hover:bg-success-700 text-white font-bold rounded-xl text-xs shadow-xs transition-colors flex items-center gap-1.5"
               >
-                Zaktualizuj w MasterVault na stałe ✨
+                <Sparkles className="w-3.5 h-3.5 shrink-0" />
+                Zaktualizuj w MasterVault na stałe
               </button>
             </div>
           </div>

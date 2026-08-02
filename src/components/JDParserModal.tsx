@@ -58,7 +58,7 @@ export const JDParserModal: React.FC<JDParserModalProps> = ({
         if (response.status === 403 || data.is403Blocked) {
           setInputMode('text');
           setFetchError(
-            '⚠️ Portal (np. Pracuj.pl, LinkedIn) zablokował bezpośrednie pobieranie ze względu na zabezpieczenia (403 Forbidden). Przełączono Cię na zakładkę "Wklej Treść Ogłoszenia" – po prostu skopiuj i wklej tekst oferty poniżej!'
+            'Portal (np. Pracuj.pl, LinkedIn) zablokował bezpośrednie pobieranie ze względu na zabezpieczenia (403 Forbidden). Przełączono Cię na zakładkę "Wklej Treść Ogłoszenia" – po prostu skopiuj i wklej tekst oferty poniżej!'
           );
         } else {
           throw new Error(data.error || 'Nie udało się pobrać oferty z podanego adresu URL.');
@@ -70,7 +70,7 @@ export const JDParserModal: React.FC<JDParserModalProps> = ({
       if (is403) {
         setInputMode('text');
         setFetchError(
-          '⚠️ Portal ogłoszeń zablokował automatyczne pobieranie (403 Forbidden). Przełączono na kartę "Wklej Treść Ogłoszenia" – skopiuj tekst oferty i wklej go poniżej.'
+          'Portal ogłoszeń zablokował automatyczne pobieranie (403 Forbidden). Przełączono na kartę "Wklej Treść Ogłoszenia" – skopiuj tekst oferty i wklej go poniżej.'
         );
       } else {
         setFetchError(err?.message || 'Błąd pobierania z adresu URL. Spróbuj przełączyć na zakładkę "Wklej Tekst" i wkleić treść oferty.');
@@ -229,8 +229,9 @@ export const JDParserModal: React.FC<JDParserModalProps> = ({
                 )}
               </button>
             </div>
-            <p className="text-[11px] text-slate-500">
-              💡 System automatycznie połączy się z portalem, oczyści kod HTML i wyekstrahuje kluczowe dane, widełki płacowe oraz benefity.
+            <p className="text-[11px] text-slate-500 flex items-start gap-1">
+              <Sparkles className="w-3 h-3 shrink-0 mt-0.5" />
+              System automatycznie połączy się z portalem, oczyści kod HTML i wyekstrahuje kluczowe dane, widełki płacowe oraz benefity.
             </p>
           </div>
         ) : (
