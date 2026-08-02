@@ -417,24 +417,24 @@ export const DOMAIN_SPECIALIZATIONS: DomainCategory[] = SECTOR_CATEGORIES.map((s
         shortCode: role.id.toUpperCase().slice(0, 6),
         detailedDictionary: [
           {
-            title: '📜 Uprawnienia, Certyfikaty i Wpisy Urzędowe',
+            title: 'Uprawnienia, Certyfikaty i Wpisy Urzędowe',
             type: 'licenses',
             items: role.certificationsAndQualifications,
           },
           {
-            title: '🏭 Marki, Sprzęt & Narzędzia Pracy',
+            title: 'Marki, Sprzęt & Narzędzia Pracy',
             type: 'brands_tools',
             items: (role.brandsAndManufacturers || []).concat(role.suggestedTools),
           },
           {
-            title: '⚙️ Specjalistyczna Terminologia & Czynności',
+            title: 'Specjalistyczna Terminologia & Czynności',
             type: 'terminology_skills',
             items: role.specializedVocabulary.concat(role.suggestedHardSkills),
           },
           ...(role.sampleMetrics && role.sampleMetrics.length > 0
             ? [
                 {
-                  title: '📊 Wskaźniki Jakości & Osiągnięcia',
+                  title: 'Wskaźniki Jakości & Osiągnięcia',
                   type: 'metrics' as const,
                   items: role.sampleMetrics,
                 },

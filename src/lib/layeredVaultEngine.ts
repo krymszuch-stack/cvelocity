@@ -153,7 +153,7 @@ export function generateLinkedInReadyExport(
 ): { headline: string; aboutSection: string; experienceBullets: Array<{ company: string; role: string; text: string }> } {
   const headline = `${targetRole || vault.personalInfo.title} | ${vault.skillsMatrix.hardSkills.slice(0, 4).join(' • ')}`;
 
-  const aboutSection = `${vault.personalInfo.summary}\n\n⚡ Kluczowe kompetencje: ${vault.skillsMatrix.hardSkills.join(', ')}\n🛠️ Narzędzia: ${vault.skillsMatrix.toolsAndTech.join(', ')}`;
+  const aboutSection = `${vault.personalInfo.summary}\n\nKluczowe kompetencje: ${vault.skillsMatrix.hardSkills.join(', ')}\nNarzędzia: ${vault.skillsMatrix.toolsAndTech.join(', ')}`;
 
   const experienceBullets = vault.history.map(exp => ({
     company: exp.company,

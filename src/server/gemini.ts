@@ -373,7 +373,7 @@ ${rawJdText}
 }
 
 /**
- * Server-side Gemini Educational Advisor ("Okienko żarówki 💡"):
+ * Server-side Gemini Educational Advisor ("Okienko Doradcy"):
  * Educates the user on ATS rules, why slang/jargon was replaced, how keywords work,
  * and answers user queries about building an effective CV.
  */
@@ -386,7 +386,7 @@ export async function getAdvisorEducationalAdvice(
 
   const prompt = `
 Jesteś cierpliwym, niezwykle merytorycznym Doradcą Rekrutacyjnym i Ekspertem ds. Systemów ATS (Applicant Tracking Systems) oraz Budowy CV.
-Twoją rolą w aplikacji SkillVault jest SERWOWANIE JAKO EDUKACYJNY SAMOUCZEK DLA UŻYTKOWNIKA ("Okienko żarówki 💡").
+Twoją rolą w aplikacji SkillVault jest SERWOWANIE JAKO EDUKACYJNY SAMOUCZEK DLA UŻYTKOWNIKA ("Okienko Doradcy").
 
 Wyjaśnij użytkownikowi w jasny, przystępny sposób:
 1. "Czemu tak, a nie inaczej" - dlaczego pewne sformułowania w CV są lepsze od potocznych lub branżowego slangu (np. dlaczego "Infolinia Banku Pekao" zamieniamy na "Pekao Direct", dlaczego "klepanie kodu" obniża wynik, dlaczego używanie wskaźników ROI/procentowych zwiększa czytelność).

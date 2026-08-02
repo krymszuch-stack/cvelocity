@@ -32,6 +32,14 @@ import {
   ExternalLink,
   HelpCircle,
   FileCheck,
+  MapPin,
+  Mail,
+  Phone,
+  Link2,
+  PenLine,
+  Target,
+  BookOpen,
+  FileEdit,
 } from 'lucide-react';
 import html2canvas from 'html2canvas';
 import jsPDF from 'jspdf';
@@ -597,7 +605,7 @@ export const DocumentRenderer: React.FC<DocumentRendererProps> = ({ resume, vaul
                     onClick={() => { setIsExportMenuOpen(false); handleDownloadPDF(); }}
                     className="w-full text-left px-3 py-2 text-xs font-bold hover:bg-slate-100 rounded-lg flex items-center justify-between text-slate-800"
                   >
-                    <span>📄 Pobierz PDF (Wektorowy)</span>
+                    <span className="inline-flex items-center gap-1.5"><FileText className="w-3.5 h-3.5" />Pobierz PDF (Wektorowy)</span>
                     <span className="text-[10px] bg-emerald-100 text-emerald-800 px-1.5 py-0.5 rounded">PDF</span>
                   </button>
 
@@ -608,7 +616,7 @@ export const DocumentRenderer: React.FC<DocumentRendererProps> = ({ resume, vaul
                     }}
                     className="w-full text-left px-3 py-2 text-xs font-bold hover:bg-slate-100 rounded-lg flex items-center justify-between text-slate-800"
                   >
-                    <span>📘 Pobierz DOCX (Natywny Word)</span>
+                    <span className="inline-flex items-center gap-1.5"><BookOpen className="w-3.5 h-3.5" />Pobierz DOCX (Natywny Word)</span>
                     <span className="text-[10px] bg-indigo-100 text-indigo-800 px-1.5 py-0.5 rounded font-mono">DOCX</span>
                   </button>
 
@@ -628,7 +636,7 @@ export const DocumentRenderer: React.FC<DocumentRendererProps> = ({ resume, vaul
                     }}
                     className="w-full text-left px-3 py-2 text-xs font-bold hover:bg-slate-100 rounded-lg flex items-center justify-between text-slate-800"
                   >
-                    <span>📝 Czysty Tekst (TXT Korpo)</span>
+                    <span className="inline-flex items-center gap-1.5"><FileEdit className="w-3.5 h-3.5" />Czysty Tekst (TXT Korpo)</span>
                     <span className="text-[10px] bg-blue-100 text-blue-800 px-1.5 py-0.5 rounded font-mono">TXT</span>
                   </button>
 
@@ -641,7 +649,7 @@ export const DocumentRenderer: React.FC<DocumentRendererProps> = ({ resume, vaul
                     }}
                     className="w-full text-left px-3 py-2 text-xs font-bold hover:bg-slate-100 rounded-lg flex items-center justify-between text-slate-800"
                   >
-                    <span>🔗 Format LinkedIn-Ready</span>
+                    <span className="inline-flex items-center gap-1.5"><Link2 className="w-3.5 h-3.5" />Format LinkedIn-Ready</span>
                     <span className="text-[10px] bg-sky-100 text-sky-800 px-1.5 py-0.5 rounded">Schowek</span>
                   </button>
                 </div>
@@ -658,7 +666,7 @@ export const DocumentRenderer: React.FC<DocumentRendererProps> = ({ resume, vaul
               className="px-4 py-2 bg-gradient-to-r from-emerald-600 to-teal-700 hover:from-emerald-700 hover:to-teal-800 text-white font-extrabold text-xs rounded-xl shadow-md flex items-center space-x-2 transition-transform active:scale-95 shrink-0"
             >
               <Dices className="w-4 h-4 text-amber-300 animate-bounce" />
-              <span>🎲 LOSUJ DESIGN</span>
+              <span>LOSUJ DESIGN</span>
             </button>
 
             {/* Photo Edit Button */}
@@ -730,11 +738,13 @@ export const DocumentRenderer: React.FC<DocumentRendererProps> = ({ resume, vaul
                 Uzupełnij swoje dane zawodowe w zakładce <strong className="text-emerald-700">„Baza CV”</strong> lub wczytaj istniejący plik PDF/Word w <strong className="text-emerald-700">„Wczytaj Plik”</strong>.
               </p>
               <div className="mt-6 flex flex-wrap justify-center gap-3">
-                <div className="px-4 py-2 bg-emerald-600 text-white text-xs font-bold rounded-xl shadow-sm">
-                  1. Wypełnij dane w Bazie CV ✍️
+                <div className="px-4 py-2 bg-success-500 text-white text-xs font-bold rounded-xl shadow-sm flex items-center gap-1.5">
+                  <PenLine className="w-3.5 h-3.5 shrink-0" />
+                  1. Wypełnij dane w Bazie CV
                 </div>
-                <div className="px-4 py-2 bg-slate-800 text-white text-xs font-bold rounded-xl shadow-sm">
-                  2. Dopasuj do oferty pracy 🎯
+                <div className="px-4 py-2 bg-slate-800 text-white text-xs font-bold rounded-xl shadow-sm flex items-center gap-1.5">
+                  <Target className="w-3.5 h-3.5 shrink-0" />
+                  2. Dopasuj do oferty pracy
                 </div>
               </div>
             </div>
@@ -865,10 +875,10 @@ export const DocumentRenderer: React.FC<DocumentRendererProps> = ({ resume, vaul
                     {vault.personalInfo.title}
                   </p>
                   <div className="text-slate-700 text-[11px] flex flex-wrap justify-center sm:justify-start gap-x-4 gap-y-1 font-medium">
-                    <span>📍 {vault.personalInfo.location}</span>
-                    <span>✉️ {vault.personalInfo.email}</span>
-                    <span>📞 {vault.personalInfo.phone}</span>
-                    {vault.personalInfo.linkedin && <span>🔗 {vault.personalInfo.linkedin}</span>}
+                    <span className="inline-flex items-center gap-1"><MapPin className="w-3 h-3 shrink-0" />{vault.personalInfo.location}</span>
+                    <span className="inline-flex items-center gap-1"><Mail className="w-3 h-3 shrink-0" />{vault.personalInfo.email}</span>
+                    <span className="inline-flex items-center gap-1"><Phone className="w-3 h-3 shrink-0" />{vault.personalInfo.phone}</span>
+                    {vault.personalInfo.linkedin && <span className="inline-flex items-center gap-1"><Link2 className="w-3 h-3 shrink-0" />{vault.personalInfo.linkedin}</span>}
                   </div>
                 </div>
 
@@ -1014,10 +1024,10 @@ export const DocumentRenderer: React.FC<DocumentRendererProps> = ({ resume, vaul
                 </div>
 
                 <div className="space-y-2 text-[11px] text-slate-700 border-t border-slate-300 pt-3">
-                  <div>📍 {vault.personalInfo.location}</div>
-                  <div>✉️ {vault.personalInfo.email}</div>
-                  <div>📞 {vault.personalInfo.phone}</div>
-                  {vault.personalInfo.linkedin && <div>🔗 {vault.personalInfo.linkedin}</div>}
+                  <div className="flex items-center gap-1.5"><MapPin className="w-3 h-3 shrink-0" />{vault.personalInfo.location}</div>
+                  <div className="flex items-center gap-1.5"><Mail className="w-3 h-3 shrink-0" />{vault.personalInfo.email}</div>
+                  <div className="flex items-center gap-1.5"><Phone className="w-3 h-3 shrink-0" />{vault.personalInfo.phone}</div>
+                  {vault.personalInfo.linkedin && <div className="flex items-center gap-1.5"><Link2 className="w-3 h-3 shrink-0" />{vault.personalInfo.linkedin}</div>}
                 </div>
 
                 <div className="border-t border-slate-300 pt-3 space-y-2">
@@ -1114,9 +1124,9 @@ export const DocumentRenderer: React.FC<DocumentRendererProps> = ({ resume, vaul
                   <h1 className="text-3xl font-extrabold tracking-tight">{vault.personalInfo.fullName}</h1>
                   <p className="text-sm font-semibold opacity-90">{vault.personalInfo.title}</p>
                   <div className="text-xs opacity-80 flex flex-wrap gap-x-4 gap-y-1 pt-1 font-mono">
-                    <span>✉️ {vault.personalInfo.email}</span>
-                    <span>📞 {vault.personalInfo.phone}</span>
-                    <span>📍 {vault.personalInfo.location}</span>
+                    <span className="inline-flex items-center gap-1"><Mail className="w-3 h-3 shrink-0" />{vault.personalInfo.email}</span>
+                    <span className="inline-flex items-center gap-1"><Phone className="w-3 h-3 shrink-0" />{vault.personalInfo.phone}</span>
+                    <span className="inline-flex items-center gap-1"><MapPin className="w-3 h-3 shrink-0" />{vault.personalInfo.location}</span>
                   </div>
                 </div>
 

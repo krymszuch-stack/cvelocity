@@ -231,7 +231,7 @@ export function analyzeJdMatchWithVault(parsedJd: ParsedJobDescription, vault: M
       type: 'LICENSE',
       message: hasLicenseInVault
         ? 'Wymagane Prawo Jazdy Kat. B (Wykryto w Twoim Master Vault)'
-        : '⚠️ UWAGA OSTRZEŻENIE: Oferta wymaga Prawa Jazdy Kat. B! W Twoim profilu nie znaleziono tej informacji.',
+        : 'Oferta wymaga Prawa Jazdy Kat. B! W Twoim profilu nie znaleziono tej informacji.',
       missingInVault: !hasLicenseInVault,
       canQuickAdd: !hasLicenseInVault,
       quickAddValue: 'Prawo Jazdy Kat. B',
@@ -248,7 +248,7 @@ export function analyzeJdMatchWithVault(parsedJd: ParsedJobDescription, vault: M
         id: 'english_c1',
         requirement: 'Język Angielski min. C1',
         type: 'LANGUAGE',
-        message: '⚠️ OSTRZEŻENIE: Ogłoszenie wymaga biegłego języka angielskiego (min. C1). Upewnij się, że masz to zaznaczone w Vault.',
+        message: 'Ogłoszenie wymaga biegłego języka angielskiego (min. C1). Upewnij się, że masz to zaznaczone w Vault.',
         missingInVault: true,
         canQuickAdd: true,
         quickAddValue: 'Angielski (Biegły C1)',
@@ -263,7 +263,7 @@ export function analyzeJdMatchWithVault(parsedJd: ParsedJobDescription, vault: M
         id: `missing_skill_${idx}`,
         requirement: `Kluczowy Skill: ${skill}`,
         type: 'SKILL',
-        message: `⚠️ Brak wymaganej technologii kluczowej: '${skill}'.`,
+        message: `Brak wymaganej technologii kluczowej: '${skill}'.`,
         missingInVault: true,
         canQuickAdd: true,
         quickAddValue: skill,
@@ -277,7 +277,7 @@ export function analyzeJdMatchWithVault(parsedJd: ParsedJobDescription, vault: M
 
   const recommendations: string[] = [];
   if (dealbreakerWarnings.some(d => d.missingInVault)) {
-    recommendations.push('⚠️ Wykryto potencjalne krytyczne luki w wymaganiach (np. prawo jazdy, C1, kluczowy skill). Uzupełnij je przed złożeniem aplikacji.');
+    recommendations.push('Wykryto potencjalne krytyczne luki w wymaganiach (np. prawo jazdy, C1, kluczowy skill). Uzupełnij je przed złożeniem aplikacji.');
   }
   if (missingSkills.length > 0) {
     recommendations.push(`Dodaj brakujące słowa kluczowe do sekcji Skills: ${missingSkills.slice(0, 4).join(', ')}.`);

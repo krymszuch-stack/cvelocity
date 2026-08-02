@@ -193,7 +193,7 @@ function MainApp() {
         )}
       </main>
 
-      {/* Gemini AI Advisor & Samouczek Modal ("Okienko żarówki 💡") */}
+      {/* Gemini AI Advisor & Samouczek Modal ("Okienko Doradcy") */}
       <GeminiAdvisorModal
         isOpen={isAdvisorOpen}
         onClose={() => setIsAdvisorOpen(false)}
