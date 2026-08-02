@@ -27,8 +27,20 @@ import {
   Info,
   Upload,
   FileText,
-  Lightbulb,
+  Puzzle,
+  Map,
+  Zap,
+  Brain,
+  ScrollText,
+  Factory,
+  Settings2,
+  BarChart3,
+  Phone,
+  Code2,
+  Languages,
+  CheckCircle2,
 } from 'lucide-react';
+import { AdvisorButton } from './ui/AdvisorButton';
 import * as pdfjsLib from 'pdfjs-dist';
 import mammoth from 'mammoth';
 
@@ -257,32 +269,32 @@ export const MasterVaultEditor: React.FC<MasterVaultEditorProps> = ({ vault, onC
       let score = 100;
 
       if (!draftVault.personalInfo.fullName || draftVault.personalInfo.fullName.length < 3) {
-        issues.push('⚠️ Uzupełnij Imię i Nazwisko');
+        issues.push('Uzupełnij Imię i Nazwisko');
         score -= 20;
       }
       if (!draftVault.personalInfo.email || !draftVault.personalInfo.email.includes('@')) {
-        issues.push('⚠️ Nieprawidłowy lub brakujący adres e-mail');
+        issues.push('Nieprawidłowy lub brakujący adres e-mail');
         score -= 20;
       }
       if (!draftVault.personalInfo.phone) {
-        suggestions.push('💡 Dodaj numer telefonu (np. +48 123 456 789) dla rekrutera');
+        suggestions.push('Dodaj numer telefonu (np. +48 123 456 789) dla rekrutera');
         score -= 5;
       }
       if (!draftVault.personalInfo.summary || draftVault.personalInfo.summary.length < 25) {
-        issues.push('⚠️ Zbyt krótkie podsumowanie zawodowe (poniżej 25 znaków)');
+        issues.push('Zbyt krótkie podsumowanie zawodowe (poniżej 25 znaków)');
         score -= 15;
       }
       if ((draftVault.skillsMatrix.hardSkills.length || 0) < 3) {
-        issues.push('⚠️ Mniej niż 3 umiejętności twarde w profilu');
+        issues.push('Mniej niż 3 umiejętności twarde w profilu');
         score -= 15;
       }
       if ((draftVault.history.length || 0) === 0) {
-        issues.push('⚠️ Brak wpisanej historii pracy');
+        issues.push('Brak wpisanej historii pracy');
         score -= 20;
       } else {
         const hasMetrics = draftVault.history.some((h) => h.highlights && h.highlights.some((hl) => /\d+/.test(hl.metric || hl.text || '')));
         if (!hasMetrics) {
-          suggestions.push('💡 Warto dodać przynajmniej jeden mierzalny wskaźnik % lub liczbowy (np. Jakość 4.40/5.00 lub obsługa SLA)');
+          suggestions.push('Warto dodać przynajmniej jeden mierzalny wskaźnik % lub liczbowy (np. Jakość 4.40/5.00 lub obsługa SLA)');
         }
       }
 
@@ -391,7 +403,7 @@ export const MasterVaultEditor: React.FC<MasterVaultEditorProps> = ({ vault, onC
       } else {
         if (response.status === 403 || resData.is403Blocked || (resData.error && resData.error.includes('403'))) {
           setPasterError(
-            '⚠️ Portal LinkedIn wymaga zalogowania konta i zablokował bezpośredni odczyt adresu URL. Aby natychmiast zaimportować bezbłędne dane: skopiuj treść swojego profilu z LinkedIn (Ctrl+A / Ctrl+C) i wklej w polu poniżej — Gemini AI bezbłędnie wyodrębni Twoją historię pracy, wykształcenie i umiejętności!'
+            'Portal LinkedIn wymaga zalogowania konta i zablokował bezpośredni odczyt adresu URL. Aby natychmiast zaimportować bezbłędne dane: skopiuj treść swojego profilu z LinkedIn (Ctrl+A / Ctrl+C) i wklej w polu poniżej — Gemini AI bezbłędnie wyodrębni Twoją historię pracy, wykształcenie i umiejętności!'
           );
         } else {
           throw new Error(resData.error || 'Nie udało się pobrać treści z podanego adresu URL.');
@@ -399,7 +411,7 @@ export const MasterVaultEditor: React.FC<MasterVaultEditorProps> = ({ vault, onC
       }
     } catch (err: any) {
       setPasterError(
-        `⚠️ ${err.message || 'Błąd odczytu URL.'} Wklej treść swojego profilu bezpośrednio w polu poniżej — nasz model AI wyekstrahuje z niej 100% Twoich rzeczywistych danych.`
+        `${err.message || 'Błąd odczytu URL.'} Wklej treść swojego profilu bezpośrednio w polu poniżej — nasz model AI wyekstrahuje z niej 100% Twoich rzeczywistych danych.`
       );
     } finally {
       setIsParsingPaster(false);
@@ -744,7 +756,7 @@ export const MasterVaultEditor: React.FC<MasterVaultEditorProps> = ({ vault, onC
     setIsLinkedInPasterOpen(false);
     setPasterText('');
     setPasterParsedData(null);
-    setLinkedInToast('✨ Pomyślnie wyekstrahowano i scalono historię pracy i wykształcenie przez Gemini AI!');
+    setLinkedInToast('Pomyślnie wyekstrahowano i scalono historię pracy i wykształcenie przez Gemini AI!');
     setTimeout(() => setLinkedInToast(null), 4500);
   };
 
@@ -788,7 +800,7 @@ export const MasterVaultEditor: React.FC<MasterVaultEditorProps> = ({ vault, onC
       )}
 
       {linkedInToast && (
-        <div className="bg-indigo-600 text-white px-4 py-2.5 rounded-lg text-xs font-bold flex items-center justify-between shadow-lg animate-in slide-in-from-top-2 duration-200">
+        <div className="bg-brand-600 text-white px-4 py-2.5 rounded-lg text-xs font-bold flex items-center justify-between shadow-lg animate-in slide-in-from-top-2 duration-200">
           <div className="flex items-center space-x-2">
             <Sparkles className="w-4 h-4 shrink-0 text-amber-300" />
             <span>{linkedInToast}</span>
@@ -839,17 +851,13 @@ export const MasterVaultEditor: React.FC<MasterVaultEditorProps> = ({ vault, onC
 
         {/* Action Controls & Living Organism Save Button */}
         <div className="flex flex-wrap items-center gap-2">
-          {/* Doradca Gemini Lightbulb Button */}
+          {/* Doradca Gemini Button */}
           {onOpenAdvisor && (
-            <button
-              type="button"
+            <AdvisorButton
               onClick={() => onOpenAdvisor('Jak uzupełnić profil zawodowy i podnieść wynik kompletnosci?')}
-              className="flex items-center space-x-1.5 px-3.5 py-2 bg-amber-500/10 hover:bg-amber-500/20 border border-amber-400/40 text-amber-700 rounded-xl text-xs font-bold transition-all shadow-sm group"
-              title="Okienko Żarówki 💡 - Zapytaj Doradcę Gemini"
-            >
-              <Lightbulb className="w-4 h-4 text-amber-500 group-hover:scale-110 transition-transform" />
-              <span>Doradca Gemini 💡</span>
-            </button>
+              label="Doradca Gemini"
+              title="Okienko Doradcy — Zapytaj Doradcę Gemini"
+            />
           )}
 
           {/* Main explicit Save button */}
@@ -883,19 +891,19 @@ export const MasterVaultEditor: React.FC<MasterVaultEditorProps> = ({ vault, onC
             onClick={() => setActiveSubTab('quiz')}
             className={`flex items-center space-x-2 px-3.5 py-2 border-b-2 font-bold text-xs sm:text-sm whitespace-nowrap transition-colors ${
               activeSubTab === 'quiz'
-                ? 'border-emerald-600 text-emerald-700 bg-emerald-50/50 rounded-t-lg'
+                ? 'border-brand-600 text-brand-700 bg-brand-50/50 rounded-t-lg'
                 : 'border-transparent text-slate-500 hover:text-slate-800'
             }`}
           >
-            <Sparkles className="w-4 h-4 text-amber-500" />
-            <span>🧩 Szybki Quiz CV od Zera</span>
+            <Puzzle className="w-4 h-4 text-amber-500" />
+            <span>Szybki Quiz CV od Zera</span>
           </button>
 
           <button
             onClick={() => setActiveSubTab('info')}
             className={`flex items-center space-x-2 px-3.5 py-2 border-b-2 font-bold text-xs sm:text-sm whitespace-nowrap transition-colors ${
               activeSubTab === 'info'
-                ? 'border-emerald-600 text-emerald-700 bg-emerald-50/50 rounded-t-lg'
+                ? 'border-brand-600 text-brand-700 bg-brand-50/50 rounded-t-lg'
                 : 'border-transparent text-slate-500 hover:text-slate-800'
             }`}
           >
@@ -907,7 +915,7 @@ export const MasterVaultEditor: React.FC<MasterVaultEditorProps> = ({ vault, onC
             onClick={() => setActiveSubTab('skills')}
             className={`flex items-center space-x-2 px-3.5 py-2 border-b-2 font-bold text-xs sm:text-sm whitespace-nowrap transition-colors ${
               activeSubTab === 'skills'
-                ? 'border-emerald-600 text-emerald-700 bg-emerald-50/50 rounded-t-lg'
+                ? 'border-brand-600 text-brand-700 bg-brand-50/50 rounded-t-lg'
                 : 'border-transparent text-slate-500 hover:text-slate-800'
             }`}
           >
@@ -919,7 +927,7 @@ export const MasterVaultEditor: React.FC<MasterVaultEditorProps> = ({ vault, onC
             onClick={() => setActiveSubTab('history')}
             className={`flex items-center space-x-2 px-3.5 py-2 border-b-2 font-bold text-xs sm:text-sm whitespace-nowrap transition-colors ${
               activeSubTab === 'history'
-                ? 'border-emerald-600 text-emerald-700 bg-emerald-50/50 rounded-t-lg'
+                ? 'border-brand-600 text-brand-700 bg-brand-50/50 rounded-t-lg'
                 : 'border-transparent text-slate-500 hover:text-slate-800'
             }`}
           >
@@ -931,7 +939,7 @@ export const MasterVaultEditor: React.FC<MasterVaultEditorProps> = ({ vault, onC
             onClick={() => setActiveSubTab('edu')}
             className={`flex items-center space-x-2 px-3.5 py-2 border-b-2 font-bold text-xs sm:text-sm whitespace-nowrap transition-colors ${
               activeSubTab === 'edu'
-                ? 'border-emerald-600 text-emerald-700 bg-emerald-50/50 rounded-t-lg'
+                ? 'border-brand-600 text-brand-700 bg-brand-50/50 rounded-t-lg'
                 : 'border-transparent text-slate-500 hover:text-slate-800'
             }`}
           >
@@ -943,7 +951,7 @@ export const MasterVaultEditor: React.FC<MasterVaultEditorProps> = ({ vault, onC
             onClick={() => setActiveSubTab('security')}
             className={`flex items-center space-x-2 px-3.5 py-2 border-b-2 font-bold text-xs sm:text-sm whitespace-nowrap transition-colors ${
               activeSubTab === 'security'
-                ? 'border-emerald-600 text-emerald-700 bg-emerald-50/50 rounded-t-lg'
+                ? 'border-brand-600 text-brand-700 bg-brand-50/50 rounded-t-lg'
                 : 'border-transparent text-slate-500 hover:text-slate-800'
             }`}
           >
@@ -965,7 +973,7 @@ export const MasterVaultEditor: React.FC<MasterVaultEditorProps> = ({ vault, onC
                 </div>
                 <div>
                   <h3 className="text-base font-extrabold text-white flex items-center space-x-2">
-                    <span>🧩 Szybki Quiz Budowy CV od Zera</span>
+                    <span>Szybki Quiz Budowy CV od Zera</span>
                     <span className="text-[10px] bg-emerald-500 text-slate-950 font-black px-2 py-0.5 rounded-full uppercase">
                       Krok po Kroku
                     </span>
@@ -1541,10 +1549,12 @@ export const MasterVaultEditor: React.FC<MasterVaultEditorProps> = ({ vault, onC
                       <Database className="w-5 h-5" />
                     </div>
                     <div>
-                      <h4 className="text-sm font-extrabold text-white flex items-center space-x-2">
-                        <span>🗺️ Zaawansowana Mapa Myśli Słów Profesji & Słownik Dziedzinowy</span>
-                        <span className="text-[10px] bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 font-bold px-2.5 py-0.5 rounded-full">
-                          ⚡ 0 Tokenów API
+                      <h4 className="text-sm font-extrabold text-white flex items-center gap-2">
+                        <Map className="w-4 h-4 shrink-0 text-indigo-300" />
+                        <span>Zaawansowana Mapa Myśli Słów Profesji & Słownik Dziedzinowy</span>
+                        <span className="inline-flex items-center gap-1 text-[10px] bg-success-500/20 text-success-500 border border-success-500/40 font-bold px-2.5 py-0.5 rounded-full">
+                          <Zap className="w-2.5 h-2.5 shrink-0" />
+                          0 Tokenów API
                         </span>
                       </h4>
                       <p className="text-xs text-indigo-200/80">
@@ -1709,7 +1719,7 @@ export const MasterVaultEditor: React.FC<MasterVaultEditorProps> = ({ vault, onC
                     <div className="pt-3 border-t border-indigo-800 space-y-3 bg-slate-900/90 p-4 rounded-xl border border-amber-500/40 shadow-2xl">
                       <div className="flex items-center justify-between border-b border-indigo-800/80 pb-2">
                         <div className="flex items-center space-x-2">
-                          <span className="text-base">🧠</span>
+                          <Brain className="w-4 h-4 text-amber-400 shrink-0" />
                           <div>
                             <h5 className="text-xs font-extrabold text-amber-300">
                               Doprecyzowana Mapa Słów i Kwalifikacji: {currentRole.title}
@@ -1732,10 +1742,10 @@ export const MasterVaultEditor: React.FC<MasterVaultEditorProps> = ({ vault, onC
                         {currentRole.detailedDictionary.map((dictCat, dictIdx) => (
                           <div key={dictIdx} className="bg-slate-950/80 border border-indigo-900/60 rounded-xl p-3 space-y-2">
                             <div className="text-[11px] font-extrabold text-indigo-200 flex items-center space-x-1.5">
-                              {dictCat.type === 'licenses' && <span>📜</span>}
-                              {dictCat.type === 'brands_tools' && <span>🏭</span>}
-                              {dictCat.type === 'terminology_skills' && <span>⚙️</span>}
-                              {dictCat.type === 'metrics' && <span>📊</span>}
+                              {dictCat.type === 'licenses' && <ScrollText className="w-3.5 h-3.5 shrink-0" />}
+                              {dictCat.type === 'brands_tools' && <Factory className="w-3.5 h-3.5 shrink-0" />}
+                              {dictCat.type === 'terminology_skills' && <Settings2 className="w-3.5 h-3.5 shrink-0" />}
+                              {dictCat.type === 'metrics' && <BarChart3 className="w-3.5 h-3.5 shrink-0" />}
                               <span>{dictCat.title}</span>
                             </div>
 
@@ -1756,7 +1766,7 @@ export const MasterVaultEditor: React.FC<MasterVaultEditorProps> = ({ vault, onC
                                         : 'bg-slate-900 text-indigo-100 border-indigo-800/80 hover:border-amber-400 hover:bg-slate-800'
                                     }`}
                                   >
-                                    <span>{isSkillAdded ? '✓' : '+'}</span>
+                                    {isSkillAdded ? <Check className="w-3 h-3 shrink-0" /> : <Plus className="w-3 h-3 shrink-0" />}
                                     <span>{item}</span>
                                   </button>
                                 );
@@ -1903,7 +1913,10 @@ export const MasterVaultEditor: React.FC<MasterVaultEditorProps> = ({ vault, onC
                       {aiAuditResults.score}/100
                     </div>
                     <div>
-                      <div className="text-sm font-bold text-white">Wynik Audytu Jakości CV: {aiAuditResults.score >= 80 ? 'Wskazanie Bardzo Dobre ✅' : 'Wymaga Poprawek ⚠️'}</div>
+                      <div className="text-sm font-bold text-white flex items-center gap-1.5">
+                        {aiAuditResults.score >= 80 ? <CheckCircle2 className="w-4 h-4 text-success-500 shrink-0" /> : <AlertTriangle className="w-4 h-4 text-warning-500 shrink-0" />}
+                        Wynik Audytu Jakości CV: {aiAuditResults.score >= 80 ? 'Wskazanie Bardzo Dobre' : 'Wymaga Poprawek'}
+                      </div>
                       <div className="text-xs text-slate-300">
                         {aiAuditResults.score >= 80
                           ? 'Twój profil jest gotowy do udostępnienia rekruterom i pobrania w formacie PDF/JSON!'
@@ -2103,7 +2116,7 @@ export const MasterVaultEditor: React.FC<MasterVaultEditorProps> = ({ vault, onC
                       className="px-3.5 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-xs font-bold flex items-center space-x-1.5 shadow-xs transition-colors"
                     >
                       <Sparkles className="w-3.5 h-3.5 text-amber-300" />
-                      <span>⚡ Przenieś profil przez AI Wklej Tekst</span>
+                      <span>Przenieś profil przez AI Wklej Tekst</span>
                     </button>
                     <button
                       type="button"
@@ -2145,7 +2158,7 @@ export const MasterVaultEditor: React.FC<MasterVaultEditorProps> = ({ vault, onC
               </div>
               <div>
                 <h3 className="text-sm font-bold text-white flex items-center space-x-2">
-                  <span>⚡ Szybki Quiz Kompetencji i Umiejętności</span>
+                  <span>Szybki Quiz Kompetencji i Umiejętności</span>
                   <span className="text-[10px] bg-amber-400 text-slate-950 font-extrabold px-2 py-0.5 rounded-full uppercase">
                     1-Kliknięcie
                   </span>
@@ -2159,29 +2172,33 @@ export const MasterVaultEditor: React.FC<MasterVaultEditorProps> = ({ vault, onC
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-1">
               {[
                 {
-                  category: '📞 Obsługa Klienta & Contact Center',
+                  category: 'Obsługa Klienta & Contact Center',
+                  icon: Phone,
                   items: ['Obsługa Klienta', 'Deeskalacja Problemów', 'Reżim procedur SLA', 'Systemy Bankowe', 'Ticketing (Jira/Zendesk)', 'Koordynacja Zgłoszeń'],
                   targetField: 'hardSkills' as const,
                 },
                 {
-                  category: '💻 Technologia & Programowanie',
+                  category: 'Technologia & Programowanie',
+                  icon: Code2,
                   items: ['TypeScript', 'React 19', 'SQL', 'Git & GitHub', 'Tailwind CSS', 'Node.js', 'REST API', 'Excel (VLOOKUP/Pivot)'],
                   targetField: 'toolsAndTech' as const,
                 },
                 {
-                  category: '🗣️ Języki & Przekładoznawstwo',
+                  category: 'Języki & Przekładoznawstwo',
+                  icon: Languages,
                   items: ['Język Angielski C1', 'Język Rosyjski B2/C1', 'Przekładoznawstwo', 'Adaptacja Językowa', 'Terminologia Techniczna'],
                   targetField: 'hardSkills' as const,
                 },
                 {
-                  category: '🧠 Umiejętności Miękkie',
+                  category: 'Umiejętności Miękkie',
+                  icon: Brain,
                   items: ['Komunikatywność', 'Praca pod presją czasu', 'Rozwiązywanie problemów', 'Skrupulatność & Procedury', 'Praca zespołowa'],
                   targetField: 'softSkills' as const,
                 },
               ].map((group, gIdx) => (
                 <div key={gIdx} className="bg-slate-950/70 border border-indigo-800/50 rounded-xl p-3 space-y-2">
-                  <div className="text-xs font-bold text-indigo-300 flex items-center justify-between">
-                    <span>{group.category}</span>
+                  <div className="text-xs font-bold text-indigo-300 flex items-center gap-1.5 justify-between">
+                    <span className="flex items-center gap-1.5"><group.icon className="w-3.5 h-3.5 shrink-0" />{group.category}</span>
                   </div>
                   <div className="flex flex-wrap gap-1.5">
                     {group.items.map((item) => {
@@ -2656,7 +2673,7 @@ export const MasterVaultEditor: React.FC<MasterVaultEditorProps> = ({ vault, onC
                   <span className="text-[10px] bg-slate-100 px-2 py-0.5 rounded text-slate-600 font-medium">{proj.role}</span>
                 </div>
                 <div className="text-slate-600 text-[11px]">{proj.description}</div>
-                {proj.metrics && <div className="text-emerald-700 font-mono font-bold text-[10px] pt-1">📊 {proj.metrics}</div>}
+                {proj.metrics && <div className="text-success-700 font-mono font-bold text-[10px] pt-1 flex items-center gap-1"><BarChart3 className="w-3 h-3 shrink-0" />{proj.metrics}</div>}
               </div>
             ))}
           </div>
@@ -2703,8 +2720,9 @@ export const MasterVaultEditor: React.FC<MasterVaultEditorProps> = ({ vault, onC
               </button>
 
               {isSavedEncrypted && (
-                <span className="text-xs text-emerald-600 font-bold animate-fade-in">
-                  ✓ Zapisano pomyślnie!
+                <span className="text-xs text-success-500 font-bold animate-fade-in flex items-center gap-1">
+                  <Check className="w-3.5 h-3.5 shrink-0" />
+                  Zapisano pomyślnie!
                 </span>
               )}
             </div>
