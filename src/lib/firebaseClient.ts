@@ -1,5 +1,5 @@
-import { initializeApp, getApps } from 'firebase/app';
-import { getAuth, GoogleAuthProvider, signInWithPopup, deleteUser } from 'firebase/auth';
+import { initializeApp, getApps, FirebaseApp } from 'firebase/app';
+import { getAuth, GoogleAuthProvider, signInWithPopup, deleteUser, Auth } from 'firebase/auth';
 
 // Firebase project configuration loaded securely from environment variables
 const firebaseConfig = {
@@ -12,13 +12,26 @@ const firebaseConfig = {
   measurementId: import.meta.env.VITE_FIREBASE_MEASUREMENT_ID || "",
 };
 
-export const app = getApps().length > 0 ? getApps()[0] : initializeApp(firebaseConfig);
-export const auth = getAuth(app);
+let app: FirebaseApp | null = null;
+let auth: Auth | null = null;
+
+// Lazily initialize Firebase on first actual use instead of at module load.
+// With no VITE_FIREBASE_API_KEY configured (e.g. a fresh checkout with no .env),
+// getAuth() throws synchronously — doing that eagerly at module scope used to
+// crash the entire app before React ever rendered anything.
+function getFirebaseAuth(): Auth {
+  if (!auth) {
+    app = getApps().length > 0 ? getApps()[0] : initializeApp(firebaseConfig);
+    auth = getAuth(app);
+  }
+  return auth;
+}
 
 export async function signInWithGooglePopup() {
+  const authInstance = getFirebaseAuth();
   const provider = new GoogleAuthProvider();
   provider.setCustomParameters({ prompt: 'select_account' });
-  const result = await signInWithPopup(auth, provider);
+  const result = await signInWithPopup(authInstance, provider);
   return {
     email: result.user.email || '',
     displayName: result.user.displayName || 'Użytkownik Google',
@@ -31,7 +44,9 @@ export async function signInWithGooglePopup() {
  * Delete current Firebase Auth user (removes account from Firebase Auth)
  */
 export async function deleteCurrentFirebaseUser(): Promise<void> {
-  const currentUser = auth.currentUser;
+  if (!firebaseConfig.apiKey) return; // Firebase not configured — nothing to delete there
+  const authInstance = getFirebaseAuth();
+  const currentUser = authInstance.currentUser;
   if (currentUser) {
     await deleteUser(currentUser);
   }

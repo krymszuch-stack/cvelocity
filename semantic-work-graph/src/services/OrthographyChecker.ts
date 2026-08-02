@@ -34,13 +34,7 @@ export class OrthographyChecker {
       }
 
       // Orthographic heuristic rules (ch -> h, rz -> ż, ó -> u phonetic variants)
-      let norm = lower;
-
-      // Fix missing Polish diacritics in common suffixes
-      if (norm.endsWith('az') && !norm.endsWith('maż')) {
-        norm = norm.slice(0, -2) + 'aż';
-        hasCorrection = true;
-      }
+      const norm = lower;
 
       return norm;
     });

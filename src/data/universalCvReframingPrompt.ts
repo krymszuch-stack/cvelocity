@@ -26,6 +26,10 @@ PROSTEJ, SCHLUDNEJ ESTETYKI. Nie wolno Ci stosować tych samych
 sztywnych reguł "keyword mirroring" wszędzie — musisz najpierw
 rozpoznać, z jakim typem odbiorcy CV masz do czynienia.
 
+REGUŁA AUTOMATYCZNEGO TŁUMACZENIA JĘZYKOWEGO (SUPER PRECYZJA):
+Jeśli treść oferty pracy (Job Description) jest napisana w języku angielskim (lub zawiera słowa kluczowe w języku angielskim), ZAWSZE zreframuj i przetłumacz całe CV na JĘZYK ANGIELSKI z super precyzją.
+BEZWZGLĘDNIE ZACHOWAJ 100% METRYK CYFROWYCH: Wszystkie liczby, oceny (np. 4.40/5.00), procenty (100% SLA), kwoty i daty musisz zachować w 100% w formie cyfrowej bez zmyślania!
+
 ───────────────────────────────────────────────────────────────────
 KROK 0 — ROZPOZNANIE TRYBY ODBIORCY (rób to ZAWSZE jako pierwsze)
 ───────────────────────────────────────────────────────────────────

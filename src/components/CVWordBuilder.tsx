@@ -131,6 +131,16 @@ export const CVWordBuilder: React.FC<CVWordBuilderProps> = ({
 }) => {
   const [substitutions, setSubstitutions] = useState<WordSubstitution[]>([]);
   const [isGenerated, setIsGenerated] = useState(false);
+  const [promotionPrompt, setPromotionPrompt] = useState<{
+    isOpen: boolean;
+    editedText: string;
+    field: string;
+    onConfirmPermanent: () => void;
+  } | null>(null);
+  // Holds a "this offer only" edit that hasn't (or won't) be promoted to the MasterVault,
+  // so the contentEditable field doesn't snap back to the old vault text when the promotion modal opens.
+  const [localSummaryOverride, setLocalSummaryOverride] = useState<string | null>(null);
+  const displaySummary = localSummaryOverride ?? (vault.personalInfo.summary || '');
 
   // Manual Inline Edit Handlers for full Word-like freedom
   const handleUpdatePersonalInfoField = (field: 'fullName' | 'title' | 'email' | 'phone' | 'location', text: string) => {
@@ -144,11 +154,27 @@ export const CVWordBuilder: React.FC<CVWordBuilderProps> = ({
   };
 
   const handleUpdateSummaryText = (text: string) => {
-    onUpdateVault({
-      ...vault,
-      personalInfo: {
-        ...vault.personalInfo,
-        summary: text,
+    const currentSummary = vault.personalInfo.summary || '';
+    if (text === currentSummary) {
+      setLocalSummaryOverride(null);
+      return;
+    }
+    // Apply immediately so the visible text survives the modal's re-render,
+    // regardless of which option the user ends up choosing.
+    setLocalSummaryOverride(text);
+    setPromotionPrompt({
+      isOpen: true,
+      editedText: text,
+      field: 'Podsumowanie Zawodowe',
+      onConfirmPermanent: () => {
+        onUpdateVault({
+          ...vault,
+          personalInfo: {
+            ...vault.personalInfo,
+            summary: text,
+          },
+        });
+        setLocalSummaryOverride(null);
       },
     });
   };
@@ -191,7 +217,9 @@ export const CVWordBuilder: React.FC<CVWordBuilderProps> = ({
     // 2. Summary word substitutions
     const currentSummary = vault.personalInfo.summary || '';
     VOCAB_REPLACEMENTS.forEach((item, idx) => {
+      item.pattern.lastIndex = 0;
       if (item.pattern.test(currentSummary)) {
+        item.pattern.lastIndex = 0;
         const matches = currentSummary.match(item.pattern);
         if (matches && matches[0]) {
           list.push({
@@ -211,7 +239,9 @@ export const CVWordBuilder: React.FC<CVWordBuilderProps> = ({
       exp.highlights.forEach((h, hIdx) => {
         const text = typeof h === 'string' ? h : h.text;
         VOCAB_REPLACEMENTS.forEach((item, rIdx) => {
+          item.pattern.lastIndex = 0;
           if (item.pattern.test(text)) {
+            item.pattern.lastIndex = 0;
             const matches = text.match(item.pattern);
             if (matches && matches[0]) {
               list.push({
@@ -759,7 +789,7 @@ export const CVWordBuilder: React.FC<CVWordBuilderProps> = ({
               className="text-slate-800 leading-relaxed text-justify hover:bg-slate-50 focus:bg-amber-50 focus:outline-2 focus:outline-amber-400 rounded p-1 transition-colors cursor-text"
               title="Kliknij, aby swobodnie edytować treść podsumowania zawodowego"
             >
-              {vault.personalInfo.summary || ''}
+              {displaySummary}
             </div>
           </div>
 
@@ -909,6 +939,46 @@ export const CVWordBuilder: React.FC<CVWordBuilderProps> = ({
           )}
         </div>
       </div>
+
+      {/* Promotion to MasterVault Modal (Dyrektywa 4) */}
+      {promotionPrompt && promotionPrompt.isOpen && (
+        <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4">
+          <div className="bg-white border border-slate-200 rounded-2xl max-w-lg w-full p-6 space-y-4 shadow-2xl text-slate-900">
+            <div className="flex items-center space-x-3 text-amber-600">
+              <Sparkles className="w-6 h-6 shrink-0 text-amber-500" />
+              <h3 className="text-base font-bold">Awansowanie Poprawki do MasterVault</h3>
+            </div>
+
+            <p className="text-xs text-slate-600 leading-relaxed">
+              Zmieniłeś treść pola <strong>{promotionPrompt.field}</strong>. Czy jest to poprawka wyłącznie pod tę ofertę pracy ({companyName || 'Pracodawca'}), czy chcesz zaktualizować ten fakt <strong>na stałe w Twoim głównym MasterVault</strong>?
+            </p>
+
+            <div className="p-3 bg-amber-50 border border-amber-200 rounded-xl text-xs font-mono text-amber-900 max-h-32 overflow-y-auto">
+              "{promotionPrompt.editedText}"
+            </div>
+
+            <div className="flex items-center justify-end space-x-3 pt-2">
+              <button
+                type="button"
+                onClick={() => setPromotionPrompt(null)}
+                className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold rounded-xl text-xs transition-colors"
+              >
+                Tylko dla tej oferty
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  promotionPrompt.onConfirmPermanent();
+                  setPromotionPrompt(null);
+                }}
+                className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-xl text-xs shadow-xs transition-colors"
+              >
+                Zaktualizuj w MasterVault na stałe ✨
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

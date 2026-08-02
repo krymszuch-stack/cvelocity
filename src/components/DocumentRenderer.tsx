@@ -5,6 +5,7 @@ import {
   generatePlainTextCvExport,
   generateLinkedInReadyExport,
 } from '../lib/layeredVaultEngine';
+import { downloadNativeDocxCv } from '../lib/docxExporter';
 import { LayeredFactItem, ApplicationHistoryRecord } from '../types';
 import {
   Printer,
@@ -460,6 +461,32 @@ export const DocumentRenderer: React.FC<DocumentRendererProps> = ({ resume, vaul
     <div className="space-y-6">
       {/* Control Bar & Style Mixer */}
       <div className="bg-white border border-slate-200 rounded-2xl p-4 sm:p-5 space-y-4 shadow-xs">
+        {/* Non-Invasive 3-Point Change Summary Banner (Dyrektywa 7) */}
+        <div className="bg-gradient-to-r from-slate-900 to-indigo-950 text-white rounded-xl p-3.5 border border-indigo-500/30 text-xs space-y-1.5 shadow-md">
+          <div className="flex items-center justify-between font-bold text-indigo-300">
+            <span className="flex items-center space-x-1.5">
+              <Sparkles className="w-4 h-4 text-indigo-400" />
+              <span>Dlaczego zmodyfikowaliśmy treść pod tę ofertę ({resume.companyName || 'Pracodawca'}):</span>
+            </span>
+            <span className="text-[10px] bg-indigo-950 text-indigo-300 px-2 py-0.5 rounded border border-indigo-700/60 font-mono">
+              Auto-Tailor Summary
+            </span>
+          </div>
+          <ul className="grid grid-cols-1 sm:grid-cols-3 gap-2 text-[11px] text-slate-300 pt-1">
+            <li className="flex items-start space-x-1.5 bg-slate-950/50 p-2 rounded-lg border border-slate-800">
+              <span className="text-emerald-400 font-bold">1.</span>
+              <span><strong>Słowa Kluczowe:</strong> Wzmocniono frazy ATS dla stanowiska <em>{resume.targetJobTitle}</em>.</span>
+            </li>
+            <li className="flex items-start space-x-1.5 bg-slate-950/50 p-2 rounded-lg border border-slate-800">
+              <span className="text-emerald-400 font-bold">2.</span>
+              <span><strong>Hierarchia Faktów:</strong> Wysunięto najistotniejsze projekty z MasterVault na początek list.</span>
+            </li>
+            <li className="flex items-start space-x-1.5 bg-slate-950/50 p-2 rounded-lg border border-slate-800">
+              <span className="text-emerald-400 font-bold">3.</span>
+              <span><strong>Wskaźniki Cyfrowe:</strong> Zachowano 100% zadeklarowanych metryk i ocen liczbowych.</span>
+            </li>
+          </ul>
+        </div>
         {/* Top Controls: Render Variant Selector */}
         <div className="flex flex-wrap items-center justify-between gap-4 border-b border-slate-200 pb-4">
           <div className="flex items-center space-x-2">
@@ -577,18 +604,12 @@ export const DocumentRenderer: React.FC<DocumentRendererProps> = ({ resume, vaul
                   <button
                     onClick={() => {
                       setIsExportMenuOpen(false);
-                      const plain = generatePlainTextCvExport(vault, [], resume.targetJobTitle, resume.companyName);
-                      const blob = new Blob([plain], { type: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' });
-                      const url = URL.createObjectURL(blob);
-                      const a = document.createElement('a');
-                      a.href = url;
-                      a.download = `CV_${vault.personalInfo.fullName.replace(/\s+/g, '_')}_ATS.docx`;
-                      a.click();
+                      downloadNativeDocxCv(vault, [], resume.targetJobTitle, resume.companyName);
                     }}
                     className="w-full text-left px-3 py-2 text-xs font-bold hover:bg-slate-100 rounded-lg flex items-center justify-between text-slate-800"
                   >
-                    <span>📘 Pobierz DOCX (ATS File)</span>
-                    <span className="text-[10px] bg-indigo-100 text-indigo-800 px-1.5 py-0.5 rounded">DOCX</span>
+                    <span>📘 Pobierz DOCX (Natywny Word)</span>
+                    <span className="text-[10px] bg-indigo-100 text-indigo-800 px-1.5 py-0.5 rounded font-mono">DOCX</span>
                   </button>
 
                   <button
@@ -599,13 +620,16 @@ export const DocumentRenderer: React.FC<DocumentRendererProps> = ({ resume, vaul
                       const url = URL.createObjectURL(blob);
                       const a = document.createElement('a');
                       a.href = url;
-                      a.download = `CV_${vault.personalInfo.fullName.replace(/\s+/g, '_')}_Formularz.txt`;
+                      const cleanName = (vault.personalInfo.fullName || 'Kandydat').replace(/\s+/g, '_');
+                      const cleanCompany = (resume.companyName || 'Aplikacja').replace(/\s+/g, '_');
+                      const cleanTitle = (resume.targetJobTitle || 'Stanowisko').replace(/\s+/g, '_');
+                      a.download = `CV_${cleanName}_${cleanCompany}_${cleanTitle}.txt`;
                       a.click();
                     }}
                     className="w-full text-left px-3 py-2 text-xs font-bold hover:bg-slate-100 rounded-lg flex items-center justify-between text-slate-800"
                   >
                     <span>📝 Czysty Tekst (TXT Korpo)</span>
-                    <span className="text-[10px] bg-blue-100 text-blue-800 px-1.5 py-0.5 rounded">TXT</span>
+                    <span className="text-[10px] bg-blue-100 text-blue-800 px-1.5 py-0.5 rounded font-mono">TXT</span>
                   </button>
 
                   <button
