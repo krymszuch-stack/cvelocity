@@ -221,9 +221,10 @@ export const GeminiAdvisorModal: React.FC<GeminiAdvisorModalProps> = ({
                           setQuestion(pq);
                           handleAskGemini(pq);
                         }}
-                        className="text-[11px] text-amber-200/90 bg-amber-950/40 hover:bg-amber-900/60 border border-amber-500/30 px-3 py-1 rounded-full transition-colors text-left"
+                        className="text-[11px] text-amber-200/90 bg-amber-950/40 hover:bg-amber-900/60 border border-amber-500/30 px-3 py-1 rounded-full transition-colors text-left inline-flex items-center gap-1.5"
                       >
-                        💡 {pq}
+                        <Lightbulb className="w-3 h-3 shrink-0" />
+                        {pq}
                       </button>
                     ))}
                   </div>
@@ -258,7 +259,7 @@ export const GeminiAdvisorModal: React.FC<GeminiAdvisorModalProps> = ({
                   {/* Slang analysis if present */}
                   {advisorResponse.slangAnalysis && (
                     <div className="p-3 bg-amber-950/30 border border-amber-500/40 rounded-lg text-xs text-amber-200">
-                      <span className="font-bold text-amber-400 block mb-1">🔍 Analiza Slangu Branżowego:</span>
+                      <span className="font-bold text-amber-400 flex items-center gap-1.5 mb-1"><Search className="w-3.5 h-3.5 shrink-0" />Analiza Slangu Branżowego:</span>
                       {advisorResponse.slangAnalysis}
                     </div>
                   )}
@@ -347,7 +348,7 @@ export const GeminiAdvisorModal: React.FC<GeminiAdvisorModalProps> = ({
                               <ArrowRight className="w-3 h-3 text-slate-500 mx-2" />
                               <span className="text-emerald-400 font-bold">{rep.formalTerm}</span>
                             </div>
-                            <p className="text-[11px] text-slate-400 italic">💡 Powód: {rep.reason}</p>
+                            <p className="text-[11px] text-slate-400 italic flex items-start gap-1"><Lightbulb className="w-3 h-3 shrink-0 mt-0.5" />Powód: {rep.reason}</p>
                           </div>
                         ))}
                       </div>

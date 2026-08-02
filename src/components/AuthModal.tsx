@@ -211,8 +211,9 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onSuccess
             </div>
 
             {errorMsg && (
-              <div className="p-3 bg-rose-50 border border-rose-200 text-rose-700 text-xs rounded-xl font-medium">
-                ⚠️ {errorMsg}
+              <div className="p-3 bg-danger-50 border border-danger-500/30 text-danger-700 text-xs rounded-xl font-medium flex items-start gap-1.5">
+                <AlertTriangle className="w-3.5 h-3.5 shrink-0 mt-0.5" />
+                <span>{errorMsg}</span>
               </div>
             )}
 

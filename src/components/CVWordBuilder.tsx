@@ -15,7 +15,6 @@ import {
   ArrowRight,
   Info,
   CheckCircle2,
-  Lightbulb,
   Bold,
   Italic,
   Underline,
@@ -28,6 +27,7 @@ import {
   Ruler,
 } from 'lucide-react';
 import { eliminateSlogans } from '../lib/slotFillingEngine';
+import { AdvisorButton } from './ui/AdvisorButton';
 
 interface WordSubstitution {
   id: string;
@@ -517,15 +517,7 @@ export const CVWordBuilder: React.FC<CVWordBuilderProps> = ({
 
           <div className="flex items-center space-x-2 shrink-0">
             {onOpenAdvisor && (
-              <button
-                type="button"
-                onClick={() => onOpenAdvisor('Jak edytować i szlifować sformułowania w tym dokumencie CV w trybie Word?')}
-                className="px-3.5 py-2 bg-amber-50 hover:bg-amber-100 border border-amber-300 text-amber-800 rounded-xl text-xs font-bold flex items-center space-x-1.5 transition-all active:scale-95"
-                title="Zapytaj Doradcę AI"
-              >
-                <Lightbulb className="w-4 h-4 text-amber-500" />
-                <span>Doradca 💡</span>
-              </button>
+              <AdvisorButton onClick={() => onOpenAdvisor('Jak edytować i szlifować sformułowania w tym dokumencie CV w trybie Word?')} />
             )}
 
             <button

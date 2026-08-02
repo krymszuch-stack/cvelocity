@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { MasterVault, TailoredResume, CoverLetter, AtsCheckResult, TailoredHighlight } from '../types';
-import { Zap, Sparkles, Cpu, CheckCircle2, AlertCircle, FileCheck, Layers, Eye, RefreshCw, BarChart, Search, Radio, Link, Globe, Gift, ShieldAlert, PlusCircle, Check, DollarSign, Briefcase, Type, Lightbulb } from 'lucide-react';
+import { Zap, Sparkles, Cpu, CheckCircle2, AlertCircle, FileCheck, Layers, Eye, RefreshCw, BarChart, Search, Radio, Link, Globe, Gift, ShieldAlert, PlusCircle, Check, DollarSign, Briefcase, Type } from 'lucide-react';
+import { AdvisorButton } from './ui/AdvisorButton';
 import { fillSlotSentence, extractSlotsFromHighlight, eliminateSlogans } from '../lib/slotFillingEngine';
 import { semanticCacheInstance } from '../lib/semanticCache';
 import { simulateAtsCheck } from '../lib/atsSimulator';
@@ -84,7 +85,7 @@ Wymagania kluczowe:
       } else {
         if (response.status === 403 || data.is403Blocked) {
           setScraperError(
-            '⚠️ Portal ogłoszeń (np. Pracuj.pl, LinkedIn) zablokował automatyczne pobieranie (403 Forbidden). Skopiuj tekst ze strony oferty i wklej go w polu "Treść Ogłoszenia o Pracę" poniżej.'
+            'Portal ogłoszeń (np. Pracuj.pl, LinkedIn) zablokował automatyczne pobieranie (403 Forbidden). Skopiuj tekst ze strony oferty i wklej go w polu "Treść Ogłoszenia o Pracę" poniżej.'
           );
         } else {
           throw new Error(data.error || 'Nie udało się pobrać treści oferty z podanego URL.');
@@ -95,7 +96,7 @@ Wymagania kluczowe:
       const is403 = err?.message?.includes('403') || err?.message?.includes('Forbidden');
       if (is403) {
         setScraperError(
-          '⚠️ Portal ogłoszeń zablokował automatyczny dostęp (403 Forbidden). Skopiuj tekst oferty ze strony i wklej go bezpośrednio w polu "Treść Ogłoszenia o Pracę" poniżej.'
+          'Portal ogłoszeń zablokował automatyczny dostęp (403 Forbidden). Skopiuj tekst oferty ze strony i wklej go bezpośrednio w polu "Treść Ogłoszenia o Pracę" poniżej.'
         );
       } else {
         setScraperError(err?.message || 'Nie udało się połączyć ze stroną. Możesz wkleić surowy tekst ogłoszenia ręcznie w polu poniżej.');
@@ -163,7 +164,7 @@ Wymagania kluczowe:
         const cacheHit = semanticCacheInstance.findMatch(h.text, 0.88);
 
         if (cacheHit.match) {
-          addLog(`✓ TRAFIENIE CACHE (0 tokenów! Podobieństwo: ${Math.round(cacheHit.similarity * 100)}%): "${cacheHit.match.optimizedText.slice(0, 45)}..."`);
+          addLog(`TRAFIENIE CACHE (0 tokenów! Podobieństwo: ${Math.round(cacheHit.similarity * 100)}%): "${cacheHit.match.optimizedText.slice(0, 45)}..."`);
           tailoredHighlights.push({
             experienceId: exp.id,
             role: exp.role,
@@ -181,7 +182,7 @@ Wymagania kluczowe:
         const slotFilled = fillSlotSentence(slot, jdKeywords, 'ACTION_FIRST');
         semanticCacheInstance.recordSlotFillingHit();
 
-        addLog(`✓ LOCAL SLOT FILLING (0 tokenów): "${slotFilled.slice(0, 50)}..."`);
+        addLog(`LOCAL SLOT FILLING (0 tokenów): "${slotFilled.slice(0, 50)}..."`);
 
         tailoredHighlights.push({
           experienceId: exp.id,
@@ -213,7 +214,7 @@ Wymagania kluczowe:
     addLog(`Wstępny wynik ATS Match Score: ${initialAtsCheck.overallScore}%`);
 
     if (initialAtsCheck.missingHardSkills.length > 0) {
-      addLog(`⚠️ Wykryto brakujące słowa klucze: ${initialAtsCheck.missingHardSkills.slice(0, 3).join(', ')}. Inicjalizacja Delta Prompting przez Gemini API...`);
+      addLog(`Wykryto brakujące słowa klucze: ${initialAtsCheck.missingHardSkills.slice(0, 3).join(', ')}. Inicjalizacja Delta Prompting przez Gemini API...`);
 
       try {
         const topBullet = tailoredHighlights[0];
@@ -231,7 +232,7 @@ Wymagania kluczowe:
 
           const data = await res.json();
           if (data.success && data.optimizedText) {
-            addLog(`⚡ GEMINI DELTA PROMPTING ZAKOŃCZONE: Dokonano precyzyjnej mikromodyfikacji frazy bez halucynacji!`);
+            addLog(`GEMINI DELTA PROMPTING ZAKOŃCZONE: Dokonano precyzyjnej mikromodyfikacji frazy bez halucynacji!`);
             tailoredHighlights[0] = {
               ...topBullet,
               optimizedText: data.optimizedText,
@@ -280,7 +281,7 @@ Wymagania kluczowe:
     setAtsResult(finalAtsResult);
     setCoverLetter(generatedCoverLetter);
 
-    addLog(`✓ ZAKOŃCZONO: Wygenerowano dopasowane CV (ATS Score: ${finalAtsResult.overallScore}%) oraz List Motywacyjny.`);
+    addLog(`ZAKOŃCZONO: Wygenerowano dopasowane CV (ATS Score: ${finalAtsResult.overallScore}%) oraz List Motywacyjny.`);
     setIsGenerating(false);
     onUpdateStats();
   };
@@ -311,15 +312,7 @@ Wymagania kluczowe:
 
           <div className="flex items-center space-x-2 shrink-0">
             {onOpenAdvisor && (
-              <button
-                type="button"
-                onClick={() => onOpenAdvisor(`Jak najlepiej przygotować CV pod stanowisko "${jobTitle}"?`)}
-                className="px-3 py-2 bg-amber-500/10 hover:bg-amber-500/20 border border-amber-400/40 text-amber-300 rounded-xl text-xs font-bold flex items-center space-x-1.5 transition-all active:scale-95"
-                title="Zapytaj Doradcę AI"
-              >
-                <Lightbulb className="w-3.5 h-3.5 text-amber-400" />
-                <span>Doradca 💡</span>
-              </button>
+              <AdvisorButton onClick={() => onOpenAdvisor(`Jak najlepiej przygotować CV pod stanowisko "${jobTitle}"?`)} />
             )}
 
             <button
@@ -393,8 +386,9 @@ Wymagania kluczowe:
             {/* Dealbreakers Alert List */}
             {matchAudit.dealbreakerWarnings && matchAudit.dealbreakerWarnings.length > 0 && (
               <div className="space-y-1.5">
-                <span className="font-bold text-amber-300 block text-[11px] uppercase">
-                  ⚠️ Wykryte Wymogi Bezwzględnie Konieczne i Ostrzeżenia:
+                <span className="font-bold text-amber-300 flex items-center gap-1.5 text-[11px] uppercase">
+                  <AlertCircle className="w-3.5 h-3.5 shrink-0" />
+                  Wykryte Wymogi Bezwzględnie Konieczne i Ostrzeżenia:
                 </span>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                   {matchAudit.dealbreakerWarnings.map((warn) => {
@@ -419,8 +413,9 @@ Wymagania kluczowe:
                           </button>
                         )}
                         {isAdded && (
-                          <span className="px-1.5 py-0.5 rounded bg-emerald-800 text-emerald-200 text-[10px] font-bold">
-                            Dodano ✓
+                          <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-emerald-800 text-emerald-200 text-[10px] font-bold">
+                            <Check className="w-3 h-3 shrink-0" />
+                            Dodano
                           </span>
                         )}
                       </div>

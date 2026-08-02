@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { MasterVault, ConsistencyCheckIssue } from '../types';
-import { FileText, Upload, Sparkles, AlertTriangle, CheckCircle2, ShieldAlert, ArrowRight, Layout, Image, Check, X, Info, FileCode, Briefcase, GraduationCap } from 'lucide-react';
+import { FileText, Upload, Sparkles, AlertTriangle, CheckCircle2, ShieldAlert, ArrowRight, Layout, Image, Check, X, Info, FileCode, Briefcase, GraduationCap, Lightbulb } from 'lucide-react';
 import { eliminateSlogans } from '../lib/slotFillingEngine';
+import { StatusBadge } from './ui/StatusBadge';
 import { extractTextFromAnyFile } from '../lib/cvUniversalParser';
 import * as pdfjsLib from 'pdfjs-dist';
 import mammoth from 'mammoth';
@@ -329,15 +330,9 @@ export const CVParserModal: React.FC<CVParserModalProps> = ({
                   Diagnostyka Geometrii Pliku i Układu (Pre-Parse Audit)
                 </h3>
               </div>
-              {geometryResult.passed ? (
-                <span className="px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 text-[10px] font-bold">
-                  ✓ BEZPIECZNY DLA ATS
-                </span>
-              ) : (
-                <span className="px-2 py-0.5 rounded bg-amber-500/20 text-amber-400 border border-amber-500/30 text-[10px] font-bold">
-                  ⚠️ RYZYKO BŁĘDÓW PARSERA
-                </span>
-              )}
+              <StatusBadge variant={geometryResult.passed ? 'success' : 'warning'} className="text-[10px]">
+                {geometryResult.passed ? 'BEZPIECZNY DLA ATS' : 'RYZYKO BŁĘDÓW PARSERA'}
+              </StatusBadge>
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5 text-xs">
@@ -463,7 +458,10 @@ export const CVParserModal: React.FC<CVParserModalProps> = ({
                     </span>
                   </div>
                   <p>{issue.description}</p>
-                  <p className="text-[11px] opacity-90 font-mono">💡 Sugestia: {issue.suggestion}</p>
+                  <p className="text-[11px] opacity-90 font-mono flex items-start gap-1">
+                    <Lightbulb className="w-3 h-3 shrink-0 mt-0.5" />
+                    <span>Sugestia: {issue.suggestion}</span>
+                  </p>
                 </div>
               ))
             )}

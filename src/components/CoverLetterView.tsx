@@ -8,6 +8,7 @@ import {
   Sparkles,
   RefreshCw,
   Plus,
+  AlertTriangle,
   Trash2,
   Lightbulb,
   Edit3,
@@ -165,7 +166,7 @@ export const CoverLetterView: React.FC<CoverLetterViewProps> = ({
                 ) : (
                   <>
                     <Sparkles className="w-3 h-3 text-purple-600" />
-                    <span>Gemini Flash ⚡</span>
+                    <span>Gemini Flash</span>
                   </>
                 )}
               </span>
@@ -193,7 +194,7 @@ export const CoverLetterView: React.FC<CoverLetterViewProps> = ({
               title="Porada AI"
             >
               <Lightbulb className="w-4 h-4 text-amber-500" />
-              <span>Porada 💡</span>
+              <span>Porada</span>
             </button>
           )}
 
@@ -242,15 +243,15 @@ export const CoverLetterView: React.FC<CoverLetterViewProps> = ({
             ) : (
               <Sparkles className="w-3.5 h-3.5 text-purple-300" />
             )}
-            <span>{isGeneratingAI ? 'Generowanie...' : 'Gemini Flash ⚡'}</span>
+            <span>{isGeneratingAI ? 'Generowanie...' : 'Gemini Flash'}</span>
           </button>
         </div>
       </div>
 
       {aiError && (
-        <div className="p-3 bg-red-50 border border-red-200 rounded-xl text-red-700 text-xs flex items-center justify-between">
-          <span>⚠️ {aiError}</span>
-          <button onClick={() => setAiError(null)} className="font-bold underline text-red-800">Zamknij</button>
+        <div className="p-3 bg-danger-50 border border-danger-500/30 text-danger-700 text-xs flex items-center justify-between">
+          <span className="flex items-center gap-1.5"><AlertTriangle className="w-3.5 h-3.5 shrink-0" />{aiError}</span>
+          <button onClick={() => setAiError(null)} className="font-bold underline text-danger-700">Zamknij</button>
         </div>
       )}
 

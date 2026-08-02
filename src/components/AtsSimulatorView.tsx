@@ -1,6 +1,7 @@
 import React from 'react';
 import { AtsCheckResult } from '../types';
-import { ShieldCheck, CheckCircle2, FileText, Calendar, Target, Cpu, Check, X, Layers, Sparkles, Binary, Award } from 'lucide-react';
+import { ShieldCheck, CheckCircle2, FileText, Calendar, Target, Cpu, Check, X, Layers, Sparkles, Binary, Award, Info, AlertTriangle } from 'lucide-react';
+import { StatusBadge } from './ui/StatusBadge';
 
 interface AtsSimulatorViewProps {
   result: AtsCheckResult;
@@ -8,9 +9,9 @@ interface AtsSimulatorViewProps {
 
 export const AtsSimulatorView: React.FC<AtsSimulatorViewProps> = ({ result }) => {
   const getScoreColor = (score: number) => {
-    if (score >= 80) return 'text-emerald-700 border-emerald-300 bg-emerald-50';
-    if (score >= 60) return 'text-amber-700 border-amber-300 bg-amber-50';
-    return 'text-rose-700 border-rose-300 bg-rose-50';
+    if (score >= 80) return 'text-success-700 border-success-500/30 bg-success-50';
+    if (score >= 60) return 'text-warning-700 border-warning-500/30 bg-warning-50';
+    return 'text-danger-700 border-danger-500/30 bg-danger-50';
   };
 
   // Estimate compatibility across popular corporate ATS engines
@@ -94,9 +95,9 @@ export const AtsSimulatorView: React.FC<AtsSimulatorViewProps> = ({ result }) =>
             </div>
             <div className="flex justify-between items-center text-slate-700">
               <span>Bezpieczeństwo Jednokolumnowe:</span>
-              <span className="font-bold font-mono text-emerald-600">
-                {result.layer1Structure?.isSingleColumnCompliant ? '✓ TAK' : '⚠️ ZŁOŻONE'}
-              </span>
+              <StatusBadge variant={result.layer1Structure?.isSingleColumnCompliant ? 'success' : 'warning'}>
+                {result.layer1Structure?.isSingleColumnCompliant ? 'TAK' : 'ZŁOŻONE'}
+              </StatusBadge>
             </div>
             <div className="pt-1">
               <span className="text-[11px] text-slate-500 font-medium">Wykryte sekcje:</span>
@@ -209,9 +210,10 @@ export const AtsSimulatorView: React.FC<AtsSimulatorViewProps> = ({ result }) =>
               {result.matchedKeywords.map((kw) => (
                 <span
                   key={kw}
-                  className="px-2 py-0.5 rounded bg-emerald-100/80 border border-emerald-300 text-emerald-800 font-mono text-[11px] font-medium"
+                  className="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-success-50 border border-success-500/30 text-success-700 font-mono text-[11px] font-medium"
                 >
-                  ✓ {kw}
+                  <Check className="w-3 h-3 shrink-0" />
+                  {kw}
                 </span>
               ))}
             </div>
@@ -231,9 +233,10 @@ export const AtsSimulatorView: React.FC<AtsSimulatorViewProps> = ({ result }) =>
               {result.missingHardSkills.map((kw) => (
                 <span
                   key={kw}
-                  className="px-2 py-0.5 rounded bg-rose-100/80 border border-rose-300 text-rose-800 font-mono text-[11px] font-medium"
+                  className="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-danger-50 border border-danger-500/30 text-danger-700 font-mono text-[11px] font-medium"
                 >
-                  ✕ {kw}
+                  <X className="w-3 h-3 shrink-0" />
+                  {kw}
                 </span>
               ))}
             </div>
@@ -271,8 +274,9 @@ export const AtsSimulatorView: React.FC<AtsSimulatorViewProps> = ({ result }) =>
           ) : (
             <div className="space-y-1">
               {result.badDateFormats.map((err, i) => (
-                <div key={i} className="text-xs text-rose-700 bg-rose-50 p-2 rounded border border-rose-200">
-                  ⚠️ {err}
+                <div key={i} className="text-xs text-danger-700 bg-danger-50 p-2 rounded border border-danger-500/30 flex items-start gap-1.5">
+                  <AlertTriangle className="w-3.5 h-3.5 shrink-0 mt-0.5" />
+                  <span>{err}</span>
                 </div>
               ))}
             </div>
@@ -292,13 +296,15 @@ export const AtsSimulatorView: React.FC<AtsSimulatorViewProps> = ({ result }) =>
           ) : (
             <div className="space-y-1">
               {result.ocrWarnings.map((warn, i) => (
-                <div key={i} className="text-xs text-amber-800 bg-amber-50 p-2 rounded border border-amber-200">
-                  ℹ️ {warn}
+                <div key={i} className="text-xs text-warning-700 bg-warning-50 p-2 rounded border border-warning-500/30 flex items-start gap-1.5">
+                  <Info className="w-3.5 h-3.5 shrink-0 mt-0.5" />
+                  <span>{warn}</span>
                 </div>
               ))}
               {result.layer1Structure?.unparsableElementsWarnings.map((warn, i) => (
-                <div key={`u-${i}`} className="text-xs text-rose-800 bg-rose-50 p-2 rounded border border-rose-200">
-                  ⚠️ {warn}
+                <div key={`u-${i}`} className="text-xs text-danger-700 bg-danger-50 p-2 rounded border border-danger-500/30 flex items-start gap-1.5">
+                  <AlertTriangle className="w-3.5 h-3.5 shrink-0 mt-0.5" />
+                  <span>{warn}</span>
                 </div>
               ))}
             </div>
