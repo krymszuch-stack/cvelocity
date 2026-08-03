@@ -9,6 +9,8 @@ import { AtsSimulatorView } from './AtsSimulatorView';
 import { CoverLetterView } from './CoverLetterView';
 import { CVWordBuilder } from './CVWordBuilder';
 import { Eye, ShieldCheck, Layers, Type, Sparkles } from 'lucide-react';
+import { Tabs } from './ui/Tabs';
+import { StatusBadge } from './ui/StatusBadge';
 
 interface RealtimeLivePreviewProps {
   vault: MasterVault;
@@ -94,83 +96,44 @@ export const RealtimeLivePreview: React.FC<RealtimeLivePreviewProps> = ({
     };
   }, [vault, jobTitle, companyName, jobDescription]);
 
+  const scoreVariant =
+    atsResult.overallScore >= 75 ? 'success' : atsResult.overallScore >= 45 ? 'warning' : 'danger';
+
   return (
     <div className="space-y-4">
-      {/* Live Sync Status Bar */}
-      <div className="bg-white border border-slate-200 rounded-xl p-3 px-4 flex items-center justify-between shadow-2xs">
-        <div className="flex items-center space-x-2.5">
-          <span className="relative flex h-2.5 w-2.5">
-            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
-            <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-emerald-500"></span>
+      {/* Live sync status */}
+      <div className="bg-surface border border-line rounded-xl px-4 py-3 flex flex-wrap items-center justify-between gap-3 shadow-xs">
+        <div className="flex items-center gap-2.5 min-w-0">
+          <span className="relative flex h-2.5 w-2.5 shrink-0">
+            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-success-500 opacity-70" />
+            <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-success-500" />
           </span>
-          <span className="text-xs font-bold text-slate-800">
-            Podgląd w Czasie Rzeczywistym (Real-Time Dynamic Sync)
-          </span>
-          <span className="hidden sm:inline-block text-[10px] font-mono px-2 py-0.5 rounded bg-emerald-50 text-emerald-700 border border-emerald-200">
-            0-Token Slot Filling
-          </span>
+          <span className="text-xs font-bold text-ink truncate">Podgląd w czasie rzeczywistym</span>
+          <StatusBadge variant="success" size="sm" showIcon={false} className="hidden sm:inline-flex">
+            <Sparkles className="w-3 h-3" /> 0 tokenów
+          </StatusBadge>
         </div>
 
-        {/* ATS Score Live Badge */}
-        <div className="flex items-center space-x-2">
-          <span className="text-xs text-slate-500 font-medium hidden md:inline">ATS Score Live:</span>
-          <div className="px-2.5 py-1 rounded-lg bg-indigo-50 border border-indigo-200 font-mono font-bold text-indigo-700 text-xs flex items-center space-x-1">
-            <ShieldCheck className="w-3.5 h-3.5 text-indigo-600" />
-            <span>{atsResult.overallScore}%</span>
-          </div>
+        <div className="flex items-center gap-2 shrink-0">
+          <span className="text-xs text-muted font-medium hidden md:inline">Wynik ATS na żywo</span>
+          <StatusBadge variant={scoreVariant} showIcon={false}>
+            <ShieldCheck className="w-3.5 h-3.5" />
+            <span className="sv-tnum">{atsResult.overallScore}%</span>
+          </StatusBadge>
         </div>
       </div>
 
-      {/* Tabs */}
-      <div className="flex border-b border-slate-200 space-x-2 overflow-x-auto pb-1">
-        <button
-          onClick={() => setTab('builder')}
-          className={`flex items-center space-x-2 px-4 py-2 border-b-2 font-bold text-xs transition-colors ${
-            activeView === 'builder'
-              ? 'border-indigo-600 text-indigo-600'
-              : 'border-transparent text-slate-600 hover:text-slate-900'
-          }`}
-        >
-          <Type className="w-4 h-4 text-blue-600" />
-          <span>Edytor CV</span>
-        </button>
-
-        <button
-          onClick={() => setTab('document')}
-          className={`flex items-center space-x-2 px-4 py-2 border-b-2 font-bold text-xs transition-colors ${
-            activeView === 'document'
-              ? 'border-indigo-600 text-indigo-600'
-              : 'border-transparent text-slate-600 hover:text-slate-900'
-          }`}
-        >
-          <Eye className="w-4 h-4" />
-          <span>Podgląd CV</span>
-        </button>
-
-        <button
-          onClick={() => setTab('ats')}
-          className={`flex items-center space-x-2 px-4 py-2 border-b-2 font-bold text-xs transition-colors ${
-            activeView === 'ats'
-              ? 'border-indigo-600 text-indigo-600'
-              : 'border-transparent text-slate-600 hover:text-slate-900'
-          }`}
-        >
-          <ShieldCheck className="w-4 h-4 text-emerald-600" />
-          <span>Symulator ATS: {atsResult.overallScore}%</span>
-        </button>
-
-        <button
-          onClick={() => setTab('coverLetter')}
-          className={`flex items-center space-x-2 px-4 py-2 border-b-2 font-bold text-xs transition-colors ${
-            activeView === 'coverLetter'
-              ? 'border-indigo-600 text-indigo-600'
-              : 'border-transparent text-slate-600 hover:text-slate-900'
-          }`}
-        >
-          <Layers className="w-4 h-4 text-amber-600" />
-          <span>List Motywacyjny</span>
-        </button>
-      </div>
+      <Tabs
+        variant="underline"
+        active={activeView}
+        onChange={setTab}
+        items={[
+          { id: 'builder', label: 'Edytor CV', icon: Type },
+          { id: 'document', label: 'Podgląd CV', icon: Eye },
+          { id: 'ats', label: `Symulator ATS · ${atsResult.overallScore}%`, icon: ShieldCheck },
+          { id: 'coverLetter', label: 'List motywacyjny', icon: Layers },
+        ]}
+      />
 
       {/* View Output */}
       {activeView === 'builder' && (

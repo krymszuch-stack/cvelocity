@@ -1,64 +1,275 @@
 @import "tailwindcss";
 
-/* SkillVault design tokens — indigo is the single brand accent; emerald is
-   reserved exclusively for success/positive-status semantics (never brand). */
+/* ============================================================================
+   SkillVault Design System
+   ----------------------------------------------------------------------------
+   Two layers:
+   1. RAW PALETTE (--sv-*) — flips between light/dark on [data-theme].
+   2. TAILWIND TOKENS (@theme --color-*) — reference the raw layer, so every
+      utility (bg-surface, text-muted, border-line …) is theme-reactive for free.
+   Components must never hardcode raw palette classes; always use these tokens.
+   ========================================================================== */
+
 @theme {
-  --color-brand-50: #eef2ff;
-  --color-brand-100: #e0e7ff;
+  /* --- Semantic surfaces & text (theme-reactive) --- */
+  --color-canvas: var(--sv-canvas);
+  --color-surface: var(--sv-surface);
+  --color-raised: var(--sv-raised);
+  --color-sunken: var(--sv-sunken);
+  --color-overlay: var(--sv-overlay);
+
+  --color-line: var(--sv-line);
+  --color-line-strong: var(--sv-line-strong);
+
+  --color-ink: var(--sv-ink);
+  --color-muted: var(--sv-muted);
+  --color-subtle: var(--sv-subtle);
+  --color-inverse: var(--sv-inverse);
+
+  /* --- Brand (indigo) — the single accent --- */
+  --color-brand-50: var(--sv-brand-50);
+  --color-brand-100: var(--sv-brand-100);
+  --color-brand-200: var(--sv-brand-200);
+  --color-brand-300: var(--sv-brand-300);
   --color-brand-400: #818cf8;
   --color-brand-500: #6366f1;
   --color-brand-600: #4f46e5;
   --color-brand-700: #4338ca;
+  --color-brand-800: #3730a3;
   --color-brand-900: #312e81;
   --color-brand-950: #1e1b4b;
+  --color-brand-soft: var(--sv-brand-soft);
+  --color-brand-fg: var(--sv-brand-fg);
 
-  --color-success-50: #ecfdf5;
+  /* --- Status: emerald = success only, never brand --- */
   --color-success-500: #10b981;
-  --color-success-700: #047857;
+  --color-success-600: #059669;
+  --color-success-soft: var(--sv-success-soft);
+  --color-success-fg: var(--sv-success-fg);
 
-  --color-warning-50: #fffbeb;
   --color-warning-500: #f59e0b;
-  --color-warning-700: #b45309;
+  --color-warning-600: #d97706;
+  --color-warning-soft: var(--sv-warning-soft);
+  --color-warning-fg: var(--sv-warning-fg);
 
-  --color-danger-50: #fef2f2;
   --color-danger-500: #f43f5e;
-  --color-danger-700: #be123c;
+  --color-danger-600: #e11d48;
+  --color-danger-soft: var(--sv-danger-soft);
+  --color-danger-fg: var(--sv-danger-fg);
+
+  /* --- Type scale --- */
+  --font-sans: 'Plus Jakarta Sans', system-ui, -apple-system, BlinkMacSystemFont,
+    'Segoe UI', Roboto, sans-serif;
+  --font-mono: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
+
+  /* --- Elevation — softer & wider than Tailwind defaults --- */
+  --shadow-xs: 0 1px 2px var(--sv-shadow-color);
+  --shadow-sm: 0 1px 3px var(--sv-shadow-color), 0 1px 2px -1px var(--sv-shadow-color);
+  --shadow-md: 0 4px 12px -2px var(--sv-shadow-color), 0 2px 6px -2px var(--sv-shadow-color);
+  --shadow-lg: 0 12px 28px -6px var(--sv-shadow-color), 0 6px 12px -6px var(--sv-shadow-color);
+  --shadow-xl: 0 24px 56px -12px var(--sv-shadow-strong);
+
+  --radius-card: 14px;
+}
+
+/* ---------------------------------------------------------------- LIGHT --- */
+:root,
+[data-theme='light'] {
+  color-scheme: light;
+
+  --sv-canvas: #f7f8fa;
+  --sv-surface: #ffffff;
+  --sv-raised: #ffffff;
+  --sv-sunken: #f1f2f6;
+  --sv-overlay: rgba(15, 18, 32, 0.45);
+
+  --sv-line: #e6e8ef;
+  --sv-line-strong: #d2d6e0;
+
+  --sv-ink: #14161f;
+  --sv-muted: #565b6b;
+  --sv-subtle: #8a90a2;
+  --sv-inverse: #ffffff;
+
+  --sv-brand-50: #eef2ff;
+  --sv-brand-100: #e0e7ff;
+  --sv-brand-200: #c7d2fe;
+  --sv-brand-300: #a5b4fc;
+  --sv-brand-soft: #eef2ff;
+  --sv-brand-fg: #4338ca;
+
+  --sv-success-soft: #ecfdf5;
+  --sv-success-fg: #047857;
+  --sv-warning-soft: #fffbeb;
+  --sv-warning-fg: #b45309;
+  --sv-danger-soft: #fff1f2;
+  --sv-danger-fg: #be123c;
+
+  --sv-shadow-color: rgba(19, 22, 40, 0.07);
+  --sv-shadow-strong: rgba(19, 22, 40, 0.16);
+}
+
+/* ----------------------------------------------------------------- DARK --- */
+[data-theme='dark'] {
+  color-scheme: dark;
+
+  --sv-canvas: #0a0b10;
+  --sv-surface: #121319;
+  --sv-raised: #171922;
+  --sv-sunken: #0e0f15;
+  --sv-overlay: rgba(4, 5, 10, 0.7);
+
+  --sv-line: #24262f;
+  --sv-line-strong: #333644;
+
+  --sv-ink: #f2f3f7;
+  --sv-muted: #a2a7b8;
+  --sv-subtle: #6f7486;
+  --sv-inverse: #0a0b10;
+
+  --sv-brand-50: #1a1b33;
+  --sv-brand-100: #22244a;
+  --sv-brand-200: #2d3060;
+  --sv-brand-300: #a5b4fc;
+  --sv-brand-soft: rgba(99, 102, 241, 0.14);
+  --sv-brand-fg: #a5b4fc;
+
+  --sv-success-soft: rgba(16, 185, 129, 0.14);
+  --sv-success-fg: #4ade9f;
+  --sv-warning-soft: rgba(245, 158, 11, 0.14);
+  --sv-warning-fg: #fbbf24;
+  --sv-danger-soft: rgba(244, 63, 94, 0.14);
+  --sv-danger-fg: #fb7185;
+
+  --sv-shadow-color: rgba(0, 0, 0, 0.5);
+  --sv-shadow-strong: rgba(0, 0, 0, 0.7);
 }
 
 @layer base {
+  * {
+    border-color: var(--sv-line);
+  }
+
   body {
-    font-family: 'Plus Jakarta Sans', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+    font-family: var(--font-sans);
+    background-color: var(--sv-canvas);
+    color: var(--sv-ink);
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    text-rendering: optimizeLegibility;
+  }
+
+  /* Theme swap should feel like a dim, not a flash. */
+  body,
+  body * {
+    transition: background-color 0.18s ease, border-color 0.18s ease,
+      color 0.18s ease;
+  }
+
+  h1, h2, h3, h4 {
+    letter-spacing: -0.018em;
+    font-weight: 700;
   }
 }
 
-/* Custom Scrollbar for Bank/Fintech Aesthetic */
+/* ------------------------------------------------------------ SCROLLBAR --- */
 ::-webkit-scrollbar {
-  width: 6px;
-  height: 6px;
+  width: 10px;
+  height: 10px;
 }
 ::-webkit-scrollbar-track {
-  background: rgba(15, 23, 42, 0.6); /* slate dark */
+  background: transparent;
 }
 ::-webkit-scrollbar-thumb {
-  background: var(--color-brand-500);
+  background: var(--sv-line-strong);
   border-radius: 9999px;
+  border: 3px solid transparent;
+  background-clip: content-box;
 }
 ::-webkit-scrollbar-thumb:hover {
-  background: rgba(99, 102, 241, 0.5);
+  background: var(--sv-subtle);
+  background-clip: content-box;
 }
 
-/* Focus styles for forms & accessibility */
-input:focus-visible, textarea:focus-visible, select:focus-visible, button:focus-visible {
-  outline: 2px solid var(--color-brand-500) !important;
-  outline-offset: 1px !important;
+/* --------------------------------------------------------------- FOCUS --- */
+:where(input, textarea, select, button, a, [tabindex]):focus-visible {
+  outline: 2px solid var(--color-brand-500);
+  outline-offset: 2px;
+  border-radius: 6px;
+}
+/* The ring above is the accessible affordance; suppress the doubled default. */
+:where(input, textarea, select, button):focus {
+  outline-color: var(--color-brand-500);
 }
 
-/* Animation utilities */
-@keyframes fadeIn {
+/* ---------------------------------------------------------- ANIMATIONS --- */
+@keyframes sv-fade-in {
   from { opacity: 0; transform: translateY(4px); }
   to { opacity: 1; transform: translateY(0); }
 }
+@keyframes sv-scale-in {
+  from { opacity: 0; transform: scale(0.97) translateY(6px); }
+  to { opacity: 1; transform: scale(1) translateY(0); }
+}
+@keyframes sv-slide-up {
+  from { opacity: 0; transform: translateY(12px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+@keyframes sv-shimmer {
+  100% { transform: translateX(100%); }
+}
 
-.animate-fade-in {
-  animation: fadeIn 0.2s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+.animate-fade-in { animation: sv-fade-in 0.2s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
+.animate-scale-in { animation: sv-scale-in 0.22s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
+.animate-slide-up { animation: sv-slide-up 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
+
+/* Staggered list entrance — set `style={{ '--i': index }}` on the child. */
+.stagger > * {
+  animation: sv-slide-up 0.34s cubic-bezier(0.16, 1, 0.3, 1) backwards;
+  animation-delay: calc(var(--i, 0) * 40ms);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+/* ------------------------------------------------------------ UTILITIES --- */
+/* Frosted panel used by the sidebar, topbar and modal chrome. */
+.sv-glass {
+  background-color: color-mix(in srgb, var(--sv-surface) 78%, transparent);
+  backdrop-filter: blur(14px) saturate(1.6);
+  -webkit-backdrop-filter: blur(14px) saturate(1.6);
+}
+
+/* Hairline that reads correctly on both themes. */
+.sv-hairline {
+  box-shadow: inset 0 -1px 0 var(--sv-line);
+}
+
+.sv-skeleton {
+  position: relative;
+  overflow: hidden;
+  background: var(--sv-sunken);
+}
+.sv-skeleton::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  transform: translateX(-100%);
+  background: linear-gradient(
+    90deg,
+    transparent,
+    color-mix(in srgb, var(--sv-ink) 6%, transparent),
+    transparent
+  );
+  animation: sv-shimmer 1.6s infinite;
+}
+
+/* Numeric data (scores, token counts) should align in columns. */
+.sv-tnum {
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: 'tnum';
 }

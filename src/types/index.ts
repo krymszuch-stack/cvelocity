@@ -1,3 +1,6 @@
+/** Top-level sections reachable from the sidebar. */
+export type AppTab = 'matcher' | 'vault' | 'parser' | 'profiler';
+
 export type FlagCategory = 'PHYSICAL' | 'OFFICE_IT' | 'CASUAL' | 'REMOTE';
 
 export type ExperienceLevel = 'ENTRY' | 'MID' | 'SENIOR' | 'PIVOT';
