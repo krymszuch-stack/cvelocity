@@ -1,12 +1,14 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { MasterVault, TokenStats } from './types';
+import { AppTab, MasterVault, TokenStats } from './types';
 import { createEmptyVault } from './lib/sampleVault';
 import { loadVaultFromLocalStorage, saveVaultToLocalStorage, clearVaultLocalStorage } from './lib/vaultCrypto';
 import { getActiveSessionUser, loadUserVault } from './lib/auth';
 import { semanticCacheInstance } from './lib/semanticCache';
 import { AuthProvider, useAuth } from './context/AuthContext';
+import { ThemeProvider } from './context/ThemeContext';
 import { AuthModal } from './components/AuthModal';
-import { Header } from './components/Header';
+import { Sidebar } from './components/shell/Sidebar';
+import { Topbar } from './components/shell/Topbar';
 import { TokenStatsWidget } from './components/TokenStatsWidget';
 import { JobMatcher } from './components/JobMatcher';
 import { MasterVaultEditor } from './components/MasterVaultEditor';
@@ -15,7 +17,9 @@ import { CVParserModal } from './components/CVParserModal';
 import { GeminiAdvisorModal } from './components/GeminiAdvisorModal';
 
 function MainApp() {
-  const [activeTab, setActiveTab] = useState<'matcher' | 'vault' | 'parser' | 'profiler'>('matcher');
+  const [activeTab, setActiveTab] = useState<AppTab>('matcher');
+  const [isNavCollapsed, setIsNavCollapsed] = useState(false);
+  const [isMobileNavOpen, setIsMobileNavOpen] = useState(false);
   const { userVault, saveUserVault } = useAuth();
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
   const [isAdvisorOpen, setIsAdvisorOpen] = useState(false);
@@ -157,48 +161,60 @@ function MainApp() {
   };
 
   return (
-    <div className="min-h-screen bg-slate-950 text-slate-100 font-sans selection:bg-cyan-500 selection:text-slate-950">
-      {/* Top Header Navigation */}
-      <Header
+    <div className="min-h-screen bg-canvas text-ink font-sans flex selection:bg-brand-500/25">
+      <Sidebar
         activeTab={activeTab}
         setActiveTab={setActiveTab}
-        tokenStats={tokenStats}
-        vaultStatus={{
-          isLoaded: !!vault.personalInfo.fullName,
-          itemCount: vault.history.length,
-          isEncrypted: false,
-        }}
-        onOpenTokenStats={() => setIsTokenModalOpen(true)}
-        onOpenAuthModal={() => setIsAuthModalOpen(true)}
+        collapsed={isNavCollapsed}
+        onToggleCollapse={() => setIsNavCollapsed((c) => !c)}
+        vaultReady={!!vault.personalInfo.fullName}
+        mobileOpen={isMobileNavOpen}
+        onCloseMobile={() => setIsMobileNavOpen(false)}
         onOpenAdvisor={handleOpenAdvisor}
       />
 
-      {/* Main Content View Container */}
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {activeTab === 'matcher' && (
-          <JobMatcher
-            vault={vault}
-            onUpdateStats={refreshStats}
-            onUpdateVault={setVault}
-            onOpenAdvisor={handleOpenAdvisor}
-          />
-        )}
+      <div className="flex-1 min-w-0 flex flex-col">
+        <Topbar
+          activeTab={activeTab}
+          tokenStats={tokenStats}
+          onOpenTokenStats={() => setIsTokenModalOpen(true)}
+          onOpenAuthModal={() => setIsAuthModalOpen(true)}
+          onOpenMobileNav={() => setIsMobileNavOpen(true)}
+        />
 
-        {activeTab === 'vault' && (
-          <MasterVaultEditor vault={vault} onChange={setVault} onOpenAdvisor={handleOpenAdvisor} />
-        )}
+        {/* Remounting per tab replays the entrance animation and drops stale view state. */}
+        <main key={activeTab} className="flex-1 px-4 sm:px-6 lg:px-8 py-7 animate-fade-in">
+          <div className="max-w-[1400px] mx-auto">
+            {activeTab === 'matcher' && (
+              <JobMatcher
+                vault={vault}
+                onUpdateStats={refreshStats}
+                onUpdateVault={setVault}
+                onOpenAdvisor={handleOpenAdvisor}
+              />
+            )}
 
-        {activeTab === 'profiler' && (
-          <ProfilerSection
-            profiler={vault.profiler}
-            onChange={(updatedProfiler) => setVault({ ...vault, profiler: updatedProfiler })}
-          />
-        )}
+            {activeTab === 'vault' && (
+              <MasterVaultEditor vault={vault} onChange={setVault} onOpenAdvisor={handleOpenAdvisor} />
+            )}
 
-        {activeTab === 'parser' && (
-          <CVParserModal currentVault={vault} onApplyParsedVault={handleApplyParsedVault} />
-        )}
-      </main>
+            {activeTab === 'profiler' && (
+              <ProfilerSection
+                profiler={vault.profiler}
+                onChange={(updatedProfiler) => setVault({ ...vault, profiler: updatedProfiler })}
+              />
+            )}
+
+            {activeTab === 'parser' && (
+              <CVParserModal currentVault={vault} onApplyParsedVault={handleApplyParsedVault} />
+            )}
+          </div>
+        </main>
+
+        <footer className="border-t border-line py-5 px-6 text-center text-xs text-subtle">
+          SkillVault © 2026 — 0-Token Local Slot Filling + Gemini Delta Prompting.
+        </footer>
+      </div>
 
       {/* Gemini AI Advisor & Samouczek Modal ("Okienko Doradcy") */}
       <GeminiAdvisorModal
@@ -225,19 +241,16 @@ function MainApp() {
           setVault(loadedVault);
         }}
       />
-
-      {/* Footer */}
-      <footer className="border-t border-slate-900 bg-slate-950 py-6 text-center text-xs text-slate-500">
-        <p>SkillVault © 2026 – System Automatyzacji CV & ATS. 0-Token Local Slot Filling + Gemini Delta Prompting.</p>
-      </footer>
     </div>
   );
 }
 
 export default function App() {
   return (
-    <AuthProvider>
-      <MainApp />
-    </AuthProvider>
+    <ThemeProvider>
+      <AuthProvider>
+        <MainApp />
+      </AuthProvider>
+    </ThemeProvider>
   );
 }

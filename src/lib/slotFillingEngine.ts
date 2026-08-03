@@ -97,6 +97,20 @@ export function extractSlotsFromHighlight(highlight: HighlightMetric | string): 
 }
 
 /**
+ * Deterministic index in [0, size) derived from `seed` (FNV-1a).
+ * Used wherever output must stay stable across renders but still vary by input.
+ */
+function stableIndex(seed: string, size: number): number {
+  if (size <= 0) return 0;
+  let hash = 0x811c9dc5;
+  for (let i = 0; i < seed.length; i++) {
+    hash ^= seed.charCodeAt(i);
+    hash = Math.imul(hash, 0x01000193) >>> 0;
+  }
+  return hash % size;
+}
+
+/**
  * Local 0-Token Slot Filling Transformer
  * Inverts sentence structure (Metric-First, Action-First, Tool-First, PAR) and injects target job keywords.
  */
@@ -107,11 +121,15 @@ export function fillSlotSentence(
 ): string {
   let { action, target, tool, metric } = slot;
 
-  // Substitute action with synonym if applicable
+  // Substitute action with synonym if applicable.
+  // The pick must be DETERMINISTIC: this function feeds the ATS simulator, and a
+  // random synonym per call made the live score jump between unrelated values on
+  // every re-render. Hashing the source phrase keeps variety across bullets while
+  // making any single bullet resolve to the same synonym every time.
   const lowerAction = action.toLowerCase();
   if (SYNONYM_MAP[lowerAction]) {
     const synonyms = SYNONYM_MAP[lowerAction];
-    action = synonyms[Math.floor(Math.random() * synonyms.length)];
+    action = synonyms[stableIndex(`${lowerAction}|${slot.target}`, synonyms.length)];
     // Capitalize first letter
     action = action.charAt(0).toUpperCase() + action.slice(1);
   }

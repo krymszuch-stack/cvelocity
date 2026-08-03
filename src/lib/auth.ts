@@ -209,7 +209,7 @@ export function disableTwoFactor(userId: string): void {
 }
 
 /**
- * Authenticate or register a user via OAuth (Google / Microsoft)
+ * Authenticate or register a user via OAuth (Google)
  */
 export function loginWithOAuthAccount(email: string, fullName: string, provider: 'google'): { user: UserAccount; vault: MasterVault } {
   const normalizedEmail = email.trim().toLowerCase();
