@@ -41,15 +41,13 @@ Zawartość pliku `.env`:
 # Klucz API Google Gemini (Wymagany)
 GEMINI_API_KEY=twoj_klucz_gemini
 
-# Google OAuth (Opcjonalnie)
-VITE_GOOGLE_CLIENT_ID=twoj_google_client_id
-GOOGLE_CLIENT_SECRET=twoj_google_client_secret
-
-# Azure Entra ID / Microsoft OAuth (Opcjonalnie)
-VITE_AZURE_CLIENT_ID=twoj_azure_client_id
-VITE_AZURE_TENANT_ID=common
-AZURE_CLIENT_SECRET=twoj_azure_client_secret
+# Firebase (Wymagane do logowania Google + kont użytkowników)
+VITE_FIREBASE_API_KEY=...
+VITE_FIREBASE_AUTH_DOMAIN=...
+VITE_FIREBASE_PROJECT_ID=...
+VITE_FIREBASE_APP_ID=...
 ```
+Pełną listę zmiennych Firebase znajdziesz w `.env.example`.
 
 ---
 
@@ -75,14 +73,14 @@ AZURE_CLIENT_SECRET=twoj_azure_client_secret
 
 ## 🔑 Integracja OAuth & Logowanie
 
-W aplikacji skonfigurowano 3 równoległe ścieżki autentykacji:
+W aplikacji skonfigurowano 2 równoległe ścieżki autentykacji, plus opcjonalne 2FA:
 
 1. **Rejestracja/Logowanie E-mail & Hasło**:
    - Wykorzystuje natywne szyfrowanie **AES-256** (CryptoJS) dla danych użytkownika. Każdy nowy użytkownik startuje z czystą bazą (bez placeholderów).
-2. **Google OAuth 2.0**:
-   - Integracja z Google Identity Services. Token ID jest weryfikowany backendowo.
-3. **Microsoft Azure Entra ID**:
-   - Integracja z MSAL (`@azure/msal-browser` i `@azure/msal-node`).
+2. **Google OAuth (Firebase Auth)**:
+   - Logowanie przez Firebase Identity (popup Google). Wymaga zmiennych `VITE_FIREBASE_*`.
+3. **TOTP 2FA (opcjonalne)**:
+   - Weryfikacja dwuetapowa kompatybilna z aplikacjami typu Google Authenticator/Authy (`otpauth` + QR kod), obsługiwana w pełni po stronie klienta.
 
 ---
 
