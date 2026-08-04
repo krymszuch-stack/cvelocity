@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { apiFetch } from '../lib/apiClient';
 import { MasterVault } from '../types';
 import { parseJobDescriptionLocal, analyzeJdMatchWithVault, ParsedJobDescription, JDVaultMatchAnalysis } from '../lib/jdParser';
 import { Search, Sparkles, CheckCircle2, AlertTriangle, ArrowRight, X, PlusCircle, Check, Target, Link, Globe, Gift, DollarSign, ShieldAlert, AlertCircle, Building, Briefcase } from 'lucide-react';
@@ -43,7 +44,7 @@ export const JDParserModal: React.FC<JDParserModalProps> = ({
     setFetchError(null);
 
     try {
-      const response = await fetch('/api/fetch-jd-url', {
+      const response = await apiFetch('/api/fetch-jd-url', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ url: jdUrl.trim() }),
@@ -90,7 +91,7 @@ export const JDParserModal: React.FC<JDParserModalProps> = ({
     setFetchError(null);
 
     try {
-      const response = await fetch('/api/parse-jd', {
+      const response = await apiFetch('/api/parse-jd', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ rawJdText: jdText }),

@@ -1,4 +1,5 @@
 import { CoverLetter, MasterVault } from '../types';
+import { apiFetch } from './apiClient';
 import { rankExperienceByRelevance, rankHighlightsByRelevance } from './relevanceRanking';
 
 /**
@@ -106,7 +107,7 @@ export async function generateCoverLetterWithAI(
   jobDescription: string,
   vault: MasterVault
 ): Promise<CoverLetter> {
-  const response = await fetch('/api/generate-cover-letter', {
+  const response = await apiFetch('/api/generate-cover-letter', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({

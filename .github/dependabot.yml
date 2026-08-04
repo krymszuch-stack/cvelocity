@@ -1,0 +1,25 @@
+version: 2
+updates:
+  - package-ecosystem: "npm"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+    open-pull-requests-limit: 5
+    labels: ["dependencies"]
+    # Grouping matters: ungrouped, this repo's ~50 packages produce a dozen PRs a
+    # week, which turns into noise everyone ignores.
+    groups:
+      dev-dependencies:
+        dependency-type: "development"
+      react:
+        patterns: ["react", "react-dom", "@types/react*"]
+      tiptap:
+        patterns: ["@tiptap/*"]
+
+  # Actions are part of the supply-chain surface and are easy to forget.
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+    labels: ["dependencies", "ci"]

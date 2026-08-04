@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { apiFetch } from '../lib/apiClient';
 import { MasterVault } from '../types';
 import {
   Sparkles, AlertCircle, Search, Link as LinkIcon, Globe, ShieldAlert, Check, ChevronDown, Building2,
@@ -56,7 +57,7 @@ Wymagania kluczowe:
     setScraperError(null);
 
     try {
-      const response = await fetch('/api/fetch-jd-url', {
+      const response = await apiFetch('/api/fetch-jd-url', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ url: jdUrlInput.trim() }),

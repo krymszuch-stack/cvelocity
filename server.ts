@@ -1,6 +1,7 @@
+// Must precede the gemini import so GEMINI_API_KEY from .env is visible to it.
+// On Render this is a no-op — dotenv never overrides variables already in the process.
+import "dotenv/config";
 import express from "express";
-import path from "path";
-import { createServer as createViteServer } from "vite";
 import * as cheerio from "cheerio";
 import { parseRawCvToVault, optimizeDeltaPhrases, parseJobDescriptionWithGemini, getAdvisorEducationalAdvice, generateCoverLetterWithFlash } from "./src/server/gemini";
 
@@ -115,22 +116,125 @@ function cleanJobHtmlToPureText(htmlOrText: string): string {
   }
 }
 
+/** Origins allowed to call this API from a browser. Overridable via ALLOWED_ORIGINS (comma-separated). */
+const DEFAULT_ALLOWED_ORIGINS = [
+  "https://skillvault-99a72.web.app",
+  "https://skillvault-99a72.firebaseapp.com",
+  "https://skillvault.oathcry.com",
+  "http://localhost:3000",
+  "http://127.0.0.1:3000",
+];
+
+const ALLOWED_ORIGINS = new Set(
+  (process.env.ALLOWED_ORIGINS ? process.env.ALLOWED_ORIGINS.split(",") : DEFAULT_ALLOWED_ORIGINS)
+    .map((o) => o.trim().replace(/\/$/, ""))
+    .filter(Boolean)
+);
+
+/**
+ * Fixed-window rate limit, per IP, for the Gemini-backed routes.
+ * These endpoints spend real money and are publicly reachable once deployed, so
+ * an open door here is a billing risk, not just an abuse one. In-memory is enough:
+ * the service runs as a single instance.
+ */
+const RATE_LIMIT_WINDOW_MS = 15 * 60 * 1000;
+const RATE_LIMIT_MAX = Number(process.env.RATE_LIMIT_MAX) || 20;
+const rateLimitHits = new Map<string, number[]>();
+
+function isRateLimited(ip: string): boolean {
+  const now = Date.now();
+  const recent = (rateLimitHits.get(ip) || []).filter((t) => now - t < RATE_LIMIT_WINDOW_MS);
+  recent.push(now);
+  rateLimitHits.set(ip, recent);
+
+  // Opportunistic sweep so idle IPs don't accumulate forever.
+  if (rateLimitHits.size > 5000) {
+    for (const [key, times] of rateLimitHits) {
+      if (times.every((t) => now - t >= RATE_LIMIT_WINDOW_MS)) rateLimitHits.delete(key);
+    }
+  }
+  return recent.length > RATE_LIMIT_MAX;
+}
+
+/** Per-attempt timeout for outbound scraping. Render kills a request at ~100s. */
+const OUTBOUND_TIMEOUT_MS = 12_000;
+
+/**
+ * Guards the URL the caller asks us to fetch. Once this API is public, an
+ * unvalidated outbound fetch lets anyone use the server as a proxy into private
+ * networks (SSRF). Returns an error message, or null when the URL is acceptable.
+ */
+function validateOutboundUrl(raw: string): string | null {
+  let parsed: URL;
+  try {
+    parsed = new URL(raw);
+  } catch {
+    return "Podaj prawidłowy adres URL ogłoszenia o pracę (http/https).";
+  }
+
+  if (parsed.protocol !== "http:" && parsed.protocol !== "https:") {
+    return "Dozwolone są wyłącznie adresy http i https.";
+  }
+
+  const host = parsed.hostname.toLowerCase().replace(/^\[|\]$/g, "");
+
+  if (
+    host === "localhost" ||
+    host.endsWith(".localhost") ||
+    host === "::1" ||
+    host === "0.0.0.0" ||
+    // IPv4 loopback / private / link-local (incl. cloud metadata 169.254.169.254)
+    /^127\./.test(host) ||
+    /^10\./.test(host) ||
+    /^192\.168\./.test(host) ||
+    /^172\.(1[6-9]|2\d|3[01])\./.test(host) ||
+    /^169\.254\./.test(host) ||
+    // IPv6 unique-local / link-local
+    /^f[cd][0-9a-f]{2}:/.test(host) ||
+    /^fe80:/.test(host)
+  ) {
+    return "Adresy lokalne i prywatne są niedozwolone.";
+  }
+
+  return null;
+}
+
 async function startServer() {
   const app = express();
-  const PORT = 3000;
+  // Render injects PORT and requires the process to bind to it.
+  const PORT = Number(process.env.PORT) || 3000;
 
-  // AdGuard & CORS Friendly Middleware for localhost
   app.use((req, res, next) => {
-    res.header("Access-Control-Allow-Origin", "*");
-    res.header("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS");
-    res.header("Access-Control-Allow-Headers", "Content-Type, Authorization");
+    const origin = req.headers.origin;
+    if (origin && ALLOWED_ORIGINS.has(origin.replace(/\/$/, ""))) {
+      res.header("Access-Control-Allow-Origin", origin);
+      // Required: without it a cache may serve one origin's response to another.
+      res.header("Vary", "Origin");
+      res.header("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
+      res.header("Access-Control-Allow-Headers", "Content-Type, Authorization");
+      res.header("Access-Control-Max-Age", "86400");
+    }
     if (req.method === "OPTIONS") {
-      return res.sendStatus(200);
+      return res.sendStatus(204);
     }
     next();
   });
 
-  app.use(express.json({ limit: "10mb" }));
+  // 2mb is ~20x the largest realistic CV; the old 10mb was a DoS/OOM vector
+  // on a 512MB instance.
+  app.use(express.json({ limit: "2mb" }));
+
+  // Health check is deliberately exempt — Render probes it and it costs nothing.
+  app.use("/api", (req, res, next) => {
+    if (req.path === "/health") return next();
+    const ip = req.ip || req.socket.remoteAddress || "unknown";
+    if (isRateLimited(ip)) {
+      return res.status(429).json({
+        error: "Zbyt wiele żądań. Odczekaj kilka minut i spróbuj ponownie.",
+      });
+    }
+    next();
+  });
 
   // API Route: Health Check
   app.get("/api/health", (req, res) => {
@@ -179,8 +283,13 @@ async function startServer() {
   app.post("/api/fetch-jd-url", async (req, res) => {
     try {
       const { url } = req.body;
-      if (!url || typeof url !== "string" || !url.startsWith("http")) {
+      if (!url || typeof url !== "string") {
         return res.status(400).json({ error: "Podaj prawidłowy adres URL ogłoszenia o pracę (http/https)." });
+      }
+
+      const urlError = validateOutboundUrl(url);
+      if (urlError) {
+        return res.status(400).json({ error: urlError });
       }
 
       console.log(`Fetching job offer URL: ${url}`);
@@ -191,6 +300,7 @@ async function startServer() {
       // Tier 1: Direct fetch with browser headers
       try {
         const response = await fetch(url, {
+          signal: AbortSignal.timeout(OUTBOUND_TIMEOUT_MS),
           headers: {
             "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36",
             "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8",
@@ -228,6 +338,7 @@ async function startServer() {
         try {
           const jinaUrl = `https://r.jina.ai/${url}`;
           const jinaRes = await fetch(jinaUrl, {
+            signal: AbortSignal.timeout(OUTBOUND_TIMEOUT_MS),
             headers: {
               "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
               "Accept": "text/plain, text/html",
@@ -254,6 +365,7 @@ async function startServer() {
         try {
           const proxyUrl = `https://corsproxy.io/?${encodeURIComponent(url)}`;
           const proxyRes = await fetch(proxyUrl, {
+            signal: AbortSignal.timeout(OUTBOUND_TIMEOUT_MS),
             headers: {
               "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
             },
@@ -276,6 +388,7 @@ async function startServer() {
         try {
           const archiveUrl = `https://web.archive.org/web/2/${url}`;
           const archiveRes = await fetch(archiveUrl, {
+            signal: AbortSignal.timeout(OUTBOUND_TIMEOUT_MS),
             headers: {
               "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36",
               "Referer": "https://web.archive.org/",
@@ -413,23 +526,30 @@ async function startServer() {
     }
   });
 
-  // Vite middleware for development
   if (process.env.NODE_ENV !== "production") {
+    // Dynamic import keeps `vite` out of the production bundle's require graph
+    // (esbuild runs with --packages=external, so a top-level import would force
+    // vite to be installed on the API host for a branch that never executes).
+    const { createServer: createViteServer } = await import("vite");
     const vite = await createViteServer({
       server: { middlewareMode: true },
       appType: "spa",
     });
     app.use(vite.middlewares);
   } else {
-    const distPath = path.join(process.cwd(), "dist");
-    app.use(express.static(distPath));
-    app.get("*", (req, res) => {
-      res.sendFile(path.join(distPath, "index.html"));
+    // Production serves the API only — the SPA lives on Firebase Hosting.
+    // Deliberately NO catch-all to index.html: that is exactly the misconfiguration
+    // that made /api/* return HTML 200 on Firebase and silently break every AI call.
+    app.get("/", (_req, res) => {
+      res.json({ service: "SkillVault Core API", status: "ok" });
+    });
+    app.use((_req, res) => {
+      res.status(404).json({ error: "Not found" });
     });
   }
 
   app.listen(PORT, "0.0.0.0", () => {
-    console.log(`SkillVault Server running on http://localhost:${PORT} (http://127.0.0.1:${PORT})`);
+    console.log(`SkillVault API running on port ${PORT}`);
   });
 }
 

@@ -4,6 +4,7 @@ import { createEmptyVault } from './lib/sampleVault';
 import { loadVaultFromLocalStorage, saveVaultToLocalStorage, clearVaultLocalStorage } from './lib/vaultCrypto';
 import { getActiveSessionUser, loadUserVault } from './lib/auth';
 import { semanticCacheInstance } from './lib/semanticCache';
+import { warmUpApi } from './lib/apiClient';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { ThemeProvider } from './context/ThemeContext';
 import { AuthModal } from './components/AuthModal';
@@ -63,6 +64,12 @@ function MainApp() {
       setVault(userVault);
     }
   }, [userVault]);
+
+  // Overlap the API's cold start (Render free tier sleeps) with the user reading
+  // the page, instead of with them waiting on a spinner after their first click.
+  useEffect(() => {
+    warmUpApi();
+  }, []);
 
   const [tokenStats, setTokenStats] = useState<TokenStats>(() => semanticCacheInstance.getStats());
   const [isTokenModalOpen, setIsTokenModalOpen] = useState(false);

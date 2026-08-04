@@ -1,0 +1,23 @@
+name: Keep API Warm
+
+# Render's free tier sleeps after ~15 min idle and costs ~50s to wake.
+# Pinging 24/7 would burn ~720 of the account's 750 monthly instance-hours, so
+# this deliberately covers weekday working hours only (~330 h/month). Outside the
+# window the first visitor pays the cold start — acceptable for this app.
+on:
+  schedule:
+    - cron: '*/10 6-20 * * 1-5'
+  workflow_dispatch:
+
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Ping health endpoint
+        run: |
+          if [ -z "${{ vars.VITE_API_BASE_URL }}" ]; then
+            echo "VITE_API_BASE_URL not set — skipping (API not deployed yet)."
+            exit 0
+          fi
+          curl --fail --silent --show-error --max-time 90 \
+            "${{ vars.VITE_API_BASE_URL }}/api/health"

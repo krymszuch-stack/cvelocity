@@ -1,0 +1,29 @@
+# Render Blueprint — SkillVault API only.
+# The SPA is served by Firebase Hosting; this service exposes /api/* exclusively.
+services:
+  - type: web
+    name: skillvault-api
+    runtime: node
+    plan: free
+    region: frankfurt
+    branch: main
+    autoDeploy: true
+
+    # Only the server is built here — the client bundle ships to Firebase.
+    # `npm ci` must include devDependencies: esbuild lives there and does the build.
+    buildCommand: npm ci && npm run build:server
+    startCommand: npm run start
+
+    # Cheap, Gemini-free endpoint — probing it costs no API quota.
+    healthCheckPath: /api/health
+
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: NODE_VERSION
+        value: "20"
+      - key: ALLOWED_ORIGINS
+        value: https://skillvault-99a72.web.app,https://skillvault-99a72.firebaseapp.com,https://skillvault.oathcry.com
+      # Set manually in the Render dashboard — never stored in the repo.
+      - key: GEMINI_API_KEY
+        sync: false

@@ -30,7 +30,17 @@ jobs:
       - name: Run Type Check (TypeScript)
         run: npm run lint
 
+      - name: Run Unit Tests (Vitest)
+        run: npm test
+
+      # Reporting only for now: a transitive advisory in a devDependency should
+      # surface, not block every merge. Tighten to a hard gate once triaged.
+      - name: Security Audit
+        run: npm audit --audit-level=high
+        continue-on-error: true
+
       - name: Build SkillVault App & Server
         run: npm run build
         env:
           NODE_ENV: production
+          VITE_API_BASE_URL: ${{ vars.VITE_API_BASE_URL }}
