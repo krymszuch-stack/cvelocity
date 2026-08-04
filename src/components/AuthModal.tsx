@@ -4,7 +4,7 @@ import { User, Lock, Mail, ShieldCheck, X, ArrowRight, UserPlus, LogIn, CheckCir
 import { MasterVault } from '../types';
 import { Requires2FAError, UserAccount } from '../lib/auth';
 import { generateTwoFactorSetup, verifyTwoFactorToken, TwoFactorSetup } from '../lib/twoFactorAuth';
-import { signInWithGooglePopup } from '../lib/firebaseClient';
+import { signInWithGooglePopup, isFirebaseConfigured } from '../lib/firebaseClient';
 
 interface AuthModalProps {
   isOpen: boolean;
@@ -134,7 +134,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onSuccess
               <p className="text-xs text-slate-500 font-mono mt-1">{user.email}</p>
               <div className="mt-3 inline-flex items-center space-x-1.5 px-2.5 py-1 rounded-md bg-emerald-50 text-emerald-700 border border-emerald-200 text-xs font-bold">
                 <ShieldCheck className="w-3.5 h-3.5" />
-                <span>Konto aktywne & Szyfrowane AES</span>
+                <span>Konto aktywne</span>
               </div>
             </div>
 
@@ -450,24 +450,38 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onSuccess
                       onClose();
                     }, 1000);
                   } catch (err: any) {
+                    // The account has 2FA on — show the code challenge, same as the password path.
+                    if (err instanceof Requires2FAError) {
+                      setPendingTwoFactorUser(err.user);
+                      setErrorMsg(null);
+                      return;
+                    }
                     console.error('Google popup auth error:', err);
                     if (err?.code === 'auth/popup-closed-by-user' || err?.code === 'auth/cancelled-popup-request') {
                       setErrorMsg('Zamknięto okno logowania Google.');
                       return;
                     }
-                    // Fallback to seamless prompt if Firebase API Key is unconfigured
-                    const googleEmail = prompt('Wprowadź swój adres e-mail Google:', email || 'uzytkownik@gmail.com');
-                    if (!googleEmail) return;
-                    const googleName = prompt('Wprowadź swoje Imię i Nazwisko:', fullName || 'Użytkownik Google');
-                    const vault = loginOAuth(googleEmail, googleName || 'Użytkownik Google', 'google');
-                    setSuccessMsg(`Zalogowano pomyślnie jako ${googleEmail}!`);
-                    if (onSuccessVaultLoaded) onSuccessVaultLoaded(vault);
-                    setTimeout(() => {
-                      onClose();
-                    }, 1000);
+                    // A failed sign-in must stay a failure. This branch previously fell back to
+                    // prompt() for the e-mail and logged the user in on whatever they typed —
+                    // an unauthenticated path into any account. Never reintroduce it.
+                    if (err?.code === 'auth/unauthorized-domain') {
+                      setErrorMsg('Ta domena nie jest autoryzowana w konsoli Firebase. Dodaj ją w Authentication → Settings → Authorized domains.');
+                      return;
+                    }
+                    setErrorMsg(
+                      isFirebaseConfigured()
+                        ? 'Logowanie przez Google nie powiodło się. Spróbuj ponownie lub użyj logowania e-mailem i hasłem.'
+                        : 'Logowanie przez Google jest niedostępne — brak konfiguracji Firebase. Użyj logowania e-mailem i hasłem.'
+                    );
                   }
                 }}
-                className="w-full py-2.5 bg-white border border-slate-300 hover:bg-slate-50 text-slate-700 rounded-xl font-bold text-xs shadow-xs flex items-center justify-center space-x-2 transition-all active:scale-95"
+                disabled={!isFirebaseConfigured()}
+                title={
+                  isFirebaseConfigured()
+                    ? 'Zaloguj się kontem Google'
+                    : 'Niedostępne — brak konfiguracji Firebase (VITE_FIREBASE_*)'
+                }
+                className="w-full py-2.5 bg-white border border-slate-300 hover:bg-slate-50 text-slate-700 rounded-xl font-bold text-xs shadow-xs flex items-center justify-center space-x-2 transition-all active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-white"
               >
                 <svg className="w-4 h-4" viewBox="0 0 48 48">
                   <path fill="#FFC107" d="M43.611 20.083H42V20H24v8h11.303c-1.649 4.657-6.08 8-11.303 8-6.627 0-12-5.373-12-12s5.373-12 12-12c3.059 0 5.842 1.154 7.961 3.039l5.657-5.657C34.046 6.053 29.268 4 24 4 12.955 4 4 12.955 4 24s8.955 20 20 20 20-8.955 20-20c0-1.341-.238-2.627-.611-3.917z" />
@@ -559,7 +573,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onSuccess
                 </div>
                 {isRegisterTab && (
                   <p className="text-[10px] text-slate-500 mt-1">
-                    Min. 6 znaków. Hasło posłuży jako klucz szyfrujący dane AES-256. Weryfikację dwuetapową (2FA) możesz włączyć po zalogowaniu.
+                    Min. 6 znaków. Weryfikację dwuetapową (2FA) możesz włączyć po zalogowaniu.
                   </p>
                 )}
               </div>

@@ -152,7 +152,11 @@ export function completeLogin(user: UserAccount, password?: string): { user: Use
   saveRegisteredUsers(users);
   saveActiveSession(foundUser);
 
-  const vault = (password && loadUserVault(foundUser.id, password)) || createEmptyVault(foundUser.fullName, foundUser.email);
+  // Always attempt a real load. Gating on `password` meant that finishing a 2FA
+  // challenge without one (the OAuth path) silently replaced the user's vault with
+  // an empty one — data loss disguised as a fresh start. loadUserVault handles a
+  // missing secret on its own.
+  const vault = loadUserVault(foundUser.id, password) || createEmptyVault(foundUser.fullName, foundUser.email);
 
   return { user: foundUser, vault };
 }
@@ -237,6 +241,13 @@ export function loginWithOAuthAccount(email: string, fullName: string, provider:
     saveUserVault(foundUser.id, initialVault, 'oauth_secret');
     saveActiveSession(foundUser);
     return { user: foundUser, vault: initialVault };
+  }
+
+  // 2FA is a property of the ACCOUNT, not of the sign-in method. Skipping it here
+  // would let anyone with access to the Google account bypass the second factor the
+  // user explicitly turned on — the password path throws the same error at this point.
+  if (foundUser.twoFactorEnabled) {
+    throw new Requires2FAError(foundUser);
   }
 
   foundUser.lastLoginAt = new Date().toISOString();
