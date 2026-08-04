@@ -9,8 +9,18 @@ import { MasterVault } from '../types';
 const STORAGE_KEY = 'skillvault_master_vault_enc_v2';
 const DEFAULT_PASSKEY = 'SkillVault_MasterVault_Secret_2026';
 
+/**
+ * Byte array explicitly backed by an ArrayBuffer.
+ *
+ * Since TypeScript 5.7 / @types/node 26, `Uint8Array` is generic over its buffer
+ * and defaults to `ArrayBufferLike`, which also covers `SharedArrayBuffer`.
+ * WebCrypto's `BufferSource` accepts only ArrayBuffer-backed views, so an
+ * unannotated `Uint8Array` no longer type-checks against subtle.* calls.
+ */
+type Bytes = Uint8Array<ArrayBuffer>;
+
 // Convert string to Uint8Array buffer
-function strToBuffer(str: string): Uint8Array {
+function strToBuffer(str: string): Bytes {
   return new TextEncoder().encode(str);
 }
 
@@ -25,7 +35,7 @@ function bufferToBase64(buffer: ArrayBuffer): string {
 }
 
 // Convert Base64 string to Uint8Array
-function base64ToBuffer(base64: string): Uint8Array {
+function base64ToBuffer(base64: string): Bytes {
   const binary = atob(base64);
   const bytes = new Uint8Array(binary.length);
   for (let i = 0; i < binary.length; i++) {
@@ -37,7 +47,7 @@ function base64ToBuffer(base64: string): Uint8Array {
 /**
  * Derives a 256-bit AES-GCM CryptoKey using OWASP-recommended PBKDF2-HMAC-SHA256 (600,000 iterations)
  */
-async function deriveEncryptionKey(passkey: string, salt: Uint8Array): Promise<CryptoKey> {
+async function deriveEncryptionKey(passkey: string, salt: Bytes): Promise<CryptoKey> {
   const keyMaterial = await window.crypto.subtle.importKey(
     'raw',
     strToBuffer(passkey),
