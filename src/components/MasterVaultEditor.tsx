@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { apiFetch } from '../lib/apiClient';
 import { MasterVault, WorkExperience, HighlightMetric, Certification, Education, Project } from '../types';
 import {
   Database,
@@ -383,7 +384,7 @@ export const MasterVaultEditor: React.FC<MasterVaultEditorProps> = ({ vault, onC
     setIsLinkedInPasterOpen(true);
 
     try {
-      const response = await fetch('/api/fetch-jd-url', {
+      const response = await apiFetch('/api/fetch-jd-url', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ url }),
@@ -392,7 +393,7 @@ export const MasterVaultEditor: React.FC<MasterVaultEditorProps> = ({ vault, onC
       const resData = await response.json();
       if (response.ok && resData.success && resData.rawJdText && resData.rawJdText.length > 30) {
         // Send fetched real text to Gemini AI for structural extraction
-        const parseRes = await fetch('/api/parse-cv', {
+        const parseRes = await apiFetch('/api/parse-cv', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ rawText: resData.rawJdText }),
@@ -647,7 +648,7 @@ export const MasterVaultEditor: React.FC<MasterVaultEditorProps> = ({ vault, onC
       setPasterText(extracted);
 
       // Instantly parse via Gemini AI
-      const response = await fetch('/api/parse-cv', {
+      const response = await apiFetch('/api/parse-cv', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ rawText: extracted }),
@@ -680,7 +681,7 @@ export const MasterVaultEditor: React.FC<MasterVaultEditorProps> = ({ vault, onC
     setPasterParsedData(null);
 
     try {
-      const response = await fetch('/api/parse-cv', {
+      const response = await apiFetch('/api/parse-cv', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ rawText: pasterText }),

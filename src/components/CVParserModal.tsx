@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { apiFetch } from '../lib/apiClient';
 import { MasterVault, ConsistencyCheckIssue } from '../types';
 import { FileText, Upload, Sparkles, AlertTriangle, CheckCircle2, ShieldAlert, ArrowRight, Layout, Image, Check, X, Info, FileCode, Briefcase, GraduationCap, Lightbulb } from 'lucide-react';
 import { eliminateSlogans } from '../lib/slotFillingEngine';
@@ -157,7 +158,7 @@ export const CVParserModal: React.FC<CVParserModalProps> = ({
     setErrorMsg(null);
 
     try {
-      const res = await fetch('/api/parse-cv', {
+      const res = await apiFetch('/api/parse-cv', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ rawText }),

@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { apiFetch } from '../lib/apiClient';
 import { Lightbulb, BookOpen, MessageSquare, Sparkles, CheckCircle2, AlertTriangle, ArrowRight, RefreshCw, X, HelpCircle, Search, Cpu } from 'lucide-react';
 import { MasterVault } from '../types';
 import { INDUSTRY_SLANG_DICTIONARY, normalizeSlangInText } from '../data/synonymsDictionary';
@@ -51,7 +52,7 @@ export const GeminiAdvisorModal: React.FC<GeminiAdvisorModalProps> = ({
     setError(null);
 
     try {
-      const response = await fetch('/api/advisor/teach', {
+      const response = await apiFetch('/api/advisor/teach', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
