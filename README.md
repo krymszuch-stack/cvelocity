@@ -13,7 +13,7 @@ Aplikacja oferuje bez-tokenowy silnik lokalnej podmiany fraz (**0-Token Local Sl
 - **Audytor Symulatora ATS**: 3-warstwowa weryfikacja lematyczna, algebraiczna ocena świeżości (*Recency Bias*) oraz analiza zagęszczenia słów kluczowych.
 - **Generator Listów Motywacyjnych (Anti-Template)**: 3-sekcyjne biznesowe listy (Hook, Proof, CTA) tworzone lokalnie z profilu CV (0 tokenów) lub przez model **Gemini Flash**.
 - **Doradca Gemini AI 💡**: Edukacyjne okienko samouczka tlumaczące powody zmian słownictwa i zasady ATS.
-- **Szyfrowany Master Vault**: Bezpieczne przechowywanie danych profilu lokalnie w przeglądarce (AES-256) z obsługą kont użytkowników.
+- **Lokalny Master Vault**: Dane profilu zostają w Twojej przeglądarce i nigdy nie trafiają na serwer, z obsługą kont użytkowników. ⚠️ Zapis w `localStorage` jest **nieszyfrowany** — patrz „Bezpieczeństwo danych" poniżej.
 
 ---
 
@@ -76,7 +76,7 @@ Pełną listę zmiennych Firebase znajdziesz w `.env.example`.
 W aplikacji skonfigurowano 2 równoległe ścieżki autentykacji, plus opcjonalne 2FA:
 
 1. **Rejestracja/Logowanie E-mail & Hasło**:
-   - Wykorzystuje natywne szyfrowanie **AES-256** (CryptoJS) dla danych użytkownika. Każdy nowy użytkownik startuje z czystą bazą (bez placeholderów).
+   - Hasła przechowywane jako skrót bcrypt z solą. Każdy nowy użytkownik startuje z czystą bazą (bez placeholderów).
 2. **Google OAuth (Firebase Auth)**:
    - Logowanie przez Firebase Identity (popup Google). Wymaga zmiennych `VITE_FIREBASE_*`.
 3. **TOTP 2FA (opcjonalne)**:
@@ -103,6 +103,18 @@ Przekieruj rekrutera bezpośrednio ze swojego portfolio do aplikacji `SkillVault
 ## ⚙️ CI/CD Pipeline
 
 W repozytorium znajduje się automatyczny workflow GitHub Actions w `.github/workflows/ci.yml`, który przy każdym `push` i `pull_request` sprawdza typowanie TypeScript (`npm run lint`) oraz buduje aplikację produkcyjną (`npm run build`).
+
+---
+
+## 🔒 Bezpieczeństwo danych
+
+Bądźmy precyzyjni, bo wcześniejsze wersje tego pliku obiecywały więcej, niż kod robił:
+
+- **Dane profilu NIE są szyfrowane.** Master Vault trafia do `localStorage` przeglądarki jako zwykły JSON. Każdy z dostępem do tego komputera i profilu przeglądarki może go odczytać.
+- **Dane nie opuszczają przeglądarki** — poza treścią, którą sam wysyłasz do API Gemini w celu analizy (parsowanie CV, generowanie listu).
+- Hasła kont są solone i hashowane (bcrypt), a 2FA (TOTP) działa niezależnie od wybranej metody logowania.
+
+Historycznie plik `vaultCrypto.ts` deklarował „zero-knowledge AES-256", ale funkcja szyfrująca ignorowała podane hasło i zapisywała jawny tekst. Atrapy zostały usunięte zamiast utrwalać nieprawdziwą deklarację. Prawdziwe szyfrowanie wymagałoby klucza wyprowadzanego z hasła użytkownika — klucz zaszyty w bundlu JS niczego nie chroni.
 
 ---
 

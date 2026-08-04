@@ -55,7 +55,7 @@ if (typeof window !== 'undefined' && pdfjsLib) {
   const version = pdfjsLib.version || '6.1.200';
   pdfjsLib.GlobalWorkerOptions.workerSrc = `https://cdn.jsdelivr.net/npm/pdfjs-dist@${version}/build/pdf.worker.min.mjs`;
 }
-import { encryptVault, saveVaultToLocalStorage } from '../lib/vaultCrypto';
+import { saveVaultToLocalStorage } from '../lib/vaultCrypto';
 import { AutocompleteInput } from './AutocompleteInput';
 import {
   SPECIALIZATION_CATEGORIES,
@@ -89,7 +89,6 @@ export const MasterVaultEditor: React.FC<MasterVaultEditorProps> = ({ vault, onC
   const [quizStep, setQuizStep] = useState<number>(1);
   const [isAiAuditing, setIsAiAuditing] = useState(false);
   const [aiAuditResults, setAiAuditResults] = useState<{ score: number; suggestions: string[]; issues: string[] } | null>(null);
-  const [passkey, setPasskey] = useState('');
   const [isSavedEncrypted, setIsSavedEncrypted] = useState(false);
   const [newSkillText, setNewSkillText] = useState({ hard: '', soft: '', tool: '' });
   const [specSearchQuery, setSpecSearchQuery] = useState('');
@@ -766,26 +765,21 @@ export const MasterVaultEditor: React.FC<MasterVaultEditorProps> = ({ vault, onC
     setTimeout(() => setLinkedInToast(null), 4500);
   };
 
-  // Encrypted File Export
+  // Kopia zapasowa do pliku. Świadomie bez opcji "z hasłem" — poprzednia wersja
+  // przyjmowała hasło, nazywała plik *_Encrypted_*.cvvault i zapisywała jawny tekst.
   const handleExportJson = () => {
-    const jsonStr = passkey ? encryptVault(draftVault, passkey) : JSON.stringify(draftVault, null, 2);
+    const jsonStr = JSON.stringify(draftVault, null, 2);
     const blob = new Blob([jsonStr], { type: 'application/json' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = passkey
-      ? `MasterVault_Encrypted_${draftVault.personalInfo.fullName.replace(/\s+/g, '_')}.cvvault`
-      : `MasterVault_${draftVault.personalInfo.fullName.replace(/\s+/g, '_')}.json`;
+    a.download = `MasterVault_${draftVault.personalInfo.fullName.replace(/\s+/g, '_') || 'profil'}.json`;
     a.click();
     URL.revokeObjectURL(url);
   };
 
-  const handleSaveAES = () => {
-    if (!passkey) {
-      alert('Wprowadź hasło do szyfrowania AES-256.');
-      return;
-    }
-    saveVaultToLocalStorage(draftVault, passkey);
+  const handleSaveLocalBackup = () => {
+    saveVaultToLocalStorage(draftVault);
     setIsSavedEncrypted(true);
     setTimeout(() => setIsSavedEncrypted(false), 3000);
   };
@@ -962,7 +956,7 @@ export const MasterVaultEditor: React.FC<MasterVaultEditorProps> = ({ vault, onC
             }`}
           >
             <Lock className="w-4 h-4 text-emerald-600" />
-            <span>5. Szyfrowanie & Kopia (AES-256)</span>
+            <span>5. Dane lokalne & Kopia</span>
           </button>
         </div>
       </div>
@@ -2726,39 +2720,39 @@ export const MasterVaultEditor: React.FC<MasterVaultEditorProps> = ({ vault, onC
       {activeSubTab === 'security' && (
         <div className="bg-slate-50 border border-slate-200 rounded-xl p-5 space-y-4">
           <div className="flex items-center space-x-3">
-            <div className="p-2 bg-emerald-50 border border-emerald-200 rounded text-emerald-700">
+            <div className="p-2 bg-amber-50 border border-amber-200 rounded text-amber-700">
               <ShieldCheck className="w-5 h-5" />
             </div>
             <div>
-              <h3 className="text-sm font-bold text-slate-900">Szyfrowanie Bazy Danych AES-256</h3>
+              <h3 className="text-sm font-bold text-slate-900">Dane lokalne i kopia zapasowa</h3>
               <p className="text-xs text-slate-500">
-                Szyfruj Master Vault lokalnie w przeglądarce za pomocą indywidualnego klucza.
+                Twój profil zapisywany jest w tej przeglądarce i nigdy nie trafia na serwer.
               </p>
             </div>
           </div>
 
-          <div className="max-w-md space-y-3 pt-2">
-            <div>
-              <label className="block text-xs font-semibold text-slate-700 mb-1">Hasło Szyfrujące Passkey</label>
-              <div className="relative">
-                <input
-                  type="password"
-                  value={passkey}
-                  onChange={(e) => setPasskey(e.target.value)}
-                  placeholder="Wprowadź tajne hasło dla klucza AES..."
-                  className="w-full bg-white border border-slate-200 rounded-lg px-3 py-2 text-xs text-slate-900 pr-10 focus:outline-none focus:border-indigo-500"
-                />
-                <Key className="w-4 h-4 text-slate-400 absolute right-3 top-2.5" />
-              </div>
-            </div>
+          <div className="p-3 bg-amber-50 border border-amber-200 rounded-lg text-xs text-amber-800 leading-relaxed">
+            <strong>Dane nie są szyfrowane.</strong> Profil jest przechowywany w pamięci przeglądarki
+            (localStorage) jako zwykły tekst — każdy, kto ma dostęp do tego komputera i profilu
+            przeglądarki, może go odczytać. Nie wpisuj tu danych, których nie chcesz tam trzymać.
+          </div>
 
-            <div className="flex items-center space-x-3">
+          <div className="max-w-md space-y-3 pt-1">
+            <div className="flex items-center flex-wrap gap-3">
               <button
-                onClick={handleSaveAES}
-                className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-xs font-bold transition-colors flex items-center space-x-1.5 shadow-2xs"
+                onClick={handleSaveLocalBackup}
+                className="px-4 py-2 bg-brand-600 hover:bg-brand-700 text-white rounded-lg text-xs font-bold transition-colors flex items-center space-x-1.5 shadow-2xs"
               >
                 <Lock className="w-3.5 h-3.5" />
-                <span>Zapisz w LocalStorage Szyfrowane AES</span>
+                <span>Zapisz kopię w tej przeglądarce</span>
+              </button>
+
+              <button
+                onClick={handleExportJson}
+                className="px-4 py-2 bg-white border border-slate-300 hover:bg-slate-50 text-slate-700 rounded-lg text-xs font-bold transition-colors flex items-center space-x-1.5 shadow-2xs"
+              >
+                <Key className="w-3.5 h-3.5" />
+                <span>Pobierz kopię do pliku (.json)</span>
               </button>
 
               {isSavedEncrypted && (

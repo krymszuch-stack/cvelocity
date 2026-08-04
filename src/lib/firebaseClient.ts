@@ -15,6 +15,15 @@ const firebaseConfig = {
 let app: FirebaseApp | null = null;
 let auth: Auth | null = null;
 
+/**
+ * Whether a real Firebase project is wired up. `apiKey` is the only field with no
+ * usable default, so its absence means Google sign-in cannot work at all — the UI
+ * uses this to disable the button up front rather than failing after a click.
+ */
+export function isFirebaseConfigured(): boolean {
+  return Boolean(firebaseConfig.apiKey && firebaseConfig.appId);
+}
+
 // Lazily initialize Firebase on first actual use instead of at module load.
 // With no VITE_FIREBASE_API_KEY configured (e.g. a fresh checkout with no .env),
 // getAuth() throws synchronously — doing that eagerly at module scope used to
