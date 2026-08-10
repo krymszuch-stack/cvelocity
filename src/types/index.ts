@@ -219,6 +219,68 @@ export interface CoverLetter {
   fullText: string;
 }
 
+export interface GlossaryTerm {
+  id: string;
+  term: string;
+  definition: string;
+  category: 'HARD_SKILL' | 'TOOL' | 'DOMAIN_CONCEPT' | 'ACRONYM';
+  source: 'JD_KEYWORD' | 'JD_TOOL' | 'JD_HARD_SKILL';
+}
+
+export interface StarTalkingPoint {
+  id: string;
+  relatedRequirement: string;
+  situation: string;
+  task: string;
+  action: string;
+  result: string;
+  sourceExperienceId?: string;
+}
+
+export interface InterviewQaItem {
+  id: string;
+  question: string;
+  modelAnswer: string;
+  category: 'BEHAVIORAL' | 'TECHNICAL' | 'MOTIVATION' | 'SITUATIONAL';
+  source: 'LOCAL_TEMPLATE' | 'GEMINI_PERSONALIZED';
+}
+
+export interface RedFlagConceptItem {
+  id: string;
+  label: string;
+  detail: string;
+  severity: 'MUST_KNOW' | 'GOOD_TO_KNOW';
+  source: 'MANDATORY_REQUIREMENT' | 'CORE_RESPONSIBILITY' | 'SENIORITY_IMPLICATION';
+}
+
+export interface EmergencyPhrase {
+  id: string;
+  scenario: string;
+  phrasePL: string;
+  phraseEN?: string;
+}
+
+export interface QuestionToAsk {
+  id: string;
+  question: string;
+  rationale: string;
+  category: 'ROLE_SCOPE' | 'TEAM_CULTURE' | 'GROWTH' | 'BUSINESS_CONTEXT';
+}
+
+export interface InterviewCheatSheet {
+  targetJobTitle: string;
+  companyName: string;
+  generatedAt: string;
+  glossary: GlossaryTerm[];
+  starTalkingPoints: StarTalkingPoint[];
+  qaBank: InterviewQaItem[];
+  redFlagsChecklist: RedFlagConceptItem[];
+  emergencyPhrases: EmergencyPhrase[];
+  questionsToAsk: QuestionToAsk[];
+  personalizedFraming?: string;
+  generationMode: 'LOCAL_SKELETON' | 'GEMINI_ENRICHED';
+}
+
 export interface ConsistencyCheckIssue {
   type: 'GAP' | 'SLOGAN' | 'UNQUANTIFIED' | 'MISSING_FIELD';
   severity: 'HIGH' | 'MEDIUM' | 'LOW';
