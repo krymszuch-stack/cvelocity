@@ -2,6 +2,7 @@ import { GoogleGenAI, Type } from "@google/genai";
 import { MasterVault } from "../types";
 import { UNIVERSAL_CV_REFRAMING_SYSTEM_PROMPT } from "../data/universalCvReframingPrompt";
 import { ATS_CV_REFRAMING_SYSTEM_PROMPT } from "../data/atsCvReframingPrompt";
+import { INTERVIEW_CHEAT_SHEET_SYSTEM_PROMPT } from "../data/interviewCheatSheetPrompt";
 
 const getGeminiClient = () => {
   const apiKey = process.env.GEMINI_API_KEY;
@@ -503,6 +504,113 @@ Zwróć odpowiedź WYŁĄCZNIE jako ustrukturyzowany obiekt JSON.
     proofPoints: Array.isArray(parsed.proofPoints) ? parsed.proofPoints : [],
     callToAction: parsed.callToAction || '',
     fullText: parsed.fullText || `${parsed.hook}\n\n${(parsed.proofPoints || []).join('\n')}\n\n${parsed.callToAction}`,
+  };
+}
+
+/**
+ * Server-side Gemini Flash Interview Cheat Sheet Enrichment:
+ * Generates ONLY the parts of the interview cheat sheet that genuinely need
+ * personalization — STAR talking points grounded in the candidate's real work
+ * history, a "why this role/company" framing, and tone/language-matched
+ * emergency phrases. Everything else (glossary, red flags, Q&A bank, questions
+ * to ask) is built with zero tokens client-side in interviewCheatSheetEngine.ts.
+ */
+export async function generateInterviewCheatSheetEnrichmentWithFlash(
+  vault: Partial<MasterVault>,
+  targetRole: string,
+  companyName: string,
+  jobDescription: string,
+  topRequirements: string[]
+): Promise<{
+  starTalkingPoints: Array<{
+    relatedRequirement: string;
+    situation: string;
+    task: string;
+    action: string;
+    result: string;
+    sourceExperienceId?: string;
+  }>;
+  personalizedFraming: string;
+  emergencyPhrases: Array<{ scenario: string; phrasePL: string; phraseEN?: string }>;
+}> {
+  const ai = getGeminiClient();
+
+  const company = companyName || "Państwa Firmie";
+  const role = targetRole || "oferowanym stanowisku";
+
+  const prompt = `
+${INTERVIEW_CHEAT_SHEET_SYSTEM_PROMPT}
+
+ZADANIE:
+Przygotuj materiał do przećwiczenia rozmowy kwalifikacyjnej na stanowisko "${role}" w firmie "${company}".
+
+Kluczowe wymagania z oferty (topRequirements): ${topRequirements.join(", ") || "brak — użyj ogólnego kontekstu oferty"}
+
+Dane Kandydata z CV (MasterVault):
+- Imię i Nazwisko: ${vault.personalInfo?.fullName || ''}
+- Tytuł/Stanowisko: ${vault.personalInfo?.title || ''}
+- Podsumowanie: ${vault.personalInfo?.summary || ''}
+- Umiejętności: ${[...(vault.skillsMatrix?.hardSkills || []), ...(vault.skillsMatrix?.toolsAndTech || [])].join(', ')}
+- Doświadczenie zawodowe: ${JSON.stringify(vault.history || [])}
+- Projekty: ${JSON.stringify(vault.projects || [])}
+
+Treść Ogłoszenia o Pracę (${company}):
+"""
+${jobDescription || 'Standardowe ogłoszenie o pracę na stanowisku ' + role}
+"""
+
+Zwróć odpowiedź WYŁĄCZNIE jako ustrukturyzowany obiekt JSON.
+`;
+
+  const response = await ai.models.generateContent({
+    model: "gemini-3.6-flash",
+    contents: prompt,
+    config: {
+      responseMimeType: "application/json",
+      responseSchema: {
+        type: Type.OBJECT,
+        properties: {
+          starTalkingPoints: {
+            type: Type.ARRAY,
+            items: {
+              type: Type.OBJECT,
+              properties: {
+                relatedRequirement: { type: Type.STRING },
+                situation: { type: Type.STRING },
+                task: { type: Type.STRING },
+                action: { type: Type.STRING },
+                result: { type: Type.STRING },
+                sourceExperienceId: { type: Type.STRING },
+              },
+              required: ["relatedRequirement", "situation", "task", "action", "result"],
+            },
+          },
+          personalizedFraming: { type: Type.STRING },
+          emergencyPhrases: {
+            type: Type.ARRAY,
+            items: {
+              type: Type.OBJECT,
+              properties: {
+                scenario: { type: Type.STRING },
+                phrasePL: { type: Type.STRING },
+                phraseEN: { type: Type.STRING },
+              },
+              required: ["scenario", "phrasePL"],
+            },
+          },
+        },
+        required: ["starTalkingPoints", "personalizedFraming", "emergencyPhrases"],
+      },
+    },
+  });
+
+  const jsonStr = response.text || "{}";
+  const parsed = JSON.parse(jsonStr);
+
+  return {
+    starTalkingPoints: Array.isArray(parsed.starTalkingPoints) ? parsed.starTalkingPoints : [],
+    personalizedFraming: parsed.personalizedFraming || '',
+    emergencyPhrases: Array.isArray(parsed.emergencyPhrases) ? parsed.emergencyPhrases : [],
   };
 }
 
