@@ -10,7 +10,7 @@ import {
 } from '../types';
 import { ParsedJobDescription } from './jdParser';
 import { rankExperienceByRelevance } from './relevanceRanking';
-import { lookupGlossaryDefinition } from '../data/interviewGlossaryDictionary';
+import { lookupGlossaryDefinition, hasGlossaryDefinition } from '../data/interviewGlossaryDictionary';
 import { apiFetch } from './apiClient';
 
 /**
@@ -52,7 +52,12 @@ export function buildGlossary(parsedJD: ParsedJobDescription): GlossaryTerm[] {
       category: 'TOOL' as const,
       source: 'JD_TOOL' as const,
     })),
+    // keyKeywords is every word in the ad, so it carries street names, city names and
+    // boilerplate alongside real terms. Only keywords the dictionary can actually
+    // define earn a place here — "Ujastek — make sure you can explain this term" is
+    // worse than no entry at all.
     ...dedupeCaseInsensitive(parsedJD.keyKeywords || [])
+      .filter((term) => hasGlossaryDefinition(term))
       .slice(0, 10)
       .map((term) => ({ term, category: 'DOMAIN_CONCEPT' as const, source: 'JD_KEYWORD' as const })),
   ];
