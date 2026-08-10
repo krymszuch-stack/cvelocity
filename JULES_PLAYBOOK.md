@@ -58,9 +58,75 @@ Jules obsługuje harmonogram dzienny/tygodniowy (bez dowolnego crona i bez webho
 
 | Cykl | Zadanie | Uzasadnienie |
 |---|---|---|
-| Tygodniowo | `npm audit` → otwórz issue z wynikiem | `ci.yml` uruchamia audit z `continue-on-error: true`, więc dziś podatności nie widzi nikt |
-| Tygodniowo | Rozmiar głównego chunka → issue, gdy urośnie o >5% | Bundle waży ~2,85 MB i nie ma nad nim żadnego nadzoru |
-| Tygodniowo | Raport modułów `src/lib/` bez testów | Utrzymuje kolejkę zadań testowych zasiloną |
+| Pon. 07:00 | `npm audit` → otwórz issue z wynikiem | `ci.yml` uruchamia audit z `continue-on-error: true`, więc dziś podatności nie widzi nikt |
+| Śr. 09:00 | Raport modułów `src/lib/` bez testów | Utrzymuje kolejkę zadań testowych zasiloną |
+| Pt. 16:00 | Rozmiar głównego chunka → issue, gdy urośnie o >5% | Bundle waży ~2,85 MB i nie ma nad nim żadnego nadzoru |
+
+**Godziny rozstrzelone celowo.** Trzy issues w jeden poranek to ściana; po jednym co drugi
+dzień mieści się w ograniczeniu z §2. Audit w poniedziałek daje pięć dni na reakcję.
+Bundle w piątek łapie tycie wprowadzone przez PR-y migracyjne z danego tygodnia.
+
+⚠️ Sprawdź strefę czasową w ustawieniach Julesa. Jeśli domyślnie jest UTC, w czasie letnim
+(CEST) wpisz **05:00 / 07:00 / 14:00**, żeby wyszło 07:00 / 09:00 / 16:00 lokalnie.
+
+### Treści do wklejenia w Jules → Scheduled tasks
+
+Każde zadanie ma wbudowaną zasadę: **gdy nie ma co zgłosić, nie otwiera issue.**
+Bez tego dostawałbyś trzy śmieciowe issues tygodniowo w nieskończoność.
+
+**1 — poniedziałek 07:00**
+
+```text
+Repozytorium: krymszuch-stack/skillvault, gałąź main.
+
+ZADANIE TYLKO RAPORTUJĄCE. Nie zmieniaj żadnego pliku. Nie twórz brancha.
+Nie otwieraj pull requesta.
+
+1. Uruchom `npm ci`, potem `npm audit --audit-level=high`.
+2. Jeśli nie ma podatności high ani critical — zakończ bez żadnej akcji.
+   Nie otwieraj issue.
+3. Jeśli są — otwórz JEDNO issue "[Audit] Podatności high/critical" zawierające:
+   - nazwę pakietu, wersję, poziom, ścieżkę zależności
+   - czy `npm audit fix` rozwiązuje to bez breaking changes
+   - nic poza tym; nie proponuj kodu
+
+Kontekst: .github/workflows/ci.yml uruchamia audit z continue-on-error: true,
+więc wyniki nie blokują CI i nikt ich nie ogląda. To zadanie jest jedynym
+miejscem, gdzie te podatności wypływają.
+```
+
+**2 — środa 09:00**
+
+```text
+Repozytorium: krymszuch-stack/skillvault, gałąź main.
+
+ZADANIE TYLKO RAPORTUJĄCE. Nie zmieniaj żadnego pliku. Nie pisz testów.
+Nie twórz brancha. Nie otwieraj pull requesta.
+
+1. Wypisz pliki .ts w src/lib/ (pomiń src/lib/__tests__/).
+2. Dla każdego sprawdź, czy w src/lib/__tests__/ istnieje test, który go importuje.
+3. Jeśli wszystkie mają testy — zakończ bez akcji.
+4. W przeciwnym razie otwórz JEDNO issue "[Coverage] Moduły src/lib bez testów"
+   z tabelą: moduł, liczba linii, czy importuje I/O (sieć, DOM, localStorage, Firebase).
+5. Posortuj od modułów bez zależności I/O — to najbezpieczniejsze cele do testowania.
+```
+
+**3 — piątek 16:00**
+
+```text
+Repozytorium: krymszuch-stack/skillvault, gałąź main.
+
+ZADANIE TYLKO RAPORTUJĄCE. Nie zmieniaj żadnego pliku. Nie twórz brancha.
+Nie otwieraj pull requesta.
+
+1. Uruchom `npm ci`, potem `npm run build`.
+2. Odczytaj rozmiar głównego chunka dist/assets/index-*.js.
+3. Wartość odniesienia: 2 853 000 bajtów.
+4. Jeśli chunk jest większy o ponad 5% od odniesienia — otwórz JEDNO issue
+   "[Bundle] Główny chunk urósł" z: rozmiarem obecnym, odniesieniem, różnicą
+   procentową oraz listą commitów z ostatnich 7 dni dotykających src/ lub package.json.
+5. Jeśli nie przekroczył progu — zakończ bez akcji.
+```
 
 ---
 
