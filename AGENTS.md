@@ -5,6 +5,33 @@ Jeśli coś tutaj kłóci się z Twoim domyślnym zachowaniem — wygrywa ten pl
 
 ---
 
+## 0. `NOTATKI.md` — czytaj przed każdą zmianą
+
+`NOTATKI.md` w katalogu głównym to bieżący notatnik uwag właściciela repo. Uwagi trafiają tam
+z telefonu (Obsidian + Obsidian Git), więc bywają krótkie i nieformalne — to nie zmniejsza ich wagi.
+
+**Przed rozpoczęciem pracy** przeczytaj sekcję „🆕 Nowe" i uwzględnij te uwagi w tym, co robisz.
+
+**Po wykonaniu — lub po świadomym uwzględnieniu — uwagi:**
+
+1. Przenieś ją z „🆕 Nowe" do „✅ Załatwione".
+2. Przekreśl treść: `~~uwaga~~`.
+3. Dopisz pod spodem jedną–dwie linijki: co zrobiłeś albo dlaczego zdecydowałeś inaczej,
+   z datą i numerem PR-a.
+
+```markdown
+- ~~Popraw wykrywanie widełek płacowych~~
+  - **Claude 2026-08-10:** dodana obsługa „net/brutto/gross" między kwotą a walutą. PR #16.
+```
+
+**Czego nie robić:** nie usuwaj uwag, nie przepisuj ich treści i nie przekreślaj czegoś, czego
+realnie nie zrobiłeś. Jeśli uwagi nie da się wykonać albo się z nią nie zgadzasz — zostaw ją
+w „🆕 Nowe" i dopisz pod spodem swoje zastrzeżenie. Decyzję podejmuje człowiek.
+
+Zmiany w `NOTATKI.md` dołączaj do PR-a, którego dotyczą — nie rób z tego osobnego PR-a.
+
+---
+
 ## 1. Czym jest ten projekt
 
 SkillVault dopasowuje CV do konkretnej oferty pracy: parsuje ogłoszenie, przestawia i przeformułowuje
