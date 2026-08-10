@@ -1,24 +1,29 @@
 import React, { useMemo } from 'react';
-import { MasterVault, TailoredResume, CoverLetter, AtsCheckResult } from '../types';
+import { MasterVault, TailoredResume, CoverLetter, AtsCheckResult, InterviewCheatSheet } from '../types';
 import { fillSlotSentence, extractSlotsFromHighlight, eliminateSlogans } from '../lib/slotFillingEngine';
 import { rankExperienceByRelevance, rankHighlightsByRelevance } from '../lib/relevanceRanking';
 import { simulateAtsCheck } from '../lib/atsSimulator';
 import { generateAntiTemplateCoverLetter } from '../lib/coverLetterEngine';
+import { parseJobDescriptionLocal } from '../lib/jdParser';
+import { buildLocalInterviewCheatSheet } from '../lib/interviewCheatSheetEngine';
 import { DocumentRenderer } from './DocumentRenderer';
 import { AtsSimulatorView } from './AtsSimulatorView';
 import { CoverLetterView } from './CoverLetterView';
 import { CVWordBuilder } from './CVWordBuilder';
-import { Eye, ShieldCheck, Layers, Type, Sparkles } from 'lucide-react';
+import { InterviewCheatSheetView } from './InterviewCheatSheetView';
+import { Eye, ShieldCheck, Layers, Type, Sparkles, GraduationCap } from 'lucide-react';
 import { Tabs } from './ui/Tabs';
 import { StatusBadge } from './ui/StatusBadge';
+
+type PreviewTab = 'document' | 'builder' | 'ats' | 'coverLetter' | 'cheatsheet';
 
 interface RealtimeLivePreviewProps {
   vault: MasterVault;
   jobTitle: string;
   companyName: string;
   jobDescription: string;
-  activeTab?: 'document' | 'builder' | 'ats' | 'coverLetter';
-  onTabChange?: (tab: 'document' | 'builder' | 'ats' | 'coverLetter') => void;
+  activeTab?: PreviewTab;
+  onTabChange?: (tab: PreviewTab) => void;
   onUpdateVault?: (updated: MasterVault) => void;
   onOpenAdvisor?: (question?: string) => void;
 }
@@ -33,16 +38,16 @@ export const RealtimeLivePreview: React.FC<RealtimeLivePreviewProps> = ({
   onUpdateVault,
   onOpenAdvisor,
 }) => {
-  const [currentTab, setCurrentTab] = React.useState<'document' | 'builder' | 'ats' | 'coverLetter'>(activeTab);
+  const [currentTab, setCurrentTab] = React.useState<PreviewTab>(activeTab);
 
   const activeView = onTabChange ? activeTab : currentTab;
-  const setTab = (t: 'document' | 'builder' | 'ats' | 'coverLetter') => {
+  const setTab = (t: PreviewTab) => {
     setCurrentTab(t);
     if (onTabChange) onTabChange(t);
   };
 
   // Real-time dynamic calculation on keystroke/change (0-token local slot filling)
-  const { tailoredResume, atsResult, coverLetter } = useMemo(() => {
+  const { tailoredResume, atsResult, coverLetter, cheatSheet } = useMemo(() => {
     const jdKeywords = (jobDescription.toLowerCase().match(/\b[a-zA-Z0-9#+.-]{3,}\b/g) || []);
 
     // 0-token relevance ranking, same as the full hybrid pipeline in JobMatcher.tsx
@@ -89,10 +94,14 @@ export const RealtimeLivePreview: React.FC<RealtimeLivePreviewProps> = ({
       vault
     );
 
+    const parsedJdLocal = parseJobDescriptionLocal(jobDescription, jobTitle || 'Specjalista');
+    const cs = buildLocalInterviewCheatSheet(parsedJdLocal, vault, jobTitle, companyName);
+
     return {
       tailoredResume: resume,
       atsResult: ats,
       coverLetter: cl,
+      cheatSheet: cs,
     };
   }, [vault, jobTitle, companyName, jobDescription]);
 
@@ -132,6 +141,7 @@ export const RealtimeLivePreview: React.FC<RealtimeLivePreviewProps> = ({
           { id: 'document', label: 'Podgląd CV', icon: Eye },
           { id: 'ats', label: `Symulator ATS · ${atsResult.overallScore}%`, icon: ShieldCheck },
           { id: 'coverLetter', label: 'List motywacyjny', icon: Layers },
+          { id: 'cheatsheet', label: 'Ściąga na Rozmowę', icon: GraduationCap },
         ]}
       />
 
@@ -158,6 +168,17 @@ export const RealtimeLivePreview: React.FC<RealtimeLivePreviewProps> = ({
       {activeView === 'coverLetter' && (
         <CoverLetterView
           coverLetter={coverLetter}
+          vault={vault}
+          jobTitle={jobTitle}
+          companyName={companyName}
+          jobDescription={jobDescription}
+          onOpenAdvisor={onOpenAdvisor}
+        />
+      )}
+
+      {activeView === 'cheatsheet' && (
+        <InterviewCheatSheetView
+          cheatSheet={cheatSheet}
           vault={vault}
           jobTitle={jobTitle}
           companyName={companyName}
