@@ -94,7 +94,9 @@ export const RealtimeLivePreview: React.FC<RealtimeLivePreviewProps> = ({
       vault
     );
 
-    const parsedJdLocal = parseJobDescriptionLocal(jobDescription, jobTitle || 'Specjalista');
+    // Pass the user's title as-is: the parser treats a supplied title as authoritative
+    // and only sniffs one from the text when the user left the field empty.
+    const parsedJdLocal = parseJobDescriptionLocal(jobDescription, jobTitle);
     const cs = buildLocalInterviewCheatSheet(parsedJdLocal, vault, jobTitle, companyName);
 
     return {

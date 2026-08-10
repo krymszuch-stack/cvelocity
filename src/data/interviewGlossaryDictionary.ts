@@ -41,6 +41,11 @@ export const INTERVIEW_GLOSSARY_DICTIONARY: Record<string, string> = {
   'erp': 'Enterprise Resource Planning — zintegrowany system zarządzania zasobami i procesami całej organizacji.',
 };
 
+/** Czy słownik zna ten termin (case-insensitive). */
+export function hasGlossaryDefinition(term: string): boolean {
+  return Boolean(INTERVIEW_GLOSSARY_DICTIONARY[term.trim().toLowerCase()]);
+}
+
 /**
  * Zwraca definicję dla danego terminu (case-insensitive), a jeśli go nie ma w słowniku —
  * generyczny fallback, żeby sekcja glosariusza nigdy nie zawierała pustego opisu.
