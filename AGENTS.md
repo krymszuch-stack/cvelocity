@@ -165,3 +165,16 @@ Wąski, domknięty kawałek jest lepszy niż szeroki i połowiczny.
   i dopisz pytanie do `NOTATKI.md`. Nie zgaduj po cichu.
 - **Nie możesz czegoś zweryfikować** (brak `GEMINI_API_KEY`, brak przeglądarki do sprawdzenia obu
   motywów) → **napisz to wprost w PR** zamiast odhaczać punkt, którego nie wykonałeś.
+
+## 9. Podział pracy między agentami
+
+`JULES_PLAYBOOK.md` określa, **które zadania wolno wykonywać agentowi autonomicznemu**, a które
+zostają przy człowieku. Przeczytaj go, zanim weźmiesz zadanie, którego nie zlecił Ci wprost człowiek.
+
+Skrót zasady: deleguj to, co CI potrafi obalić. Obszary bezpieczeństwa (`server.ts`, `auth.ts`,
+`twoFactorAuth.ts`, `vaultCrypto.ts`), poprawność parserów (`jdParser.ts`, `atsSimulator.ts`)
+oraz ciało dokumentu A4 są **poza zasięgiem** — tam zielone CI nie dowodzi poprawności.
+
+Obowiązuje też reguła antykolizyjna: jeden plik = jeden otwarty PR, a pliki współdzielone
+(`src/index.css`, `src/types/index.ts`, `AGENTS.md`, `NOTATKI.md`) są poza zasięgiem zadań
+zleconych agentom. Brakuje tokena? Zgłoś to w PR, nie dodawaj go samodzielnie.
