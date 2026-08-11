@@ -166,6 +166,8 @@ Wąski, domknięty kawałek jest lepszy niż szeroki i połowiczny.
 - **Nie możesz czegoś zweryfikować** (brak `GEMINI_API_KEY`, brak przeglądarki do sprawdzenia obu
   motywów) → **napisz to wprost w PR** zamiast odhaczać punkt, którego nie wykonałeś.
 
+Konkretna mechanika zostawiania śladu (gdzie, w jakim formacie) jest w `JULES_PLAYBOOK.md` §9.
+
 ## 9. Podział pracy między agentami
 
 `JULES_PLAYBOOK.md` określa, **które zadania wolno wykonywać agentowi autonomicznemu**, a które

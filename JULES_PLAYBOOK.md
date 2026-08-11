@@ -211,3 +211,41 @@ Zadania są otwarte jako GitHub Issues. Uruchomienie: nadaj issue etykietę **`j
 
 Fala 1 jest pilotem procesu, nie techniki: sprawdzamy, czy Jules respektuje `AGENTS.md`,
 czy PR jest recenzowalny i czy przechodzi CI. Dopiero potem skalujemy.
+
+---
+
+## 9. Przekazywanie przerwanej pracy (handoff)
+
+Zarówno Jules, jak i Claude Code mogą nie dokończyć zadania w jednej sesji — zbyt szeroki
+zakres, limit czasu, zwykłe zakończenie rozmowy przez człowieka. Zasada z `AGENTS.md` §8.4
+(„wąski, domknięty kawałek jest lepszy niż szeroki i połowiczny") obowiązuje zawsze, ale
+potrzebuje konkretnej mechaniki: **gdzie zostawić ślad, żeby ktoś — człowiek, Jules albo
+kolejna sesja Claude — mógł podjąć pracę bez odgadywania stanu.**
+
+### Zastrzeżenie o „liczeniu tokenów"
+
+Claude Code nie ma dostępu do dokładnego licznika własnego zużycia kontekstu w procentach —
+nie da się tu wdrożyć dosłownego „przy 95% oddaj zadanie". Kontekst rozmowy jest automatycznie
+kompresowany w miarę potrzeby, więc typowa sesja nie urywa się w pół zdania z powodu limitu
+tokenów. Realne ryzyko przerwania pracy to zbyt szeroki zakres zadania albo koniec sesji z
+inicjatywy człowieka — ten mechanizm adresuje właśnie to, zamiast opierać się na metryce,
+do której nie ma dostępu.
+
+### Mechanizm
+
+1. **Przed zadaniem szerszym niż jeden plik / jedna wąska zmiana** — rozbij je na kroki, z
+   których każdy da się domknąć osobno (build + testy zielone, stan nadający się do commitu).
+2. **Gdy nie zdążysz dokończyć bieżącego kroku** — nie zostawiaj kodu w stanie, który nie
+   buduje się lub nie przechodzi testów. Cofnij niedokończony fragment albo domknij go do
+   najbliższego stabilnego punktu.
+3. **Zostaw ślad kontynuacji, dopasowany do tego, kto ma podjąć pracę:**
+   - Zadanie z zielonej listy (§3), które nadaje się dla Jules → otwórz albo zaktualizuj
+     GitHub Issue z etykietą `jules`, wg szablonu z §7, z dodaną sekcją „Stan na teraz"
+     opisującą dokładnie co zrobione, co zostało, i który plik/linia jest granicą.
+   - Zadanie wymagające ludzkiego osądu (czerwona lista §4, albo zwykła niejednoznaczność) →
+     wpis w `NOTATKI.md` §0, w istniejącym formacie.
+4. **Nigdy nie zostawiaj samego kodu jako jedynego śladu.** Diff bez opisu w issue/PR/
+   `NOTATKI.md` nie mówi kolejnej sesji, co jest zamierzone, a co przerwane w pół zdania.
+
+To rozszerza `AGENTS.md` §8.4 o konkretną mechanikę — **gdzie** zostawić ślad i **w jakim
+formacie** — zamiast tylko stwierdzać, że trzeba go zostawić.
