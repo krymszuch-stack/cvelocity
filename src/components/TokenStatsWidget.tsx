@@ -3,6 +3,7 @@ import { Zap, Cpu, DollarSign, RotateCcw } from 'lucide-react';
 import { TokenStats } from '../types';
 import { Modal } from './ui/Modal';
 import { Button } from './ui/Button';
+import { StatTile } from './ui/Feedback';
 
 interface TokenStatsWidgetProps {
   isOpen: boolean;
@@ -53,27 +54,20 @@ export const TokenStatsWidget: React.FC<TokenStatsWidgetProps> = ({
       <div className="space-y-6">
         {/* Big Counter Banner */}
         <div className="grid grid-cols-2 gap-4">
-          <div className="bg-sunken border border-line rounded-xl p-4 text-center">
-            <div className="text-xs text-muted mb-1 flex items-center justify-center space-x-1 font-bold">
-              <Cpu className="w-3.5 h-3.5 text-brand-fg" />
-              <span>Tokeny Zaoszczędzone</span>
-            </div>
-            <div className="text-2xl font-extrabold font-mono text-success-fg sv-tnum">
-              {stats.totalTokensSaved.toLocaleString()}
-            </div>
-            <div className="text-[10px] text-subtle mt-1">Oszczędność 0-Token Slot Filling</div>
-          </div>
-
-          <div className="bg-sunken border border-line rounded-xl p-4 text-center">
-            <div className="text-xs text-muted mb-1 flex items-center justify-center space-x-1 font-bold">
-              <DollarSign className="w-3.5 h-3.5 text-warning-fg" />
-              <span>Koszt Zredukowany $</span>
-            </div>
-            <div className="text-2xl font-extrabold font-mono text-warning-fg sv-tnum">
-              ${stats.estimatedCostSavedUSD.toFixed(5)}
-            </div>
-            <div className="text-[10px] text-subtle mt-1">Stawka Gemini 2.5 Flash API</div>
-          </div>
+          <StatTile
+            icon={Cpu}
+            label="Tokeny Zaoszczędzone"
+            value={<span className="font-mono text-success-fg">{stats.totalTokensSaved.toLocaleString()}</span>}
+            hint="Oszczędność 0-Token Slot Filling"
+            accent="success"
+          />
+          <StatTile
+            icon={DollarSign}
+            label="Koszt Zredukowany $"
+            value={<span className="font-mono text-warning-fg">${stats.estimatedCostSavedUSD.toFixed(5)}</span>}
+            hint="Stawka Gemini 2.5 Flash API"
+            accent="warning"
+          />
         </div>
 
         {/* Ratio Progress Bar */}
@@ -102,15 +96,15 @@ export const TokenStatsWidget: React.FC<TokenStatsWidgetProps> = ({
           <div className="flex justify-between items-center text-[10px] text-muted mt-2 font-mono">
             <span className="flex items-center space-x-1">
               <span className="w-2 h-2 rounded-full bg-success-500 inline-block"></span>
-              <span>Local Slot: {stats.localSlotHits}</span>
+              <span>Local Slot: <span className="sv-tnum">{stats.localSlotHits}</span></span>
             </span>
             <span className="flex items-center space-x-1">
               <span className="w-2 h-2 rounded-full bg-brand-500 inline-block"></span>
-              <span>Cache: {stats.cacheHits}</span>
+              <span>Cache: <span className="sv-tnum">{stats.cacheHits}</span></span>
             </span>
             <span className="flex items-center space-x-1">
               <span className="w-2 h-2 rounded-full bg-warning-500 inline-block"></span>
-              <span>Gemini: {stats.geminiDeltaCalls}</span>
+              <span>Gemini: <span className="sv-tnum">{stats.geminiDeltaCalls}</span></span>
             </span>
           </div>
         </div>
@@ -118,15 +112,15 @@ export const TokenStatsWidget: React.FC<TokenStatsWidgetProps> = ({
         <div className="grid grid-cols-3 gap-3 rounded-xl border border-line bg-sunken p-3 text-[11px] text-muted">
           <div>
             <div className="text-[10px] uppercase tracking-[0.16em] text-subtle">Prompt</div>
-            <div className="mt-1 font-mono font-bold text-ink">{(stats.apiPromptTokens ?? 0).toLocaleString()}</div>
+            <div className="mt-1 font-mono font-bold text-ink sv-tnum">{(stats.apiPromptTokens ?? 0).toLocaleString()}</div>
           </div>
           <div>
             <div className="text-[10px] uppercase tracking-[0.16em] text-subtle">Output</div>
-            <div className="mt-1 font-mono font-bold text-ink">{(stats.apiOutputTokens ?? 0).toLocaleString()}</div>
+            <div className="mt-1 font-mono font-bold text-ink sv-tnum">{(stats.apiOutputTokens ?? 0).toLocaleString()}</div>
           </div>
           <div>
             <div className="text-[10px] uppercase tracking-[0.16em] text-subtle">Live sync</div>
-            <div className="mt-1 font-mono font-bold text-ink">{stats.lastSyncedAt ? new Date(stats.lastSyncedAt).toLocaleTimeString('pl-PL', { hour: '2-digit', minute: '2-digit', second: '2-digit' }) : '—'}</div>
+            <div className="mt-1 font-mono font-bold text-ink sv-tnum">{stats.lastSyncedAt ? new Date(stats.lastSyncedAt).toLocaleTimeString('pl-PL', { hour: '2-digit', minute: '2-digit', second: '2-digit' }) : '—'}</div>
           </div>
         </div>
       </div>
