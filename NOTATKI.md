@@ -33,3 +33,6 @@ Format wpisu:
 
 - ~~Statystyki oszczędności tokenów były zbyt szacunkowe i nie odzwierciedlały realnej aktywności API~~
   - **Claude 2026-08-12:** usunięto sztuczne wartości startowe, dodano live synchronizację z rzeczywistych metryk Gemini z `usageMetadata` przez endpoint `/api/usage/stats`, a widget statystyk odświeża dane co 5 sekund. Weryfikacja: `npm run lint`, `npm test`, `npm run build`. PR #TBD.
+
+- ~~Błąd klucza vaultu i duplikacja wpisów po imporcie CV~~
+  - **Claude 2026-08-12:** usunięto fallback `default_key` z `AuthContext`, dodano bezpieczne przechowywanie sekretu vaultu w pamięci sesji i poprawiono merge po imporcie CV tak, by nie dublować historii, edukacji, projektów i certyfikacji. Weryfikacja: `npm run lint`, `npm test`, `npm run build`. PR #TBD.

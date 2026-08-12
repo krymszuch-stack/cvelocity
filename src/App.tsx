@@ -148,30 +148,41 @@ function MainApp() {
 
   const handleApplyParsedVault = (parsed: Partial<MasterVault>) => {
     setVault((prev) => {
-      // Merge history without duplicate company + role entries
-      const existingHistoryKeys = new Set(prev.history.map((h) => `${h.company.toLowerCase().trim()}_${h.role.toLowerCase().trim()}`));
-      const newHistory = (parsed.history || []).filter((h) => !existingHistoryKeys.has(`${h.company.toLowerCase().trim()}_${h.role.toLowerCase().trim()}`));
-      
-      const mergedHistory = prev.history.length === 0
-        ? (parsed.history || [])
-        : [...(parsed.history || []), ...newHistory];
+      const toKey = (value: string) => value.toLowerCase().trim();
 
-      // Merge education without duplicate institution + degree
-      const existingEduKeys = new Set(prev.education.map((e) => `${e.institution.toLowerCase().trim()}_${e.degree.toLowerCase().trim()}`));
-      const newEdu = (parsed.education || []).filter((e) => !existingEduKeys.has(`${e.institution.toLowerCase().trim()}_${e.degree.toLowerCase().trim()}`));
-      const mergedEducation = prev.education.length === 0
-        ? (parsed.education || [])
-        : [...(parsed.education || []), ...newEdu];
+      const mergeUnique = <T extends { id?: string }>(base: T[], incoming: T[], keyFn: (item: T) => string): T[] => {
+        const seen = new Map<string, T>();
 
-      // Merge certifications
-      const existingCertNames = new Set((prev.skillsMatrix.certifications || []).map((c) => c.name.toLowerCase().trim()));
-      const newCerts = (parsed.skillsMatrix?.certifications || []).filter((c) => !existingCertNames.has(c.name.toLowerCase().trim()));
-      const mergedCertifications = [...(prev.skillsMatrix.certifications || []), ...newCerts];
+        [...base, ...incoming].forEach((item) => {
+          const key = keyFn(item);
+          if (!key) return;
+          if (!seen.has(key)) {
+            seen.set(key, item);
+          }
+        });
 
-      // Merge projects
-      const existingProjNames = new Set((prev.projects || []).map((p) => p.name.toLowerCase().trim()));
-      const newProjects = (parsed.projects || []).filter((p) => !existingProjNames.has(p.name.toLowerCase().trim()));
-      const mergedProjects = [...(prev.projects || []), ...newProjects];
+        return Array.from(seen.values());
+      };
+
+      const mergedHistory = mergeUnique(prev.history, parsed.history || [], (item) => {
+        const company = item.company || '';
+        const role = item.role || '';
+        return `${toKey(company)}|${toKey(role)}`;
+      });
+
+      const mergedEducation = mergeUnique(prev.education, parsed.education || [], (item) => {
+        const institution = item.institution || '';
+        const degree = item.degree || '';
+        return `${toKey(institution)}|${toKey(degree)}`;
+      });
+
+      const mergedCertifications = mergeUnique(
+        prev.skillsMatrix.certifications || [],
+        parsed.skillsMatrix?.certifications || [],
+        (item) => toKey(item.name || '')
+      );
+
+      const mergedProjects = mergeUnique(prev.projects || [], parsed.projects || [], (item) => toKey(item.name || ''));
 
       return {
         ...prev,
@@ -192,9 +203,9 @@ function MainApp() {
           toolsAndTech: Array.from(new Set([...(parsed.skillsMatrix?.toolsAndTech || []), ...prev.skillsMatrix.toolsAndTech])),
           certifications: mergedCertifications,
         },
-        history: mergedHistory.length > 0 ? mergedHistory : prev.history,
-        education: mergedEducation.length > 0 ? mergedEducation : prev.education,
-        projects: mergedProjects.length > 0 ? mergedProjects : prev.projects,
+        history: mergedHistory,
+        education: mergedEducation,
+        projects: mergedProjects,
         updatedAt: new Date().toISOString(),
       };
     });

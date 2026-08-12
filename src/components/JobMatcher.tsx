@@ -49,6 +49,7 @@ export const JobMatcher: React.FC<JobMatcherProps> = ({
   const [companyName, setCompanyName] = useState('');
   const [jobDescription, setJobDescription] = useState('');
   const [startChoice, setStartChoice] = useState<'offer' | 'cv' | 'vault' | null>(null);
+  const [welcomeWizardOpen, setWelcomeWizardOpen] = useState(false);
   const roleKnowledge = inferRoleKnowledge(jobTitle);
   const predictedRequirements = buildRoleRequirements(jobTitle);
 
@@ -155,6 +156,10 @@ export const JobMatcher: React.FC<JobMatcherProps> = ({
 
   const isNewUser = !vault.personalInfo.fullName && !vault.personalInfo.email && !vault.history.length && !vault.education.length && !vault.skillsMatrix.hardSkills.length && !vault.skillsMatrix.toolsAndTech.length;
 
+  React.useEffect(() => {
+    setWelcomeWizardOpen(isNewUser && startChoice === null);
+  }, [isNewUser, startChoice]);
+
   const onboardingSteps = [
     {
       title: '1. Uzupełnij profil',
@@ -205,15 +210,15 @@ export const JobMatcher: React.FC<JobMatcherProps> = ({
       {startChoice === null && (
         <Card className="overflow-hidden relative">
           <div className="relative p-5 sm:p-6">
-            {isNewUser && (
+            {welcomeWizardOpen && (
               <div className="mb-6 rounded-2xl border border-brand-500/25 bg-brand-soft p-4 sm:p-5">
                 <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                   <div>
-                    <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-brand-fg">Nowy użytkownik</p>
-                    <h2 className="mt-2 text-2xl font-black tracking-tight text-ink">Witaj w SkillVault. Zacznij w 3 krokach.</h2>
+                    <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-brand-fg">Przewodnik pierwszego uruchomienia</p>
+                    <h2 className="mt-2 text-2xl font-black tracking-tight text-ink">Witaj w SkillVault. Rozpocznij od najważniejszego kroku.</h2>
                   </div>
                   <Button variant="primary" size="sm" iconRight={ArrowRight} onClick={() => setStartChoice('offer')}>
-                    Zacznij od oferty
+                    Uruchom przewodnik
                   </Button>
                 </div>
 

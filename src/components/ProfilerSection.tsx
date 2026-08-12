@@ -1,24 +1,31 @@
 import React from 'react';
 import { FlagCategory, ExperienceLevel, ProfilerState, LanguageProficiency } from '../types';
-import { Settings, MapPin, Globe, Award, Shield, Check, Plus, Trash2 } from 'lucide-react';
+import { Settings, MapPin, Globe, Award, Shield, Check, Plus, Trash2, Sparkles } from 'lucide-react';
 
 interface ProfilerSectionProps {
   profiler: ProfilerState;
   onChange: (updated: ProfilerState) => void;
 }
 
-const ALL_FLAGS: { id: FlagCategory; label: string; desc: string }[] = [
-  { id: 'PHYSICAL', label: 'Praca Fizyczna / Operacyjna', desc: 'Stanowiska produkcyjne, logistyczne, terenowe lub wymagające dyspozycji fizycznej' },
-  { id: 'OFFICE_IT', label: 'Biuro / IT / Inżynieria', desc: 'Praca biurowa, rozwój oprogramowania, architektura danych, zarządzenie' },
-  { id: 'CASUAL', label: 'Casual / Elastyczna', desc: 'Praca projektowa, zlecenia, praca sezonowa lub elastyczne godziny' },
-  { id: 'REMOTE', label: 'Zdalna / Remote Only', desc: 'Pełna praca zdalna z dowolnego miejsca bez konieczności stawiennictwa w biurze' },
+const ALL_FLAGS: { id: FlagCategory; label: string; desc: string; icon: string; accent: string }[] = [
+  { id: 'PHYSICAL', label: 'Praca operacyjna', desc: 'Logistyka, produkcja, teren i wymagania fizyczne.', icon: '🏭', accent: 'from-amber-500/15 via-orange-500/5 to-transparent' },
+  { id: 'OFFICE_IT', label: 'Biuro i technologie', desc: 'IT, doradztwo, analityka, projektowanie i zarządzanie.', icon: '💼', accent: 'from-brand-500/15 via-indigo-500/5 to-transparent' },
+  { id: 'CASUAL', label: 'Elastyczna / projektowa', desc: 'Freelance, sezonowość, elastyczne godziny i zlecenia.', icon: '✨', accent: 'from-emerald-500/15 via-teal-500/5 to-transparent' },
+  { id: 'REMOTE', label: 'Praca zdalna', desc: 'Pełny remote, hybryda lub globalna współpraca online.', icon: '🌍', accent: 'from-sky-500/15 via-brand-500/5 to-transparent' },
 ];
 
-const EXPERIENCE_LEVELS: { id: ExperienceLevel; label: string; desc: string }[] = [
-  { id: 'ENTRY', label: 'Entry Level (0-2 lata)', desc: 'Początek ścieżki zawodowej, staże, pierwsze samodzielne projekty' },
-  { id: 'MID', label: 'Mid Level (2-5 lat)', desc: 'Samodzielny specjalista, realizacja komercyjnych wdrożeń' },
-  { id: 'SENIOR', label: 'Senior Level (5+ lat)', desc: 'Ekspert, architektura rozwiązań, prowadzenie zespołów' },
-  { id: 'PIVOT', label: 'Przebranżowienie (Pivot)', desc: 'Zmiana branży, transfer umiejętności uniwersalnych i miękkich' },
+const EXPERIENCE_LEVELS: { id: ExperienceLevel; label: string; desc: string; icon: string; accent: string }[] = [
+  { id: 'ENTRY', label: 'Entry (0-2 lata)', desc: 'Początek kariery, staże i pierwsze projekty.', icon: '🚀', accent: 'from-brand-500/15 to-brand-500/5' },
+  { id: 'MID', label: 'Mid (2-5 lat)', desc: 'Samodzielne wdrożenia i niezależna realizacja.', icon: '🧭', accent: 'from-emerald-500/15 to-teal-500/5' },
+  { id: 'SENIOR', label: 'Senior (5+ lat)', desc: 'Ekspercki poziom, architektura i przewodzenie zespołowi.', icon: '🏆', accent: 'from-amber-500/15 to-orange-500/5' },
+  { id: 'PIVOT', label: 'Przebranżowienie', desc: 'Transfer kompetencji i zmiana ścieżki zawodowej.', icon: '🔄', accent: 'from-sky-500/15 to-brand-500/5' },
+];
+
+const PROFILE_PRESETS: { id: string; label: string; description: string; icon: string; accent: string; flags: FlagCategory[] }[] = [
+  { id: 'remote', label: 'Remote-ready', description: 'Zdalna współpraca, elastyczne godziny i hybryda.', icon: '🌍', accent: 'from-sky-500/15 via-brand-500/10 to-transparent', flags: ['REMOTE'] },
+  { id: 'office-it', label: 'Biuro / IT', description: 'Praca z klientem, analityka, product i projektowanie.', icon: '💻', accent: 'from-brand-500/15 via-indigo-500/10 to-transparent', flags: ['OFFICE_IT'] },
+  { id: 'physical', label: 'Operacyjnie', description: 'Teren, produkcja, logistyka i szybkie realizacje.', icon: '🏭', accent: 'from-amber-500/15 via-orange-500/10 to-transparent', flags: ['PHYSICAL'] },
+  { id: 'flex', label: 'Elastycznie', description: 'Freelance, projekty i różnorodne ścieżki zawodowe.', icon: '✨', accent: 'from-emerald-500/15 via-teal-500/10 to-transparent', flags: ['CASUAL'] },
 ];
 
 export const ProfilerSection: React.FC<ProfilerSectionProps> = ({ profiler, onChange }) => {
@@ -38,6 +45,13 @@ export const ProfilerSection: React.FC<ProfilerSectionProps> = ({ profiler, onCh
     onChange({
       ...profiler,
       location: { ...profiler.location, [field]: value },
+    });
+  };
+
+  const applyPreset = (presetFlags: FlagCategory[]) => {
+    onChange({
+      ...profiler,
+      flags: Array.from(new Set([...profiler.flags, ...presetFlags])),
     });
   };
 
@@ -72,11 +86,49 @@ export const ProfilerSection: React.FC<ProfilerSectionProps> = ({ profiler, onCh
             <Settings className="w-5 h-5" />
           </div>
           <div>
-            <h2 className="text-xl font-bold text-ink">Matryca Profilu & Ingestion Flags</h2>
+            <h2 className="text-xl font-bold text-ink">Profil kandydata</h2>
             <p className="text-xs text-muted">
-              Wielokryterialne flagi preferencji (bitmask) i parametry kandydata
+              Wybór stylu pracy, mobilności i priorytetów dopasowania do ofert
             </p>
           </div>
+        </div>
+      </div>
+
+      <div>
+        <div className="mb-3 flex items-center justify-between gap-2">
+          <label className="block text-xs font-bold text-ink flex items-center space-x-2">
+            <Sparkles className="w-4 h-4 text-brand-fg" />
+            <span>Szybkie predefiniowane profile</span>
+          </label>
+        </div>
+        <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-3">
+          {PROFILE_PRESETS.map((preset) => {
+            const isSelected = preset.flags.every((flag) => profiler.flags.includes(flag));
+            return (
+              <button
+                key={preset.id}
+                type="button"
+                onClick={() => applyPreset(preset.flags)}
+                className={`relative overflow-hidden text-left rounded-2xl border p-3.5 transition-all duration-200 ${
+                  isSelected
+                    ? 'border-brand-500 bg-brand-soft ring-1 ring-brand-500/30'
+                    : 'border-line bg-sunken hover:border-line-strong hover:-translate-y-0.5'
+                }`}
+              >
+                <div className={`absolute inset-0 bg-gradient-to-br ${preset.accent} opacity-90`} />
+                <div className="relative flex items-center justify-between gap-2">
+                  <span className="flex h-10 w-10 items-center justify-center rounded-xl border border-white/30 bg-white/30 text-xl shadow-sm">
+                    {preset.icon}
+                  </span>
+                  {isSelected && <Check className="w-4 h-4 text-brand-fg" />}
+                </div>
+                <div className="relative mt-3">
+                  <div className="text-sm font-bold text-ink">{preset.label}</div>
+                  <p className="mt-1 text-[11px] leading-relaxed text-muted">{preset.description}</p>
+                </div>
+              </button>
+            );
+          })}
         </div>
       </div>
 
@@ -94,27 +146,40 @@ export const ProfilerSection: React.FC<ProfilerSectionProps> = ({ profiler, onCh
           {ALL_FLAGS.map((flag) => {
             const isSelected = profiler.flags.includes(flag.id);
             return (
-              <div
+              <button
+                type="button"
                 key={flag.id}
                 onClick={() => toggleFlag(flag.id)}
-                className={`cursor-pointer p-4 rounded-xl border transition-all flex items-start space-x-3 ${
+                className={`relative overflow-hidden text-left p-4 rounded-2xl border transition-all duration-200 ${
                   isSelected
                     ? 'bg-brand-soft border-brand-500 shadow-2xs ring-1 ring-brand-500/30'
-                    : 'bg-sunken border-line hover:border-line-strong'
+                    : 'bg-sunken border-line hover:border-line-strong hover:-translate-y-0.5'
                 }`}
               >
-                <div
-                  className={`w-5 h-5 rounded flex items-center justify-center shrink-0 mt-0.5 border ${
-                    isSelected ? 'bg-brand-600 border-brand-600 text-white' : 'border-line-strong bg-surface'
-                  }`}
-                >
-                  {isSelected && <Check className="w-3.5 h-3.5 stroke-[3]" />}
+                <div className={`absolute inset-0 bg-gradient-to-br ${flag.accent} opacity-80`} />
+                <div className="relative flex items-start space-x-3">
+                  <div
+                    className={`w-11 h-11 rounded-xl flex items-center justify-center text-xl shrink-0 border ${
+                      isSelected ? 'bg-brand-600 border-brand-600 text-white shadow-sm' : 'border-line-strong bg-surface text-ink'
+                    }`}
+                  >
+                    {flag.icon}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center justify-between gap-2">
+                      <h4 className="text-sm font-bold text-ink">{flag.label}</h4>
+                      <div
+                        className={`w-5 h-5 rounded-full flex items-center justify-center shrink-0 border ${
+                          isSelected ? 'bg-brand-600 border-brand-600 text-white' : 'border-line-strong bg-surface'
+                        }`}
+                      >
+                        {isSelected && <Check className="w-3.5 h-3.5 stroke-[3]" />}
+                      </div>
+                    </div>
+                    <p className="text-xs text-muted mt-1 leading-relaxed">{flag.desc}</p>
+                  </div>
                 </div>
-                <div>
-                  <h4 className="text-sm font-bold text-ink">{flag.label}</h4>
-                  <p className="text-xs text-muted mt-1">{flag.desc}</p>
-                </div>
-              </div>
+              </button>
             );
           })}
         </div>
@@ -130,18 +195,26 @@ export const ProfilerSection: React.FC<ProfilerSectionProps> = ({ profiler, onCh
           {EXPERIENCE_LEVELS.map((lvl) => {
             const isSelected = profiler.experienceLevel === lvl.id;
             return (
-              <div
+              <button
+                type="button"
                 key={lvl.id}
                 onClick={() => handleLevelChange(lvl.id)}
-                className={`cursor-pointer p-3.5 rounded-xl border transition-all text-left ${
+                className={`relative overflow-hidden text-left p-3.5 rounded-2xl border transition-all duration-200 ${
                   isSelected
                     ? 'bg-warning-soft border-warning-500 ring-1 ring-warning-500/30'
-                    : 'bg-sunken border-line hover:border-line-strong'
+                    : 'bg-sunken border-line hover:border-line-strong hover:-translate-y-0.5'
                 }`}
               >
-                <div className="text-xs font-bold text-ink">{lvl.label}</div>
-                <div className="text-[11px] text-muted mt-1">{lvl.desc}</div>
-              </div>
+                <div className={`absolute inset-0 bg-gradient-to-br ${lvl.accent}`} />
+                <div className="relative">
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="text-xl">{lvl.icon}</span>
+                    {isSelected && <Check className="w-4 h-4 text-warning-fg" />}
+                  </div>
+                  <div className="text-xs font-bold text-ink mt-2">{lvl.label}</div>
+                  <div className="text-[11px] text-muted mt-1 leading-relaxed">{lvl.desc}</div>
+                </div>
+              </button>
             );
           })}
         </div>

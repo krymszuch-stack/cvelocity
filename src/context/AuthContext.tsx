@@ -125,7 +125,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode; onVaultLoaded?:
     setUserVault(null);
   }, [user]);
 
-  const saveUserVaultFunc = useCallback((vault: MasterVault, userSecret: string = 'default_key') => {
+  const saveUserVaultFunc = useCallback((vault: MasterVault, userSecret?: string) => {
     if (user) {
       const cleanFullName = (vault.personalInfo.fullName || '').replace(/<[^>]+>/g, '').trim();
       const cleanEmail = (vault.personalInfo.email || '').replace(/<[^>]+>/g, '').trim();

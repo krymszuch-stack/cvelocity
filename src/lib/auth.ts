@@ -120,6 +120,7 @@ export function registerUser(email: string, password: string, fullName: string):
   saveRegisteredUsers(users);
 
   const initialVault = createEmptyVault(fullName, normalizedEmail);
+  rememberUserVaultSecret(newUser.id, password);
   saveUserVault(newUser.id, initialVault, password);
   saveActiveSession(newUser);
 
@@ -172,6 +173,7 @@ export function loginUser(email: string, password: string): { user: UserAccount;
   }
 
   foundUser.lastLoginAt = new Date().toISOString();
+  rememberUserVaultSecret(foundUser.id, password);
   saveRegisteredUsers(users);
   saveActiveSession(foundUser);
 
@@ -243,6 +245,10 @@ export function disableTwoFactor(userId: string, verificationPassword?: string):
     throw new Error('Użytkownik nie został odnaleziony.');
   }
 
+  if (user.twoFactorEnabled && !verificationPassword) {
+    throw new Error('Aby wyłączyć 2FA, podaj aktualne hasło lub kod weryfikacyjny.');
+  }
+
   if (verificationPassword) {
     const isMatch600k = hashPassword(verificationPassword, user.salt, 600000) === user.passwordHash;
     const isMatchLegacy = !isMatch600k && (hashPassword(verificationPassword, user.salt, 1000) === user.passwordHash);
@@ -267,6 +273,10 @@ export function disableTwoFactor(userId: string, verificationPassword?: string):
 export function completeLogin(pendingUser: UserAccount, password?: string): { user: UserAccount; vault: MasterVault } {
   const users = getRegisteredUsers();
   const user = users.find((u) => u.id === pendingUser.id) || pendingUser;
+
+  if (password) {
+    rememberUserVaultSecret(user.id, password);
+  }
 
   user.lastLoginAt = new Date().toISOString();
   saveRegisteredUsers(users);
@@ -311,6 +321,7 @@ export function logoutUser(): void {
   const activeUser = getActiveSessionUser();
   if (activeUser) {
     delete IN_MEMORY_VAULT_CACHE[activeUser.id];
+    delete IN_MEMORY_VAULT_SECRET_CACHE[activeUser.id];
   }
   localStorage.removeItem(CURRENT_SESSION_KEY);
 }
@@ -320,6 +331,16 @@ export function logoutUser(): void {
 * because a browser-stored, unencrypted vault can be read by any script with access to the origin.
 */
 const IN_MEMORY_VAULT_CACHE: Record<string, MasterVault> = {};
+const IN_MEMORY_VAULT_SECRET_CACHE: Record<string, string> = {};
+
+export function rememberUserVaultSecret(userId: string, userSecret: string): void {
+  if (!userId || !userSecret) return;
+  IN_MEMORY_VAULT_SECRET_CACHE[userId] = userSecret;
+}
+
+export function getUserVaultSecret(userId: string): string | undefined {
+  return IN_MEMORY_VAULT_SECRET_CACHE[userId];
+}
 
 /**
  * Save encrypted vault for specific user
@@ -327,12 +348,15 @@ const IN_MEMORY_VAULT_CACHE: Record<string, MasterVault> = {};
 export function saveUserVault(userId: string, vault: MasterVault, userSecret?: string): void {
   const storageKey = `skillvault_vault_encrypted_${userId}`;
   const legacyActiveKey = `skillvault_vault_active_${userId}`;
+  const resolvedSecret = userSecret ?? getUserVaultSecret(userId);
 
-  if (userSecret) {
-    const encrypted = encryptUserVault(vault, userSecret);
+  if (resolvedSecret) {
+    rememberUserVaultSecret(userId, resolvedSecret);
+    const encrypted = encryptUserVault(vault, resolvedSecret);
     localStorage.setItem(storageKey, encrypted);
   } else {
     localStorage.removeItem(storageKey);
+    delete IN_MEMORY_VAULT_SECRET_CACHE[userId];
   }
 
   localStorage.removeItem(legacyActiveKey);
@@ -349,7 +373,8 @@ export function loadUserVault(userId: string, userSecret?: string): MasterVault 
   }
 
   const encryptedKey = `skillvault_vault_encrypted_${userId}`;
-  if (!userSecret) {
+  const resolvedSecret = userSecret ?? getUserVaultSecret(userId);
+  if (!resolvedSecret) {
     return null;
   }
 
@@ -358,9 +383,10 @@ export function loadUserVault(userId: string, userSecret?: string): MasterVault 
     return null;
   }
 
-  const decrypted = decryptUserVault(encrypted, userSecret);
+  const decrypted = decryptUserVault(encrypted, resolvedSecret);
   if (decrypted) {
     IN_MEMORY_VAULT_CACHE[userId] = decrypted;
+    rememberUserVaultSecret(userId, resolvedSecret);
   }
 
   return decrypted;
@@ -371,6 +397,7 @@ export function loadUserVault(userId: string, userSecret?: string): MasterVault 
  */
 export function deleteUserAccount(userId: string): void {
   delete IN_MEMORY_VAULT_CACHE[userId];
+  delete IN_MEMORY_VAULT_SECRET_CACHE[userId];
   localStorage.removeItem(`skillvault_vault_encrypted_${userId}`);
   localStorage.removeItem(`skillvault_vault_active_${userId}`);
   localStorage.removeItem(CURRENT_SESSION_KEY);
