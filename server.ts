@@ -3,7 +3,7 @@
 import "dotenv/config";
 import express from "express";
 import * as cheerio from "cheerio";
-import { parseRawCvToVault, optimizeDeltaPhrases, parseJobDescriptionWithGemini, getAdvisorEducationalAdvice, generateCoverLetterWithFlash } from "./src/server/gemini";
+import { parseRawCvToVault, optimizeDeltaPhrases, parseJobDescriptionWithGemini, getAdvisorEducationalAdvice, generateCoverLetterWithFlash, generateInterviewCheatSheetEnrichmentWithFlash } from "./src/server/gemini";
 
 /**
  * Filter out web portal navigation noise, links, buttons ("Zobacz ofertę", "Aplikuj", "Pobierz aplikację", cookies, footers)
@@ -587,6 +587,29 @@ async function startServer() {
     } catch (err: any) {
       console.error("Error in /api/generate-cover-letter:", err);
       res.status(500).json(formatApiError("Błąd podczas generowania listu motywacyjnego przez Gemini Flash.", err));
+    }
+  });
+
+  // API Route: Interview Cheat Sheet Enrichment (STAR points, framing, emergency phrases)
+  app.post("/api/generate-cheat-sheet", async (req, res) => {
+    try {
+      const { vault, targetRole, companyName, jobDescription, topRequirements } = req.body;
+
+      const enrichment = await generateInterviewCheatSheetEnrichmentWithFlash(
+        vault || {},
+        targetRole || "Specjalista",
+        companyName || "Firma",
+        jobDescription || "",
+        Array.isArray(topRequirements) ? topRequirements : []
+      );
+
+      res.json({ success: true, enrichment });
+    } catch (err: any) {
+      console.error("Error in /api/generate-cheat-sheet:", err);
+      res.status(500).json({
+        error: "Błąd podczas generowania ściągi na rozmowę przez Gemini Flash.",
+        details: err?.message || String(err),
+      });
     }
   });
 

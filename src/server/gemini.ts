@@ -2,6 +2,7 @@ import { GoogleGenAI, Type } from "@google/genai";
 import { MasterVault } from "../types";
 import { UNIVERSAL_CV_REFRAMING_SYSTEM_PROMPT } from "../data/universalCvReframingPrompt";
 import { ATS_CV_REFRAMING_SYSTEM_PROMPT } from "../data/atsCvReframingPrompt";
+import { INTERVIEW_CHEAT_SHEET_SYSTEM_PROMPT } from "../data/interviewCheatSheetPrompt";
 
 const getGeminiClient = () => {
   const apiKey = process.env.GEMINI_API_KEY;

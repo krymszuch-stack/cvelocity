@@ -49,33 +49,140 @@ export interface JDVaultMatchAnalysis {
 }
 
 /**
- * Local client-side smart parser fallback for Job Descriptions
+ * Legal boilerplate (RODO/GDPR consent and data-retention clauses) is mandatory in
+ * Polish job ads and is NOT part of the employer's requirements. Scanning it for
+ * requirements produced fabricated dealbreakers — the retention period
+ * "przez okres 3 lat od daty przesłania zgłoszenia" was read as "requires 3 years
+ * of experience". Requirement detection must run on the ad body only.
  */
-export function parseJobDescriptionLocal(rawJdText: string, defaultTitle = 'Full-Stack Developer'): ParsedJobDescription {
+const LEGAL_BOILERPLATE_LINE =
+  /rodo|klauzul|przetwarzan|przetwarzamy|dane osobowe|danych osobowych|administrator|inspektor(a)? ochrony danych|art\.\s*\d|uodo|prezesa urzędu|ochrony danych|zgłoszeni(e|a|u) rekrutacyjn|cofnięcia zgody|podstawy przetwarzania|okres przechowywania|udostępnianie danych/i;
+
+export function stripLegalBoilerplate(text: string): string {
+  return text
+    .split(/\r?\n/)
+    .filter((line) => !LEGAL_BOILERPLATE_LINE.test(line))
+    .join('\n');
+}
+
+/**
+ * Guards against the first line of an ad being mistaken for the job title.
+ * Real ads open with street addresses, salary ranges, marketing sentences or
+ * application instructions far more often than with the position name.
+ */
+function looksLikeJobTitle(candidate: string): boolean {
+  const c = candidate.trim();
+  if (c.length <= 3 || c.length >= 80) return false;
+  if (/[@]/.test(c)) return false;
+  if (/[:?!]$/.test(c)) return false;
+  if (/\b(ul|al|os|pl)\.\s/i.test(c)) return false;
+  if (/\d[\d\s.,]*\s*(?:-|–|do)\s*\d|PLN|EUR|USD|\bzł\b|brutto|netto|gross/i.test(c)) return false;
+  if (/\b(jesteś|jeśli|poszukujemy|szukamy|dołącz|zapraszamy|oferujemy|jesteśmy|zapewniamy|skontaktuj|prześlij|aplikuj|we are|our goal|do naszej|do naszego)\b/i.test(c)) return false;
+  if (c.split(/\s+/).length > 8) return false;
+  return true;
+}
+
+// No trailing \b: it is an ASCII word boundary and fails after Polish letters
+// ("Mamy dla Ciebie pracę," would not match with it).
+const RESPONSIBILITY_HEADER =
+  /^(zakres obowiązków|zakres zadań|zakres pracy|twoje zadania|twoim zadaniem|będziesz odpowiadać|do twoich zadań|obowiązki|zadania|mamy dla ciebie pracę|tasks|responsibilities|your responsibilities|what you will do|your role)/i;
+
+const SECTION_HEADER =
+  /^(wymagania|nasze wymagania|oczekujemy|wymagamy|profil kandydata|mile widziane|benefity|benefits|oferujemy|zapewniamy|what we offer|requirements|must have|nice to have|about you|zaaplikuj|aplikuj|szukamy|poszukujemy|employment type|location|office hours|holiday|company size|remote work|monthly salary)/i;
+
+/**
+ * Pulls the responsibilities section out of the ad instead of blindly taking
+ * lines 2-6, which used to capture section headers, requirements, marketing copy
+ * and even the recruiter's email address.
+ */
+export function extractResponsibilities(lines: string[]): string[] {
+  const out: string[] = [];
+  let inSection = false;
+
+  for (const line of lines) {
+    if (RESPONSIBILITY_HEADER.test(line)) {
+      inSection = true;
+      continue;
+    }
+    if (!inSection) continue;
+    if (SECTION_HEADER.test(line)) break;
+
+    const cleaned = line.replace(/^[-•*•\s]+/, '').trim();
+    if (cleaned.length < 10) continue;
+    if (/[@]|\+?\d{2}[\s-]?\d{3}[\s-]?\d{3}/.test(cleaned)) continue; // e-mail / phone
+    if (/:$/.test(cleaned)) continue; // nested header
+
+    out.push(cleaned);
+    if (out.length >= 6) break;
+  }
+
+  return out;
+}
+
+/**
+ * Reads the actual required years of experience rather than flagging a fixed
+ * "3-5 lat" string whenever any number near "lat" appears anywhere in the text.
+ */
+export function extractExperienceRequirement(bodyText: string): string | null {
+  const patterns = [
+    /(?:min\.?|minimum|co najmniej|at least|a minimum of)?\s*(\d{1,2})\s*\+?\s*(?:lat|lata|years?)\s+(?:\w+\s+){0,3}?(?:doświadcz|experience)/i,
+    /(?:doświadczeni\w*|experience)\s*(?:\w+\s+){0,3}?(?:min\.?|minimum|co najmniej|at least|of)?\s*(\d{1,2})\s*\+?\s*(?:lat|lata|years?)/i,
+  ];
+
+  for (const pattern of patterns) {
+    const match = bodyText.match(pattern);
+    if (match?.[1]) {
+      const years = match[1];
+      return `Min. ${years} ${Number(years) === 1 ? 'rok' : 'lat'} doświadczenia`;
+    }
+  }
+  return null;
+}
+
+/**
+ * Local client-side smart parser fallback for Job Descriptions.
+ *
+ * Contract: every field is derived from the ad text. When something is not found
+ * the field stays EMPTY — it is never back-filled with a plausible-looking guess,
+ * because a fabricated requirement is worse than a missing one (see "0-Halucynacji"
+ * in SYSTEM_ARCHITECTURE_GUIDANCE.md).
+ *
+ * `defaultTitle` is authoritative when supplied: it is what the user typed, and the
+ * parser must not overwrite it with a sniffed line.
+ */
+export function parseJobDescriptionLocal(rawJdText: string, defaultTitle = ''): ParsedJobDescription {
   const text = rawJdText.trim();
   const lower = text.toLowerCase();
 
-  // Extract potential job title from top lines
+  // Requirements/benefits are read from the ad body only, never from legal clauses.
+  const bodyText = stripLegalBoilerplate(text);
+  const bodyLower = bodyText.toLowerCase();
+
   const lines = text.split('\n').map((l) => l.trim()).filter(Boolean);
-  let jobTitle = defaultTitle;
-  if (lines.length > 0) {
-    const firstLine = lines[0].replace(/^(poszukujemy|rekrutacja na|stanowisko:?|oferta:?)\s*/i, '');
-    if (firstLine.length > 3 && firstLine.length < 80) {
+  let jobTitle = defaultTitle.trim();
+  if (!jobTitle) {
+    const firstLine = lines[0]?.replace(/^(poszukujemy|rekrutacja na|stanowisko:?|oferta:?)\s*/i, '') || '';
+    if (looksLikeJobTitle(firstLine)) {
       jobTitle = firstLine;
     }
   }
 
-  // Seniority detection
+  // Seniority detection. Order matters: the checks are mutually exclusive so a
+  // "junior working with senior engineers" ad is not silently promoted to SENIOR.
+  // The title is included because that is where seniority is usually stated.
+  const seniorityText = `${jobTitle} ${bodyLower}`.toLowerCase();
   let seniorityLevel: ParsedJobDescription['seniorityLevel'] = 'MID';
-  if (/senior|główny|lead|principal|architekt|head/i.test(lower)) seniorityLevel = 'SENIOR';
-  if (/junior|praktykant|stażysta|entry/i.test(lower)) seniorityLevel = 'ENTRY';
-  if (/tech lead|team lead|lead engineer|kierownik/i.test(lower)) seniorityLevel = 'LEAD';
+  if (/\b(junior|praktykant|stażyst\w*|intern|entry[- ]level)\b/i.test(seniorityText)) seniorityLevel = 'ENTRY';
+  else if (/\b(tech lead|team lead|lead engineer|kierownik|head of)\b/i.test(seniorityText)) seniorityLevel = 'LEAD';
+  else if (/\b(senior|starszy|principal|architekt\w*|ekspert)\b/i.test(seniorityText)) seniorityLevel = 'SENIOR';
 
   // Common Tech & Skill Dictionaries
   const knownTech = [
     'TypeScript', 'JavaScript', 'React', 'React.js', 'Node.js', 'Express', 'Python', 'Java', 'C#', '.NET',
     'PostgreSQL', 'SQL', 'MySQL', 'MongoDB', 'Redis', 'Docker', 'Kubernetes', 'AWS', 'GCP', 'Azure',
-    'GraphQL', 'REST API', 'CI/CD', 'Git', 'Tailwind', 'Next.js', 'NestJS', 'Microservices', 'Jest', 'Cypress',
+    // 'Jest' omitted deliberately: it is the Polish word for "is", so it matched the
+    // RODO clause ("Administratorem ... jest COGNOR S.A.") on virtually every ad.
+    'GraphQL', 'REST API', 'CI/CD', 'Git', 'Tailwind', 'Next.js', 'NestJS', 'Microservices', 'Cypress',
     'Linux', 'Agile', 'Scrum', 'Jira', 'Terraform', 'Kafka', 'Elasticsearch'
   ];
 
@@ -90,7 +197,8 @@ export function parseJobDescriptionLocal(rawJdText: string, defaultTitle = 'Full
 
   knownTech.forEach((tech) => {
     const regex = new RegExp(`\\b${tech.replace('.', '\\.')}\\b`, 'i');
-    if (regex.test(text)) {
+    // Matched against the ad body: the legal clause is not a statement of requirements.
+    if (regex.test(bodyText)) {
       if (['Docker', 'Kubernetes', 'AWS', 'GCP', 'Azure', 'Git', 'Jira', 'Terraform', 'Kafka', 'Redis', 'Linux'].includes(tech)) {
         foundTools.push(tech);
       } else {
@@ -100,50 +208,78 @@ export function parseJobDescriptionLocal(rawJdText: string, defaultTitle = 'Full
   });
 
   knownSoft.forEach((soft) => {
-    if (new RegExp(soft, 'i').test(text)) {
+    if (new RegExp(soft, 'i').test(bodyText)) {
       foundSoft.push(soft);
     }
   });
 
-  // Languages detection
+  // Languages detection. The declared level is read from the ad instead of being
+  // normalised to a fixed "B2/C1" — an ad asking for B1 must not be reported as C1.
+  const detectLanguageLevel = (namePattern: string): string => {
+    const match = bodyText.match(
+      new RegExp(`(?:${namePattern})[^.\\n]{0,60}?\\b([ABC][12])\\b(?:\\s*[-/–]\\s*\\b([ABC][12])\\b)?`, 'i')
+    );
+    if (!match) return '';
+    return match[2]
+      ? ` (${match[1].toUpperCase()}-${match[2].toUpperCase()})`
+      : ` (${match[1].toUpperCase()})`;
+  };
+
   const languages: string[] = [];
-  if (/angielsk|english|c1|b2|c2/i.test(lower)) languages.push('Angielski (B2/C1)');
-  if (/polsk|polish/i.test(lower)) languages.push('Polski (Ojczysty)');
-  if (/niemieck|german/i.test(lower)) languages.push('Niemiecki');
+  if (/angielsk|english/i.test(bodyLower)) languages.push(`Angielski${detectLanguageLevel('angielsk\\w*|english')}`);
+  if (/niemieck|german/i.test(bodyLower)) languages.push(`Niemiecki${detectLanguageLevel('niemieck\\w*|german')}`);
+  if (/rosyjsk|russian/i.test(bodyLower)) languages.push(`Rosyjski${detectLanguageLevel('rosyjsk\\w*|russian')}`);
+  if (/polsk|polish/i.test(bodyLower)) languages.push(`Polski${detectLanguageLevel('polsk\\w*|polish')}`);
 
-  // Extract benefits and perks
+  // Benefits. Patterns tolerate Polish declension ("opieki medycznej" as well as
+  // "opieka medyczna") and labels stay close to what the ad actually says — no
+  // invented brand names, no upgrading "kursy i szkolenia" into a training budget.
   const benefits: string[] = [];
-  if (/multisport|karta sport/i.test(lower)) benefits.push('Karta MultiSport / FitProfit');
-  if (/luxmed|praktyka medyczna|opieka medyczna|private medical/i.test(lower)) benefits.push('Prywatna Opieka Medyczna (LuxMed/EnelMed)');
-  if (/budżet szkoleniowy|szkolenia|kursy|training budget/i.test(lower)) benefits.push('Budżet Szkoleniowy i Konferencyjny');
-  if (/elastycz|flexible hours/i.test(lower)) benefits.push('Elastyczne Godziny Pracy');
-  if (/sprzęt|macbook|laptop|apple/i.test(lower)) benefits.push('Nowoczesny Sprzęt (Laptop / MacBook)');
-  if (/lekcje angielskiego|dofinansowanie nauki/i.test(lower)) benefits.push('Dofinansowanie do Nauki Języków Obcych');
-  if (/owocowe|kawa|przekąski/i.test(lower)) benefits.push('Darmowe Przekąski, Kawa i Soki w Biurze');
-  if (/bonus|premia/i.test(lower)) benefits.push('Bonus Roczny / Premia za Wyniki');
+  if (/multisport|kart\w* sportow\w*|pakiet\w* sportow\w*/i.test(bodyLower)) benefits.push('Karta / pakiet sportowy');
+  if (/opiek\w* medyczn\w*|private medical|luxmed|medicover|enel-?med/i.test(bodyLower)) benefits.push('Prywatna opieka medyczna');
+  if (/budżet\w* szkoleniow\w*|training budget/i.test(bodyLower)) benefits.push('Budżet szkoleniowy');
+  else if (/szkoleni\w*|kurs\w*|trainings?\b/i.test(bodyLower)) benefits.push('Szkolenia i kursy');
+  if (/elastyczn\w*\s+(godzin\w*|czas\w*)|flexible (hours|working)/i.test(bodyLower)) benefits.push('Elastyczne godziny pracy');
+  if (/ubezpieczeni\w*|insurance/i.test(bodyLower)) benefits.push('Ubezpieczenie grupowe');
+  if (/kart\w* lunchow\w*|bon\w* żywieniow\w*|dofinansowani\w* posiłk\w*/i.test(bodyLower)) benefits.push('Karta lunchowa / dofinansowanie posiłków');
+  if (/zfśs|fundusz\w* świadczeń socjalnych/i.test(bodyLower)) benefits.push('Świadczenia z ZFŚS');
+  if (/premi\w*|bonus/i.test(bodyLower)) benefits.push('Premia / bonus');
+  if (/macbook|laptop|sprzęt\w* służbow\w*|narzędzi\w* do pracy/i.test(bodyLower)) benefits.push('Sprzęt służbowy');
 
-  // Mandatory requirements / Dealbreakers detection
+  // Mandatory requirements / dealbreakers, read from the ad body only.
   const mandatory: string[] = [];
-  if (/prawo jazdy|driver'?s license|kat\.?\s*b/i.test(lower)) mandatory.push('Prawo Jazdy Kat. B (Wymóg Konieczny)');
-  if (/c1|c2|fluent english|biegły angielski/i.test(lower)) mandatory.push('Język Angielski poziom min. C1');
-  if (/studia wyższe|wykształcenie wyższe|bachelor|master degree/i.test(lower)) mandatory.push('Wykształcenie Wyższe (Inżynier / Magister)');
-  if (/3\+?\s*lat|5\+?\s*lat|years of experience/i.test(lower)) mandatory.push('Min. 3-5 lat udokumentowanego doświadczenia');
-  if (/stacjonarnie|z biura|office only/i.test(lower)) mandatory.push('Praca Stacjonarna z Biura');
+  if (/prawo jazdy|driver'?s licen[cs]e/i.test(bodyLower)) {
+    const category = bodyText.match(/prawo jazdy[^.\n]{0,30}?kat\w*\.?\s*([A-E]\s*\+?\s*E?)/i);
+    mandatory.push(category ? `Prawo jazdy kat. ${category[1].replace(/\s+/g, '').toUpperCase()}` : 'Prawo jazdy');
+  }
+  const experienceRequirement = extractExperienceRequirement(bodyText);
+  if (experienceRequirement) mandatory.push(experienceRequirement);
+  if (/wykształceni\w* wyższ\w*|studia wyższe|bachelor'?s degree|master'?s degree/i.test(bodyLower)) mandatory.push('Wykształcenie wyższe');
+  if (/wózk\w* widłow\w*|uprawnieni\w*[^.\n]{0,20}wózk|\budt\b/i.test(bodyLower)) mandatory.push('Uprawnienia do obsługi wózka widłowego (UDT)');
+  if (/uprawnieni\w* spawalnicz\w*|certyfikat\w* spawalnicz\w*/i.test(bodyLower)) mandatory.push('Uprawnienia spawalnicze');
+  if (/uprawnieni\w* sep|\bsep\s*[ed]\b/i.test(bodyLower)) mandatory.push('Uprawnienia SEP');
+  if (/\bhaccp\b/i.test(bodyLower)) mandatory.push('HACCP');
+  if (/stacjonarn\w*|z biura|office only|on-?site only/i.test(bodyLower)) mandatory.push('Praca stacjonarna z biura');
 
-  // Work model
-  let workModel = 'HYBRID';
-  if (/zdaln|remote|100% zdalnie/i.test(lower)) workModel = 'REMOTE';
-  else if (/stacjonarn|z biura|in-office/i.test(lower)) workModel = 'ON_SITE';
+  // Work model. Left undefined when the ad does not say — defaulting to HYBRID
+  // used to invent a remote-work policy for on-site factory jobs.
+  let workModel: string | undefined;
+  if (/zdaln\w*|remote|100% zdalnie/i.test(bodyLower)) workModel = 'REMOTE';
+  else if (/hybrydow\w*|hybrid/i.test(bodyLower)) workModel = 'HYBRID';
+  else if (/stacjonarn\w*|z biura|in-office|on-?site/i.test(bodyLower)) workModel = 'ON_SITE';
 
-  // Salary range
+  // Salary range. "net"/"brutto"/"gross" commonly sits between the amount and the
+  // currency, which the previous pattern could not span.
   let salaryRange = '';
-  const salaryMatch = text.match(/(\d[\d\s\.]+\s*(?:–|-|do)\s*\d[\d\s\.]+\s*(?:PLN|EUR|USD|zl|zł))/i);
+  const salaryMatch = bodyText.match(
+    /(\d[\d\s.,]*\s*(?:–|-|do)\s*\d[\d\s.,]*\s*(?:net(?:to)?|brutto|gross)?\s*(?:PLN|EUR|USD|zł|zl))/i
+  );
   if (salaryMatch) {
-    salaryRange = salaryMatch[0];
+    salaryRange = salaryMatch[0].trim();
   }
 
   // 4-Stage Advanced NLP extraction
-  const dynamicNlp = extractDynamicJdPhrases(text);
+  const dynamicNlp = extractDynamicJdPhrases(bodyText);
 
   dynamicNlp.hardSkills.forEach((hs) => {
     const term = hs.phrase;
@@ -158,10 +294,22 @@ export function parseJobDescriptionLocal(rawJdText: string, defaultTitle = 'Full
     if (!foundSoft.includes(ss.phrase)) foundSoft.push(ss.phrase);
   });
 
-  // Extract keywords (filtering out HR stop words)
-  const rawWords = (text.match(/\b[a-zA-Z0-9#+.-]{3,}\b/g) || [])
-    .map((w) => w.toLowerCase())
-    .filter((w) => !HR_AND_COMMON_STOP_WORDS.has(w) && !/^\d+$/.test(w));
+  // Extract keywords. Splitting on non-word runs (instead of an ASCII-only \b match)
+  // keeps Polish words intact — the old pattern cut them at every diacritic and
+  // produced meaningless stubs like "wym" (from "wymóg") that then surfaced to the
+  // user as "key terms" and inflated keyword matching.
+  const rawWords = bodyText
+    .toLowerCase()
+    .split(/[^a-z0-9ąćęłńóśźż#+.-]+/i)
+    // Dots and dashes are kept inside tokens for "node.js" / "ci-cd", but trailing
+    // sentence punctuation would otherwise leak in as part of the word.
+    .map((w) => w.replace(/^[.\-+#]+/, '').replace(/[.\-+#]+$/, ''))
+    .filter(
+      (w) =>
+        w.length >= 4 &&
+        !/^\d+$/.test(w) &&
+        !HR_AND_COMMON_STOP_WORDS.has(w)
+    );
 
   const keywords = Array.from(new Set([
     ...dynamicNlp.hardSkills.map((h) => h.phrase),
@@ -171,18 +319,19 @@ export function parseJobDescriptionLocal(rawJdText: string, defaultTitle = 'Full
     ...rawWords,
   ])).filter((k) => !HR_AND_COMMON_STOP_WORDS.has(k));
 
+  // Every field below is what the ad actually contains. Nothing is back-filled:
+  // an empty array means "the ad does not say", which the UI can show honestly.
   return {
     jobTitle,
-    companyName: 'Firma z ogłoszenia',
+    companyName: '',
     seniorityLevel,
-    requiredHardSkills: foundHard.length > 0 ? foundHard : ['TypeScript', 'React', 'Node.js'],
-    requiredSoftSkills: foundSoft.length > 0 ? foundSoft : ['Komunikatywność', 'Praca w zespole'],
-    toolsAndTech: foundTools.length > 0 ? foundTools : ['Git', 'Docker', 'Jira'],
-    languagesRequired: languages.length > 0 ? languages : ['Angielski (B2/C1)'],
-    coreResponsibilities: lines.slice(1, 6),
+    requiredHardSkills: foundHard,
+    requiredSoftSkills: foundSoft,
+    toolsAndTech: foundTools,
+    languagesRequired: languages,
+    coreResponsibilities: extractResponsibilities(lines),
     keyKeywords: keywords.slice(0, 15),
-    benefits: benefits.length > 0 ? benefits : ['Prywatna Opieka Medyczna', 'Karta MultiSport', 'Budżet Szkoleniowy'],
-    perksAndPlusy: ['Elastyczny czas pracy', 'Nowoczesny sprzęt', 'Możliwość pracy zdalnej'],
+    benefits,
     mandatoryRequirements: mandatory,
     salaryRange: salaryRange || undefined,
     workModel,

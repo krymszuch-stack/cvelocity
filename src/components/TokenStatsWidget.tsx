@@ -50,92 +50,83 @@ export const TokenStatsWidget: React.FC<TokenStatsWidgetProps> = ({
         </div>
       }
     >
-      <div className="space-y-6">
-        {/* Big Counter Banner */}
-        <div className="grid grid-cols-2 gap-4">
-          <div className="bg-sunken border border-line rounded-xl p-4 text-center">
-            <div className="text-xs text-muted mb-1 flex items-center justify-center space-x-1 font-bold">
-              <Cpu className="w-3.5 h-3.5 text-brand-fg" />
-              <span>Tokeny Zaoszczędzone</span>
-            </div>
-            <div className="text-2xl font-extrabold font-mono text-success-fg sv-tnum">
-              {stats.totalTokensSaved.toLocaleString()}
-            </div>
-            <div className="text-[10px] text-subtle mt-1">Oszczędność 0-Token Slot Filling</div>
-          </div>
+      {/* Big Counter Banner */}
+      <div className="grid grid-cols-2 gap-4 mb-6">
+        <StatTile
+          icon={Cpu}
+          label="Tokeny Zaoszczędzone"
+          value={stats.totalTokensSaved.toLocaleString()}
+          hint="Oszczędność 0-Token Slot Filling"
+          accent="success"
+        />
+        <StatTile
+          icon={DollarSign}
+          label="Koszt Zredukowany $"
+          value={`$${stats.estimatedCostSavedUSD.toFixed(5)}`}
+          hint="Stawka Gemini 2.5 Flash API"
+          accent="warning"
+        />
+      </div>
 
-          <div className="bg-sunken border border-line rounded-xl p-4 text-center">
-            <div className="text-xs text-muted mb-1 flex items-center justify-center space-x-1 font-bold">
-              <DollarSign className="w-3.5 h-3.5 text-warning-fg" />
-              <span>Koszt Zredukowany $</span>
-            </div>
-            <div className="text-2xl font-extrabold font-mono text-warning-fg sv-tnum">
-              ${stats.estimatedCostSavedUSD.toFixed(5)}
-            </div>
-            <div className="text-[10px] text-subtle mt-1">Stawka Gemini 2.5 Flash API</div>
-          </div>
+      {/* Ratio Progress Bar */}
+      <div className="mb-6 bg-sunken p-4 rounded-lg border border-line">
+        <div className="flex justify-between items-center text-xs mb-2">
+          <span className="font-bold text-muted">Wskaźnik Wywołań Bez-Tokenowych</span>
+          <span className="font-mono font-bold text-brand-fg sv-tnum">{zeroTokenPercent}%</span>
+        </div>
+        <div className="w-full h-3 bg-line rounded-full overflow-hidden flex">
+          <div
+            className="bg-success-500 h-full transition-all"
+            style={{ width: `${(stats.localSlotHits / totalHits) * 100}%` }}
+            title="Local Slot Filling"
+          ></div>
+          <div
+            className="bg-brand-500 h-full transition-all"
+            style={{ width: `${(stats.cacheHits / totalHits) * 100}%` }}
+            title="Semantic Cache"
+          ></div>
+          <div
+            className="bg-warning-500 h-full transition-all"
+            style={{ width: `${(stats.geminiDeltaCalls / totalHits) * 100}%` }}
+            title="Gemini Delta Calls"
+          ></div>
         </div>
 
-        {/* Ratio Progress Bar */}
-        <div className="bg-sunken p-4 rounded-xl border border-line">
-          <div className="flex justify-between items-center text-xs mb-2">
-            <span className="font-bold text-ink">Wskaźnik Wywołań Bez-Tokenowych</span>
-            <span className="font-mono font-bold text-brand-fg sv-tnum">{zeroTokenPercent}%</span>
+        <div className="flex items-center justify-between text-[11px] text-muted font-medium mt-3 pt-2 border-t border-line">
+          <div className="flex items-center space-x-1.5">
+            <span className="w-2.5 h-2.5 rounded-full bg-success-500"></span>
+            <span>Local Slot Filling: <span className="sv-tnum">{stats.localSlotHits}</span></span>
           </div>
-          <div className="w-full h-3 bg-line-strong rounded-full overflow-hidden flex">
-            <div
-              className="bg-success-500 h-full transition-all"
-              style={{ width: `${(stats.localSlotHits / totalHits) * 100}%` }}
-              title="Local Slot Filling"
-            ></div>
-            <div
-              className="bg-brand-500 h-full transition-all"
-              style={{ width: `${(stats.cacheHits / totalHits) * 100}%` }}
-              title="Semantic Cache"
-            ></div>
-            <div
-              className="bg-warning-500 h-full transition-all"
-              style={{ width: `${(stats.geminiDeltaCalls / totalHits) * 100}%` }}
-              title="Gemini Delta Calls"
-            ></div>
+          <div className="flex items-center space-x-1.5">
+            <span className="w-2.5 h-2.5 rounded-full bg-brand-500"></span>
+            <span>Semantic Cache: <span className="sv-tnum">{stats.cacheHits}</span></span>
           </div>
-
-          <div className="flex items-center justify-between text-[11px] text-muted font-medium mt-3 pt-2 border-t border-line">
-            <div className="flex items-center space-x-1.5">
-              <span className="w-2.5 h-2.5 rounded-full bg-success-500"></span>
-              <span>Local Slot Filling: <span className="sv-tnum">{stats.localSlotHits}</span></span>
-            </div>
-            <div className="flex items-center space-x-1.5">
-              <span className="w-2.5 h-2.5 rounded-full bg-brand-500"></span>
-              <span>Semantic Cache: <span className="sv-tnum">{stats.cacheHits}</span></span>
-            </div>
-            <div className="flex items-center space-x-1.5">
-              <span className="w-2.5 h-2.5 rounded-full bg-warning-500"></span>
-              <span>Gemini Delta: <span className="sv-tnum">{stats.geminiDeltaCalls}</span></span>
-            </div>
+          <div className="flex items-center space-x-1.5">
+            <span className="w-2.5 h-2.5 rounded-full bg-warning-500"></span>
+            <span>Gemini Delta: <span className="sv-tnum">{stats.geminiDeltaCalls}</span></span>
           </div>
         </div>
+      </div>
 
-        {/* Feature Explainer */}
-        <div className="space-y-2 text-xs text-muted bg-sunken p-3.5 rounded-xl border border-line">
-          <div className="flex items-start space-x-2">
-            <CheckCircle2 className="w-4 h-4 text-success-fg shrink-0 mt-0.5" />
-            <p className="text-ink">
-              <strong>Local Slot Filling:</strong> Podstawia synonimy i odwraca szyk zdań w przeglądarce bez odpytywania API.
-            </p>
-          </div>
-          <div className="flex items-start space-x-2">
-            <CheckCircle2 className="w-4 h-4 text-brand-fg shrink-0 mt-0.5" />
-            <p className="text-ink">
-              <strong>Semantic Cache:</strong> Pobiera wcześniej zatwierdzone bloki z lokalnej bazy przy podobieństwie &gt;0.88.
-            </p>
-          </div>
-          <div className="flex items-start space-x-2">
-            <CheckCircle2 className="w-4 h-4 text-warning-fg shrink-0 mt-0.5" />
-            <p className="text-ink">
-              <strong>Gemini Delta Prompting:</strong> Wysyła do API wyłącznie brakujące pojedyncze frazy, oszczędzając do 90% tokenów.
-            </p>
-          </div>
+      {/* Feature Explainer */}
+      <div className="space-y-2 text-xs text-muted mb-6 bg-sunken p-3 rounded-lg border border-line">
+        <div className="flex items-start space-x-2">
+          <CheckCircle2 className="w-4 h-4 text-success-500 shrink-0 mt-0.5" />
+          <p>
+            <strong>Local Slot Filling:</strong> Podstawia synonimy i odwraca szyk zdań w przeglądarce bez odpytywania API.
+          </p>
+        </div>
+        <div className="flex items-start space-x-2">
+          <CheckCircle2 className="w-4 h-4 text-brand-500 shrink-0 mt-0.5" />
+          <p>
+            <strong>Semantic Cache:</strong> Pobiera wcześniej zatwierdzone bloki z lokalnej bazy przy podobieństwie &gt;0.88.
+          </p>
+        </div>
+        <div className="flex items-start space-x-2">
+          <CheckCircle2 className="w-4 h-4 text-warning-500 shrink-0 mt-0.5" />
+          <p>
+            <strong>Gemini Delta Prompting:</strong> Wysyła do API wyłącznie brakujące pojedyncze frazy, oszczędzając do <span className="sv-tnum">90%</span> tokenów.
+          </p>
         </div>
       </div>
     </Modal>

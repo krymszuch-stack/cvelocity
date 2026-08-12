@@ -5,6 +5,33 @@ Jeśli coś tutaj kłóci się z Twoim domyślnym zachowaniem — wygrywa ten pl
 
 ---
 
+## 0. `NOTATKI.md` — czytaj przed każdą zmianą
+
+`NOTATKI.md` w katalogu głównym to bieżący notatnik uwag właściciela repo. Uwagi trafiają tam
+z telefonu (Obsidian + Obsidian Git), więc bywają krótkie i nieformalne — to nie zmniejsza ich wagi.
+
+**Przed rozpoczęciem pracy** przeczytaj sekcję „🆕 Nowe" i uwzględnij te uwagi w tym, co robisz.
+
+**Po wykonaniu — lub po świadomym uwzględnieniu — uwagi:**
+
+1. Przenieś ją z „🆕 Nowe" do „✅ Załatwione".
+2. Przekreśl treść: `~~uwaga~~`.
+3. Dopisz pod spodem jedną–dwie linijki: co zrobiłeś albo dlaczego zdecydowałeś inaczej,
+   z datą i numerem PR-a.
+
+```markdown
+- ~~Popraw wykrywanie widełek płacowych~~
+  - **Claude 2026-08-10:** dodana obsługa „net/brutto/gross" między kwotą a walutą. PR #16.
+```
+
+**Czego nie robić:** nie usuwaj uwag, nie przepisuj ich treści i nie przekreślaj czegoś, czego
+realnie nie zrobiłeś. Jeśli uwagi nie da się wykonać albo się z nią nie zgadzasz — zostaw ją
+w „🆕 Nowe" i dopisz pod spodem swoje zastrzeżenie. Decyzję podejmuje człowiek.
+
+Zmiany w `NOTATKI.md` dołączaj do PR-a, którego dotyczą — nie rób z tego osobnego PR-a.
+
+---
+
 ## 1. Czym jest ten projekt
 
 SkillVault dopasowuje CV do konkretnej oferty pracy: parsuje ogłoszenie, przestawia i przeformułowuje
@@ -86,3 +113,70 @@ Jeśli potrzebujesz nowej zmiennej — dopisz ją do `.env.example` z pustą war
 - Trzymaj się konwencji sąsiadującego kodu (importy względne, nazewnictwo, gęstość komentarzy).
 - Komentarze pisz tylko tam, gdzie wyjaśniają *dlaczego*, nie *co*.
 - Nie zostawiaj martwego kodu „na przyszłość" — usuwaj.
+
+## 8. Definicja ukończenia — przeczytaj, zanim otworzysz PR
+
+Ta sekcja istnieje, bo agent asynchroniczny (Jules, Claude Code) nie może dopytać w trakcie
+i sam decyduje, że skończył. **„Kompiluje się" to nie jest ukończone zadanie.**
+
+### 8.1 Zadanie jest ukończone, gdy
+
+- `npm run lint && npm test && npm run build` przechodzi (§3) — i bramki nie zostały obejście (§8.2).
+- Nowa funkcja jest **osiągalna z UI**. Kod, do którego użytkownik nie może kliknąć, jest martwy.
+- Nowa logika domenowa ma test. Wzorzec do naśladowania:
+  `src/lib/__tests__/slot_filling_determinism.test.ts` — regresja pilnująca konkretnego, realnego
+  błędu, z komentarzem wyjaśniającym, co się zepsuło. Do parsowania ofert i CV używaj fixture'ów
+  z **prawdziwych** dokumentów zamiast wymyślonych: syntetyczny przykład potrafi przejść, gdy
+  produkcyjny tekst się wywala.
+- W diffie nie ma `TODO`, `FIXME`, zakomentowanego kodu, `console.log`, nieużywanych importów
+  ani abstrakcji „pod przyszłe użycie", z której nikt jeszcze nie korzysta.
+- Opis PR-a mówi prawdę o tym, co **faktycznie** zostało zweryfikowane.
+
+### 8.2 Zakaz obchodzenia bramek
+
+Zielone CI ma znaczyć „działa", a nie „uciszone". **Nie wolno:**
+
+- dodawać `@ts-ignore`, `as any` ani `eslint-disable`, żeby przeszedł lint,
+- luzować `tsconfig.json`,
+- oznaczać testów `.skip` / `.todo` ani ich kasować, żeby suite był zielony,
+- naginać asercji testu pod wynik kodu, zamiast naprawić kod.
+
+Jeśli test naprawdę jest błędny — popraw go i **napisz w PR, dlaczego** stara asercja była zła.
+
+### 8.3 Brak danych to puste pole, nie zmyślona wartość
+
+Produkt obiecuje „0-Halucynacji" (`SYSTEM_ARCHITECTURE_GUIDANCE.md` §6) i ta zasada obowiązuje
+również w kodzie, nie tylko w promptach do modelu.
+
+**Nigdy nie podstawiaj prawdopodobnie wyglądającej wartości domyślnej** w miejsce danych, których
+nie udało się wyciągnąć. Puste pole UI pokaże uczciwie; zmyślona wartość trafia do CV kandydata
+i wygląda tam jak fakt.
+
+To nie jest hipotetyczne: parser ofert zwracał `['TypeScript', 'React', 'Node.js']`, gdy nie
+rozpoznał żadnej technologii — przez co ogłoszenie dla spawacza „wymagało" Reacta.
+
+### 8.4 Gdy nie możesz dokończyć
+
+Wąski, domknięty kawałek jest lepszy niż szeroki i połowiczny.
+
+- **Zadanie za duże** → zrób część, którą domykasz w całości, a resztę dopisz jako uwagę do
+  `NOTATKI.md` (§0). Nie zostawiaj w kodzie rusztowania pod niezrobioną część.
+- **Wymagania niejasne** → wybierz najprostszą sensowną interpretację, **zapisz ją w opisie PR-a**
+  i dopisz pytanie do `NOTATKI.md`. Nie zgaduj po cichu.
+- **Nie możesz czegoś zweryfikować** (brak `GEMINI_API_KEY`, brak przeglądarki do sprawdzenia obu
+  motywów) → **napisz to wprost w PR** zamiast odhaczać punkt, którego nie wykonałeś.
+
+Konkretna mechanika zostawiania śladu (gdzie, w jakim formacie) jest w `JULES_PLAYBOOK.md` §9.
+
+## 9. Podział pracy między agentami
+
+`JULES_PLAYBOOK.md` określa, **które zadania wolno wykonywać agentowi autonomicznemu**, a które
+zostają przy człowieku. Przeczytaj go, zanim weźmiesz zadanie, którego nie zlecił Ci wprost człowiek.
+
+Skrót zasady: deleguj to, co CI potrafi obalić. Obszary bezpieczeństwa (`server.ts`, `auth.ts`,
+`twoFactorAuth.ts`, `vaultCrypto.ts`), poprawność parserów (`jdParser.ts`, `atsSimulator.ts`)
+oraz ciało dokumentu A4 są **poza zasięgiem** — tam zielone CI nie dowodzi poprawności.
+
+Obowiązuje też reguła antykolizyjna: jeden plik = jeden otwarty PR, a pliki współdzielone
+(`src/index.css`, `src/types/index.ts`, `AGENTS.md`, `NOTATKI.md`) są poza zasięgiem zadań
+zleconych agentom. Brakuje tokena? Zgłoś to w PR, nie dodawaj go samodzielnie.

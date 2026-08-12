@@ -110,12 +110,16 @@ const KNOWN_HARD_SKILLS = [
   // IT & Cloud Stack
   'typescript', 'javascript', 'react', 'react.js', 'next.js', 'vue', 'angular',
   'node.js', 'express', 'nest.js', 'python', 'django', 'fastapi', 'c#', '.net',
-  'java', 'spring', 'spring boot', 'go', 'golang', 'rust', 'php', 'laravel',
+  // 'go' omitted deliberately: it is also an everyday Polish pronoun, so it matched
+  // ordinary prose. 'golang' covers the language unambiguously.
+  'java', 'spring', 'spring boot', 'golang', 'rust', 'php', 'laravel',
   'html', 'css', 'tailwind', 'tailwind css', 'sass', 'redux', 'zustand', 'graphql',
   'rest api', 'websockets', 'sql', 'postgresql', 'mysql', 'mongodb', 'redis',
   'elasticsearch', 'prisma', 'drizzle', 'docker', 'kubernetes', 'aws', 'gcp',
   'google cloud', 'azure', 'ci/cd', 'github actions', 'jenkins', 'terraform',
-  'linux', 'bash', 'microservices', 'system design', 'unit testing', 'jest',
+  // 'jest' omitted deliberately: it is the Polish word for "is", so every Polish ad
+  // matched it as the testing framework. 'unit testing' still covers the intent.
+  'linux', 'bash', 'microservices', 'system design', 'unit testing',
   'cypress', 'playwright', 'agile', 'scrum', 'jira', 'git', 'github', 'figma',
   'clean code', 'solid', 'security', 'oauth', 'seo', 'ats', 'analytics', 'etl',
   'kafka', 'rabbitmq', 'prometheus', 'grafana', 'opentelemetry', 'c++', 'swift', 'flutter',
@@ -135,6 +139,17 @@ const KNOWN_HARD_SKILLS = [
   'iso 9001', 'prawo pracy', 'kadry i płace', 'direct search', 'supply chain',
   'logistyka', 'procurement', 'autocad', 'cad', 'solidworks', 'plc'
 ];
+
+/**
+ * All-caps tokens that pass the acronym shape test but are never skills:
+ * currencies, legal-entity suffixes, document and registry abbreviations.
+ */
+const NON_SKILL_ACRONYMS = new Set([
+  'pln', 'eur', 'usd', 'gbp', 'chf', 'brutto', 'netto',
+  's.a', 'sa', 'spzoo', 'zoo', 'gmbh', 'ltd', 'inc',
+  'nip', 'krs', 'regon', 'cv', 'rodo', 'gdpr', 'ue', 'onz', 'uodo',
+  'ul', 'al', 'nr', 'tel', 'pon', 'pt',
+]);
 
 const FORMAL_REQ_KEYWORDS = [
   'wykształcenie wyższe', 'studia', 'licencjat', 'magister', 'inżynier',
@@ -196,32 +211,31 @@ export function extractDynamicJdPhrases(jdText: string): {
     }
   }
 
-  // 5. Stage 2 POS & Capitalized Acronym / Tech Stack Extractor
-  const capitalizedMatches = jdText.match(/\b[A-Z][a-zA-Z0-9#+.-]{1,}(?:\s+[A-Z][a-zA-Z0-9#+.-]{1,})*\b/g) || [];
+  // 5. Acronym & known-term extractor.
+  //
+  // This used to accept EVERY capitalised phrase, which turned street names, city
+  // names and RODO boilerplate into "hard skills" — a welding ad yielded
+  // "Stalmacha", "Siemianowicach", "Administratorem", "Benefity". Worse, the
+  // ASCII-only character class cut Polish words at the first diacritic, so
+  // "Osprzętu" surfaced to the user as the skill "Osprz".
+  //
+  // A token is now kept only when it is a genuine all-caps acronym (MIG, MAG, MMA,
+  // SQL, UDT, SEP, HACCP) or a term the dictionary already knows.
+  const tokens = jdText.split(/[^A-Za-z0-9ąćęłńóśźżĄĆĘŁŃÓŚŹŻ#+.-]+/);
 
-  for (const match of capitalizedMatches) {
-    const lower = match.toLowerCase().trim();
+  for (const rawToken of tokens) {
+    const token = rawToken.replace(/^[.\-+#]+/, '').replace(/[.\-+#]+$/, '');
+    if (token.length < 2 || /^\d+$/.test(token)) continue;
 
-    if (lower.length < 3 || /^\d+$/.test(lower)) continue;
-    if (HR_AND_COMMON_STOP_WORDS.has(lower)) continue;
+    const lower = token.toLowerCase();
+    if (HR_AND_COMMON_STOP_WORDS.has(lower) || NON_SKILL_ACRONYMS.has(lower)) continue;
 
-    const words = lower.split(/\s+/);
-    if (words.every((w) => HR_AND_COMMON_STOP_WORDS.has(w))) continue;
+    const isAcronym = /^[A-Z0-9#+.]{2,6}$/.test(token);
+    const isKnownTerm = KNOWN_HARD_SKILLS.includes(lower);
+    if (!isAcronym && !isKnownTerm) continue;
 
-    // Strip leading and trailing HR stop words from multi-word phrases
-    let cleanWords = [...words];
-    while (cleanWords.length > 0 && HR_AND_COMMON_STOP_WORDS.has(cleanWords[0])) {
-      cleanWords.shift();
-    }
-    while (cleanWords.length > 0 && HR_AND_COMMON_STOP_WORDS.has(cleanWords[cleanWords.length - 1])) {
-      cleanWords.pop();
-    }
-
-    const cleanPhrase = cleanWords.join(' ');
-    if (cleanPhrase.length >= 3 && !HR_AND_COMMON_STOP_WORDS.has(cleanPhrase)) {
-      if (!hardSkills.some((h) => h.phrase === cleanPhrase)) {
-        hardSkills.push({ phrase: cleanPhrase, weight: 3.0 });
-      }
+    if (!hardSkills.some((h) => h.phrase === lower)) {
+      hardSkills.push({ phrase: lower, weight: 3.0 });
     }
   }
 

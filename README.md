@@ -76,7 +76,7 @@ Pełną listę zmiennych Firebase znajdziesz w `.env.example`.
 W aplikacji skonfigurowano 2 równoległe ścieżki autentykacji, plus opcjonalne 2FA:
 
 1. **Rejestracja/Logowanie E-mail & Hasło**:
-   - Hasła przechowywane jako skrót bcrypt z solą. Każdy nowy użytkownik startuje z czystą bazą (bez placeholderów).
+   - Hasła są bezpiecznie hashowane za pomocą algorytmu PBKDF2 z solą (przy użyciu biblioteki CryptoJS). Każdy nowy użytkownik startuje z czystą bazą (bez placeholderów).
 2. **Google OAuth (Firebase Auth)**:
    - Logowanie przez Firebase Identity (popup Google). Wymaga zmiennych `VITE_FIREBASE_*`.
 3. **TOTP 2FA (opcjonalne)**:
@@ -100,9 +100,28 @@ Przekieruj rekrutera bezpośrednio ze swojego portfolio do aplikacji `SkillVault
 
 ---
 
+## 🌐 Wdrożenie (Deployment)
+
+Aplikacja SkillVault została zaprojektowana z jasnym podziałem na część frontendową (SPA) oraz backendową (Express API), które są wdrażane jako dwa osobne środowiska:
+
+1. **Frontend (SPA)**:
+   - Hostowany na platformie **Firebase Hosting** (zgodnie z konfiguracją w `firebase.json` i workflow `.github/workflows/deploy-frontend.yml`).
+   - Wdrożenie odbywa się automatycznie po każdym pushu do gałęzi `main`. Podczas budowania frontendu zmienna `VITE_API_BASE_URL` musi wskazywać na serwer API na platformie Render.
+
+2. **Backend API**:
+   - Hostowany na platformie **Render** (jako usługa Web Service, zgodnie z konfiguracją w `render.yaml`).
+   - Podczas budowania na platformie Render kompilowany jest wyłącznie serwer Express (`npm run build:server`), a proces startuje z polecenia `npm run start`.
+   - Na serwerze Render nie jest serwowany front (brak fallbacku do `index.html`), co zapewnia bezpieczeństwo przed przypadkowym serwowaniem błędnego kodu HTML pod ścieżkami API.
+   - Wdrożenie wykorzystuje mechanizm keep-alive realizowany przez GitHub Actions (`.github/workflows/keepalive.yml`), który regularnie odpytuje endpoint `/api/health` w dni robocze, aby zapobiec usypianiu darmowej instancji na Renderze.
+
+---
+
 ## ⚙️ CI/CD Pipeline
 
-W repozytorium znajduje się automatyczny workflow GitHub Actions w `.github/workflows/ci.yml`, który przy każdym `push` i `pull_request` sprawdza typowanie TypeScript (`npm run lint`) oraz buduje aplikację produkcyjną (`npm run build`).
+W repozytorium znajdują się automatyczne przepływy pracy (Workflows) w katalogu `.github/workflows/`:
+- **CI Pipeline (`ci.yml`)**: Wyzwalany przy każdym `push` i `pull_request` na gałęziach `main` i `master`. Sprawdza typowanie TypeScript (`npm run lint`), uruchamia testy jednostkowe (`npm test`) i testuje poprawność budowania aplikacji produkcyjnej (`npm run build`).
+- **Wdrożenie Frontendu (`deploy-frontend.yml`)**: Buduje wyłącznie klienta (`npm run build:client`) i publikuje go w Firebase Hosting po udanej integracji na gałęzi `main`.
+- **Utrzymanie aktywności API (`keepalive.yml`)**: Cyklicznie odpytuje endpoint `/api/health` na Renderze, aby zapobiec cold startom w godzinach pracy.
 
 ---
 
@@ -112,7 +131,7 @@ Bądźmy precyzyjni, bo wcześniejsze wersje tego pliku obiecywały więcej, ni�
 
 - **Dane profilu NIE są szyfrowane.** Master Vault trafia do `localStorage` przeglądarki jako zwykły JSON. Każdy z dostępem do tego komputera i profilu przeglądarki może go odczytać.
 - **Dane nie opuszczają przeglądarki** — poza treścią, którą sam wysyłasz do API Gemini w celu analizy (parsowanie CV, generowanie listu).
-- Hasła kont są solone i hashowane (bcrypt), a 2FA (TOTP) działa niezależnie od wybranej metody logowania.
+- Hasła kont są solone i hashowane (PBKDF2), a 2FA (TOTP) działa niezależnie od wybranej metody logowania.
 
 Historycznie plik `vaultCrypto.ts` deklarował „zero-knowledge AES-256", ale funkcja szyfrująca ignorowała podane hasło i zapisywała jawny tekst. Atrapy zostały usunięte zamiast utrwalać nieprawdziwą deklarację. Prawdziwe szyfrowanie wymagałoby klucza wyprowadzanego z hasła użytkownika — klucz zaszyty w bundlu JS niczego nie chroni.
 
