@@ -42,16 +42,19 @@ export function parseStoredVault(serialized: string): MasterVault | null {
   }
 }
 
-export function saveVaultToLocalStorage(vault: MasterVault): void {
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(vault));
+export function saveVaultToLocalStorage(vault: MasterVault, userId?: string): void {
+  const key = userId ? `sv_${userId}_vault` : STORAGE_KEY;
+  localStorage.setItem(key, JSON.stringify(vault));
 }
 
-export function loadVaultFromLocalStorage(): MasterVault | null {
-  const stored = localStorage.getItem(STORAGE_KEY);
+export function loadVaultFromLocalStorage(userId?: string): MasterVault | null {
+  const key = userId ? `sv_${userId}_vault` : STORAGE_KEY;
+  const stored = localStorage.getItem(key);
   if (!stored) return null;
   return parseStoredVault(stored);
 }
 
-export function clearVaultLocalStorage(): void {
-  localStorage.removeItem(STORAGE_KEY);
+export function clearVaultLocalStorage(userId?: string): void {
+  const key = userId ? `sv_${userId}_vault` : STORAGE_KEY;
+  localStorage.removeItem(key);
 }

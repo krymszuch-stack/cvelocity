@@ -44,7 +44,7 @@ function MainApp() {
     // Authenticated user: load their personal vault
     const sessionUser = getActiveSessionUser();
     if (sessionUser) {
-      const userVaultData = loadUserVault(sessionUser.id);
+      const userVaultData = loadUserVault(sessionUser.id) || loadVaultFromLocalStorage(sessionUser.id);
       if (userVaultData) return userVaultData;
       return createEmptyVault(sessionUser.fullName, sessionUser.email);
     }
@@ -61,9 +61,16 @@ function MainApp() {
 
   // Sync user vault when authenticated user changes
   useEffect(() => {
-    if (userVault && userVault !== lastUserVaultRef.current) {
-      lastUserVaultRef.current = userVault;
-      setVault(userVault);
+    if (userVault) {
+      if (userVault !== lastUserVaultRef.current) {
+        lastUserVaultRef.current = userVault;
+        setVault(userVault);
+      }
+    } else {
+      // User is logged out / unauthenticated
+      lastUserVaultRef.current = null;
+      const loaded = loadVaultFromLocalStorage();
+      setVault(loaded || createEmptyVault());
     }
   }, [userVault]);
 
@@ -109,7 +116,7 @@ function MainApp() {
   }, []);
 
   // Auto-save vault on changes with 500ms debounce to avoid performance degradation (ADR-79)
-  const { isAuthenticated } = useAuth();
+  const { isAuthenticated, user } = useAuth();
   useEffect(() => {
     if (vault === userVault) return;
 
@@ -118,7 +125,7 @@ function MainApp() {
         if (!isAuthenticated) {
           saveVaultToLocalStorage(vault);
         } else {
-          saveVaultToLocalStorage(vault);
+          saveVaultToLocalStorage(vault, user?.id);
           saveUserVault(vault);
         }
       } catch (err) {
@@ -127,7 +134,7 @@ function MainApp() {
     }, 500);
 
     return () => clearTimeout(timer);
-  }, [vault, userVault, saveUserVault, isAuthenticated]);
+  }, [vault, userVault, saveUserVault, isAuthenticated, user]);
 
   useEffect(() => {
     try {

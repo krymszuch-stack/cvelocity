@@ -51,6 +51,7 @@ import { Input, Textarea } from './ui/Field';
 import { extractTextFromAnyFile } from '../lib/cvUniversalParser';
 import { saveVaultToLocalStorage } from '../lib/vaultCrypto';
 import { AutocompleteInput } from './AutocompleteInput';
+import { useAuth } from '../context/AuthContext';
 import {
   SPECIALIZATION_CATEGORIES,
   DOMAIN_SPECIALIZATIONS,
@@ -79,6 +80,7 @@ interface MasterVaultEditorProps {
 }
 
 export const MasterVaultEditor: React.FC<MasterVaultEditorProps> = ({ vault, onChange, onOpenAdvisor }) => {
+  const { user } = useAuth();
   const [activeSubTab, setActiveSubTab] = useState<'quiz' | 'info' | 'skills' | 'history' | 'edu' | 'security'>('quiz');
   const [quizStep, setQuizStep] = useState<number>(1);
   const [isAiAuditing, setIsAiAuditing] = useState(false);
@@ -793,7 +795,7 @@ export const MasterVaultEditor: React.FC<MasterVaultEditorProps> = ({ vault, onC
   };
 
   const handleSaveLocalBackup = () => {
-    saveVaultToLocalStorage(draftVault);
+    saveVaultToLocalStorage(draftVault, user?.id);
     setIsSavedEncrypted(true);
     setTimeout(() => setIsSavedEncrypted(false), 3000);
   };
