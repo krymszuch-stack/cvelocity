@@ -41,4 +41,41 @@ describe('CV Universal Multi-Format Parser Suite', () => {
     expect(parsed.education[0]?.institution).toContain('Politechnika Warszawska');
     expect(parsed.education[0]?.degree).toContain('magister');
   });
+
+  it('powinien przestrzegać zasady 0-Halucynacji i nie wstawiać placeholderów dla pustych/częściowych CV', () => {
+    const rawCvText = `
+    12345 CV
+    brak sekcji doswiadczenia i edukacji.
+    `;
+
+    const parsed = parseTextToMasterVault(rawCvText, 'TXT');
+
+    // Brak imienia (nie spełnia wymagań regex), brak maila, brak telefonu, brak stanowiska
+    expect(parsed.personalInfo.fullName).toBe('');
+    expect(parsed.personalInfo.title).toBe('');
+    expect(parsed.personalInfo.email).toBe('');
+    expect(parsed.personalInfo.phone).toBe('');
+    expect(parsed.personalInfo.location).toBe('');
+    expect(parsed.personalInfo.summary).toBe('');
+
+    // Brak sekcji doświadczenia i edukacji powinien skutkować pustymi tablicami
+    expect(parsed.history).toEqual([]);
+    expect(parsed.education).toEqual([]);
+    expect(parsed.certifications).toEqual([]);
+  });
+
+  it('powinien poprawnie obsługiwać częściowe wykształcenie bez wstawiania domyślnych wartości', () => {
+    const rawCvText = `
+    Wykształcenie:
+    Politechnika Warszawska
+    `;
+
+    const parsed = parseTextToMasterVault(rawCvText, 'TXT');
+
+    expect(parsed.education).toHaveLength(1);
+    expect(parsed.education[0].institution).toBe('Politechnika Warszawska');
+    expect(parsed.education[0].degree).toBe('');
+    expect(parsed.education[0].fieldOfStudy).toBe('');
+    expect(parsed.education[0].endDate).toBe('');
+  });
 });
