@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { AppTab, ApplicationRecord, MasterVault, TokenStats } from './types';
 import { createEmptyVault } from './lib/sampleVault';
-import { loadVaultFromLocalStorage, saveVaultToLocalStorage, clearVaultLocalStorage } from './lib/vaultCrypto';
+import { loadVaultFromLocalStorage, saveVaultToLocalStorage, clearVaultLocalStorage, isLocalVaultLocked } from './lib/vaultCrypto';
 import { getActiveSessionUser, loadUserVault } from './lib/auth';
 import { semanticCacheInstance } from './lib/semanticCache';
 import { apiFetch, warmUpApi } from './lib/apiClient';
@@ -35,8 +35,19 @@ function MainApp() {
       return [];
     }
   });
-  const { userVault, saveUserVault } = useAuth();
+  const { userVault, saveUserVault, isAuthenticated, logout } = useAuth();
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
+  const [isVaultLocked, setIsVaultLocked] = useState(() => {
+    const sessionUser = getActiveSessionUser();
+    if (sessionUser) {
+      const encryptedKey = `skillvault_vault_encrypted_${sessionUser.id}`;
+      const hasEncrypted = typeof window !== 'undefined' && !!localStorage.getItem(encryptedKey);
+      const userVaultData = loadUserVault(sessionUser.id);
+      return hasEncrypted && !userVaultData;
+    } else {
+      return isLocalVaultLocked();
+    }
+  });
   const [isAdvisorOpen, setIsAdvisorOpen] = useState(false);
   const [advisorInitialQuestion, setAdvisorInitialQuestion] = useState<string | undefined>(undefined);
 
@@ -108,9 +119,52 @@ function MainApp() {
     return () => window.clearInterval(intervalId);
   }, []);
 
+  const handleResetLockedVault = () => {
+    if (window.confirm('Czy na pewno chcesz usunąć zablokowane dane i zacząć od nowa? Tej operacji nie można cofnąć.')) {
+      if (isAuthenticated) {
+        logout();
+      } else {
+        clearVaultLocalStorage();
+      }
+      setIsVaultLocked(false);
+      setVault(createEmptyVault());
+      window.location.reload();
+    }
+  };
+
+  const handleImportBackupOnLock = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    try {
+      const reader = new FileReader();
+      reader.onload = (event) => {
+        try {
+          const parsed = JSON.parse(event.target?.result as string) as MasterVault;
+          if (parsed && parsed.personalInfo) {
+            setVault(parsed);
+            if (!isAuthenticated) {
+              saveVaultToLocalStorage(parsed);
+            } else {
+              saveUserVault(parsed);
+            }
+            setIsVaultLocked(false);
+            alert('Kopia zapasowa została pomyślnie zaimportowana!');
+          } else {
+            alert('Nieprawidłowy format pliku kopii zapasowej.');
+          }
+        } catch {
+          alert('Błąd odczytu pliku kopii zapasowej.');
+        }
+      };
+      reader.readAsText(file);
+    } catch {
+      alert('Nie udało się zaimportować pliku.');
+    }
+  };
+
   // Auto-save vault on changes with 500ms debounce to avoid performance degradation (ADR-79)
-  const { isAuthenticated } = useAuth();
   useEffect(() => {
+    if (isVaultLocked) return; // Do not overwrite locked vault
     if (vault === userVault) return;
 
     const timer = setTimeout(() => {
@@ -127,7 +181,7 @@ function MainApp() {
     }, 500);
 
     return () => clearTimeout(timer);
-  }, [vault, userVault, saveUserVault, isAuthenticated]);
+  }, [vault, userVault, saveUserVault, isAuthenticated, isVaultLocked]);
 
   useEffect(() => {
     try {
@@ -235,34 +289,85 @@ function MainApp() {
         {/* Remounting per tab replays the entrance animation and drops stale view state. */}
         <main key={activeTab} className="flex-1 px-4 sm:px-6 lg:px-8 py-7 animate-fade-in">
           <div className="max-w-[1400px] mx-auto">
-            {activeTab === 'matcher' && (
-              <JobMatcher
-                vault={vault}
-                onUpdateStats={refreshStats}
-                onUpdateVault={setVault}
-                onOpenAdvisor={handleOpenAdvisor}
-                onSwitchTab={setActiveTab}
-                onAddApplication={handleAddApplication}
-              />
-            )}
+            {isVaultLocked ? (
+              <div className="max-w-md mx-auto my-12 p-6 bg-surface border border-line rounded-2xl shadow-lg space-y-4 text-center">
+                <div className="w-12 h-12 bg-danger-soft border border-danger-500/30 rounded-full flex items-center justify-center mx-auto text-danger-fg">
+                  <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m0 0v2m0-2h2m-2 0H10m3-9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" />
+                  </svg>
+                </div>
+                <h3 className="text-sm font-extrabold text-ink">Profil jest zablokowany</h3>
+                <p className="text-xs text-subtle leading-relaxed">
+                  {isAuthenticated
+                    ? 'Klucz deszyfrujący Twoją sesję wygasł lub został usunięty. Zaloguj się ponownie, aby bezpiecznie odblokować swoje dane.'
+                    : 'Wykryto zaszyfrowany profil lokalny, ale klucz sesji wygasł (np. sesja wygasła lub zamknięto przeglądarkę). Aby zapobiec nadpisaniu danych, wgraj plik kopii zapasowej lub wyczyść dane, aby zacząć od nowa.'}
+                </p>
 
-            {activeTab === 'vault' && (
-              <MasterVaultEditor vault={vault} onChange={setVault} onOpenAdvisor={handleOpenAdvisor} />
-            )}
+                <div className="pt-2 space-y-2">
+                  {isAuthenticated ? (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        logout();
+                        setIsAuthModalOpen(true);
+                      }}
+                      className="w-full py-2 bg-brand-600 hover:bg-brand-700 text-white font-bold text-xs rounded-xl shadow-md transition-all"
+                    >
+                      Zaloguj się ponownie
+                    </button>
+                  ) : (
+                    <label className="block w-full py-2 bg-brand-600 hover:bg-brand-700 text-white font-bold text-xs rounded-xl shadow-md text-center cursor-pointer transition-all">
+                      Wgraj kopię zapasową (.json)
+                      <input
+                        type="file"
+                        accept=".json"
+                        onChange={handleImportBackupOnLock}
+                        className="hidden"
+                      />
+                    </label>
+                  )}
 
-            {activeTab === 'profiler' && (
-              <ProfilerSection
-                profiler={vault.profiler}
-                onChange={(updatedProfiler) => setVault({ ...vault, profiler: updatedProfiler })}
-              />
-            )}
+                  <button
+                    type="button"
+                    onClick={handleResetLockedVault}
+                    className="w-full py-2 bg-sunken hover:bg-danger-soft hover:text-danger-fg text-subtle border border-line rounded-xl text-xs font-semibold transition-all"
+                  >
+                    Wyczyść zablokowane dane i zacznij od nowa
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <>
+                {activeTab === 'matcher' && (
+                  <JobMatcher
+                    vault={vault}
+                    onUpdateStats={refreshStats}
+                    onUpdateVault={setVault}
+                    onOpenAdvisor={handleOpenAdvisor}
+                    onSwitchTab={setActiveTab}
+                    onAddApplication={handleAddApplication}
+                  />
+                )}
 
-            {activeTab === 'parser' && (
-              <CVParserModal currentVault={vault} onApplyParsedVault={handleApplyParsedVault} />
-            )}
+                {activeTab === 'vault' && (
+                  <MasterVaultEditor vault={vault} onChange={setVault} onOpenAdvisor={handleOpenAdvisor} />
+                )}
 
-            {activeTab === 'applications' && (
-              <ApplicationTracker applications={applications} onAddApplication={handleAddApplication} />
+                {activeTab === 'profiler' && (
+                  <ProfilerSection
+                    profiler={vault.profiler}
+                    onChange={(updatedProfiler) => setVault({ ...vault, profiler: updatedProfiler })}
+                  />
+                )}
+
+                {activeTab === 'parser' && (
+                  <CVParserModal currentVault={vault} onApplyParsedVault={handleApplyParsedVault} />
+                )}
+
+                {activeTab === 'applications' && (
+                  <ApplicationTracker applications={applications} onAddApplication={handleAddApplication} />
+                )}
+              </>
             )}
           </div>
         </main>
