@@ -65,6 +65,7 @@ import {
   SUGGESTED_SOFT_SKILLS,
   SUGGESTED_TOOLS_AND_TECH,
 } from '../lib/autocompleteSuggestions';
+import { mergeParsedVaultIntoMaster } from '../lib/layeredVaultEngine';
 import {
   ThoroughLinkedInProfile,
   parseComprehensiveLinkedInProfile,
@@ -721,56 +722,8 @@ export const MasterVaultEditor: React.FC<MasterVaultEditorProps> = ({ vault, onC
   const applyPasterDataToDraft = () => {
     if (!pasterParsedData) return;
 
-    const parsed = pasterParsedData;
-    
-    // Merge History without exact duplicate company + role
-    const existingHistKeys = new Set(draftVault.history.map((h) => `${h.company.toLowerCase().trim()}_${h.role.toLowerCase().trim()}`));
-    const newHist = (parsed.history || []).filter((h) => !existingHistKeys.has(`${h.company.toLowerCase().trim()}_${h.role.toLowerCase().trim()}`));
-    const isPrevSample = draftVault.history.some((h) => h.company.includes('TechCorp') || h.company.includes('FinTech'));
-    const mergedHistory = isPrevSample && parsed.history && parsed.history.length > 0
-      ? parsed.history
-      : [...parsed.history || [], ...draftVault.history.filter((h) => !(parsed.history || []).some((p) => p.company.toLowerCase().trim() === h.company.toLowerCase().trim() && p.role.toLowerCase().trim() === h.role.toLowerCase().trim()))];
-
-    // Merge Education without duplicate institution + degree
-    const existingEduKeys = new Set(draftVault.education.map((e) => `${e.institution.toLowerCase().trim()}_${e.degree.toLowerCase().trim()}`));
-    const newEdu = (parsed.education || []).filter((e) => !existingEduKeys.has(`${e.institution.toLowerCase().trim()}_${e.degree.toLowerCase().trim()}`));
-    const isPrevEduSample = draftVault.education.some((e) => e.institution.includes('Politechnika Warszawska'));
-    const mergedEducation = isPrevEduSample && parsed.education && parsed.education.length > 0
-      ? parsed.education
-      : [...parsed.education || [], ...newEdu];
-
-    // Merge Certifications
-    const existingCertNames = new Set((draftVault.skillsMatrix.certifications || []).map((c) => c.name.toLowerCase().trim()));
-    const newCerts = (parsed.skillsMatrix?.certifications || []).filter((c) => !existingCertNames.has(c.name.toLowerCase().trim()));
-
-    // Merge Skills
-    const mergedHard = Array.from(new Set([...(parsed.skillsMatrix?.hardSkills || []), ...draftVault.skillsMatrix.hardSkills]));
-    const mergedSoft = Array.from(new Set([...(parsed.skillsMatrix?.softSkills || []), ...draftVault.skillsMatrix.softSkills]));
-    const mergedTools = Array.from(new Set([...(parsed.skillsMatrix?.toolsAndTech || []), ...draftVault.skillsMatrix.toolsAndTech]));
-
-    updateDraft({
-      ...draftVault,
-      personalInfo: {
-        ...draftVault.personalInfo,
-        fullName: parsed.personalInfo?.fullName || draftVault.personalInfo.fullName,
-        title: parsed.personalInfo?.title || draftVault.personalInfo.title,
-        summary: parsed.personalInfo?.summary || draftVault.personalInfo.summary,
-        location: parsed.personalInfo?.location || draftVault.personalInfo.location,
-        email: parsed.personalInfo?.email || draftVault.personalInfo.email,
-        phone: parsed.personalInfo?.phone || draftVault.personalInfo.phone,
-        linkedin: parsed.personalInfo?.linkedin || draftVault.personalInfo.linkedin,
-      },
-      skillsMatrix: {
-        ...draftVault.skillsMatrix,
-        hardSkills: mergedHard,
-        softSkills: mergedSoft,
-        toolsAndTech: mergedTools,
-        certifications: [...draftVault.skillsMatrix.certifications, ...newCerts],
-      },
-      history: mergedHistory.length > 0 ? mergedHistory : draftVault.history,
-      education: mergedEducation.length > 0 ? mergedEducation : draftVault.education,
-      updatedAt: new Date().toISOString(),
-    });
+    const merged = mergeParsedVaultIntoMaster(draftVault, pasterParsedData);
+    updateDraft(merged);
 
     setIsLinkedInPasterOpen(false);
     setPasterText('');

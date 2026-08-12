@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { AppTab, ApplicationRecord, MasterVault, TokenStats } from './types';
 import { createEmptyVault } from './lib/sampleVault';
 import { loadVaultFromLocalStorage, saveVaultToLocalStorage, clearVaultLocalStorage } from './lib/vaultCrypto';
+import { mergeParsedVaultIntoMaster } from './lib/layeredVaultEngine';
 import { getActiveSessionUser, loadUserVault } from './lib/auth';
 import { semanticCacheInstance } from './lib/semanticCache';
 import { apiFetch, warmUpApi } from './lib/apiClient';
@@ -147,57 +148,7 @@ function MainApp() {
   };
 
   const handleApplyParsedVault = (parsed: Partial<MasterVault>) => {
-    setVault((prev) => {
-      // Merge history without duplicate company + role entries
-      const existingHistoryKeys = new Set(prev.history.map((h) => `${h.company.toLowerCase().trim()}_${h.role.toLowerCase().trim()}`));
-      const newHistory = (parsed.history || []).filter((h) => !existingHistoryKeys.has(`${h.company.toLowerCase().trim()}_${h.role.toLowerCase().trim()}`));
-      
-      const mergedHistory = prev.history.length === 0
-        ? (parsed.history || [])
-        : [...(parsed.history || []), ...newHistory];
-
-      // Merge education without duplicate institution + degree
-      const existingEduKeys = new Set(prev.education.map((e) => `${e.institution.toLowerCase().trim()}_${e.degree.toLowerCase().trim()}`));
-      const newEdu = (parsed.education || []).filter((e) => !existingEduKeys.has(`${e.institution.toLowerCase().trim()}_${e.degree.toLowerCase().trim()}`));
-      const mergedEducation = prev.education.length === 0
-        ? (parsed.education || [])
-        : [...(parsed.education || []), ...newEdu];
-
-      // Merge certifications
-      const existingCertNames = new Set((prev.skillsMatrix.certifications || []).map((c) => c.name.toLowerCase().trim()));
-      const newCerts = (parsed.skillsMatrix?.certifications || []).filter((c) => !existingCertNames.has(c.name.toLowerCase().trim()));
-      const mergedCertifications = [...(prev.skillsMatrix.certifications || []), ...newCerts];
-
-      // Merge projects
-      const existingProjNames = new Set((prev.projects || []).map((p) => p.name.toLowerCase().trim()));
-      const newProjects = (parsed.projects || []).filter((p) => !existingProjNames.has(p.name.toLowerCase().trim()));
-      const mergedProjects = [...(prev.projects || []), ...newProjects];
-
-      return {
-        ...prev,
-        personalInfo: {
-          ...prev.personalInfo,
-          fullName: parsed.personalInfo?.fullName || prev.personalInfo.fullName,
-          title: parsed.personalInfo?.title || prev.personalInfo.title,
-          summary: parsed.personalInfo?.summary || prev.personalInfo.summary,
-          location: parsed.personalInfo?.location || prev.personalInfo.location,
-          email: parsed.personalInfo?.email || prev.personalInfo.email,
-          phone: parsed.personalInfo?.phone || prev.personalInfo.phone,
-          linkedin: parsed.personalInfo?.linkedin || prev.personalInfo.linkedin,
-        },
-        skillsMatrix: {
-          ...prev.skillsMatrix,
-          hardSkills: Array.from(new Set([...(parsed.skillsMatrix?.hardSkills || []), ...prev.skillsMatrix.hardSkills])),
-          softSkills: Array.from(new Set([...(parsed.skillsMatrix?.softSkills || []), ...prev.skillsMatrix.softSkills])),
-          toolsAndTech: Array.from(new Set([...(parsed.skillsMatrix?.toolsAndTech || []), ...prev.skillsMatrix.toolsAndTech])),
-          certifications: mergedCertifications,
-        },
-        history: mergedHistory.length > 0 ? mergedHistory : prev.history,
-        education: mergedEducation.length > 0 ? mergedEducation : prev.education,
-        projects: mergedProjects.length > 0 ? mergedProjects : prev.projects,
-        updatedAt: new Date().toISOString(),
-      };
-    });
+    setVault((prev) => mergeParsedVaultIntoMaster(prev, parsed));
     setActiveTab('vault');
   };
 
