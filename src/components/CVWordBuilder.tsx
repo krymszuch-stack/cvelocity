@@ -218,7 +218,7 @@ export const CVWordBuilder: React.FC<CVWordBuilderProps> = ({
     const currentSummary = vault.personalInfo.summary || '';
     VOCAB_REPLACEMENTS.forEach((item, idx) => {
       item.pattern.lastIndex = 0;
-      if (item.pattern.test(currentSummary)) {
+      if (item.pattern.test(currentSummary) && !currentSummary.includes(item.replacement)) {
         item.pattern.lastIndex = 0;
         const matches = currentSummary.match(item.pattern);
         if (matches && matches[0]) {
@@ -240,7 +240,7 @@ export const CVWordBuilder: React.FC<CVWordBuilderProps> = ({
         const text = typeof h === 'string' ? h : h.text;
         VOCAB_REPLACEMENTS.forEach((item, rIdx) => {
           item.pattern.lastIndex = 0;
-          if (item.pattern.test(text)) {
+          if (item.pattern.test(text) && !text.includes(item.replacement)) {
             item.pattern.lastIndex = 0;
             const matches = text.match(item.pattern);
             if (matches && matches[0]) {
@@ -403,86 +403,7 @@ export const CVWordBuilder: React.FC<CVWordBuilderProps> = ({
     );
   };
 
-  // Render text with Word-style inline tracked changes
-  const renderTrackedText = (text: string, section: 'summary' | 'experience', expId?: string) => {
-    if (!text) return null;
 
-    let resultElements: React.ReactNode[] = [text];
-
-    const activeSubs = substitutions.filter(
-      (s) => s.section === section && (!expId || s.experienceId === expId)
-    );
-
-    activeSubs.forEach((sub) => {
-      const regex = new RegExp(`(${sub.originalPhrase})`, 'gi');
-
-      const nextElements: React.ReactNode[] = [];
-
-      resultElements.forEach((node, nodeIdx) => {
-        if (typeof node !== 'string') {
-          nextElements.push(node);
-          return;
-        }
-
-        const parts = node.split(regex);
-        parts.forEach((part, pIdx) => {
-          if (part.toLowerCase() === sub.originalPhrase.toLowerCase()) {
-            // Render Track Changes Diff
-            if (sub.accepted === true) {
-              nextElements.push(
-                <span key={`${sub.id}_${nodeIdx}_${pIdx}`} className="bg-emerald-100 text-emerald-900 border-b-2 border-emerald-600 font-bold px-1 rounded mx-0.5">
-                  {sub.suggestedPhrase}
-                </span>
-              );
-            } else if (sub.accepted === false) {
-              nextElements.push(
-                <span key={`${sub.id}_${nodeIdx}_${pIdx}`} className="text-slate-800">
-                  {part}
-                </span>
-              );
-            } else {
-              // Pending suggestion popover / inline badge
-              nextElements.push(
-                <span
-                  key={`${sub.id}_${nodeIdx}_${pIdx}`}
-                  className="inline-flex flex-wrap items-center gap-1 bg-amber-50 border border-amber-300 rounded p-1 mx-0.5 my-0.5 shadow-2xs"
-                >
-                  <span className="line-through text-red-600 font-medium px-1 bg-red-50 rounded">
-                    {part}
-                  </span>
-                  <ArrowRight className="w-3 h-3 text-slate-400" />
-                  <span className="bg-emerald-100 text-emerald-900 font-bold px-1.5 py-0.5 rounded text-xs border border-emerald-300">
-                    {sub.suggestedPhrase}
-                  </span>
-                  <button
-                    onClick={() => handleAcceptSingle(sub.id)}
-                    className="px-1.5 py-0.5 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded text-[10px] flex items-center space-x-0.5 shadow-2xs transition-all"
-                    title="Zaakceptuj podmianę wyrazu"
-                  >
-                    <Check className="w-3 h-3" />
-                    <span>Tak</span>
-                  </button>
-                  <button
-                    onClick={() => handleRejectSingle(sub.id)}
-                    className="px-1.5 py-0.5 bg-slate-200 hover:bg-slate-300 text-slate-700 font-bold rounded text-[10px] transition-all"
-                    title="Odrzuć propozycję"
-                  >
-                    <X className="w-3 h-3" />
-                  </button>
-                </span>
-              );
-            }
-          } else if (part) {
-            nextElements.push(part);
-          }
-        });
-      });
-
-      resultElements = nextElements;
-    });
-
-    return <>{resultElements}</>;
-  };
 
   const pendingCount = substitutions.filter((s) => s.accepted === null).length;
   const acceptedCount = substitutions.filter((s) => s.accepted === true).length;

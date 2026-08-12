@@ -11,7 +11,7 @@ services:
 
     # Only the server is built here — the client bundle ships to Firebase.
     # `npm ci` must include devDependencies: esbuild lives there and does the build.
-    buildCommand: npm ci && npm run build:server
+    buildCommand: npm ci --include=dev && npm run build:server
     startCommand: npm run start
 
     # Cheap, Gemini-free endpoint — probing it costs no API quota.

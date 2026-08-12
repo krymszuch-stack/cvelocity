@@ -27,31 +27,19 @@ function MainApp() {
   const [advisorInitialQuestion, setAdvisorInitialQuestion] = useState<string | undefined>(undefined);
 
   const [vault, setVault] = useState<MasterVault>(() => {
-    const SAMPLE_EMAIL = 'jan.kowalski@example.com';
-
-    // Authenticated user: always load their personal vault
+    // Authenticated user: load their personal vault
     const sessionUser = getActiveSessionUser();
     if (sessionUser) {
       const userVaultData = loadUserVault(sessionUser.id);
-      // If stored vault is still the old sample data, clear it and return empty
-      if (userVaultData && userVaultData.personalInfo.email === SAMPLE_EMAIL) {
-        clearVaultLocalStorage();
-        return createEmptyVault(sessionUser.fullName, sessionUser.email);
-      }
       if (userVaultData) return userVaultData;
       return createEmptyVault(sessionUser.fullName, sessionUser.email);
     }
 
-    // Unauthenticated: check global cache but never return sample data
+    // Unauthenticated: check global cache
     const loaded = loadVaultFromLocalStorage();
-    if (loaded && loaded.personalInfo.email !== SAMPLE_EMAIL) {
+    if (loaded) {
       return loaded;
     }
-    // Clear polluted localStorage with sample data
-    if (loaded && loaded.personalInfo.email === SAMPLE_EMAIL) {
-      clearVaultLocalStorage();
-    }
-    // Return a fresh empty vault for unauthenticated view
     return createEmptyVault();
   });
 
@@ -74,25 +62,25 @@ function MainApp() {
   const [tokenStats, setTokenStats] = useState<TokenStats>(() => semanticCacheInstance.getStats());
   const [isTokenModalOpen, setIsTokenModalOpen] = useState(false);
 
-  // Auto-save vault on changes - only save to user storage if authenticated
-  // and the vault is NOT the sample/demo vault (prevents overwriting new user's clean slate)
+  // Auto-save vault on changes with 500ms debounce to avoid performance degradation (ADR-79)
   const { isAuthenticated } = useAuth();
   useEffect(() => {
-    // `vault` was just set FROM `userVault` by the mirror effect above (same object reference) —
-    // there's nothing new to save. Skipping this case breaks a ping-pong loop between this effect
-    // and the mirror effect that otherwise fires right when isAuthenticated flips true (React's
-    // "Maximum update depth exceeded"): mirror copies userVault into vault -> this effect saves
-    // vault and writes it back into userVault -> mirror sees a "changed" userVault -> repeat.
     if (vault === userVault) return;
 
-    if (!isAuthenticated) {
-      // Only save to global localStorage for unauthenticated/demo mode
-      saveVaultToLocalStorage(vault);
-      return;
-    }
-    // Authenticated: save to both storages
-    saveVaultToLocalStorage(vault);
-    saveUserVault(vault);
+    const timer = setTimeout(() => {
+      try {
+        if (!isAuthenticated) {
+          saveVaultToLocalStorage(vault);
+        } else {
+          saveVaultToLocalStorage(vault);
+          saveUserVault(vault);
+        }
+      } catch (err) {
+        console.error('Błąd podczas autozapisu danych w localStorage:', err);
+      }
+    }, 500);
+
+    return () => clearTimeout(timer);
   }, [vault, userVault, saveUserVault, isAuthenticated]);
 
   const refreshStats = () => {
@@ -110,19 +98,16 @@ function MainApp() {
       const existingHistoryKeys = new Set(prev.history.map((h) => `${h.company.toLowerCase().trim()}_${h.role.toLowerCase().trim()}`));
       const newHistory = (parsed.history || []).filter((h) => !existingHistoryKeys.has(`${h.company.toLowerCase().trim()}_${h.role.toLowerCase().trim()}`));
       
-      // If previous history was sample data or empty, prefer parsed history
-      const isPrevSample = prev.history.some((h) => h.company.includes('TechCorp') || h.company.includes('FinTech'));
-      const mergedHistory = isPrevSample && parsed.history && parsed.history.length > 0
-        ? parsed.history
-        : [...parsed.history || [], ...prev.history.filter((h) => !(parsed.history || []).some((p) => p.company.toLowerCase().trim() === h.company.toLowerCase().trim() && p.role.toLowerCase().trim() === h.role.toLowerCase().trim()))];
+      const mergedHistory = prev.history.length === 0
+        ? (parsed.history || [])
+        : [...(parsed.history || []), ...newHistory];
 
       // Merge education without duplicate institution + degree
       const existingEduKeys = new Set(prev.education.map((e) => `${e.institution.toLowerCase().trim()}_${e.degree.toLowerCase().trim()}`));
       const newEdu = (parsed.education || []).filter((e) => !existingEduKeys.has(`${e.institution.toLowerCase().trim()}_${e.degree.toLowerCase().trim()}`));
-      const isPrevEduSample = prev.education.some((e) => e.institution.includes('Politechnika Warszawska') && e.fieldOfStudy.includes('Informatyka'));
-      const mergedEducation = isPrevEduSample && parsed.education && parsed.education.length > 0
-        ? parsed.education
-        : [...parsed.education || [], ...newEdu];
+      const mergedEducation = prev.education.length === 0
+        ? (parsed.education || [])
+        : [...(parsed.education || []), ...newEdu];
 
       // Merge certifications
       const existingCertNames = new Set((prev.skillsMatrix.certifications || []).map((c) => c.name.toLowerCase().trim()));

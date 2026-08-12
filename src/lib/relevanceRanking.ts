@@ -1,4 +1,5 @@
 import { WorkExperience, HighlightMetric } from '../types';
+import { matchesKeyword } from './keywordMatching';
 
 /**
  * 0-Token relevance scoring & reordering.
@@ -18,10 +19,9 @@ function highlightText(highlight: HighlightMetric | string): string {
 
 function scoreTextAgainstKeywords(text: string, jdKeywordSet: Set<string>): { score: number; matchedKeywords: string[] } {
   if (jdKeywordSet.size === 0) return { score: 0, matchedKeywords: [] };
-  const lowerText = text.toLowerCase();
   const matchedKeywords: string[] = [];
   jdKeywordSet.forEach((kw) => {
-    if (lowerText.includes(kw)) matchedKeywords.push(kw);
+    if (matchesKeyword(text, kw)) matchedKeywords.push(kw);
   });
   return { score: matchedKeywords.length / jdKeywordSet.size, matchedKeywords };
 }

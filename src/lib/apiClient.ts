@@ -16,9 +16,21 @@ export function apiUrl(path: string): string {
 /**
  * Thin wrapper over fetch — returns the raw Response on purpose, because each
  * call site already has its own (Polish, endpoint-specific) error handling.
+ * Includes a default 45s timeout to prevent infinite hanging spinners.
  */
 export function apiFetch(path: string, init?: RequestInit): Promise<Response> {
-  return fetch(apiUrl(path), init);
+  if (
+    !API_BASE &&
+    typeof window !== 'undefined' &&
+    !['localhost', '127.0.0.1'].includes(window.location.hostname)
+  ) {
+    console.warn(
+      'VITE_API_BASE_URL nie została zdefiniowana w czasie buildu. Wywołania API mogą trafiać do Firebase Hosting zamiast serwera API Render.'
+    );
+  }
+
+  const signal = init?.signal ?? AbortSignal.timeout(45_000);
+  return fetch(apiUrl(path), { ...init, signal });
 }
 
 /**

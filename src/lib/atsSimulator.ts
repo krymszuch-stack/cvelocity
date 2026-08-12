@@ -1,4 +1,5 @@
 import { AtsCheckResult, MasterVault, TailoredResume, LemmatizedMatch } from '../types';
+import { matchesKeyword } from './keywordMatching';
 
 /**
  * Polish Stemming & Lemmatization helper.
@@ -30,19 +31,7 @@ export function getPolishStem(word: string): string {
  * Checks if phraseA matches phraseB taking inflection and Polish stems into account.
  */
 export function isLemmatizedMatch(phraseA: string, phraseB: string): boolean {
-  const normA = phraseA.toLowerCase().trim();
-  const normB = phraseB.toLowerCase().trim();
-
-  if (normA === normB || normB.includes(normA) || normA.includes(normB)) {
-    return true;
-  }
-
-  const wordsA = normA.split(/[\s,./()]+/).filter((w) => w.length > 2).map(getPolishStem);
-  const wordsB = normB.split(/[\s,./()]+/).filter((w) => w.length > 2).map(getPolishStem);
-
-  if (wordsA.length === 0 || wordsB.length === 0) return false;
-
-  return wordsA.every((stemA) => wordsB.some((stemB) => stemB.startsWith(stemA) || stemA.startsWith(stemB)));
+  return matchesKeyword(phraseB, phraseA) || matchesKeyword(phraseA, phraseB);
 }
 
 /**
@@ -303,22 +292,21 @@ export function simulateAtsCheck(
   const badDateFormats: string[] = [];
   const ocrWarnings: string[] = [];
 
-  // Check Standard Section Headers
-  const standardHeaders = [
-    { key: 'EXPERIENCE', name: 'Doświadczenie zawodowe', aliases: ['doświadczenie', 'historia zatrudnienia', 'work experience'] },
-    { key: 'EDUCATION', name: 'Wykształcenie', aliases: ['wykształcenie', 'edukacja', 'education'] },
-    { key: 'SKILLS', name: 'Umiejętności', aliases: ['umiejętności', 'kompetencje', 'skills', 'technologie'] },
-    { key: 'CERTS', name: 'Certyfikaty', aliases: ['certyfikaty', 'uprawnienia', 'certifications'] },
-    { key: 'CONTACT', name: 'Dane kontaktowe', aliases: ['kontakt', 'dane osobowe', 'contact'] },
+  // Check Standard Section Headers based on Vault structure
+  const sectionChecks = [
+    { key: 'EXPERIENCE', name: 'Doświadczenie zawodowe', present: vault.history.length > 0, required: true },
+    { key: 'EDUCATION', name: 'Wykształcenie', present: (vault.education || []).length > 0, required: false },
+    { key: 'SKILLS', name: 'Umiejętności', present: vault.skillsMatrix.hardSkills.length > 0 || (vault.skillsMatrix.toolsAndTech || []).length > 0, required: true },
+    { key: 'CERTS', name: 'Certyfikaty', present: (vault.skillsMatrix?.certifications || []).length > 0, required: false },
+    { key: 'CONTACT', name: 'Dane kontaktowe', present: !!(vault.personalInfo.email || vault.personalInfo.phone), required: true },
   ];
 
   const missingStandardSections: string[] = [];
 
-  for (const std of standardHeaders) {
-    const hasHeader = std.aliases.some((alias) => fullCvText.includes(alias));
-    if (hasHeader) {
+  for (const std of sectionChecks) {
+    if (std.present) {
       detectedSections.push(std.name);
-    } else if (std.key === 'EXPERIENCE' || std.key === 'SKILLS' || std.key === 'CONTACT') {
+    } else if (std.required) {
       missingStandardSections.push(std.name);
     }
   }
@@ -329,7 +317,7 @@ export function simulateAtsCheck(
   }
 
   // Graphical elements without text equivalent
-  if (fullCvText.includes('★★★') || fullCvText.includes('●●●') || fullCvText.includes('10/10') || fullCvText.includes('90%')) {
+  if (fullCvText.includes('★★★') || fullCvText.includes('●●●') || fullCvText.includes('███') || fullCvText.includes('■■■')) {
     unparsableElementsWarnings.push('Wykryto wizualne wskaźniki umiejętności (gwiazdki/paski postępu %). ATS nie potrafi ich odczytać – opisz poziom słownie (np. "Zaawansowany", "B2").');
   }
 
@@ -416,8 +404,9 @@ export function simulateAtsCheck(
     }
   }
 
-  const hardSkillsCoverage = totalHardWeight > 0 ? Math.round((matchedHardWeight / totalHardWeight) * 100) : 100;
-  const formalReqsCoverage = totalFormalWeight > 0 ? Math.round((matchedFormalWeight / totalFormalWeight) * 100) : 100;
+  const isVaultEmpty = !fullCvText || fullCvText.trim().length === 0;
+  const hardSkillsCoverage = totalHardWeight > 0 ? Math.round((matchedHardWeight / totalHardWeight) * 100) : (isVaultEmpty ? 0 : 100);
+  const formalReqsCoverage = totalFormalWeight > 0 ? Math.round((matchedFormalWeight / totalFormalWeight) * 100) : (isVaultEmpty ? 0 : 100);
 
   // ==================== LAYER 3: SCORING ALGEBRA (RECENCY & TITLE DENSITY) ====================
   
@@ -440,23 +429,23 @@ export function simulateAtsCheck(
       .map((h) => `${h.role} ${h.company} ${h.highlights.map((hl) => hl.text).join(' ')}`)
       .join(' ');
 
-    if (isLemmatizedMatch(kw, currentRoleText)) {
+    if (currentRoleText && isLemmatizedMatch(kw, currentRoleText)) {
       recencyScoreSum += 100;
-    } else if (isLemmatizedMatch(kw, midRoleText)) {
+    } else if (midRoleText && isLemmatizedMatch(kw, midRoleText)) {
       recencyScoreSum += 70;
     } else {
       recencyScoreSum += 40; // Only in old roles, skills matrix, or education
     }
   }
 
-  const recencyScore = recencyCount > 0 ? Math.round(recencyScoreSum / recencyCount) : 80;
+  const recencyScore = recencyCount > 0 ? Math.round(recencyScoreSum / recencyCount) : (vault.history.length === 0 ? 0 : 80);
 
   // Calculate Job Title Match / Density Score (St)
   const targetTitle = resume.targetJobTitle || vault.personalInfo.title || '';
   const currentCvTitle = vault.personalInfo.title || '';
   const pastRolesTitles = vault.history.map((h) => h.role).join(' ');
 
-  let titleMatchScore = 50; // base
+  let titleMatchScore = isVaultEmpty ? 0 : 50; // base
   if (targetTitle && currentCvTitle) {
     if (isLemmatizedMatch(targetTitle, currentCvTitle)) {
       titleMatchScore = 100;
@@ -469,13 +458,15 @@ export function simulateAtsCheck(
 
   // Algebra Score calculation: Score = (W_h * S_h) + (W_r * S_r) + (W_t * S_t)
   const hardSkillScore = hardSkillsCoverage; // S_h
-  const weightedAlgebraScore = Math.round(
-    (hardSkillScore * 3.0 + recencyScore * 1.5 + titleMatchScore * 1.5) / 6.0
-  );
+  const weightedAlgebraScore = isVaultEmpty
+    ? 0
+    : Math.round((hardSkillScore * 3.0 + recencyScore * 1.5 + titleMatchScore * 1.5) / 6.0);
 
   // Apply layout / structure penalty
   const structurePenalty = (100 - structureScore) * 0.15 + (100 - formattingScore) * 0.10;
-  const overallScore = Math.max(0, Math.min(100, Math.round(weightedAlgebraScore - structurePenalty)));
+  const overallScore = isVaultEmpty
+    ? 0
+    : Math.max(0, Math.min(100, Math.round(weightedAlgebraScore - structurePenalty)));
 
   const formulaBreakdown = `Algebra: Score = (3.0 × ${hardSkillScore}% [Hard Skills]) + (1.5 × ${recencyScore}% [Świeżość/Recency]) + (1.5 × ${titleMatchScore}% [Tytuł Stanowiska]) ÷ 6.0 - ${Math.round(structurePenalty)}% (Kara Układu)`;
 
@@ -486,7 +477,10 @@ export function simulateAtsCheck(
   const gapAnalysis: string[] = [];
   const recommendations: string[] = [];
 
-  if (missingHardSkills.length > 0) {
+  if (isVaultEmpty) {
+    gapAnalysis.push('Brak danych w Master Vault. Uzupełnij profil CV, aby wykonać analizę dopasowania ATS.');
+    recommendations.push('Dodaj swoje doświadczenie i umiejętności w edytorze Master Vault.');
+  } else if (missingHardSkills.length > 0) {
     gapAnalysis.push(
       `Brakujące wymagania twarde z ogłoszenia: ${missingHardSkills.slice(0, 6).join(', ')}.`
     );

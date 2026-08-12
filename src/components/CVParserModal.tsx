@@ -5,14 +5,6 @@ import { FileText, Upload, Sparkles, AlertTriangle, CheckCircle2, ShieldAlert, A
 import { eliminateSlogans } from '../lib/slotFillingEngine';
 import { StatusBadge } from './ui/StatusBadge';
 import { extractTextFromAnyFile } from '../lib/cvUniversalParser';
-import * as pdfjsLib from 'pdfjs-dist';
-import mammoth from 'mammoth';
-
-// Configure worker for PDF.js using jsdelivr CDN matching exact installed version (.mjs for pdfjs-dist v4+)
-if (typeof window !== 'undefined' && pdfjsLib) {
-  const version = pdfjsLib.version || '6.1.200';
-  pdfjsLib.GlobalWorkerOptions.workerSrc = `https://cdn.jsdelivr.net/npm/pdfjs-dist@${version}/build/pdf.worker.min.mjs`;
-}
 
 interface CVParserModalProps {
   currentVault: MasterVault;
@@ -181,46 +173,7 @@ export const CVParserModal: React.FC<CVParserModalProps> = ({
     }
   };
 
-  // PDF Text Extraction Helper
-  const extractPdfText = async (file: File): Promise<string> => {
-    try {
-      const arrayBuffer = await file.arrayBuffer();
-      const version = pdfjsLib.version || '6.1.200';
-      const loadingTask = pdfjsLib.getDocument({
-        data: arrayBuffer,
-        cMapUrl: `https://cdn.jsdelivr.net/npm/pdfjs-dist@${version}/cmaps/`,
-        cMapPacked: true,
-      });
-      const pdfDoc = await loadingTask.promise;
-      let fullText = '';
-      for (let i = 1; i <= pdfDoc.numPages; i++) {
-        const page = await pdfDoc.getPage(i);
-        const textContent = await page.getTextContent();
-        const pageStrings = textContent.items.map((item: any) => item.str);
-        fullText += pageStrings.join(' ') + '\n';
-      }
-      return fullText;
-    } catch (pdfErr: any) {
-      console.warn('PDF.js parsing error:', pdfErr);
-      try {
-        const rawText = await file.text();
-        const cleaned = rawText.replace(/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F-\x9F]/g, ' ');
-        if (cleaned.trim().length > 50) {
-          return cleaned;
-        }
-      } catch {
-        // Ignore secondary text fallback error
-      }
-      throw new Error(`Błąd odczytu pliku PDF: ${pdfErr?.message || String(pdfErr)}`);
-    }
-  };
 
-  // DOCX Text Extraction Helper
-  const extractDocxText = async (file: File): Promise<string> => {
-    const arrayBuffer = await file.arrayBuffer();
-    const result = await mammoth.extractRawText({ arrayBuffer });
-    return result.value || '';
-  };
 
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -256,14 +209,14 @@ export const CVParserModal: React.FC<CVParserModalProps> = ({
   };
 
   return (
-    <div className="bg-white border border-slate-200 rounded-xl p-6 text-slate-900 shadow-xs space-y-6">
-      <div className="flex items-center space-x-3 border-b border-slate-100 pb-4">
-        <div className="p-2.5 bg-emerald-50 border border-emerald-200 rounded-xl text-emerald-600">
+    <div className="bg-surface border border-line rounded-xl p-6 text-ink shadow-xs space-y-6">
+      <div className="flex items-center space-x-3 border-b border-line pb-4">
+        <div className="p-2.5 bg-brand-soft border border-brand-300 rounded-xl text-brand-fg">
           <FileText className="w-5 h-5" />
         </div>
         <div>
-          <h2 className="text-base font-bold text-slate-900">Importuj CV</h2>
-          <p className="text-xs text-slate-500">
+          <h2 className="text-base font-bold text-ink">Importuj CV</h2>
+          <p className="text-xs text-muted">
             Automatyczna konwersja surowego dokumentu do Bazy CV
           </p>
         </div>
@@ -272,16 +225,16 @@ export const CVParserModal: React.FC<CVParserModalProps> = ({
       {/* Input section */}
       <div className="space-y-4">
         {/* LinkedIn Import Guide Banner */}
-        <div className="p-3.5 bg-sky-50/80 border border-sky-200 rounded-xl flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs text-slate-800">
+        <div className="p-3.5 bg-brand-soft border border-brand-300 rounded-xl flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs text-ink">
           <div className="flex items-start space-x-2.5">
-            <div className="p-1.5 bg-sky-600 text-white rounded-lg shrink-0 mt-0.5">
+            <div className="p-1.5 bg-brand-600 text-white rounded-lg shrink-0 mt-0.5">
               <FileText className="w-4 h-4" />
             </div>
             <div>
-              <div className="font-bold text-sky-950 flex items-center space-x-1.5">
+              <div className="font-bold text-brand-fg flex items-center space-x-1.5">
                 <span>Jak importować dane z LinkedIn?</span>
               </div>
-              <p className="text-[11px] text-slate-600 mt-0.5">
+              <p className="text-[11px] text-muted mt-0.5">
                 1. Profil &rarr; 2. Więcej / More &rarr; 3. Zapisz do PDF &rarr; 4. Wgraj plik poniżej.
               </p>
             </div>
@@ -289,18 +242,18 @@ export const CVParserModal: React.FC<CVParserModalProps> = ({
         </div>
 
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
-          <label className="text-xs font-semibold text-slate-700">
-            Wklej treść lub wgraj plik <span className="text-indigo-600 font-bold">.pdf .docx .rtf .txt .json .csv</span>
+          <label className="text-xs font-semibold text-muted">
+            Wklej treść lub wgraj plik <span className="text-brand-fg font-bold">.pdf .docx .rtf .txt .json .csv</span>
           </label>
-          <label className={`cursor-pointer px-3.5 py-2 rounded-xl border border-indigo-200 bg-indigo-50/80 hover:bg-indigo-100 text-indigo-700 font-bold text-xs flex items-center space-x-1.5 transition-all active:scale-95 shrink-0 ${isFileReading ? 'opacity-50 pointer-events-none' : ''}`}>
+          <label className={`cursor-pointer px-3.5 py-2 rounded-xl border border-brand-300 bg-brand-soft hover:bg-brand-soft/80 text-brand-fg font-bold text-xs flex items-center space-x-1.5 transition-all active:scale-95 shrink-0 ${isFileReading ? 'opacity-50 pointer-events-none' : ''}`}>
             {isFileReading ? (
               <>
-                <div className="w-3.5 h-3.5 border-2 border-indigo-600 border-t-transparent rounded-full animate-spin"></div>
+                <div className="w-3.5 h-3.5 border-2 border-brand-600 border-t-transparent rounded-full animate-spin"></div>
                 <span>Odczytywanie...</span>
               </>
             ) : (
               <>
-                <Upload className="w-3.5 h-3.5 text-indigo-600" />
+                <Upload className="w-3.5 h-3.5 text-brand-fg" />
                 <span>Wybierz Plik (PDF/DOCX/RTF/JSON)</span>
               </>
             )}
@@ -318,16 +271,16 @@ export const CVParserModal: React.FC<CVParserModalProps> = ({
           value={rawText}
           onChange={(e) => setRawText(e.target.value)}
           placeholder="Wklej tutaj surowy tekst swojego dotychczasowego CV, profilu LinkedIn lub opisu 'O mnie'..."
-          className="w-full bg-slate-50 border border-slate-200 rounded-xl p-4 text-xs font-mono text-slate-800 focus:outline-none focus:border-indigo-500 focus:bg-white"
+          className="w-full bg-sunken border border-line rounded-xl p-4 text-xs font-mono text-ink focus:outline-none focus:border-brand-500 focus:bg-surface"
         />
 
         {/* Pre-Parse File Geometry Diagnostic Tool */}
         {geometryResult && (
-          <div className="bg-slate-900 border border-slate-800 text-white rounded-xl p-4 space-y-3 animate-fade-in">
-            <div className="flex items-center justify-between border-b border-slate-800 pb-2">
+          <div className="bg-sunken border border-line text-ink rounded-xl p-4 space-y-3 animate-fade-in">
+            <div className="flex items-center justify-between border-b border-line pb-2">
               <div className="flex items-center space-x-2">
-                <Layout className="w-4 h-4 text-cyan-400" />
-                <h3 className="text-xs font-bold uppercase tracking-wider text-slate-200">
+                <Layout className="w-4 h-4 text-brand-fg" />
+                <h3 className="text-xs font-bold uppercase tracking-wider text-ink">
                   Diagnostyka Geometrii Pliku i Układu (Pre-Parse Audit)
                 </h3>
               </div>
@@ -338,45 +291,45 @@ export const CVParserModal: React.FC<CVParserModalProps> = ({
 
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5 text-xs">
               {/* Check 1: Layout */}
-              <div className="bg-slate-800/80 border border-slate-700 p-2.5 rounded-lg flex items-center space-x-2">
+              <div className="bg-surface border border-line p-2.5 rounded-lg flex items-center space-x-2">
                 {geometryResult.isTwoColumnDetected ? (
-                  <X className="w-4 h-4 text-rose-400 shrink-0" />
+                  <X className="w-4 h-4 text-danger-fg shrink-0" />
                 ) : (
-                  <Check className="w-4 h-4 text-emerald-400 shrink-0" />
+                  <Check className="w-4 h-4 text-success-fg shrink-0" />
                 )}
                 <div>
-                  <div className="text-[11px] font-bold text-slate-200">Układ Strumienia</div>
-                  <div className="text-[10px] text-slate-400">
+                  <div className="text-[11px] font-bold text-ink">Układ Strumienia</div>
+                  <div className="text-[10px] text-muted">
                     {geometryResult.isTwoColumnDetected ? 'Wykryto 2 kolumny' : 'Jednokolumnowy ok'}
                   </div>
                 </div>
               </div>
 
               {/* Check 2: Graphic elements */}
-              <div className="bg-slate-800/80 border border-slate-700 p-2.5 rounded-lg flex items-center space-x-2">
+              <div className="bg-surface border border-line p-2.5 rounded-lg flex items-center space-x-2">
                 {geometryResult.hasGraphicElements ? (
-                  <X className="w-4 h-4 text-rose-400 shrink-0" />
+                  <X className="w-4 h-4 text-danger-fg shrink-0" />
                 ) : (
-                  <Check className="w-4 h-4 text-emerald-400 shrink-0" />
+                  <Check className="w-4 h-4 text-success-fg shrink-0" />
                 )}
                 <div>
-                  <div className="text-[11px] font-bold text-slate-200">Obrazy / Grafik / SVG</div>
-                  <div className="text-[10px] text-slate-400">
+                  <div className="text-[11px] font-bold text-ink">Obrazy / Grafik / SVG</div>
+                  <div className="text-[10px] text-muted">
                     {geometryResult.hasGraphicElements ? 'Niewykrywalne elementy' : 'Brak grafik/gwiazdek'}
                   </div>
                 </div>
               </div>
 
               {/* Check 3: Standard headers */}
-              <div className="bg-slate-800/80 border border-slate-700 p-2.5 rounded-lg flex items-center space-x-2">
+              <div className="bg-surface border border-line p-2.5 rounded-lg flex items-center space-x-2">
                 {geometryResult.hasNonStandardHeaders ? (
-                  <X className="w-4 h-4 text-amber-400 shrink-0" />
+                  <X className="w-4 h-4 text-warning-fg shrink-0" />
                 ) : (
-                  <Check className="w-4 h-4 text-emerald-400 shrink-0" />
+                  <Check className="w-4 h-4 text-success-fg shrink-0" />
                 )}
                 <div>
-                  <div className="text-[11px] font-bold text-slate-200">Standard Sekcji</div>
-                  <div className="text-[10px] text-slate-400">
+                  <div className="text-[11px] font-bold text-ink">Standard Sekcji</div>
+                  <div className="text-[10px] text-muted">
                     {geometryResult.hasNonStandardHeaders ? 'Niestandardowe nazwy' : 'Standardowe nagłówki'}
                   </div>
                 </div>
@@ -387,8 +340,8 @@ export const CVParserModal: React.FC<CVParserModalProps> = ({
             {geometryResult.warnings.length > 0 && (
               <div className="space-y-1.5 pt-1">
                 {geometryResult.warnings.map((warn, i) => (
-                  <div key={i} className="text-[11px] text-amber-300 bg-amber-950/40 border border-amber-800/60 p-2 rounded flex items-start space-x-2">
-                    <AlertTriangle className="w-3.5 h-3.5 text-amber-400 shrink-0 mt-0.5" />
+                  <div key={i} className="text-[11px] text-warning-fg bg-warning-soft border border-warning-500/30 p-2 rounded flex items-start space-x-2">
+                    <AlertTriangle className="w-3.5 h-3.5 text-warning-fg shrink-0 mt-0.5" />
                     <span>{warn}</span>
                   </div>
                 ))}
@@ -398,7 +351,7 @@ export const CVParserModal: React.FC<CVParserModalProps> = ({
         )}
 
         {errorMsg && (
-          <div className="bg-rose-50 border border-rose-200 text-rose-700 text-xs p-3 rounded-lg flex items-center space-x-2">
+          <div className="bg-danger-soft border border-danger-500/30 text-danger-fg text-xs p-3 rounded-lg flex items-center space-x-2">
             <AlertTriangle className="w-4 h-4 shrink-0" />
             <span>{errorMsg}</span>
           </div>
@@ -407,7 +360,7 @@ export const CVParserModal: React.FC<CVParserModalProps> = ({
         <button
           onClick={handleParseDocument}
           disabled={isLoading}
-          className="w-full py-3 bg-indigo-600 hover:bg-indigo-500 active:scale-95 text-white rounded-xl font-bold text-xs sm:text-sm flex items-center justify-center space-x-2 shadow-md shadow-indigo-600/30 disabled:opacity-50 transition-all"
+          className="w-full py-3 bg-brand-600 hover:bg-brand-700 active:scale-95 text-white rounded-xl font-bold text-xs sm:text-sm flex items-center justify-center space-x-2 shadow-2xs disabled:opacity-50 transition-all"
         >
           {isLoading ? (
             <>
@@ -416,7 +369,7 @@ export const CVParserModal: React.FC<CVParserModalProps> = ({
             </>
           ) : (
             <>
-              <Sparkles className="w-4 h-4 text-amber-300" />
+              <Sparkles className="w-4 h-4 text-warning-fg" />
               <span>Sparsuj i Zapisz w Bazie CV</span>
             </>
           )}
@@ -425,20 +378,20 @@ export const CVParserModal: React.FC<CVParserModalProps> = ({
 
       {/* Consistency Verification Report */}
       {parsedPreview && (
-        <div className="bg-slate-50 border border-slate-200 rounded-xl p-5 space-y-4 animate-fade-in">
-          <div className="flex items-center justify-between border-b border-slate-200 pb-3">
+        <div className="bg-sunken border border-line rounded-xl p-5 space-y-4 animate-fade-in">
+          <div className="flex items-center justify-between border-b border-line pb-3">
             <div className="flex items-center space-x-2">
-              <ShieldAlert className="w-5 h-5 text-amber-600" />
-              <h3 className="text-sm font-bold text-slate-900">Weryfikator Spójności Profilu</h3>
+              <ShieldAlert className="w-5 h-5 text-warning-fg" />
+              <h3 className="text-sm font-bold text-ink">Weryfikator Spójności Profilu</h3>
             </div>
-            <span className="text-xs text-emerald-700 font-mono font-bold">
+            <span className="text-xs text-success-fg font-mono font-bold">
               Sparsowano pomyślnie!
             </span>
           </div>
 
           <div className="space-y-2">
             {consistencyIssues.length === 0 ? (
-              <div className="text-xs text-emerald-700 font-medium flex items-center space-x-2">
+              <div className="text-xs text-success-fg font-medium flex items-center space-x-2">
                 <CheckCircle2 className="w-4 h-4" />
                 <span>Brak błędów spójności i wagi sloganu! Dane zachowują 100% rygoru.</span>
               </div>
@@ -448,13 +401,13 @@ export const CVParserModal: React.FC<CVParserModalProps> = ({
                   key={idx}
                   className={`p-3 rounded-lg border text-xs space-y-1 ${
                     issue.severity === 'HIGH'
-                      ? 'bg-rose-50 border-rose-200 text-rose-800'
-                      : 'bg-amber-50 border-amber-200 text-amber-800'
+                      ? 'bg-danger-soft border-danger-500/30 text-danger-fg'
+                      : 'bg-warning-soft border-warning-500/30 text-warning-fg'
                   }`}
                 >
                   <div className="font-bold flex items-center justify-between">
                     <span>{issue.title}</span>
-                    <span className="text-[10px] uppercase font-mono px-1.5 py-0.5 rounded bg-white border border-slate-200 font-bold">
+                    <span className="text-[10px] uppercase font-mono px-1.5 py-0.5 rounded bg-surface border border-line font-bold text-ink">
                       {issue.severity}
                     </span>
                   </div>
@@ -471,52 +424,52 @@ export const CVParserModal: React.FC<CVParserModalProps> = ({
           {/* Extracted Data Summary Cards */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3 pt-1">
             {/* History Preview */}
-            <div className="bg-white border border-slate-200 rounded-lg p-3 space-y-2 text-xs">
-              <div className="font-bold text-slate-800 flex items-center justify-between border-b border-slate-100 pb-1.5">
+            <div className="bg-surface border border-line rounded-lg p-3 space-y-2 text-xs">
+              <div className="font-bold text-ink flex items-center justify-between border-b border-line pb-1.5">
                 <span className="flex items-center space-x-1.5">
-                  <Briefcase className="w-3.5 h-3.5 text-indigo-600" />
+                  <Briefcase className="w-3.5 h-3.5 text-brand-fg" />
                   <span>Doświadczenie Zawodowe</span>
                 </span>
-                <span className="px-1.5 py-0.5 rounded bg-indigo-50 text-indigo-700 font-mono font-bold text-[10px]">
+                <span className="px-1.5 py-0.5 rounded bg-brand-soft text-brand-fg font-mono font-bold text-[10px] sv-tnum">
                   {parsedPreview.history?.length || 0} stanowisk
                 </span>
               </div>
               {parsedPreview.history && parsedPreview.history.length > 0 ? (
                 <div className="space-y-1.5 max-h-36 overflow-y-auto pr-1">
                   {parsedPreview.history.map((h, i) => (
-                    <div key={i} className="text-[11px] text-slate-700 border-b border-slate-100 last:border-0 pb-1">
-                      <div className="font-semibold text-slate-900">{h.role} <span className="text-slate-500 font-normal">@ {h.company}</span></div>
-                      <div className="text-[10px] text-slate-400 font-mono">{h.startDate} - {h.endDate || 'Obecnie'} • {h.highlights?.length || 0} wskaźników</div>
+                    <div key={i} className="text-[11px] text-muted border-b border-line last:border-0 pb-1">
+                      <div className="font-semibold text-ink">{h.role} <span className="text-muted font-normal">@ {h.company}</span></div>
+                      <div className="text-[10px] text-subtle font-mono sv-tnum">{h.startDate} - {h.endDate || 'Obecnie'} • {h.highlights?.length || 0} wskaźników</div>
                     </div>
                   ))}
                 </div>
               ) : (
-                <div className="text-[11px] text-slate-400 italic">Nie wykryto stanowisk w tekście.</div>
+                <div className="text-[11px] text-subtle italic">Nie wykryto stanowisk w tekście.</div>
               )}
             </div>
 
             {/* Education Preview */}
-            <div className="bg-white border border-slate-200 rounded-lg p-3 space-y-2 text-xs">
-              <div className="font-bold text-slate-800 flex items-center justify-between border-b border-slate-100 pb-1.5">
+            <div className="bg-surface border border-line rounded-lg p-3 space-y-2 text-xs">
+              <div className="font-bold text-ink flex items-center justify-between border-b border-line pb-1.5">
                 <span className="flex items-center space-x-1.5">
-                  <GraduationCap className="w-3.5 h-3.5 text-emerald-600" />
+                  <GraduationCap className="w-3.5 h-3.5 text-success-fg" />
                   <span>Wykształcenie & Uczelnie</span>
                 </span>
-                <span className="px-1.5 py-0.5 rounded bg-emerald-50 text-emerald-700 font-mono font-bold text-[10px]">
+                <span className="px-1.5 py-0.5 rounded bg-success-soft text-success-fg font-mono font-bold text-[10px] sv-tnum">
                   {parsedPreview.education?.length || 0} wpisów
                 </span>
               </div>
               {parsedPreview.education && parsedPreview.education.length > 0 ? (
                 <div className="space-y-1.5 max-h-36 overflow-y-auto pr-1">
                   {parsedPreview.education.map((e, i) => (
-                    <div key={i} className="text-[11px] text-slate-700 border-b border-slate-100 last:border-0 pb-1">
-                      <div className="font-semibold text-slate-900">{e.degree} {e.fieldOfStudy ? `- ${e.fieldOfStudy}` : ''}</div>
-                      <div className="text-[10px] text-slate-500">{e.institution} ({e.startDate} - {e.endDate})</div>
+                    <div key={i} className="text-[11px] text-muted border-b border-line last:border-0 pb-1">
+                      <div className="font-semibold text-ink">{e.degree} {e.fieldOfStudy ? `- ${e.fieldOfStudy}` : ''}</div>
+                      <div className="text-[10px] text-subtle sv-tnum">{e.institution} ({e.startDate} - {e.endDate})</div>
                     </div>
                   ))}
                 </div>
               ) : (
-                <div className="text-[11px] text-slate-400 italic">Nie wykryto uczelni w tekście.</div>
+                <div className="text-[11px] text-subtle italic">Nie wykryto uczelni w tekście.</div>
               )}
             </div>
           </div>
@@ -524,7 +477,7 @@ export const CVParserModal: React.FC<CVParserModalProps> = ({
           <div className="pt-2 flex justify-end">
             <button
               onClick={applyChanges}
-              className="px-5 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-xs font-bold flex items-center space-x-2 shadow-2xs"
+              className="px-5 py-2.5 bg-success-600 hover:bg-success-700 text-white rounded-lg text-xs font-bold flex items-center space-x-2 shadow-2xs"
             >
               <span>Scal z Master Vault</span>
               <ArrowRight className="w-4 h-4" />
@@ -535,4 +488,5 @@ export const CVParserModal: React.FC<CVParserModalProps> = ({
     </div>
   );
 };
+
 

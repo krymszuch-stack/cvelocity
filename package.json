@@ -41,8 +41,7 @@
     "pdfjs-dist": "^6.1.200",
     "qrcode": "^1.5.4",
     "react": "^19.0.1",
-    "react-dom": "^19.0.1",
-    "vite": "^6.2.3"
+    "react-dom": "^19.0.1"
   },
   "devDependencies": {
     "@types/bcryptjs": "^3.0.0",

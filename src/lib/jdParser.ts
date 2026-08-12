@@ -1,5 +1,6 @@
 import { MasterVault } from '../types';
 import { HR_AND_COMMON_STOP_WORDS, extractDynamicJdPhrases } from './atsSimulator';
+import { matchesKeyword } from './keywordMatching';
 
 export interface ParsedJobDescription {
   jobTitle: string;
@@ -192,7 +193,19 @@ export function parseJobDescriptionLocal(rawJdText: string, defaultTitle = 'Full
  * Compare Parsed Job Description against user's Master Vault
  */
 export function analyzeJdMatchWithVault(parsedJd: ParsedJobDescription, vault: MasterVault): JDVaultMatchAnalysis {
-  const vaultTextFull = JSON.stringify(vault).toLowerCase();
+  const vaultTextFull = [
+    vault.personalInfo.fullName,
+    vault.personalInfo.title,
+    vault.personalInfo.summary,
+    vault.personalInfo.location,
+    ...vault.history.flatMap(h => [h.role, h.company, h.description || '', ...(h.highlights || []).map(hl => hl.text)]),
+    ...vault.skillsMatrix.hardSkills,
+    ...vault.skillsMatrix.toolsAndTech,
+    ...vault.skillsMatrix.softSkills,
+    ...(vault.education || []).flatMap(e => [e.degree, e.fieldOfStudy, e.institution]),
+    ...(vault.skillsMatrix?.certifications || []).map((c: any) => typeof c === 'string' ? c : c.name),
+  ].filter(Boolean).join(' ');
+
   const vaultSkillsLower = new Set([
     ...vault.skillsMatrix.hardSkills.map((s) => s.toLowerCase()),
     ...vault.skillsMatrix.toolsAndTech.map((s) => s.toLowerCase()),
@@ -209,7 +222,7 @@ export function analyzeJdMatchWithVault(parsedJd: ParsedJobDescription, vault: M
   const missingSkills: string[] = [];
 
   allJdSkills.forEach((skill) => {
-    if (vaultSkillsLower.has(skill.toLowerCase()) || vaultTextFull.includes(skill.toLowerCase())) {
+    if (vaultSkillsLower.has(skill.toLowerCase()) || matchesKeyword(vaultTextFull, skill)) {
       matchedSkills.push(skill);
     } else {
       missingSkills.push(skill);
@@ -302,7 +315,7 @@ export function analyzeJdMatchWithVault(parsedJd: ParsedJobDescription, vault: M
       addSkillsToVault: missingSkills,
       highlightAdvice: [
         `Użyj aktywnego czasownika w pierwszym punkcie historii pod kątem: ${parsedJd.requiredHardSkills[0] || 'Głównych wymagań'}.`,
-        `Wzmocnij odniesienie do narzędzia: ${parsedJd.toolsAndTech[0] || 'CI/CD'}.`
+        `Wzmocnij odniesienie do narzędzia: ${parsedJd.toolsAndTech[0] || parsedJd.requiredHardSkills[0] || 'wymagań stanowiska'}.`
       ],
     },
   };

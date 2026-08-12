@@ -172,6 +172,12 @@
   }
 }
 
+/* Hard override to prevent dark theme borders leaking onto white A4 printable CV sheet (ADR-95, AGENTS.md §5) */
+.printable-area,
+.printable-area * {
+  border-color: #cbd5e1;
+}
+
 /* ------------------------------------------------------------ SCROLLBAR --- */
 ::-webkit-scrollbar {
   width: 10px;

@@ -1,6 +1,5 @@
 import { MasterVault, WorkExperience, Education, Certification } from '../types';
 import { sanitizeTextInput } from './securityGuardrails';
-import * as mammoth from 'mammoth';
 
 export interface ParsedCVResult {
   personalInfo: {
@@ -51,6 +50,8 @@ export async function extractTextFromAnyFile(file: File): Promise<{ text: string
   if (fileName.endsWith('.docx') || fileName.endsWith('.doc')) {
     try {
       const arrayBuffer = await file.arrayBuffer();
+      const mammothModule = await import('mammoth');
+      const mammoth = mammothModule.default || mammothModule;
       const result = await mammoth.extractRawText({ arrayBuffer });
       if (result.value && result.value.trim().length > 20) {
         return { text: result.value, format: 'DOCX' };
@@ -65,19 +66,27 @@ export async function extractTextFromAnyFile(file: File): Promise<{ text: string
   // 5. PDF Format
   if (fileName.endsWith('.pdf')) {
     try {
-      if ((window as any).pdfjsLib) {
-        const arrayBuffer = await file.arrayBuffer();
-        const pdf = await (window as any).pdfjsLib.getDocument({ data: arrayBuffer }).promise;
-        let pdfText = '';
-        for (let i = 1; i <= pdf.numPages; i++) {
-          const page = await pdf.getPage(i);
-          const textContent = await page.getTextContent();
-          const pageItems = textContent.items.map((item: any) => item.str).join(' ');
-          pdfText += pageItems + '\n';
-        }
-        if (pdfText.trim().length > 20) {
-          return { text: pdfText, format: 'PDF' };
-        }
+      const arrayBuffer = await file.arrayBuffer();
+      const pdfjsLib = await import('pdfjs-dist');
+      const version = pdfjsLib.version || '6.1.200';
+      if (pdfjsLib.GlobalWorkerOptions && !pdfjsLib.GlobalWorkerOptions.workerSrc) {
+        pdfjsLib.GlobalWorkerOptions.workerSrc = `https://cdn.jsdelivr.net/npm/pdfjs-dist@${version}/build/pdf.worker.min.mjs`;
+      }
+      const loadingTask = pdfjsLib.getDocument({
+        data: new Uint8Array(arrayBuffer),
+        cMapUrl: `https://cdn.jsdelivr.net/npm/pdfjs-dist@${version}/cmaps/`,
+        cMapPacked: true,
+      });
+      const pdf = await loadingTask.promise;
+      let pdfText = '';
+      for (let i = 1; i <= pdf.numPages; i++) {
+        const page = await pdf.getPage(i);
+        const textContent = await page.getTextContent();
+        const pageItems = textContent.items.map((item: any) => item.str).join(' ');
+        pdfText += pageItems + '\n';
+      }
+      if (pdfText.trim().length > 20) {
+        return { text: pdfText, format: 'PDF' };
       }
     } catch (pdfErr) {
       console.warn('PDF.js extraction fallback to raw text:', pdfErr);

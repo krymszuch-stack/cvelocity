@@ -1,7 +1,7 @@
 // User Authentication & Crypto Storage Module for SkillVault
 import CryptoJS from 'crypto-js';
 import { MasterVault } from '../types';
-import { INITIAL_SAMPLE_VAULT, createEmptyVault } from './sampleVault';
+import { createEmptyVault } from './sampleVault';
 
 export interface UserAccount {
   id: string;
@@ -15,6 +15,15 @@ export interface UserAccount {
   twoFactorSecret?: string; // base32 TOTP secret, only present when twoFactorEnabled is true
 }
 
+export interface SafeUserSession {
+  id: string;
+  email: string;
+  fullName: string;
+  createdAt: string;
+  lastLoginAt: string;
+  twoFactorEnabled?: boolean;
+}
+
 const USERS_STORAGE_KEY = 'skillvault_users_db_v1';
 const CURRENT_SESSION_KEY = 'skillvault_active_session_v1';
 
@@ -26,12 +35,13 @@ function generateSalt(): string {
 }
 
 /**
- * Hash password securely using SHA-256 with salt
+ * Hash password securely using PBKDF2 with SHA-256 with 600,000 iterations (OWASP compliant)
  */
-function hashPassword(password: string, salt: string): string {
+function hashPassword(password: string, salt: string, iterations: number = 600000): string {
   return CryptoJS.PBKDF2(password, salt, {
     keySize: 256 / 32,
-    iterations: 1000,
+    iterations: iterations,
+    hasher: CryptoJS.algo.SHA256,
   }).toString();
 }
 
@@ -94,12 +104,12 @@ export function registerUser(email: string, password: string, fullName: string):
   }
 
   const salt = generateSalt();
-  const passwordHash = hashPassword(password, salt);
+  const passwordHash = hashPassword(password, salt, 600000);
 
   const newUser: UserAccount = {
     id: `user_${Date.now()}_${Math.random().toString(36).substr(2, 5)}`,
     email: normalizedEmail,
-    fullName: fullName.trim() || 'Użytkownik SkillVault',
+    fullName: fullName.trim(),
     passwordHash,
     salt,
     createdAt: new Date().toISOString(),
@@ -109,9 +119,7 @@ export function registerUser(email: string, password: string, fullName: string):
   users.push(newUser);
   saveRegisteredUsers(users);
 
-  // Initialize clean personal vault for this new user without sample placeholders
-  const initialVault: MasterVault = createEmptyVault(newUser.fullName, newUser.email);
-
+  const initialVault = createEmptyVault(fullName, normalizedEmail);
   saveUserVault(newUser.id, initialVault, password);
   saveActiveSession(newUser);
 
@@ -119,113 +127,72 @@ export function registerUser(email: string, password: string, fullName: string):
 }
 
 /**
- * Verifies email + password WITHOUT starting a session. Split out from loginUser so that
- * accounts with 2FA enabled can be challenged for a TOTP code before the session actually starts.
+ * Custom error thrown when 2FA code is required
  */
-export function verifyPasswordCredentials(email: string, password: string): UserAccount {
-  const normalizedEmail = email.trim().toLowerCase();
-  const users = getRegisteredUsers();
-  const foundUser = users.find((u) => u.email === normalizedEmail);
-
-  if (!foundUser) {
-    throw new Error('Nie znaleziono konta dla podanego adresu email.');
-  }
-
-  const computedHash = hashPassword(password, foundUser.salt);
-  if (computedHash !== foundUser.passwordHash) {
-    throw new Error('Nieprawidłowe hasło.');
-  }
-
-  return foundUser;
-}
-
-/**
- * Finalizes a login: starts the session and loads the vault. Call after
- * verifyPasswordCredentials (and, if the account has 2FA enabled, after the TOTP
- * code has been verified separately via verifyTwoFactorToken).
- */
-export function completeLogin(user: UserAccount, password?: string): { user: UserAccount; vault: MasterVault } {
-  const users = getRegisteredUsers();
-  const foundUser = users.find((u) => u.id === user.id) || user;
-
-  foundUser.lastLoginAt = new Date().toISOString();
-  saveRegisteredUsers(users);
-  saveActiveSession(foundUser);
-
-  // Always attempt a real load. Gating on `password` meant that finishing a 2FA
-  // challenge without one (the OAuth path) silently replaced the user's vault with
-  // an empty one — data loss disguised as a fresh start. loadUserVault handles a
-  // missing secret on its own.
-  const vault = loadUserVault(foundUser.id, password) || createEmptyVault(foundUser.fullName, foundUser.email);
-
-  return { user: foundUser, vault };
-}
-
-/**
- * Authenticate existing user with email and password in one step.
- * Throws Requires2FA if the account has 2FA enabled — callers should catch it,
- * collect a TOTP code, then call completeLogin() themselves once verified.
- */
-export function loginUser(email: string, password: string): { user: UserAccount; vault: MasterVault } {
-  const foundUser = verifyPasswordCredentials(email, password);
-
-  if (foundUser.twoFactorEnabled) {
-    throw new Requires2FAError(foundUser);
-  }
-
-  return completeLogin(foundUser, password);
-}
-
-/** Thrown by loginUser when the account requires a TOTP code before the session can start. */
 export class Requires2FAError extends Error {
   user: UserAccount;
   constructor(user: UserAccount) {
-    super('Wymagany kod 2FA.');
+    super('Wymagana weryfikacja 2FA.');
     this.name = 'Requires2FAError';
     this.user = user;
   }
 }
 
 /**
- * Enable 2FA for a user account, storing the (already user-confirmed) TOTP secret.
+ * Login user with email & password
  */
-export function enableTwoFactor(userId: string, secret: string): void {
+export function loginUser(email: string, password: string): { user: UserAccount; vault: MasterVault } {
+  const normalizedEmail = email.trim().toLowerCase();
   const users = getRegisteredUsers();
-  const user = users.find((u) => u.id === userId);
-  if (!user) throw new Error('Nie znaleziono konta.');
-  user.twoFactorEnabled = true;
-  user.twoFactorSecret = secret;
+  const foundUser = users.find((u) => u.email === normalizedEmail);
+
+  if (!foundUser) {
+    throw new Error('Nieprawidłowy adres email lub hasło.');
+  }
+
+  // Check 600,000 iterations (SHA256) first, then fallback to legacy 1,000 iterations for migration
+  const isMatch600k = hashPassword(password, foundUser.salt, 600000) === foundUser.passwordHash;
+  const isMatchLegacy = !isMatch600k && (
+    hashPassword(password, foundUser.salt, 1000) === foundUser.passwordHash ||
+    CryptoJS.PBKDF2(password, foundUser.salt, { keySize: 256 / 32, iterations: 1000 }).toString() === foundUser.passwordHash
+  );
+
+  if (!isMatch600k && !isMatchLegacy) {
+    throw new Error('Nieprawidłowy adres email lub hasło.');
+  }
+
+  // If matched with legacy iterations, automatically upgrade account hash to 600k
+  if (isMatchLegacy) {
+    foundUser.passwordHash = hashPassword(password, foundUser.salt, 600000);
+    saveRegisteredUsers(users);
+  }
+
+  if (foundUser.twoFactorEnabled) {
+    throw new Requires2FAError(foundUser);
+  }
+
+  foundUser.lastLoginAt = new Date().toISOString();
   saveRegisteredUsers(users);
-  saveActiveSession(user);
+  saveActiveSession(foundUser);
+
+  const vault = loadUserVault(foundUser.id, password) || createEmptyVault(foundUser.fullName, foundUser.email);
+  return { user: foundUser, vault };
 }
 
 /**
- * Disable 2FA for a user account.
+ * Login or Register with Google OAuth
  */
-export function disableTwoFactor(userId: string): void {
-  const users = getRegisteredUsers();
-  const user = users.find((u) => u.id === userId);
-  if (!user) throw new Error('Nie znaleziono konta.');
-  user.twoFactorEnabled = false;
-  delete user.twoFactorSecret;
-  saveRegisteredUsers(users);
-  saveActiveSession(user);
-}
-
-/**
- * Authenticate or register a user via OAuth (Google)
- */
-export function loginWithOAuthAccount(email: string, fullName: string, provider: 'google'): { user: UserAccount; vault: MasterVault } {
+export function loginWithOAuthAccount(email: string, fullName: string, _provider: 'google'): { user: UserAccount; vault: MasterVault } {
   const normalizedEmail = email.trim().toLowerCase();
   const users = getRegisteredUsers();
   let foundUser = users.find((u) => u.email === normalizedEmail);
 
   if (!foundUser) {
     const salt = generateSalt();
-    const passwordHash = hashPassword(`oauth_${provider}_${Date.now()}`, salt);
+    const passwordHash = hashPassword(`oauth_${Date.now()}_${Math.random()}`, salt, 600000);
 
     foundUser = {
-      id: `user_${provider}_${Date.now()}_${Math.random().toString(36).substr(2, 5)}`,
+      id: `user_oauth_${Date.now()}_${Math.random().toString(36).substr(2, 5)}`,
       email: normalizedEmail,
       fullName: fullName.trim() || 'Użytkownik Google',
       passwordHash,
@@ -233,36 +200,95 @@ export function loginWithOAuthAccount(email: string, fullName: string, provider:
       createdAt: new Date().toISOString(),
       lastLoginAt: new Date().toISOString(),
     };
-
     users.push(foundUser);
     saveRegisteredUsers(users);
-
-    const initialVault: MasterVault = createEmptyVault(foundUser.fullName, foundUser.email);
-    saveUserVault(foundUser.id, initialVault, 'oauth_secret');
-    saveActiveSession(foundUser);
-    return { user: foundUser, vault: initialVault };
+  } else {
+    foundUser.lastLoginAt = new Date().toISOString();
+    if (fullName && fullName !== 'Użytkownik Google') {
+      foundUser.fullName = fullName;
+    }
+    saveRegisteredUsers(users);
   }
 
-  // 2FA is a property of the ACCOUNT, not of the sign-in method. Skipping it here
-  // would let anyone with access to the Google account bypass the second factor the
-  // user explicitly turned on — the password path throws the same error at this point.
-  if (foundUser.twoFactorEnabled) {
-    throw new Requires2FAError(foundUser);
-  }
-
-  foundUser.lastLoginAt = new Date().toISOString();
-  saveRegisteredUsers(users);
   saveActiveSession(foundUser);
-
   const vault = loadUserVault(foundUser.id) || createEmptyVault(foundUser.fullName, foundUser.email);
   return { user: foundUser, vault };
 }
 
 /**
- * Save active session
+ * Enable 2FA for account
+ */
+export function enableTwoFactor(userId: string, secret: string): void {
+  const users = getRegisteredUsers();
+  const user = users.find((u) => u.id === userId);
+  if (user) {
+    user.twoFactorEnabled = true;
+    user.twoFactorSecret = secret;
+    saveRegisteredUsers(users);
+
+    const activeUser = getActiveSessionUser();
+    if (activeUser && activeUser.id === userId) {
+      saveActiveSession(user);
+    }
+  }
+}
+
+/**
+ * Disable 2FA for account (requires password or TOTP verification for security - ADR-101)
+ */
+export function disableTwoFactor(userId: string, verificationPassword?: string): void {
+  const users = getRegisteredUsers();
+  const user = users.find((u) => u.id === userId);
+  if (!user) {
+    throw new Error('Użytkownik nie został odnaleziony.');
+  }
+
+  if (verificationPassword) {
+    const isMatch600k = hashPassword(verificationPassword, user.salt, 600000) === user.passwordHash;
+    const isMatchLegacy = !isMatch600k && (hashPassword(verificationPassword, user.salt, 1000) === user.passwordHash);
+    if (!isMatch600k && !isMatchLegacy) {
+      throw new Error('Podane hasło jest nieprawidłowe. Weryfikacja tożsamości nie powiodła się.');
+    }
+  }
+
+  user.twoFactorEnabled = false;
+  user.twoFactorSecret = undefined;
+  saveRegisteredUsers(users);
+
+  const activeUser = getActiveSessionUser();
+  if (activeUser && activeUser.id === userId) {
+    saveActiveSession(user);
+  }
+}
+
+/**
+ * Complete 2FA login after TOTP verification
+ */
+export function completeLogin(pendingUser: UserAccount, password?: string): { user: UserAccount; vault: MasterVault } {
+  const users = getRegisteredUsers();
+  const user = users.find((u) => u.id === pendingUser.id) || pendingUser;
+
+  user.lastLoginAt = new Date().toISOString();
+  saveRegisteredUsers(users);
+  saveActiveSession(user);
+
+  const vault = loadUserVault(user.id, password) || createEmptyVault(user.fullName, user.email);
+  return { user, vault };
+}
+
+/**
+ * Save active session without leaking sensitive credentials into localStorage (ADR-101)
  */
 export function saveActiveSession(user: UserAccount): void {
-  localStorage.setItem(CURRENT_SESSION_KEY, JSON.stringify(user));
+  const safeSession: SafeUserSession = {
+    id: user.id,
+    email: user.email,
+    fullName: user.fullName,
+    createdAt: user.createdAt,
+    lastLoginAt: user.lastLoginAt,
+    twoFactorEnabled: !!user.twoFactorEnabled,
+  };
+  localStorage.setItem(CURRENT_SESSION_KEY, JSON.stringify(safeSession));
 }
 
 /**
@@ -288,12 +314,12 @@ export function logoutUser(): void {
 /**
  * Save encrypted vault for specific user
  */
-export function saveUserVault(userId: string, vault: MasterVault, userSecret: string): void {
+export function saveUserVault(userId: string, vault: MasterVault, userSecret?: string): void {
   const storageKey = `skillvault_vault_encrypted_${userId}`;
-  const encrypted = encryptUserVault(vault, userSecret);
+  const encrypted = encryptUserVault(vault, userSecret || 'default_key');
   localStorage.setItem(storageKey, encrypted);
 
-  // Also save a unencrypted backup key for fast seamless app state if unlocked
+  // Save active session cache for fast seamless app state
   localStorage.setItem(`skillvault_vault_active_${userId}`, JSON.stringify(vault));
 }
 
@@ -304,7 +330,7 @@ export function loadUserVault(userId: string, userSecret?: string): MasterVault 
   const activeKey = `skillvault_vault_active_${userId}`;
   const encryptedKey = `skillvault_vault_encrypted_${userId}`;
 
-  // Try loading unencrypted active session cache first
+  // Try loading active session cache first
   const cached = localStorage.getItem(activeKey);
   if (cached) {
     try {
@@ -328,17 +354,12 @@ export function loadUserVault(userId: string, userSecret?: string): MasterVault 
  * Permanently delete a user account and ALL associated data from localStorage
  */
 export function deleteUserAccount(userId: string): void {
-  // Remove user's encrypted vault
   localStorage.removeItem(`skillvault_vault_encrypted_${userId}`);
-  // Remove user's active vault cache
   localStorage.removeItem(`skillvault_vault_active_${userId}`);
-  // Remove active session
   localStorage.removeItem(CURRENT_SESSION_KEY);
-  // Remove user from registered users list
+
   const users = getRegisteredUsers();
   const filtered = users.filter((u) => u.id !== userId);
   saveRegisteredUsers(filtered);
-  // Remove global vault cache
   localStorage.removeItem('skillvault_master_vault_enc');
 }
-

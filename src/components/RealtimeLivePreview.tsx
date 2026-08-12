@@ -2,7 +2,7 @@ import React, { useMemo } from 'react';
 import { MasterVault, TailoredResume, CoverLetter, AtsCheckResult } from '../types';
 import { fillSlotSentence, extractSlotsFromHighlight, eliminateSlogans } from '../lib/slotFillingEngine';
 import { rankExperienceByRelevance, rankHighlightsByRelevance } from '../lib/relevanceRanking';
-import { simulateAtsCheck } from '../lib/atsSimulator';
+import { simulateAtsCheck, extractDynamicJdPhrases } from '../lib/atsSimulator';
 import { generateAntiTemplateCoverLetter } from '../lib/coverLetterEngine';
 import { DocumentRenderer } from './DocumentRenderer';
 import { AtsSimulatorView } from './AtsSimulatorView';
@@ -43,7 +43,8 @@ export const RealtimeLivePreview: React.FC<RealtimeLivePreviewProps> = ({
 
   // Real-time dynamic calculation on keystroke/change (0-token local slot filling)
   const { tailoredResume, atsResult, coverLetter } = useMemo(() => {
-    const jdKeywords = (jobDescription.toLowerCase().match(/\b[a-zA-Z0-9#+.-]{3,}\b/g) || []);
+    const dynamicPhrases = extractDynamicJdPhrases(jobDescription);
+    const jdKeywords = dynamicPhrases.hardSkills.map((h) => h.phrase);
 
     // 0-token relevance ranking, same as the full hybrid pipeline in JobMatcher.tsx
     const rankedExperience = rankExperienceByRelevance(vault.history, jdKeywords, jobTitle || '');

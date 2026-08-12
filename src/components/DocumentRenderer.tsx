@@ -5,7 +5,6 @@ import {
   generatePlainTextCvExport,
   generateLinkedInReadyExport,
 } from '../lib/layeredVaultEngine';
-import { downloadNativeDocxCv } from '../lib/docxExporter';
 import { LayeredFactItem, ApplicationHistoryRecord } from '../types';
 import {
   Printer,
@@ -41,8 +40,6 @@ import {
   BookOpen,
   FileEdit,
 } from 'lucide-react';
-import html2canvas from 'html2canvas';
-import jsPDF from 'jspdf';
 
 interface DocumentRendererProps {
   resume: TailoredResume;
@@ -219,16 +216,34 @@ export const DocumentRenderer: React.FC<DocumentRendererProps> = ({ resume, vaul
   const [isPreFlightOpen, setIsPreFlightOpen] = useState(false);
   const [isCompareOpen, setIsCompareOpen] = useState(false);
   const [isExportMenuOpen, setIsExportMenuOpen] = useState(false);
-  const [isHistoryOpen, setIsHistoryOpen] = useState(false);
   const docRef = useRef<HTMLDivElement>(null);
+  const exportMenuRef = useRef<HTMLDivElement>(null);
 
-  // Photo state (custom override or from vault)
-  const [photoUrl, setPhotoUrl] = useState<string>(
-    vault.personalInfo.photoUrl ||
-      'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=400&auto=format&fit=crop&q=80'
-  );
+  // Photo state (custom override or from vault) - ADR-61 (no fake Unsplash photo)
+  const [photoUrl, setPhotoUrl] = useState<string>(vault.personalInfo.photoUrl || '');
   const [isPhotoModalOpen, setIsPhotoModalOpen] = useState(false);
   const [customUrlInput, setCustomUrlInput] = useState('');
+
+  // Close export menu when clicking outside or pressing Escape (ADR-106)
+  React.useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (exportMenuRef.current && !exportMenuRef.current.contains(event.target as Node)) {
+        setIsExportMenuOpen(false);
+      }
+    };
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        setIsExportMenuOpen(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    document.addEventListener('keydown', handleKeyDown);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+      document.removeEventListener('keydown', handleKeyDown);
+    };
+  }, []);
 
   // Active Design Theme State
   const [currentPaletteIndex, setCurrentPaletteIndex] = useState(0);
@@ -252,19 +267,24 @@ export const DocumentRenderer: React.FC<DocumentRendererProps> = ({ resume, vaul
     setCurrentPaperIndex(Math.floor(Math.random() * PAPER_BACKGROUNDS.length));
   };
 
-  const handleCopyRawText = () => {
-    let raw = `${vault.personalInfo.fullName}\n${vault.personalInfo.title}\nEmail: ${vault.personalInfo.email} | Tel: ${vault.personalInfo.phone} | ${vault.personalInfo.location}\n\n`;
-    raw += `PODSUMOWANIE ZAWODOWE:\n${resume.summary}\n\n`;
-    raw += `DOŚWIADCZENIE ZAWODOWE:\n`;
-    resume.selectedHighlights.forEach((h) => {
-      raw += `• ${h.role} (${h.company}) - ${h.optimizedText}\n`;
-    });
-    raw += `\nUMIEJĘTNOŚCI TWARDE:\n${resume.skillsMatched.hardSkills.join(', ')}\n`;
-    raw += `NARZĘDZIA I TECHNOLOGIE:\n${resume.skillsMatched.toolsAndTech.join(', ')}\n`;
+  const handleCopyRawText = async () => {
+    try {
+      let raw = `${vault.personalInfo.fullName}\n${vault.personalInfo.title}\nEmail: ${vault.personalInfo.email} | Tel: ${vault.personalInfo.phone} | ${vault.personalInfo.location}\n\n`;
+      raw += `PODSUMOWANIE ZAWODOWE:\n${resume.summary}\n\n`;
+      raw += `DOŚWIADCZENIE ZAWODOWE:\n`;
+      resume.selectedHighlights.forEach((h) => {
+        raw += `• ${h.role} (${h.company}) - ${h.optimizedText}\n`;
+      });
+      raw += `\nUMIEJĘTNOŚCI TWARDE:\n${resume.skillsMatched.hardSkills.join(', ')}\n`;
+      raw += `NARZĘDZIA I TECHNOLOGIE:\n${resume.skillsMatched.toolsAndTech.join(', ')}\n`;
 
-    navigator.clipboard.writeText(raw);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
+      await navigator.clipboard.writeText(raw);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch (err) {
+      console.error('Błąd podczas kopiowania tekstu CV:', err);
+      alert('Nie удалось skopiować tekstu CV. Zweryfikuj uprawnienia przeglądarki.');
+    }
   };
 
   const handlePrint = () => {
@@ -276,6 +296,13 @@ export const DocumentRenderer: React.FC<DocumentRendererProps> = ({ resume, vaul
     setIsExporting(true);
 
     try {
+      const [html2canvasModule, jsPDFModule] = await Promise.all([
+        import('html2canvas'),
+        import('jspdf'),
+      ]);
+      const html2canvas = html2canvasModule.default || html2canvasModule;
+      const jsPDF = jsPDFModule.jsPDF || jsPDFModule.default || jsPDFModule;
+
       const element = docRef.current;
       const canvas = await html2canvas(element, {
         scale: 2,
@@ -603,7 +630,7 @@ export const DocumentRenderer: React.FC<DocumentRendererProps> = ({ resume, vaul
             </button>
 
             {/* Export Multi-Format Dropdown */}
-            <div className="relative inline-block text-left">
+            <div ref={exportMenuRef} className="relative inline-block text-left">
               <button
                 onClick={() => setIsExportMenuOpen(!isExportMenuOpen)}
                 className="flex items-center space-x-1.5 px-4 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-xs font-bold shadow-2xs transition-colors"
@@ -623,9 +650,10 @@ export const DocumentRenderer: React.FC<DocumentRendererProps> = ({ resume, vaul
                   </button>
 
                   <button
-                    onClick={() => {
+                    onClick={async () => {
                       setIsExportMenuOpen(false);
-                      downloadNativeDocxCv({ ...vault, history: getOrderedHistory(vault, resume) }, [], resume.targetJobTitle, resume.companyName);
+                      const { downloadNativeDocxCv } = await import('../lib/docxExporter');
+                      await downloadNativeDocxCv({ ...vault, history: getOrderedHistory(vault, resume) }, [], resume.targetJobTitle, resume.companyName);
                     }}
                     className="w-full text-left px-3 py-2 text-xs font-bold hover:bg-slate-100 rounded-lg flex items-center justify-between text-slate-800"
                   >
@@ -654,11 +682,16 @@ export const DocumentRenderer: React.FC<DocumentRendererProps> = ({ resume, vaul
                   </button>
 
                   <button
-                    onClick={() => {
+                    onClick={async () => {
                       setIsExportMenuOpen(false);
                       const lkd = generateLinkedInReadyExport({ ...vault, history: getOrderedHistory(vault, resume) }, resume.targetJobTitle);
-                      navigator.clipboard.writeText(`${lkd.headline}\n\n${lkd.aboutSection}`);
-                      alert('Format LinkedIn skopiowany do schowka! Wklej go w sekcji O sobie na profilu.');
+                      try {
+                        await navigator.clipboard.writeText(`${lkd.headline}\n\n${lkd.aboutSection}`);
+                        alert('Format LinkedIn skopiowany do schowka! Wklej go w sekcji O sobie na profilu.');
+                      } catch (e) {
+                        console.error('Błąd podczas kopiowania do schowka:', e);
+                        alert('Nie udało się automatycznie skopiować tekstu LinkedIn. Zweryfikuj uprawnienia przeglądarki.');
+                      }
                     }}
                     className="w-full text-left px-3 py-2 text-xs font-bold hover:bg-slate-100 rounded-lg flex items-center justify-between text-slate-800"
                   >
