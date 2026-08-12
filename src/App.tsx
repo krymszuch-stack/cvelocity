@@ -18,11 +18,12 @@ import { ProfilerSection } from './components/ProfilerSection';
 import { CVParserModal } from './components/CVParserModal';
 import { GeminiAdvisorModal } from './components/GeminiAdvisorModal';
 import { ApplicationTracker } from './components/ApplicationTracker';
+import { LandingPage } from './components/LandingPage';
 
 const APPLICATIONS_STORAGE_KEY = 'skillvault_applications_v1';
 
 function MainApp() {
-  const [activeTab, setActiveTab] = useState<AppTab>('matcher');
+  const [activeTab, setActiveTab] = useState<AppTab>('home');
   const [isNavCollapsed, setIsNavCollapsed] = useState(false);
   const [isMobileNavOpen, setIsMobileNavOpen] = useState(false);
   const [applications, setApplications] = useState<ApplicationRecord[]>(() => {
@@ -199,6 +200,8 @@ function MainApp() {
         {/* Remounting per tab replays the entrance animation and drops stale view state. */}
         <main key={activeTab} className="flex-1 px-4 sm:px-6 lg:px-8 py-7 animate-fade-in">
           <div className="max-w-[1400px] mx-auto">
+            {activeTab === 'home' && <LandingPage onEnterApp={() => setActiveTab('matcher')} />}
+
             {activeTab === 'matcher' && (
               <JobMatcher
                 vault={vault}
@@ -231,8 +234,22 @@ function MainApp() {
           </div>
         </main>
 
-        <footer className="border-t border-line py-5 px-6 text-center text-xs text-subtle">
-          SkillVault © 2026 — Aggregator ofert + dopasowanie kompetencji do realnych wymagań.
+        <footer className="border-t border-line py-5 px-6 text-center text-xs text-subtle space-y-1">
+          <p>SkillVault © 2026 — Aggregator ofert + dopasowanie kompetencji do realnych wymagań.</p>
+          <p>
+            Stworzone przez{' '}
+            <a href="https://oathcry.com" target="_blank" rel="noreferrer" className="font-semibold text-brand-fg hover:underline">
+              Adriana Kozińskiego
+            </a>
+            {' · '}
+            <a href="https://github.com/krymszuch-stack" target="_blank" rel="noreferrer" className="hover:underline">
+              GitHub
+            </a>
+            {' · '}
+            <a href="https://www.linkedin.com/in/adrian-kozi%C5%84ski-6847162a6/" target="_blank" rel="noreferrer" className="hover:underline">
+              LinkedIn
+            </a>
+          </p>
         </footer>
       </div>
 

@@ -1,9 +1,10 @@
 import React, { useMemo, useState } from 'react';
-import { CalendarDays, Clock3, BriefcaseBusiness, Plus, CheckCircle2, CircleDashed, XCircle } from 'lucide-react';
+import { CalendarDays, Clock3, BriefcaseBusiness, Plus, CheckCircle2, CircleDashed, XCircle, X } from 'lucide-react';
 import { ApplicationRecord } from '../types';
 import { Button } from './ui/Button';
 import { Card, CardHeader, PageHeader } from './ui/Card';
 import { StatusBadge } from './ui/StatusBadge';
+import { Input } from './ui/Field';
 
 interface ApplicationTrackerProps {
   applications: ApplicationRecord[];
@@ -19,6 +20,10 @@ const STATUS_META: Record<ApplicationRecord['status'], { label: string; variant:
 
 export const ApplicationTracker: React.FC<ApplicationTrackerProps> = ({ applications, onAddApplication }) => {
   const [statusFilter, setStatusFilter] = useState<'all' | ApplicationRecord['status']>('all');
+  const [isAdding, setIsAdding] = useState(false);
+  const [formJobTitle, setFormJobTitle] = useState('');
+  const [formCompany, setFormCompany] = useState('');
+  const [formUrl, setFormUrl] = useState('');
 
   const visibleApplications = useMemo(() => {
     const sorted = [...applications].sort((a, b) => new Date(b.appliedAt).getTime() - new Date(a.appliedAt).getTime());
@@ -26,22 +31,32 @@ export const ApplicationTracker: React.FC<ApplicationTrackerProps> = ({ applicat
     return sorted.filter((application) => application.status === statusFilter);
   }, [applications, statusFilter]);
 
-  const addSampleApplication = () => {
-    if (!onAddApplication) return;
+  const resetForm = () => {
+    setFormJobTitle('');
+    setFormCompany('');
+    setFormUrl('');
+    setIsAdding(false);
+  };
 
-    const sample: ApplicationRecord = {
-      id: `sample-${Date.now()}`,
-      jobTitle: 'Frontend Developer (React / TypeScript)',
-      company: 'Northwind Studio',
-      source: 'OLX / Pracuj.pl',
-      status: 'applied',
+  // Every field here is what the user actually typed. Nothing is invented — an
+  // application record with a fabricated title, company or "wysłana" status is
+  // worse than no record at all (see "0-Hallucinacji" w AGENTS.md §8.3).
+  const handleSubmitManualApplication = () => {
+    if (!onAddApplication || !formJobTitle.trim() || !formCompany.trim()) return;
+
+    onAddApplication({
+      id: `${Date.now()}`,
+      jobTitle: formJobTitle.trim(),
+      company: formCompany.trim(),
+      source: 'manual',
+      status: 'saved',
       appliedAt: new Date().toISOString(),
-      matchScore: 84,
-      notes: 'Aplikacja wysłana po weryfikacji wymagań i dojazdu.',
-      url: 'https://example.com/offer',
-    };
+      matchScore: 0,
+      notes: undefined,
+      url: formUrl.trim() || undefined,
+    });
 
-    onAddApplication(sample);
+    resetForm();
   };
 
   return (
@@ -51,11 +66,66 @@ export const ApplicationTracker: React.FC<ApplicationTrackerProps> = ({ applicat
         title="Tracker aplikacji"
         description="Osobna lista aplikacji z datą i godziną wysłania — bez agresywnych popupów typu Indeed."
         actions={
-          <Button size="sm" icon={Plus} variant="primary" onClick={addSampleApplication}>
-            Dodaj aplikację
-          </Button>
+          onAddApplication && (
+            <Button size="sm" icon={Plus} variant="primary" onClick={() => setIsAdding(true)}>
+              Dodaj aplikację
+            </Button>
+          )
         }
       />
+
+      {isAdding && (
+        <Card>
+          <CardHeader
+            icon={Plus}
+            title="Nowa aplikacja"
+            subtitle="Wpisz dane oferty, do której faktycznie aplikujesz."
+            accent="brand"
+            actions={
+              <Button size="sm" variant="ghost" icon={X} onClick={resetForm}>
+                Anuluj
+              </Button>
+            }
+          />
+          <div className="mt-4 grid gap-3 sm:grid-cols-2">
+            <Input
+              label="Stanowisko"
+              required
+              value={formJobTitle}
+              onChange={(e) => setFormJobTitle(e.target.value)}
+              placeholder="np. Senior Frontend Developer"
+            />
+            <Input
+              label="Firma"
+              required
+              value={formCompany}
+              onChange={(e) => setFormCompany(e.target.value)}
+              placeholder="np. Northwind Studio"
+            />
+            <Input
+              label="Link do oferty (opcjonalnie)"
+              wrapClassName="sm:col-span-2"
+              value={formUrl}
+              onChange={(e) => setFormUrl(e.target.value)}
+              placeholder="https://..."
+            />
+          </div>
+          <div className="mt-4 flex justify-end gap-2">
+            <Button size="sm" variant="ghost" onClick={resetForm}>
+              Anuluj
+            </Button>
+            <Button
+              size="sm"
+              variant="primary"
+              icon={Plus}
+              disabled={!formJobTitle.trim() || !formCompany.trim()}
+              onClick={handleSubmitManualApplication}
+            >
+              Zapisz aplikację
+            </Button>
+          </div>
+        </Card>
+      )}
 
       <Card>
         <CardHeader
@@ -86,8 +156,13 @@ export const ApplicationTracker: React.FC<ApplicationTrackerProps> = ({ applicat
             <CircleDashed className="w-10 h-10 text-muted" />
             <h3 className="mt-4 text-lg font-bold text-ink">Brak zapisanych aplikacji</h3>
             <p className="mt-2 max-w-md text-sm text-muted">
-              Zapisz pierwszą aplikację z poziomu oferty i ta lista pokaże datę, godzinę oraz status bez agresywnego modalnego flow.
+              Zapisz pierwszą aplikację z poziomu oferty (przycisk „Zapisz aplikację" w zakładce Dopasuj Ofertę) albo dodaj ją ręcznie poniżej.
             </p>
+            {onAddApplication && !isAdding && (
+              <Button className="mt-4" size="sm" icon={Plus} variant="outline" onClick={() => setIsAdding(true)}>
+                Dodaj ręcznie
+              </Button>
+            )}
           </div>
         </Card>
       ) : (
@@ -124,7 +199,10 @@ export const ApplicationTracker: React.FC<ApplicationTrackerProps> = ({ applicat
                     {application.status === 'applied' ? <CheckCircle2 className="w-4 h-4 text-success-fg" /> : null}
                     {application.status === 'rejected' ? <XCircle className="w-4 h-4 text-danger-fg" /> : null}
                     {application.status !== 'applied' && application.status !== 'rejected' ? <CircleDashed className="w-4 h-4 text-warning-fg" /> : null}
-                    <span>Match: {application.matchScore}%</span>
+                    {/* matchScore is 0 both for "no keywords matched" and for "never
+                        analyzed against an offer" (manual entries) — showing "Match: 0%"
+                        for the latter would read as a real, computed zero. */}
+                    <span>Match: {application.matchScore > 0 ? `${application.matchScore}%` : 'brak analizy'}</span>
                   </div>
 
                   {application.url && (

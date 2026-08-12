@@ -2,6 +2,7 @@ import { GoogleGenAI, Type } from "@google/genai";
 import { z } from "zod";
 import { MasterVault } from "../types";
 import { parseTextToMasterVault } from "../lib/cvUniversalParser";
+import { parseJobDescriptionLocal } from "../lib/jdParser";
 import { UNIVERSAL_CV_REFRAMING_SYSTEM_PROMPT } from "../data/universalCvReframingPrompt";
 import { ATS_CV_REFRAMING_SYSTEM_PROMPT } from "../data/atsCvReframingPrompt";
 
@@ -501,9 +502,47 @@ INSTRUKCJA (KROK 5 - REFRAMING FAZ):
 }
 
 /**
+ * Maps the local, token-free JD parser's output onto the shape the Gemini-backed
+ * parser normally returns, so callers (server routes, frontend) don't need a second
+ * code path when Gemini is unavailable or rate-limited. Only data actually found in
+ * the ad is included — no field is back-filled with a guess (0-Hallucination).
+ */
+function mapLocalJdToGeminiShape(rawJdText: string): z.infer<typeof jobDescriptionResponseSchema> {
+  const local = parseJobDescriptionLocal(rawJdText);
+
+  const languages = (local.languagesRequired || []).map((entry) => {
+    const match = entry.match(/^(.+?)\s*\(([^)]+)\)\s*$/);
+    return match
+      ? { language: match[1].trim(), level: match[2].trim() }
+      : { language: entry.trim(), level: "" };
+  });
+
+  return {
+    jobTitle: local.jobTitle || "Specjalista",
+    companyName: local.companyName || "Firma",
+    seniorityLevel: local.seniorityLevel || "Mid / Senior",
+    requiredHardSkills: local.requiredHardSkills,
+    toolsAndTech: local.toolsAndTech,
+    niceToHaveSkills: [],
+    languages,
+    dealbreakerWarnings: [],
+    benefitsList: local.benefits || [],
+    salaryRange: local.salaryRange || "Nie podano",
+    workModel: local.workModel || "Hybrydowa",
+    cleanBodyText: rawJdText,
+  };
+}
+
+/**
  * Server-side function: Parse Job Description text into structured requirements JSON
  */
 export async function parseJobDescriptionWithGemini(rawJdText: string): Promise<any> {
+  const hasGeminiKey = !!process.env.GEMINI_API_KEY && process.env.GEMINI_API_KEY.trim() !== "";
+  if (!hasGeminiKey) {
+    return mapLocalJdToGeminiShape(rawJdText);
+  }
+
+  try {
   const ai = getGeminiClient();
 
   const prompt = `
@@ -580,6 +619,10 @@ Zwróć odpowiedź WYŁĄCZNIE jako obiekt JSON.
     workModel: "Hybrydowa",
     cleanBodyText: rawJdText,
   });
+  } catch (err) {
+    console.warn("Gemini JD parsing failed, using local parser fallback:", err);
+    return mapLocalJdToGeminiShape(rawJdText);
+  }
 }
 
 /**
