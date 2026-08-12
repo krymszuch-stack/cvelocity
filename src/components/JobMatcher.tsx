@@ -153,6 +153,29 @@ export const JobMatcher: React.FC<JobMatcherProps> = ({
     }
   };
 
+  const isNewUser = !vault.personalInfo.fullName && !vault.personalInfo.email && !vault.history.length && !vault.education.length && !vault.skillsMatrix.hardSkills.length && !vault.skillsMatrix.toolsAndTech.length;
+
+  const onboardingSteps = [
+    {
+      title: '1. Uzupełnij profil',
+      description: 'Dodaj swoje dane, doświadczenie i stack technologi, żeby dopasowanie było trafne od pierwszej oferty.',
+      action: () => onSwitchTab?.('vault'),
+      icon: FolderOpen,
+    },
+    {
+      title: '2. Wczytaj CV',
+      description: 'Zaimportuj PDF, DOCX albo wklej CV, aby SkillVault uzupełnił brakujące dane i nauczył się profilu.',
+      action: () => onSwitchTab?.('parser'),
+      icon: FileText,
+    },
+    {
+      title: '3. Porównaj ofertę',
+      description: 'Wklej link do ogłoszenia z OLX, Pracuj.pl, No Fluff Jobs lub innych portali i zrób szybki match.',
+      action: () => setStartChoice('offer'),
+      icon: LinkIcon,
+    },
+  ];
+
   const quickStartOptions = [
     {
       key: 'offer' as const,
@@ -182,6 +205,43 @@ export const JobMatcher: React.FC<JobMatcherProps> = ({
       {startChoice === null && (
         <Card className="overflow-hidden relative">
           <div className="relative p-5 sm:p-6">
+            {isNewUser && (
+              <div className="mb-6 rounded-2xl border border-brand-500/25 bg-brand-soft p-4 sm:p-5">
+                <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                  <div>
+                    <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-brand-fg">Nowy użytkownik</p>
+                    <h2 className="mt-2 text-2xl font-black tracking-tight text-ink">Witaj w SkillVault. Zacznij w 3 krokach.</h2>
+                  </div>
+                  <Button variant="primary" size="sm" iconRight={ArrowRight} onClick={() => setStartChoice('offer')}>
+                    Zacznij od oferty
+                  </Button>
+                </div>
+
+                <div className="mt-4 grid gap-3 lg:grid-cols-3">
+                  {onboardingSteps.map((step) => {
+                    const Icon = step.icon;
+                    return (
+                      <button
+                        key={step.title}
+                        type="button"
+                        onClick={step.action}
+                        className="text-left rounded-xl border border-brand-500/20 bg-surface/80 p-3 transition-all duration-150 hover:-translate-y-0.5 hover:border-brand-500/35"
+                      >
+                        <div className="flex items-center justify-between gap-2">
+                          <span className="flex h-9 w-9 items-center justify-center rounded-lg bg-brand-soft text-brand-fg">
+                            <Icon className="w-4 h-4" />
+                          </span>
+                          <ArrowRight className="w-4 h-4 text-subtle" />
+                        </div>
+                        <h3 className="mt-3 text-sm font-bold text-ink">{step.title}</h3>
+                        <p className="mt-1 text-xs leading-relaxed text-muted">{step.description}</p>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+
             <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
               <div>
                 <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-subtle">Szybki start</p>
