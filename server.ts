@@ -138,10 +138,13 @@ const ALLOWED_ORIGINS = new Set(
  * the service runs as a single instance.
  */
 const RATE_LIMIT_WINDOW_MS = 15 * 60 * 1000;
-const RATE_LIMIT_MAX = Number(process.env.RATE_LIMIT_MAX) || 20;
+const RATE_LIMIT_MAX = process.env.RATE_LIMIT_MAX !== undefined && Number.isFinite(Number(process.env.RATE_LIMIT_MAX))
+  ? Number(process.env.RATE_LIMIT_MAX)
+  : 20;
 const rateLimitHits = new Map<string, number[]>();
 
 function isRateLimited(ip: string): boolean {
+  if (RATE_LIMIT_MAX <= 0) return false;
   const now = Date.now();
   const recent = (rateLimitHits.get(ip) || []).filter((t) => now - t < RATE_LIMIT_WINDOW_MS);
   recent.push(now);
@@ -153,7 +156,15 @@ function isRateLimited(ip: string): boolean {
       if (times.every((t) => now - t >= RATE_LIMIT_WINDOW_MS)) rateLimitHits.delete(key);
     }
   }
-  return recent.length > RATE_LIMIT_MAX;
+  return recent.length >= RATE_LIMIT_MAX;
+}
+
+function formatApiError(defaultMessage: string, err: any) {
+  const isDev = process.env.NODE_ENV !== "production";
+  return {
+    error: defaultMessage,
+    ...(isDev ? { details: err?.message || String(err) } : {}),
+  };
 }
 
 /** Per-attempt timeout for outbound scraping. Render kills a request at ~100s. */
@@ -288,16 +299,23 @@ async function startServer() {
     if (req.path === "/health") return next();
     const ip = req.ip || req.socket.remoteAddress || "unknown";
     if (isRateLimited(ip)) {
+      res.setHeader("Retry-After", "900");
       return res.status(429).json({
-        error: "Zbyt wiele żądań. Odczekaj kilka minut i spróbuj ponownie.",
+        error: "Zbyt wiele żądań. Odczekaj 15 minut i spróbuj ponownie.",
       });
     }
     next();
   });
 
   // API Route: Health Check
-  app.get("/api/health", (req, res) => {
-    res.json({ status: "ok", service: "SkillVault Core API", timestamp: new Date().toISOString() });
+  app.get("/api/health", (_req, res) => {
+    const hasGeminiKey = !!process.env.GEMINI_API_KEY;
+    res.status(hasGeminiKey ? 200 : 503).json({
+      status: hasGeminiKey ? "ok" : "degraded",
+      gemini: hasGeminiKey ? "ok" : "missing-key",
+      service: "SkillVault Core API",
+      timestamp: new Date().toISOString(),
+    });
   });
 
   // API Route: Parse Raw Resume Text into Master Vault JSON
@@ -312,10 +330,7 @@ async function startServer() {
       res.json({ success: true, parsedVault, data: parsedVault });
     } catch (err: any) {
       console.error("Error in /api/parse-cv:", err);
-      res.status(500).json({
-        error: "Nie udało się sparsować dokumentu przez API Gemini.",
-        details: err?.message || String(err),
-      });
+      res.status(502).json(formatApiError("Nie udało się sparsować dokumentu przez API Gemini.", err));
     }
   });
 
@@ -331,10 +346,7 @@ async function startServer() {
       res.json({ success: true, parsedJd });
     } catch (err: any) {
       console.error("Error in /api/parse-jd:", err);
-      res.status(500).json({
-        error: "Nie udało się sparsować ogłoszenia o pracę.",
-        details: err?.message || String(err),
-      });
+      res.status(502).json(formatApiError("Nie udało się sparsować ogłoszenia o pracę.", err));
     }
   });
 
@@ -509,8 +521,7 @@ async function startServer() {
       console.error("Error fetching JD URL:", err);
       res.status(500).json({
         success: false,
-        error: "Nie udało się pobrać treści z podanego adresu URL.",
-        details: err?.message || String(err),
+        ...formatApiError("Nie udało się pobrać treści z podanego adresu URL.", err),
       });
     }
   });
@@ -519,23 +530,23 @@ async function startServer() {
   app.post("/api/delta-optimize", async (req, res) => {
     try {
       const { missingKeywords, existingBullet, targetRole } = req.body;
-      if (!existingBullet) {
-        return res.status(400).json({ error: "Brak punktora do optymalizacji." });
+      if (!existingBullet || typeof existingBullet !== "string") {
+        return res.status(400).json({ error: "Brak prawidłowego punktoru (existingBullet) do optymalizacji." });
+      }
+      if (missingKeywords !== undefined && !Array.isArray(missingKeywords)) {
+        return res.status(400).json({ error: "Pole missingKeywords musi być tablicą haseł." });
       }
 
       const result = await optimizeDeltaPhrases(
         missingKeywords || [],
         existingBullet,
-        targetRole || "Oprogramowanie / Specjalista"
+        typeof targetRole === "string" ? targetRole : "Oprogramowanie / Specjalista"
       );
 
       res.json({ success: true, ...result });
     } catch (err: any) {
       console.error("Error in /api/delta-optimize:", err);
-      res.status(500).json({
-        error: "Błąd podczas wywołania Delta Prompting w Gemini.",
-        details: err?.message || String(err),
-      });
+      res.status(500).json(formatApiError("Błąd podczas wywołania Delta Prompting w Gemini.", err));
     }
   });
 
@@ -556,10 +567,7 @@ async function startServer() {
       res.json({ success: true, advice });
     } catch (err: any) {
       console.error("Error in /api/advisor/teach:", err);
-      res.status(500).json({
-        error: "Błąd podczas generowania porady w Doradcy Gemini AI.",
-        details: err?.message || String(err),
-      });
+      res.status(500).json(formatApiError("Błąd podczas generowania porady w Doradcy Gemini AI.", err));
     }
   });
 
@@ -570,18 +578,15 @@ async function startServer() {
 
       const coverLetter = await generateCoverLetterWithFlash(
         vault || {},
-        targetRole || "Specjalista",
-        companyName || "Firma",
-        jobDescription || ""
+        typeof targetRole === "string" ? targetRole : "Specjalista",
+        typeof companyName === "string" ? companyName : "Firma",
+        typeof jobDescription === "string" ? jobDescription : ""
       );
 
       res.json({ success: true, coverLetter });
     } catch (err: any) {
       console.error("Error in /api/generate-cover-letter:", err);
-      res.status(500).json({
-        error: "Błąd podczas generowania listu motywacyjnego przez Gemini Flash.",
-        details: err?.message || String(err),
-      });
+      res.status(500).json(formatApiError("Błąd podczas generowania listu motywacyjnego przez Gemini Flash.", err));
     }
   });
 

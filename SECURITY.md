@@ -2,7 +2,7 @@
 
 ## Overview & Commitment
 
-Security and data privacy are foundational principles of **SkillVault**. SkillVault operates on a **Zero-Knowledge, Client-Side Encryption** model (AES-256-GCM with PBKDF2 600,000 iterations). Your raw personal data, credentials, and MasterVault facts remain encrypted at all times on the client side and are never stored in plaintext on central servers.
+Security and data privacy are foundational principles of **SkillVault**. SkillVault stores user CV profiles and MasterVault data locally in browser `localStorage`. Authentication passwords are hashed on the client side using PBKDF2 (SHA-256) with 600,000 iterations and a unique salt per account. Remote AI features send job description texts and CV highlights strictly over HTTPS to serverless backend endpoints powered by the Google Gemini API, where requests are processed statelessly without central database storage.
 
 ---
 

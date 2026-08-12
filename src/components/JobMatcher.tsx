@@ -24,20 +24,17 @@ interface JobMatcherProps {
 }
 
 export const JobMatcher: React.FC<JobMatcherProps> = ({ vault, onUpdateStats, onUpdateVault, onOpenAdvisor }) => {
-  const [jobTitle, setJobTitle] = useState('Senior Full-Stack Engineer & Cloud Systems Architect');
-  const [companyName, setCompanyName] = useState('TechGrowth Inc.');
-  const [jobDescription, setJobDescription] = useState(
-    `Poszukujemy doświadczonego Inżyniera Oprogramowania (Senior Full-Stack Engineer), który dołączy do naszego zespołu.
+  const [jobTitle, setJobTitle] = useState('');
+  const [companyName, setCompanyName] = useState('');
+  const [jobDescription, setJobDescription] = useState('');
 
-Wymagania kluczowe:
-- Min. 5 lat doświadczenia w TypeScript, React.js oraz Node.js (Express).
-- Doświadczenie w optymalizacji zapytań SQL, baz danych PostgreSQL i Redis.
-- Znajomość architektury mikroserwisów, konteneryzacji (Docker, Kubernetes) oraz CI/CD.
-- Znajomość systemów chmurowych (AWS/GCP).
-- Umiejętność kierowania zespołem technologicznym (Tech Lead) i wprowadzania praktyk Code Review.
-- Język angielski na poziomie C1.
-- Prawo jazdy kat. B (Wymóg konieczny).`
-  );
+  const handleLoadSampleOffer = () => {
+    setJobTitle('Senior Full-Stack Engineer & Cloud Systems Architect');
+    setCompanyName('TechGrowth Inc.');
+    setJobDescription(
+      `Poszukujemy doświadczonego Inżyniera Oprogramowania (Senior Full-Stack Engineer), który dołączy do naszego zespołu.\n\nWymagania kluczowe:\n- Min. 5 lat doświadczenia w TypeScript, React.js oraz Node.js (Express).\n- Doświadczenie w optymalizacji zapytań SQL, baz danych PostgreSQL i Redis.\n- Znajomość architektury mikroserwisów, konteneryzacji (Docker, Kubernetes) oraz CI/CD.\n- Znajomość systemów chmurowych (AWS/GCP).\n- Umiejętność kierowania zespołem technologicznym (Tech Lead) i wprowadzania praktyk Code Review.\n- Język angielski na poziomie C1.\n- Prawo jazdy kat. B (Wymóg konieczny).`
+    );
+  };
 
   const [jdUrlInput, setJdUrlInput] = useState('');
   const [isFetchingUrl, setIsFetchingUrl] = useState(false);
@@ -288,14 +285,25 @@ Wymagania kluczowe:
               />
             </div>
 
-            <Textarea
-              label="Treść ogłoszenia o pracę"
-              rows={7}
-              value={jobDescription}
-              onChange={(e) => setJobDescription(e.target.value)}
-              placeholder="Wklej pełny tekst wymagań i zakresu zadań…"
-              className="font-mono text-xs"
-            />
+            <div>
+              <div className="flex items-center justify-between mb-1.5">
+                <span className="text-xs font-medium text-muted">Treść ogłoszenia o pracę</span>
+                <button
+                  type="button"
+                  onClick={handleLoadSampleOffer}
+                  className="text-xs font-medium text-brand-500 hover:underline"
+                >
+                  Wypełnij przykładową ofertą (IT)
+                </button>
+              </div>
+              <Textarea
+                rows={7}
+                value={jobDescription}
+                onChange={(e) => setJobDescription(e.target.value)}
+                placeholder="Wklej tutaj pełną treść ogłoszenia o pracę..."
+                className="font-mono text-xs"
+              />
+            </div>
 
             <div className="flex justify-end">
               <Button size="sm" variant="outline" icon={Search} onClick={handleAnalyzeText}>

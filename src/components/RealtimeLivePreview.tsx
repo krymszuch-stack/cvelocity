@@ -2,7 +2,7 @@ import React, { useMemo } from 'react';
 import { MasterVault, TailoredResume, CoverLetter, AtsCheckResult, InterviewCheatSheet } from '../types';
 import { fillSlotSentence, extractSlotsFromHighlight, eliminateSlogans } from '../lib/slotFillingEngine';
 import { rankExperienceByRelevance, rankHighlightsByRelevance } from '../lib/relevanceRanking';
-import { simulateAtsCheck } from '../lib/atsSimulator';
+import { simulateAtsCheck, extractDynamicJdPhrases } from '../lib/atsSimulator';
 import { generateAntiTemplateCoverLetter } from '../lib/coverLetterEngine';
 import { parseJobDescriptionLocal } from '../lib/jdParser';
 import { buildLocalInterviewCheatSheet } from '../lib/interviewCheatSheetEngine';

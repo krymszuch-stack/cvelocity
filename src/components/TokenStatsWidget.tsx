@@ -1,8 +1,7 @@
 import React from 'react';
-import { Cpu, DollarSign, RotateCcw, CheckCircle2, Zap } from 'lucide-react';
+import { Zap, Cpu, DollarSign, RotateCcw, CheckCircle2 } from 'lucide-react';
 import { TokenStats } from '../types';
 import { Modal } from './ui/Modal';
-import { StatTile } from './ui/Feedback';
 import { Button } from './ui/Button';
 
 interface TokenStatsWidgetProps {
@@ -18,8 +17,6 @@ export const TokenStatsWidget: React.FC<TokenStatsWidgetProps> = ({
   stats,
   onResetStats,
 }) => {
-  if (!isOpen) return null;
-
   const totalHits = stats.localSlotHits + stats.cacheHits + stats.geminiDeltaCalls || 1;
   const zeroTokenHits = stats.localSlotHits + stats.cacheHits;
   const zeroTokenPercent = Math.round((zeroTokenHits / totalHits) * 100);
@@ -33,19 +30,20 @@ export const TokenStatsWidget: React.FC<TokenStatsWidgetProps> = ({
       icon={Zap}
       size="md"
       footer={
-        <div className="flex w-full justify-between items-center">
-          <button
+        <div className="flex justify-between items-center w-full">
+          <Button
+            variant="danger"
+            size="sm"
+            icon={RotateCcw}
             onClick={onResetStats}
-            className="flex items-center space-x-1.5 text-xs text-danger-500 font-bold hover:text-danger-600 transition-colors"
           >
-            <RotateCcw className="w-3.5 h-3.5" />
-            <span>Zresetuj Statystyki</span>
-          </button>
+            Zresetuj Statystyki
+          </Button>
 
           <Button
-            onClick={onClose}
             variant="primary"
             size="sm"
+            onClick={onClose}
           >
             Zamknij
           </Button>
@@ -134,3 +132,4 @@ export const TokenStatsWidget: React.FC<TokenStatsWidgetProps> = ({
     </Modal>
   );
 };
+

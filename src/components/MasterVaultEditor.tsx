@@ -47,14 +47,8 @@ import {
   Stethoscope,
 } from 'lucide-react';
 import { AdvisorButton } from './ui/AdvisorButton';
-import * as pdfjsLib from 'pdfjs-dist';
-import mammoth from 'mammoth';
-
-// Configure worker for PDF.js using jsdelivr CDN matching exact installed version (.mjs for pdfjs-dist v4+)
-if (typeof window !== 'undefined' && pdfjsLib) {
-  const version = pdfjsLib.version || '6.1.200';
-  pdfjsLib.GlobalWorkerOptions.workerSrc = `https://cdn.jsdelivr.net/npm/pdfjs-dist@${version}/build/pdf.worker.min.mjs`;
-}
+import { Input, Textarea } from './ui/Field';
+import { extractTextFromAnyFile } from '../lib/cvUniversalParser';
 import { saveVaultToLocalStorage } from '../lib/vaultCrypto';
 import { AutocompleteInput } from './AutocompleteInput';
 import {
@@ -474,6 +468,19 @@ export const MasterVaultEditor: React.FC<MasterVaultEditorProps> = ({ vault, onC
     });
   };
 
+  const updateCertification = (certId: string, field: keyof Certification, value: string) => {
+    updateDraft({
+      ...draftVault,
+      skillsMatrix: {
+        ...draftVault.skillsMatrix,
+        certifications: (draftVault.skillsMatrix.certifications || []).map((c) =>
+          c.id === certId ? { ...c, [field]: value } : c
+        ),
+      },
+      updatedAt: new Date().toISOString(),
+    });
+  };
+
   const removeCertification = (certId: string) => {
     updateDraft({
       ...draftVault,
@@ -481,6 +488,42 @@ export const MasterVaultEditor: React.FC<MasterVaultEditorProps> = ({ vault, onC
         ...draftVault.skillsMatrix,
         certifications: draftVault.skillsMatrix.certifications.filter((c) => c.id !== certId),
       },
+      updatedAt: new Date().toISOString(),
+    });
+  };
+
+  // Projects CRUD (ADR-77)
+  const addProject = () => {
+    const newProj: Project = {
+      id: 'proj_' + Date.now(),
+      name: 'Nowy Projekt',
+      role: 'Twórca / Developer',
+      description: 'Opis projektu i osiągniętych rezultatów...',
+      techStack: ['React', 'TypeScript'],
+      metrics: '',
+      link: '',
+    };
+    updateDraft({
+      ...draftVault,
+      projects: [...(draftVault.projects || []), newProj],
+      updatedAt: new Date().toISOString(),
+    });
+  };
+
+  const updateProject = (projId: string, field: keyof Project, value: any) => {
+    updateDraft({
+      ...draftVault,
+      projects: (draftVault.projects || []).map((p) =>
+        p.id === projId ? { ...p, [field]: value } : p
+      ),
+      updatedAt: new Date().toISOString(),
+    });
+  };
+
+  const removeProject = (projId: string) => {
+    updateDraft({
+      ...draftVault,
+      projects: (draftVault.projects || []).filter((p) => p.id !== projId),
       updatedAt: new Date().toISOString(),
     });
   };
@@ -600,25 +643,6 @@ export const MasterVaultEditor: React.FC<MasterVaultEditorProps> = ({ vault, onC
     });
   };
 
-  // Helper to read PDF text in MasterVaultEditor
-  const extractPdfText = async (file: File): Promise<string> => {
-    const arrayBuffer = await file.arrayBuffer();
-    const loadingTask = pdfjsLib.getDocument({
-      data: new Uint8Array(arrayBuffer),
-      cMapUrl: 'https://cdn.jsdelivr.net/npm/pdfjs-dist@6.1.200/cmaps/',
-      cMapPacked: true,
-    });
-    const pdfDoc = await loadingTask.promise;
-    let fullText = '';
-    for (let i = 1; i <= pdfDoc.numPages; i++) {
-      const page = await pdfDoc.getPage(i);
-      const textContent = await page.getTextContent();
-      const pageStrings = textContent.items.map((item: any) => item.str);
-      fullText += pageStrings.join(' ') + '\n';
-    }
-    return fullText;
-  };
-
   const handleModalFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -628,17 +652,7 @@ export const MasterVaultEditor: React.FC<MasterVaultEditorProps> = ({ vault, onC
     setPasterParsedData(null);
 
     try {
-      const fileName = file.name.toLowerCase();
-      let extracted = '';
-      if (fileName.endsWith('.pdf')) {
-        extracted = await extractPdfText(file);
-      } else if (fileName.endsWith('.docx') || fileName.endsWith('.doc')) {
-        const arrayBuffer = await file.arrayBuffer();
-        const res = await mammoth.extractRawText({ arrayBuffer });
-        extracted = res.value || '';
-      } else {
-        extracted = await file.text();
-      }
+      const { text: extracted } = await extractTextFromAnyFile(file);
 
       if (!extracted || extracted.trim().length < 15) {
         throw new Error('Plik nie zawiera dostatecznej ilości tekstu (minimum 15 znaków).');
@@ -2682,34 +2696,110 @@ export const MasterVaultEditor: React.FC<MasterVaultEditorProps> = ({ vault, onC
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               {draftVault.skillsMatrix.certifications.map((cert) => (
-                <div key={cert.id} className="bg-white border border-slate-200 p-3.5 rounded-xl relative space-y-1 shadow-2xs">
+                <div key={cert.id} className="bg-white border border-slate-200 p-3.5 rounded-xl relative space-y-2 shadow-2xs">
                   <button
                     onClick={() => removeCertification(cert.id)}
                     className="absolute top-2.5 right-2.5 text-slate-400 hover:text-rose-600"
+                    title="Usuń certyfikat"
                   >
                     <Trash2 className="w-3.5 h-3.5" />
                   </button>
-                  <div className="font-bold text-xs text-slate-900 pr-6">{cert.name}</div>
-                  <div className="text-[11px] text-slate-500">{cert.issuer} ({cert.date || 'Brak daty'})</div>
+                  <Input
+                    label="Nazwa certyfikatu"
+                    value={cert.name}
+                    onChange={(e) => updateCertification(cert.id, 'name', e.target.value)}
+                    placeholder="np. AWS Certified Solutions Architect"
+                  />
+                  <div className="grid grid-cols-2 gap-2">
+                    <Input
+                      label="Instytucja / Wydawca"
+                      value={cert.issuer}
+                      onChange={(e) => updateCertification(cert.id, 'issuer', e.target.value)}
+                      placeholder="np. Amazon Web Services"
+                    />
+                    <Input
+                      label="Data uzyskania"
+                      value={cert.date || ''}
+                      onChange={(e) => updateCertification(cert.id, 'date', e.target.value)}
+                      placeholder="YYYY-MM"
+                    />
+                  </div>
+                  <Input
+                    label="URL weryfikacji / Badge (Opcjonalnie)"
+                    value={cert.url || ''}
+                    onChange={(e) => updateCertification(cert.id, 'url', e.target.value)}
+                    placeholder="https://credly.com/..."
+                  />
                 </div>
               ))}
             </div>
           </div>
 
-          {/* Projects */}
+          {/* Projects (ADR-77: Full CRUD) */}
           <div className="bg-slate-50 border border-slate-200 rounded-xl p-4 space-y-3">
-            <div className="flex items-center space-x-2 border-b border-slate-200 pb-2">
-              <FolderGit2 className="w-4 h-4 text-emerald-600" />
-              <h4 className="text-xs font-bold text-slate-800">Kluczowe Projekty Poboczne: {draftVault.projects.length}</h4>
+            <div className="flex items-center justify-between border-b border-slate-200 pb-2">
+              <div className="flex items-center space-x-2">
+                <FolderGit2 className="w-4 h-4 text-emerald-600" />
+                <h4 className="text-xs font-bold text-slate-800">Kluczowe Projekty Poboczne: {(draftVault.projects || []).length}</h4>
+              </div>
+              <button
+                onClick={addProject}
+                className="text-xs text-indigo-600 font-bold hover:underline flex items-center space-x-1"
+              >
+                <Plus className="w-3.5 h-3.5" />
+                <span>Dodaj Projekt</span>
+              </button>
             </div>
-            {draftVault.projects.map((proj) => (
-              <div key={proj.id} className="bg-white border border-slate-200 p-3 rounded-xl space-y-1 text-xs shadow-2xs">
-                <div className="font-bold text-slate-900 flex items-center justify-between">
-                  <span>{proj.name}</span>
-                  <span className="text-[10px] bg-slate-100 px-2 py-0.5 rounded text-slate-600 font-medium">{proj.role}</span>
+            {(draftVault.projects || []).map((proj) => (
+              <div key={proj.id} className="bg-white border border-slate-200 p-3.5 rounded-xl space-y-2.5 text-xs shadow-2xs relative">
+                <button
+                  onClick={() => removeProject(proj.id)}
+                  className="absolute top-2.5 right-2.5 text-slate-400 hover:text-rose-600"
+                  title="Usuń projekt"
+                >
+                  <Trash2 className="w-3.5 h-3.5" />
+                </button>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 pr-6">
+                  <Input
+                    label="Nazwa projektu"
+                    value={proj.name}
+                    onChange={(e) => updateProject(proj.id, 'name', e.target.value)}
+                    placeholder="np. SkillVault CLI"
+                  />
+                  <Input
+                    label="Rola w projekcie"
+                    value={proj.role}
+                    onChange={(e) => updateProject(proj.id, 'role', e.target.value)}
+                    placeholder="np. Autor / Lead Architect"
+                  />
                 </div>
-                <div className="text-slate-600 text-[11px]">{proj.description}</div>
-                {proj.metrics && <div className="text-success-700 font-mono font-bold text-[10px] pt-1 flex items-center gap-1"><BarChart3 className="w-3 h-3 shrink-0" />{proj.metrics}</div>}
+                <Textarea
+                  label="Opis projektu i osiągnięć"
+                  rows={2}
+                  value={proj.description}
+                  onChange={(e) => updateProject(proj.id, 'description', e.target.value)}
+                  placeholder="Krótki opis celu, architektury i rezultatów..."
+                />
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                  <Input
+                    label="Stack technologiczny (po przecinku)"
+                    value={(proj.techStack || []).join(', ')}
+                    onChange={(e) => updateProject(proj.id, 'techStack', e.target.value.split(',').map((s) => s.trim()).filter(Boolean))}
+                    placeholder="React, Node.js, TS"
+                  />
+                  <Input
+                    label="Metryka sukcesu / Wyniki"
+                    value={proj.metrics || ''}
+                    onChange={(e) => updateProject(proj.id, 'metrics', e.target.value)}
+                    placeholder="np. 500+ aktywne sesje"
+                  />
+                  <Input
+                    label="Link do repozytorium / Demo"
+                    value={proj.link || ''}
+                    onChange={(e) => updateProject(proj.id, 'link', e.target.value)}
+                    placeholder="https://github.com/..."
+                  />
+                </div>
               </div>
             ))}
           </div>

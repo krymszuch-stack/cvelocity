@@ -1,6 +1,9 @@
 import { describe, it, expect } from 'vitest';
 import { sanitizeTextInput, scanProfanity } from '../securityGuardrails';
-import { calculateAdvancedATSScore } from '../atsScorer';
+import { simulateAtsCheck } from '../atsSimulator';
+import { matchesKeyword } from '../keywordMatching';
+import { createEmptyVault } from '../sampleVault';
+import { TailoredResume } from '../../types';
 
 describe('Security Guardrails & ATS Scoring Suite', () => {
   it('powinien odfiltrować skrypty XSS i niebezpieczne URIs', () => {
@@ -20,17 +23,79 @@ describe('Security Guardrails & ATS Scoring Suite', () => {
   });
 
   it('powinien precyzyjnie wyliczyć wskaźnik ATS Score dla profilu CV', () => {
-    const mockVault: any = {
-      personalInfo: { title: 'Senior Frontend Developer', summary: 'Doświadczony inżynier oprogramowania' },
-      skillsMatrix: { hardSkills: ['React', 'TypeScript', 'Tailwind', 'Node.js'], tools: ['Git', 'Vite'] },
-      history: [{ id: '1', role: 'Frontend Dev', company: 'Tech', highlights: ['Tworzenie aplikacji React'] }],
+    const mockVault = createEmptyVault('Jan Kowalski', 'jan@example.com');
+    mockVault.personalInfo.title = 'Senior Frontend Developer';
+    mockVault.personalInfo.summary = 'Doświadczony inżynier oprogramowania';
+    mockVault.skillsMatrix.hardSkills = ['React', 'TypeScript', 'Tailwind', 'Node.js'];
+    mockVault.skillsMatrix.toolsAndTech = ['Git', 'Vite'];
+    mockVault.history = [
+      {
+        id: '1',
+        company: 'Tech',
+        role: 'Frontend Dev',
+        location: 'Warszawa',
+        startDate: '01/2022',
+        endDate: 'Obecnie',
+        isCurrent: true,
+        highlights: [
+          {
+            id: 'h1',
+            text: 'Tworzenie aplikacji React i TypeScript',
+            action: 'Tworzenie',
+            target: 'aplikacji React',
+            tool: 'TypeScript',
+            metric: 'wysoką jakość',
+            keywords: ['react', 'typescript'],
+          },
+        ],
+      },
+    ];
+
+    const mockResume: TailoredResume = {
+      targetJobTitle: 'Senior Frontend Developer',
+      companyName: 'Tech Corp',
+      summary: 'Inżynier Frontend',
+      atsScore: 0,
+      skillsMatched: {
+        hardSkills: ['React', 'TypeScript'],
+        toolsAndTech: ['Git'],
+        softSkills: [],
+      },
+      selectedHighlights: [],
     };
 
     const jobDescription = 'Poszukujemy Senior Frontend Developer ze znajomością React, TypeScript oraz Tailwind';
-    const atsScores = calculateAdvancedATSScore(mockVault, jobDescription, 'Senior Frontend Developer');
+    const atsResult = simulateAtsCheck(mockResume, mockVault, jobDescription);
 
-    expect(atsScores.overallScore).toBeGreaterThan(60);
-    expect(atsScores.workdayScore).toBeGreaterThan(60);
-    expect(Array.isArray(atsScores.missingKeywords)).toBe(true);
+    expect(atsResult.overallScore).toBeGreaterThan(60);
+    expect(Array.isArray(atsResult.missingHardSkills)).toBe(true);
+  });
+
+  it('powinien poprawnie wykrywać pusty vault i nie przyznawać 82% ATS (ADR-16)', () => {
+    const emptyVault = createEmptyVault();
+
+    const mockResume: TailoredResume = {
+      targetJobTitle: 'Developer',
+      companyName: 'Company',
+      summary: '',
+      atsScore: 0,
+      skillsMatched: {
+        hardSkills: [],
+        toolsAndTech: [],
+        softSkills: [],
+      },
+      selectedHighlights: [],
+    };
+
+    const atsResult = simulateAtsCheck(mockResume, emptyVault, 'Poszukujemy React Developer');
+    expect(atsResult.overallScore).toBe(0);
+    expect(atsResult.gapAnalysis[0]).toContain('Brak danych');
+  });
+
+  it('powinien zapobiegać fałszywym dopasowaniom "b2" z "b2b" oraz "git" z "digital" (ADR-52, ADR-91)', () => {
+    expect(matchesKeyword('Umowa B2B w firmie', 'b2')).toBe(false);
+    expect(matchesKeyword('Digital Marketing Manager', 'git')).toBe(false);
+    expect(matchesKeyword('Praca z repozytorium Git', 'git')).toBe(true);
+    expect(matchesKeyword('Wymagany angielski B2', 'b2')).toBe(true);
   });
 });

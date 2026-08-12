@@ -11,7 +11,6 @@ import {
   AlertTriangle,
   Trash2,
   Lightbulb,
-  Edit3,
   Cpu,
   ShieldCheck,
   Building2,
@@ -141,43 +140,43 @@ export const CoverLetterView: React.FC<CoverLetterViewProps> = ({
   };
 
   return (
-    <div className="bg-white border border-slate-200 rounded-2xl p-5 sm:p-6 text-slate-900 shadow-xs space-y-5 animate-fade-in">
+    <div className="bg-surface border border-line rounded-2xl p-5 sm:p-6 text-ink shadow-xs space-y-5 animate-fade-in">
       {/* Top Bar Header & Controls */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between border-b border-slate-100 pb-4 gap-4">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between border-b border-line pb-4 gap-4">
         <div className="flex items-center space-x-3">
-          <div className="p-2.5 bg-indigo-50 border border-indigo-200 rounded-xl text-indigo-600 shrink-0">
+          <div className="p-2.5 bg-brand-soft border border-brand-200 rounded-xl text-brand-fg shrink-0">
             <Layers className="w-5 h-5" />
           </div>
           <div>
             <div className="flex items-center space-x-2 flex-wrap gap-y-1">
-              <h2 className="text-base font-bold text-slate-900">List Motywacyjny</h2>
+              <h2 className="text-base font-bold text-ink">List Motywacyjny</h2>
               <span
                 className={`px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider flex items-center space-x-1 ${
                   generationMode === 'zero-token'
-                    ? 'bg-emerald-100 text-emerald-800 border border-emerald-300'
-                    : 'bg-purple-100 text-purple-800 border border-purple-300'
+                    ? 'bg-success-soft text-success-fg border border-success-500/30'
+                    : 'bg-brand-soft text-brand-fg border border-brand-300'
                 }`}
               >
                 {generationMode === 'zero-token' ? (
                   <>
-                    <Zap className="w-3 h-3 text-emerald-600" />
+                    <Zap className="w-3 h-3 text-success-fg" />
                     <span>Zero-Token</span>
                   </>
                 ) : (
                   <>
-                    <Sparkles className="w-3 h-3 text-purple-600" />
+                    <Sparkles className="w-3 h-3 text-brand-fg" />
                     <span>Gemini Flash</span>
                   </>
                 )}
               </span>
             </div>
-            <p className="text-xs text-slate-500 mt-0.5 flex items-center space-x-3">
+            <p className="text-xs text-muted mt-0.5 flex items-center space-x-3">
               <span className="flex items-center space-x-1">
-                <Briefcase className="w-3.5 h-3.5 text-slate-400" />
+                <Briefcase className="w-3.5 h-3.5 text-subtle" />
                 <span>{jobTitle || letter.targetJobTitle || 'Stanowisko'}</span>
               </span>
               <span className="flex items-center space-x-1">
-                <Building2 className="w-3.5 h-3.5 text-slate-400" />
+                <Building2 className="w-3.5 h-3.5 text-subtle" />
                 <span>{companyName || letter.companyName || 'Firma'}</span>
               </span>
             </p>
@@ -190,17 +189,17 @@ export const CoverLetterView: React.FC<CoverLetterViewProps> = ({
             <button
               type="button"
               onClick={() => onOpenAdvisor('Jak napisać list motywacyjny bez zbędnych sloganów?')}
-              className="px-3 py-2 bg-amber-50 hover:bg-amber-100 border border-amber-300 text-amber-800 rounded-xl text-xs font-bold flex items-center space-x-1.5 transition-all active:scale-95"
+              className="px-3 py-2 bg-warning-soft hover:bg-warning-soft/80 border border-warning-500/30 text-warning-fg rounded-xl text-xs font-bold flex items-center space-x-1.5 transition-all active:scale-95"
               title="Porada AI"
             >
-              <Lightbulb className="w-4 h-4 text-amber-500" />
+              <Lightbulb className="w-4 h-4 text-warning-fg" />
               <span>Porada</span>
             </button>
           )}
 
           <button
             onClick={handleCopy}
-            className="flex items-center space-x-1.5 px-4 py-2 bg-slate-900 hover:bg-slate-800 active:scale-95 text-white rounded-xl text-xs font-bold shadow-xs transition-all"
+            className="flex items-center space-x-1.5 px-4 py-2 bg-brand-600 hover:bg-brand-700 active:scale-95 text-white rounded-xl text-xs font-bold shadow-xs transition-all"
           >
             {copied ? <Check className="w-4 h-4 text-emerald-400" /> : <Copy className="w-4 h-4" />}
             <span>{copied ? 'Skopiowano!' : 'Kopiuj Tekst'}</span>
@@ -209,9 +208,9 @@ export const CoverLetterView: React.FC<CoverLetterViewProps> = ({
       </div>
 
       {/* Generator Selector Card: Zero-Token vs Gemini Flash */}
-      <div className="bg-slate-50 border border-slate-200 p-3.5 rounded-xl flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
-        <div className="text-xs font-bold text-slate-700 flex items-center space-x-1.5">
-          <Cpu className="w-4 h-4 text-indigo-600" />
+      <div className="bg-sunken border border-line p-3.5 rounded-xl flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
+        <div className="text-xs font-bold text-ink flex items-center space-x-1.5">
+          <Cpu className="w-4 h-4 text-brand-fg" />
           <span>Generowanie z profilu CV:</span>
         </div>
 
@@ -221,11 +220,11 @@ export const CoverLetterView: React.FC<CoverLetterViewProps> = ({
             disabled={isGeneratingAI}
             className={`px-3.5 py-2 rounded-xl text-xs font-bold flex items-center space-x-1.5 border transition-all active:scale-95 ${
               generationMode === 'zero-token'
-                ? 'bg-emerald-600 text-white border-emerald-700 shadow-xs'
-                : 'bg-white text-slate-700 border-slate-300 hover:bg-slate-100'
+                ? 'bg-success-600 text-white border-success-700 shadow-xs'
+                : 'bg-surface text-muted border-line hover:bg-sunken'
             }`}
           >
-            <Zap className="w-3.5 h-3.5 text-amber-300" />
+            <Zap className="w-3.5 h-3.5 text-warning-fg" />
             <span>Zero-Token z CV</span>
           </button>
 
@@ -234,14 +233,14 @@ export const CoverLetterView: React.FC<CoverLetterViewProps> = ({
             disabled={isGeneratingAI}
             className={`px-3.5 py-2 rounded-xl text-xs font-bold flex items-center space-x-1.5 border transition-all active:scale-95 ${
               generationMode === 'gemini-flash'
-                ? 'bg-purple-600 text-white border-purple-700 shadow-xs'
-                : 'bg-white text-slate-700 border-slate-300 hover:bg-slate-100'
+                ? 'bg-brand-600 text-white border-brand-700 shadow-xs'
+                : 'bg-surface text-muted border-line hover:bg-sunken'
             }`}
           >
             {isGeneratingAI ? (
-              <RefreshCw className="w-3.5 h-3.5 animate-spin text-purple-200" />
+              <RefreshCw className="w-3.5 h-3.5 animate-spin text-brand-200" />
             ) : (
-              <Sparkles className="w-3.5 h-3.5 text-purple-300" />
+              <Sparkles className="w-3.5 h-3.5 text-brand-300" />
             )}
             <span>{isGeneratingAI ? 'Generowanie...' : 'Gemini Flash'}</span>
           </button>
@@ -249,46 +248,46 @@ export const CoverLetterView: React.FC<CoverLetterViewProps> = ({
       </div>
 
       {aiError && (
-        <div className="p-3 bg-danger-50 border border-danger-500/30 text-danger-700 text-xs flex items-center justify-between">
+        <div className="p-3 bg-danger-soft border border-danger-500/30 text-danger-fg text-xs flex items-center justify-between rounded-xl">
           <span className="flex items-center gap-1.5"><AlertTriangle className="w-3.5 h-3.5 shrink-0" />{aiError}</span>
-          <button onClick={() => setAiError(null)} className="font-bold underline text-danger-700">Zamknij</button>
+          <button onClick={() => setAiError(null)} className="font-bold underline text-danger-fg">Zamknij</button>
         </div>
       )}
 
       {/* 3 Structured Sections Display with Live Editability */}
       <div className="space-y-4">
         {/* Section 1: Hook */}
-        <div className="bg-slate-50 border border-slate-200 p-4 rounded-xl space-y-2">
+        <div className="bg-sunken border border-line p-4 rounded-xl space-y-2">
           <div className="flex items-center justify-between">
             <div className="flex items-center space-x-2">
-              <span className="w-2.5 h-2.5 rounded-full bg-indigo-600"></span>
-              <span className="text-xs font-bold uppercase tracking-wider text-indigo-700">
+              <span className="w-2.5 h-2.5 rounded-full bg-brand-600"></span>
+              <span className="text-xs font-bold uppercase tracking-wider text-brand-fg">
                 1. Haczyk (Hook) – Odniesienie do wyzwań firmy & profilu kandydata
               </span>
             </div>
-            <span className="text-[10px] text-slate-400 italic">Edytowalne poniżej</span>
+            <span className="text-[10px] text-subtle italic">Edytowalne poniżej</span>
           </div>
           <textarea
             value={letter.hook}
             onChange={(e) => updateLetter({ hook: e.target.value })}
             rows={3}
-            className="w-full text-xs sm:text-sm text-slate-800 leading-relaxed font-sans bg-white p-3 rounded-lg border border-slate-300 focus:outline-hidden focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 resize-y"
+            className="w-full text-xs sm:text-sm text-ink leading-relaxed font-sans bg-surface p-3 rounded-lg border border-line focus:outline-none focus:border-brand-500 resize-y"
             placeholder="Wpisz treść haczyka..."
           />
         </div>
 
         {/* Section 2: Proof Points */}
-        <div className="bg-slate-50 border border-slate-200 p-4 rounded-xl space-y-2">
+        <div className="bg-sunken border border-line p-4 rounded-xl space-y-2">
           <div className="flex items-center justify-between">
             <div className="flex items-center space-x-2">
-              <span className="w-2.5 h-2.5 rounded-full bg-emerald-600"></span>
-              <span className="text-xs font-bold uppercase tracking-wider text-emerald-700">
+              <span className="w-2.5 h-2.5 rounded-full bg-success-600"></span>
+              <span className="text-xs font-bold uppercase tracking-wider text-success-fg">
                 2. Dowód (Proof) – Mierzalne osiągnięcia wyciągnięte z CV
               </span>
             </div>
             <button
               onClick={handleAddProofPoint}
-              className="px-2 py-1 bg-emerald-600 hover:bg-emerald-700 text-white rounded text-[11px] font-bold flex items-center space-x-1"
+              className="px-2 py-1 bg-success-600 hover:bg-success-700 text-white rounded text-[11px] font-bold flex items-center space-x-1"
             >
               <Plus className="w-3 h-3" />
               <span>Dodaj Punkt</span>
@@ -302,11 +301,11 @@ export const CoverLetterView: React.FC<CoverLetterViewProps> = ({
                   type="text"
                   value={point}
                   onChange={(e) => handleProofChange(idx, e.target.value)}
-                  className="flex-1 text-xs sm:text-sm text-slate-800 bg-white px-3 py-2 rounded-lg border border-slate-300 focus:outline-hidden focus:ring-2 focus:ring-emerald-500 font-medium"
+                  className="flex-1 text-xs sm:text-sm text-ink bg-surface px-3 py-2 rounded-lg border border-line focus:outline-none focus:border-success-500 font-medium"
                 />
                 <button
                   onClick={() => handleRemoveProofPoint(idx)}
-                  className="p-2 text-slate-400 hover:text-red-600 rounded-lg transition-colors"
+                  className="p-2 text-subtle hover:text-danger-fg rounded-lg transition-colors"
                   title="Usuń ten punkt"
                 >
                   <Trash2 className="w-4 h-4" />
@@ -317,11 +316,11 @@ export const CoverLetterView: React.FC<CoverLetterViewProps> = ({
         </div>
 
         {/* Section 3: Call to Action (CTA) */}
-        <div className="bg-slate-50 border border-slate-200 p-4 rounded-xl space-y-2">
+        <div className="bg-sunken border border-line p-4 rounded-xl space-y-2">
           <div className="flex items-center justify-between">
             <div className="flex items-center space-x-2">
-              <span className="w-2.5 h-2.5 rounded-full bg-amber-600"></span>
-              <span className="text-xs font-bold uppercase tracking-wider text-amber-700">
+              <span className="w-2.5 h-2.5 rounded-full bg-warning-600"></span>
+              <span className="text-xs font-bold uppercase tracking-wider text-warning-fg">
                 3. Call to Action (CTA) – Zaproszenie do kontaktu
               </span>
             </div>
@@ -330,22 +329,22 @@ export const CoverLetterView: React.FC<CoverLetterViewProps> = ({
             value={letter.callToAction}
             onChange={(e) => updateLetter({ callToAction: e.target.value })}
             rows={2}
-            className="w-full text-xs sm:text-sm text-slate-800 leading-relaxed font-sans bg-white p-3 rounded-lg border border-slate-300 focus:outline-hidden focus:ring-2 focus:ring-amber-500 resize-y"
+            className="w-full text-xs sm:text-sm text-ink leading-relaxed font-sans bg-surface p-3 rounded-lg border border-line focus:outline-none focus:border-warning-500 resize-y"
             placeholder="Wpisz wezwanie do działania..."
           />
         </div>
       </div>
 
       {/* Full Plain Text Preview & Copy Area */}
-      <div className="bg-slate-900 text-slate-100 p-5 rounded-xl space-y-3">
+      <div className="bg-raised text-ink p-5 rounded-xl space-y-3 border border-line">
         <div className="flex items-center justify-between">
-          <label className="text-xs font-bold uppercase tracking-wider text-indigo-300 flex items-center space-x-2">
-            <ShieldCheck className="w-4 h-4 text-emerald-400" />
+          <label className="text-xs font-bold uppercase tracking-wider text-brand-fg flex items-center space-x-2">
+            <ShieldCheck className="w-4 h-4 text-success-fg" />
             <span>Gotowa treść listu w formacie tekstowym:</span>
           </label>
           <button
             onClick={handleCopy}
-            className="px-3 py-1 bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg text-xs font-bold flex items-center space-x-1.5 transition-colors"
+            className="px-3 py-1 bg-brand-600 hover:bg-brand-500 text-white rounded-lg text-xs font-bold flex items-center space-x-1.5 transition-colors"
           >
             {copied ? <Check className="w-3.5 h-3.5 text-emerald-300" /> : <Copy className="w-3.5 h-3.5" />}
             <span>{copied ? 'Skopiowano!' : 'Kopiuj Tekst'}</span>
@@ -356,7 +355,7 @@ export const CoverLetterView: React.FC<CoverLetterViewProps> = ({
           value={letter.fullText}
           onChange={(e) => updateLetter({ fullText: e.target.value })}
           rows={10}
-          className="w-full font-sans text-xs sm:text-sm text-slate-100 bg-slate-950 p-4 rounded-lg border border-slate-800 leading-relaxed focus:outline-hidden focus:ring-1 focus:ring-indigo-500 font-mono resize-y"
+          className="w-full font-sans text-xs sm:text-sm text-ink bg-sunken p-4 rounded-lg border border-line leading-relaxed focus:outline-none focus:border-brand-500 font-mono resize-y"
         />
       </div>
     </div>

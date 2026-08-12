@@ -18,7 +18,7 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Setup Node.js
-        uses: actions/setup-node@v7
+        uses: actions/setup-node@v4
         with:
           node-version: '20'
           cache: 'npm'
@@ -31,6 +31,13 @@ jobs:
 
       - name: Run Unit Tests
         run: npm test
+
+      - name: Verify VITE_API_BASE_URL Variable
+        run: |
+          if [ -z "${{ vars.VITE_API_BASE_URL }}" ]; then
+            echo "ERROR: vars.VITE_API_BASE_URL is not configured in GitHub Repository Variables!"
+            exit 1
+          fi
 
       # build:client only — the server belongs on Render, and building it here
       # would put server.cjs back into dist/, which Firebase publishes.

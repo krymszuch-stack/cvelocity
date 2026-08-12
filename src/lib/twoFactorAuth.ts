@@ -1,5 +1,4 @@
 import * as OTPAuth from 'otpauth';
-import QRCode from 'qrcode';
 
 const ISSUER = 'SkillVault';
 
@@ -25,6 +24,8 @@ export async function generateTwoFactorSetup(accountLabel: string): Promise<TwoF
   });
 
   const otpauthUrl = totp.toString();
+  const QRCodeModule = await import('qrcode');
+  const QRCode = QRCodeModule.default || QRCodeModule;
   const qrCodeDataUrl = await QRCode.toDataURL(otpauthUrl, { margin: 1, width: 220 });
 
   return {

@@ -90,8 +90,8 @@ export function extractSlotsFromHighlight(highlight: HighlightMetric | string): 
     template: '{text}',
     action: firstWord,
     target: words.slice(1).join(' ') || text,
-    tool: parts[1] ? parts[1].trim() : '',
-    metric: parts[2] ? parts[2].trim() : '',
+    tool: '',
+    metric: '',
     keywords: words.filter(w => w.length > 4),
   };
 }

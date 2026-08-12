@@ -1,11 +1,9 @@
-import { Document, Packer, Paragraph, TextRun, HeadingLevel, AlignmentType, BorderStyle } from 'docx';
-import { saveAs } from 'file-saver';
+import type { Paragraph } from 'docx';
 import { MasterVault, LayeredFactItem } from '../types';
 
 /**
- * FILAR 3 & ZATWIERDZONE DYREKTYWY:
  * Native Microsoft Word (.docx) Exporter using docx & file-saver
- * Produces ATS-perfect OpenXML document layout.
+ * Produces ATS-perfect OpenXML document layout with full sections (ADR-56).
  */
 export async function downloadNativeDocxCv(
   vault: MasterVault,
@@ -13,6 +11,14 @@ export async function downloadNativeDocxCv(
   targetRole: string,
   companyName: string
 ): Promise<void> {
+  const [docx, fileSaverModule] = await Promise.all([
+    import('docx'),
+    import('file-saver'),
+  ]);
+
+  const { Document, Packer, Paragraph, TextRun, HeadingLevel, AlignmentType, BorderStyle } = docx;
+  const saveAs = fileSaverModule.saveAs || fileSaverModule.default || fileSaverModule;
+
   const docTitle = targetRole || vault.personalInfo.title || 'Specjalista';
   const name = vault.personalInfo.fullName || 'Kandydat';
 
@@ -169,6 +175,135 @@ export async function downloadNativeDocxCv(
     }
   });
 
+  // Education Section (ADR-56)
+  if (vault.education && vault.education.length > 0) {
+    paragraphs.push(
+      new Paragraph({
+        heading: HeadingLevel.HEADING_2,
+        spacing: { before: 240, after: 120 },
+        children: [
+          new TextRun({
+            text: 'WYKSZTAŁCENIE',
+            bold: true,
+            size: 22,
+            color: '0F172A',
+            font: 'Calibri',
+          }),
+        ],
+      })
+    );
+    vault.education.forEach((edu) => {
+      paragraphs.push(
+        new Paragraph({
+          spacing: { before: 60, after: 40 },
+          children: [
+            new TextRun({
+              text: `${edu.degree} — ${edu.institution}`,
+              bold: true,
+              size: 20,
+              color: '1E293B',
+              font: 'Calibri',
+            }),
+            new TextRun({
+              text: ` (${edu.startDate || ''} - ${edu.endDate || ''})`,
+              color: '64748B',
+              size: 18,
+              font: 'Calibri',
+            }),
+          ],
+        })
+      );
+    });
+  }
+
+  // Certifications Section (ADR-56)
+  if (vault.skillsMatrix?.certifications && vault.skillsMatrix.certifications.length > 0) {
+    paragraphs.push(
+      new Paragraph({
+        heading: HeadingLevel.HEADING_2,
+        spacing: { before: 240, after: 120 },
+        children: [
+          new TextRun({
+            text: 'CERTYFIKATY ZAWODOWE',
+            bold: true,
+            size: 22,
+            color: '0F172A',
+            font: 'Calibri',
+          }),
+        ],
+      })
+    );
+    vault.skillsMatrix.certifications.forEach((cert) => {
+      paragraphs.push(
+        new Paragraph({
+          bullet: { level: 0 },
+          spacing: { after: 40 },
+          children: [
+            new TextRun({
+              text: `${cert.name} — ${cert.issuer}`,
+              bold: true,
+              size: 20,
+              color: '1E293B',
+              font: 'Calibri',
+            }),
+            new TextRun({
+              text: cert.date ? ` (${cert.date})` : '',
+              size: 18,
+              color: '64748B',
+              font: 'Calibri',
+            }),
+          ],
+        })
+      );
+    });
+  }
+
+  // Side Projects Section (ADR-56)
+  if (vault.projects && vault.projects.length > 0) {
+    paragraphs.push(
+      new Paragraph({
+        heading: HeadingLevel.HEADING_2,
+        spacing: { before: 240, after: 120 },
+        children: [
+          new TextRun({
+            text: 'PROJEKTY POBOCZNE',
+            bold: true,
+            size: 22,
+            color: '0F172A',
+            font: 'Calibri',
+          }),
+        ],
+      })
+    );
+    vault.projects.forEach((proj) => {
+      paragraphs.push(
+        new Paragraph({
+          spacing: { before: 60, after: 40 },
+          children: [
+            new TextRun({
+              text: `${proj.name} — ${proj.role}`,
+              bold: true,
+              size: 20,
+              color: '1E293B',
+              font: 'Calibri',
+            }),
+          ],
+        }),
+        new Paragraph({
+          spacing: { after: 60 },
+          children: [
+            new TextRun({
+              text: proj.description,
+              size: 20,
+              color: '334155',
+              font: 'Calibri',
+            }),
+          ],
+        })
+      );
+    });
+  }
+
   // Skills & Tools Section
   paragraphs.push(
     new Paragraph({
@@ -187,19 +322,39 @@ export async function downloadNativeDocxCv(
     new Paragraph({
       spacing: { after: 60 },
       children: [
-        new TextRun({ text: 'Umiejętności twarde: ', bold: true, size: 20, color: '1E293B' }),
-        new TextRun({ text: vault.skillsMatrix.hardSkills.join(', '), size: 20, color: '334155' }),
+        new TextRun({ text: 'Umiejętności twarde: ', bold: true, size: 20, color: '1E293B', font: 'Calibri' }),
+        new TextRun({ text: vault.skillsMatrix.hardSkills.join(', '), size: 20, color: '334155', font: 'Calibri' }),
       ],
     }),
     new Paragraph({
-      spacing: { after: 240 },
+      spacing: { after: 60 },
       children: [
-        new TextRun({ text: 'Narzędzia i technologie: ', bold: true, size: 20, color: '1E293B' }),
-        new TextRun({ text: vault.skillsMatrix.toolsAndTech.join(', '), size: 20, color: '334155' }),
+        new TextRun({ text: 'Narzędzia i technologie: ', bold: true, size: 20, color: '1E293B', font: 'Calibri' }),
+        new TextRun({ text: vault.skillsMatrix.toolsAndTech.join(', '), size: 20, color: '334155', font: 'Calibri' }),
       ],
-    }),
+    })
+  );
 
-    // RODO Clause
+  // Foreign Languages (ADR-56)
+  if (vault.profiler?.languages && vault.profiler.languages.length > 0) {
+    paragraphs.push(
+      new Paragraph({
+        spacing: { after: 120 },
+        children: [
+          new TextRun({ text: 'Języki obce: ', bold: true, size: 20, color: '1E293B', font: 'Calibri' }),
+          new TextRun({
+            text: vault.profiler.languages.map((l) => `${l.language} (${l.level})`).join(', '),
+            size: 20,
+            color: '334155',
+            font: 'Calibri',
+          }),
+        ],
+      })
+    );
+  }
+
+  // RODO Clause
+  paragraphs.push(
     new Paragraph({
       spacing: { before: 240 },
       children: [
@@ -225,7 +380,7 @@ export async function downloadNativeDocxCv(
 
   const blob = await Packer.toBlob(doc);
   
-  // Format filename per User Rule 8: CV_[FullName]_[CompanyName]_[JobTitle].docx
+  // Format filename: CV_[FullName]_[CompanyName]_[JobTitle].docx
   const cleanName = name.replace(/\s+/g, '_');
   const cleanCompany = (companyName || 'Aplikacja').replace(/\s+/g, '_');
   const cleanTitle = (docTitle || 'Stanowisko').replace(/\s+/g, '_');

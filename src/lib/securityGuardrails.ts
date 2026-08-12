@@ -28,8 +28,6 @@ export function sanitizeTextInput(input: string): string {
     .replace(/onload\s*=/gi, '')
     .replace(/onclick\s*=/gi, '')
     .replace(/eval\s*\(/gi, '')
-    // Escape single quotes for SQL safety (even though parameterized queries are used)
-    .replace(/'/g, "''")
     .trim();
 
   return sanitized;

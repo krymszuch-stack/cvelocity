@@ -1,5 +1,5 @@
 import { initializeApp, getApps, FirebaseApp } from 'firebase/app';
-import { getAuth, GoogleAuthProvider, signInWithPopup, deleteUser, Auth } from 'firebase/auth';
+import { getAuth, GoogleAuthProvider, signInWithPopup, deleteUser, signOut, Auth } from 'firebase/auth';
 
 // Firebase project configuration loaded securely from environment variables
 const firebaseConfig = {
@@ -25,9 +25,6 @@ export function isFirebaseConfigured(): boolean {
 }
 
 // Lazily initialize Firebase on first actual use instead of at module load.
-// With no VITE_FIREBASE_API_KEY configured (e.g. a fresh checkout with no .env),
-// getAuth() throws synchronously — doing that eagerly at module scope used to
-// crash the entire app before React ever rendered anything.
 function getFirebaseAuth(): Auth {
   if (!auth) {
     app = getApps().length > 0 ? getApps()[0] : initializeApp(firebaseConfig);
@@ -50,13 +47,28 @@ export async function signInWithGooglePopup() {
 }
 
 /**
- * Delete current Firebase Auth user (removes account from Firebase Auth)
+ * Sign out Firebase user on logout (ADR-81)
  */
-export async function deleteCurrentFirebaseUser(): Promise<void> {
-  if (!firebaseConfig.apiKey) return; // Firebase not configured — nothing to delete there
+export async function signOutFirebaseUser(): Promise<void> {
+  if (!firebaseConfig.apiKey) return;
+  const authInstance = getFirebaseAuth();
+  if (authInstance.currentUser) {
+    await signOut(authInstance);
+  }
+}
+
+/**
+ * Delete current Firebase Auth user with email verification safety check (ADR-81)
+ */
+export async function deleteCurrentFirebaseUser(expectedEmail?: string): Promise<void> {
+  if (!firebaseConfig.apiKey) return;
   const authInstance = getFirebaseAuth();
   const currentUser = authInstance.currentUser;
   if (currentUser) {
+    if (expectedEmail && currentUser.email && currentUser.email.toLowerCase() !== expectedEmail.toLowerCase()) {
+      console.warn(`Pominęto usunięcie konta Firebase: currentUser (${currentUser.email}) nie zgadza się z kasowanym kontem (${expectedEmail}).`);
+      return;
+    }
     await deleteUser(currentUser);
   }
 }

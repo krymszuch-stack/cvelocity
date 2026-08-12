@@ -14,7 +14,7 @@ import {
   disableTwoFactor as authDisableTwoFactor,
 } from '../lib/auth';
 import { verifyTwoFactorToken } from '../lib/twoFactorAuth';
-import { deleteCurrentFirebaseUser } from '../lib/firebaseClient';
+import { deleteCurrentFirebaseUser, signOutFirebaseUser } from '../lib/firebaseClient';
 import { MasterVault } from '../types';
 
 interface AuthContextType {
@@ -28,7 +28,7 @@ interface AuthContextType {
   /** Verifies a TOTP code for a pending 2FA login and finalizes the session. */
   completeTwoFactorLogin: (pendingUser: UserAccount, password: string, token: string) => MasterVault;
   enableTwoFactor: (secret: string) => void;
-  disableTwoFactor: () => void;
+  disableTwoFactor: (password?: string) => void;
   logout: () => void;
   deleteAccount: () => Promise<void>;
   saveUserVault: (vault: MasterVault, userSecret?: string) => void;
@@ -50,17 +50,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode; onVaultLoaded?:
     return null;
   });
 
-  // Note: no effect re-syncing userVault from storage whenever `user` changes here —
-  // login/register/loginOAuth/completeTwoFactorLogin/logout all already set userVault
-  // explicitly with the value they just computed. A redundant effect re-reading from
-  // localStorage on every `user` change produced a fresh object reference each time,
-  // which ping-ponged against App.tsx's vault-mirroring effect (React's "Maximum
-  // update depth exceeded"). The lazy useState initializer above already covers the
-  // "existing session on page load" case.
-
   const login = useCallback((email: string, pass: string): MasterVault => {
-    // authLogin throws Requires2FAError for 2FA-enabled accounts — let it propagate to the caller (AuthModal),
-    // which should catch it, prompt for a TOTP code, and call completeTwoFactorLogin().
     const result = authLogin(email, pass);
     setUser(result.user);
     setUserVault(result.vault);
@@ -89,9 +79,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode; onVaultLoaded?:
     setUser({ ...user, twoFactorEnabled: true, twoFactorSecret: secret });
   }, [user]);
 
-  const disableTwoFactor = useCallback(() => {
+  const disableTwoFactor = useCallback((password?: string) => {
     if (!user) return;
-    authDisableTwoFactor(user.id);
+    authDisableTwoFactor(user.id, password);
     setUser({ ...user, twoFactorEnabled: false, twoFactorSecret: undefined });
   }, [user]);
 
@@ -117,29 +107,26 @@ export const AuthProvider: React.FC<{ children: React.ReactNode; onVaultLoaded?:
 
   const logout = useCallback(() => {
     authLogout();
+    void signOutFirebaseUser().catch(() => {});
     setUser(null);
     setUserVault(null);
   }, []);
 
   const deleteAccount = useCallback(async () => {
     if (!user) return;
-    // 1. Delete all localStorage data for this user
+    const emailToDelete = user.email;
     deleteUserAccount(user.id);
-    // 2. Delete Firebase Auth account (if logged in via Google/Firebase)
     try {
-      await deleteCurrentFirebaseUser();
+      await deleteCurrentFirebaseUser(emailToDelete);
     } catch (err) {
-      // Firebase user might not exist if registered via email/password only
       console.warn('Firebase user deletion skipped:', err);
     }
-    // 3. Clear local React state
     setUser(null);
     setUserVault(null);
   }, [user]);
 
   const saveUserVaultFunc = useCallback((vault: MasterVault, userSecret: string = 'default_key') => {
     if (user) {
-      // Security Sanitization check
       const cleanFullName = (vault.personalInfo.fullName || '').replace(/<[^>]+>/g, '').trim();
       const cleanEmail = (vault.personalInfo.email || '').replace(/<[^>]+>/g, '').trim();
       const cleanPhone = (vault.personalInfo.phone || '').replace(/<[^>]+>/g, '').trim();
@@ -151,9 +138,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode; onVaultLoaded?:
         cleanPhone !== vault.personalInfo.phone ||
         cleanLocation !== vault.personalInfo.location;
 
-      // Reuse the exact same object reference when nothing actually changed — App.tsx mirrors
-      // userVault back into its own vault state, and a fresh reference every call here caused
-      // an infinite App.vault <-> AuthContext.userVault ping-pong (React's "Maximum update depth exceeded").
       const sanitizedVault: MasterVault = needsSanitization
         ? {
             ...vault,
