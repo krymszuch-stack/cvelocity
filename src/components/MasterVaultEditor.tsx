@@ -15,7 +15,7 @@ import {
   Save,
   CheckCircle,
   Sparkles,
-  Linkedin,
+  Link2,
   GitMerge,
   RefreshCw,
   Check,
@@ -2057,7 +2057,7 @@ export const MasterVaultEditor: React.FC<MasterVaultEditorProps> = ({ vault, onC
 
             <div>
               <label className="block text-xs font-semibold text-slate-700 mb-1 flex items-center space-x-1.5">
-                <Linkedin className="w-3.5 h-3.5 text-sky-600" />
+                <Link2 className="w-3.5 h-3.5 text-sky-600" />
                 <span>LinkedIn / Profil URL</span>
               </label>
               <input
@@ -2072,7 +2072,7 @@ export const MasterVaultEditor: React.FC<MasterVaultEditorProps> = ({ vault, onC
               {draftVault.personalInfo.linkedin && draftVault.personalInfo.linkedin.includes('linkedin.com') && (
                 <div className="mt-2.5 p-3 bg-sky-50 border border-sky-200 rounded-xl space-y-2 text-xs text-slate-800 animate-in fade-in duration-200">
                   <div className="flex items-center space-x-2 font-bold text-sky-900">
-                    <Linkedin className="w-4 h-4 text-sky-600 shrink-0" />
+                    <Link2 className="w-4 h-4 text-sky-600 shrink-0" />
                     <span>Import Prawdziwego Profilu LinkedIn bez Losowych Danych</span>
                   </div>
                   <p className="text-[11px] text-slate-600 leading-relaxed">
@@ -2837,7 +2837,7 @@ export const MasterVaultEditor: React.FC<MasterVaultEditorProps> = ({ vault, onC
             <div className="flex items-center justify-between border-b border-slate-100 pb-3">
               <div className="flex items-center space-x-2">
                 <div className="p-2 bg-sky-50 text-sky-600 rounded-lg">
-                  <Linkedin className="w-5 h-5" />
+                  <Link2 className="w-5 h-5" />
                 </div>
                 <div>
                   <h3 className="text-base font-bold text-slate-900">
