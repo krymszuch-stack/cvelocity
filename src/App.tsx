@@ -75,11 +75,15 @@ function MainApp() {
 
   const [tokenStats, setTokenStats] = useState<TokenStats>(() => semanticCacheInstance.getStats());
   const [isTokenModalOpen, setIsTokenModalOpen] = useState(false);
+  const [isStatsConnected, setIsStatsConnected] = useState(false);
 
   const syncTokenStats = async () => {
     const localStats = semanticCacheInstance.getStats();
     try {
       const response = await apiFetch('/api/usage/stats');
+      if (!response.ok) {
+        throw new Error('API request failed');
+      }
       const payload = await response.json();
       const providerStats = payload?.stats ?? {};
       setTokenStats({
@@ -95,7 +99,9 @@ function MainApp() {
         lastSyncedAt: providerStats.lastSyncedAt || localStats.lastSyncedAt || new Date().toISOString(),
         providerName: providerStats.providerName || localStats.providerName || 'Google Gemini',
       });
+      setIsStatsConnected(true);
     } catch {
+      setIsStatsConnected(false);
       setTokenStats(localStats);
     }
   };
@@ -286,6 +292,7 @@ function MainApp() {
         onClose={() => setIsTokenModalOpen(false)}
         stats={tokenStats}
         onResetStats={handleResetStats}
+        isConnected={isStatsConnected}
       />
 
       {/* Auth Modal */}
