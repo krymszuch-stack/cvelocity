@@ -308,52 +308,69 @@ export function getActiveSessionUser(): UserAccount | null {
  * Logout active session
  */
 export function logoutUser(): void {
+  const activeUser = getActiveSessionUser();
+  if (activeUser) {
+    delete IN_MEMORY_VAULT_CACHE[activeUser.id];
+  }
   localStorage.removeItem(CURRENT_SESSION_KEY);
 }
+
+/**
+* In-memory cache for the current session only; we intentionally avoid a plaintext localStorage snapshot
+* because a browser-stored, unencrypted vault can be read by any script with access to the origin.
+*/
+const IN_MEMORY_VAULT_CACHE: Record<string, MasterVault> = {};
 
 /**
  * Save encrypted vault for specific user
  */
 export function saveUserVault(userId: string, vault: MasterVault, userSecret?: string): void {
   const storageKey = `skillvault_vault_encrypted_${userId}`;
-  const encrypted = encryptUserVault(vault, userSecret || 'default_key');
-  localStorage.setItem(storageKey, encrypted);
+  const legacyActiveKey = `skillvault_vault_active_${userId}`;
 
-  // Save active session cache for fast seamless app state
-  localStorage.setItem(`skillvault_vault_active_${userId}`, JSON.stringify(vault));
+  if (userSecret) {
+    const encrypted = encryptUserVault(vault, userSecret);
+    localStorage.setItem(storageKey, encrypted);
+  } else {
+    localStorage.removeItem(storageKey);
+  }
+
+  localStorage.removeItem(legacyActiveKey);
+  IN_MEMORY_VAULT_CACHE[userId] = vault;
 }
 
 /**
  * Load vault for specific user
  */
 export function loadUserVault(userId: string, userSecret?: string): MasterVault | null {
-  const activeKey = `skillvault_vault_active_${userId}`;
+  const memoryVault = IN_MEMORY_VAULT_CACHE[userId];
+  if (memoryVault) {
+    return memoryVault;
+  }
+
   const encryptedKey = `skillvault_vault_encrypted_${userId}`;
-
-  // Try loading active session cache first
-  const cached = localStorage.getItem(activeKey);
-  if (cached) {
-    try {
-      return JSON.parse(cached);
-    } catch (e) {
-      // fallback to decrypting
-    }
+  if (!userSecret) {
+    return null;
   }
 
-  if (userSecret) {
-    const encrypted = localStorage.getItem(encryptedKey);
-    if (encrypted) {
-      return decryptUserVault(encrypted, userSecret);
-    }
+  const encrypted = localStorage.getItem(encryptedKey);
+  if (!encrypted) {
+    return null;
   }
 
-  return null;
+  const decrypted = decryptUserVault(encrypted, userSecret);
+  if (decrypted) {
+    IN_MEMORY_VAULT_CACHE[userId] = decrypted;
+  }
+
+  return decrypted;
 }
 
 /**
  * Permanently delete a user account and ALL associated data from localStorage
  */
 export function deleteUserAccount(userId: string): void {
+  delete IN_MEMORY_VAULT_CACHE[userId];
   localStorage.removeItem(`skillvault_vault_encrypted_${userId}`);
   localStorage.removeItem(`skillvault_vault_active_${userId}`);
   localStorage.removeItem(CURRENT_SESSION_KEY);
