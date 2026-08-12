@@ -4,6 +4,7 @@ import "dotenv/config";
 import express from "express";
 import * as cheerio from "cheerio";
 import { parseRawCvToVault, optimizeDeltaPhrases, parseJobDescriptionWithGemini, getAdvisorEducationalAdvice, generateCoverLetterWithFlash, generateInterviewCheatSheetEnrichmentWithFlash, getGeminiUsageStats } from "./src/server/gemini";
+import { OutboundValidationError, validateOutboundUrl, validateOutboundHost, safeOutboundFetch } from "./src/lib/outboundValidation";
 
 /**
  * Filter out web portal navigation noise, links, buttons ("Zobacz ofertę", "Aplikuj", "Pobierz aplikację", cookies, footers)
@@ -159,7 +160,7 @@ async function scrapeJobPageText(url: string): Promise<{ text: string; source: s
 
   for (const candidate of proxyCandidates) {
     try {
-      const response = await fetch(candidate.url, {
+      const response = await safeOutboundFetch(candidate.url, {
         signal: AbortSignal.timeout(OUTBOUND_TIMEOUT_MS),
         headers: {
           Accept: "text/html, text/plain, application/xhtml+xml, */*;q=0.8",
@@ -176,8 +177,11 @@ async function scrapeJobPageText(url: string): Promise<{ text: string; source: s
       if (cleaned && cleaned.length > 120) {
         return { text: cleaned, source: candidate.label };
       }
-    } catch {
-      // Try the next source.
+    } catch (err) {
+      if (err instanceof OutboundValidationError) {
+        throw err;
+      }
+      // Try the next source for standard fetch failures
     }
   }
 
@@ -236,106 +240,7 @@ function formatApiError(defaultMessage: string, err: any) {
 }
 
 /** Per-attempt timeout for outbound scraping. Render kills a request at ~100s. */
-const OUTBOUND_TIMEOUT_MS = 12_000;
-
-/**
- * Guards the URL the caller asks us to fetch. Once this API is public, an
- * unvalidated outbound fetch lets anyone use the server as a proxy into private
- * networks (SSRF). Returns an error message, or null when the URL is acceptable.
- */
-function validateOutboundUrl(raw: string): string | null {
-  let parsed: URL;
-  try {
-    parsed = new URL(raw);
-  } catch {
-    return "Podaj prawidłowy adres URL ogłoszenia o pracę (http/https).";
-  }
-
-  if (parsed.protocol !== "http:" && parsed.protocol !== "https:") {
-    return "Dozwolone są wyłącznie adresy http i https.";
-  }
-
-  return validateOutboundHost(parsed.hostname);
-}
-
-/**
- * Rejects hostnames that resolve to the machine itself or to private ranges.
- *
- * Works on the NORMALISED host: the same address has many textual spellings, and
- * matching raw text meant `[::ffff:127.0.0.1]` slipped past checks that caught
- * plain `127.0.0.1`. Anything IPv4-mapped is folded back to its IPv4 form first.
- */
-function validateOutboundHost(rawHost: string): string | null {
-  let host = rawHost.toLowerCase().replace(/^\[|\]$/g, "");
-
-  // IPv4-mapped IPv6 -> bare IPv4. Note that `new URL()` rewrites the readable
-  // form `::ffff:127.0.0.1` into hex (`::ffff:7f00:1`), so matching the dotted
-  // spelling alone silently misses every real request.
-  const mappedHex = host.match(/^::ffff:([0-9a-f]{1,4}):([0-9a-f]{1,4})$/);
-  if (mappedHex) {
-    const high = parseInt(mappedHex[1], 16);
-    const low = parseInt(mappedHex[2], 16);
-    host = [(high >> 8) & 255, high & 255, (low >> 8) & 255, low & 255].join(".");
-  }
-  const mappedDotted = host.match(/^::(?:ffff:)?(\d{1,3}(?:\.\d{1,3}){3})$/);
-  if (mappedDotted) host = mappedDotted[1];
-
-  // Decimal / octal / hex spellings of an IPv4 address (e.g. 2130706433, 0177.0.0.1)
-  const asInt = /^\d+$/.test(host) ? Number(host) : /^0x[0-9a-f]+$/.test(host) ? parseInt(host, 16) : NaN;
-  if (Number.isFinite(asInt) && asInt >= 0 && asInt <= 0xffffffff) {
-    host = [(asInt >>> 24) & 255, (asInt >>> 16) & 255, (asInt >>> 8) & 255, asInt & 255].join(".");
-  }
-  const octal = host.match(/^0\d+(?:\.0*\d+){3}$/);
-  if (octal) {
-    host = host.split(".").map((p) => String(parseInt(p, 8))).join(".");
-  }
-
-  if (
-    host === "localhost" ||
-    host.endsWith(".localhost") ||
-    host === "::1" ||
-    host === "::" ||
-    host === "0.0.0.0" ||
-    /^0\./.test(host) ||
-    /^127\./.test(host) ||
-    /^10\./.test(host) ||
-    /^192\.168\./.test(host) ||
-    /^172\.(1[6-9]|2\d|3[01])\./.test(host) ||
-    /^169\.254\./.test(host) ||
-    /^100\.(6[4-9]|[7-9]\d|1[01]\d|12[0-7])\./.test(host) ||
-    /^f[cd][0-9a-f]{2}:/.test(host) ||
-    /^fe80:/.test(host)
-  ) {
-    return "Adresy lokalne i prywatne są niedozwolone.";
-  }
-
-  return null;
-}
-
-/**
- * fetch() that refuses to be redirected somewhere the caller was not allowed to
- * ask for directly. Validating only the submitted URL is not enough — a permitted
- * public host can answer with `Location: http://127.0.0.1/`.
- */
-async function safeOutboundFetch(url: string, init: RequestInit = {}, maxHops = 3): Promise<Response> {
-  let current = url;
-
-  for (let hop = 0; hop <= maxHops; hop++) {
-    const invalid = validateOutboundUrl(current);
-    if (invalid) throw new Error(invalid);
-
-    const response = await fetch(current, { ...init, redirect: "manual" });
-
-    if (response.status < 300 || response.status > 399) return response;
-
-    const location = response.headers.get("location");
-    if (!location) return response;
-
-    current = new URL(location, current).toString();
-  }
-
-  throw new Error("Zbyt wiele przekierowań przy pobieraniu oferty.");
-}
+const OUTBOUND_TIMEOUT_MS = 8000;
 
 async function startServer() {
   const app = express();
@@ -501,6 +406,12 @@ async function startServer() {
       });
     } catch (err: any) {
       console.error("Error fetching JD URL:", err);
+      if (err instanceof OutboundValidationError) {
+        return res.status(400).json({
+          success: false,
+          error: err.message,
+        });
+      }
       res.status(500).json({
         success: false,
         ...formatApiError("Nie udało się pobrać treści z podanego adresu URL.", err),
