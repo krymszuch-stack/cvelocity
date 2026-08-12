@@ -121,9 +121,9 @@ export const ApplicationTracker: React.FC<ApplicationTrackerProps> = ({ applicat
 
                 <div className="mt-4 flex flex-wrap items-center justify-between gap-3 border-t border-line pt-4">
                   <div className="flex items-center gap-2 text-xs text-muted">
-                    {application.status === 'applied' ? <CheckCircle2 className="w-4 h-4 text-success-500" /> : null}
-                    {application.status === 'rejected' ? <XCircle className="w-4 h-4 text-danger-500" /> : null}
-                    {application.status !== 'applied' && application.status !== 'rejected' ? <CircleDashed className="w-4 h-4 text-warning-500" /> : null}
+                    {application.status === 'applied' ? <CheckCircle2 className="w-4 h-4 text-success-fg" /> : null}
+                    {application.status === 'rejected' ? <XCircle className="w-4 h-4 text-danger-fg" /> : null}
+                    {application.status !== 'applied' && application.status !== 'rejected' ? <CircleDashed className="w-4 h-4 text-warning-fg" /> : null}
                     <span>Match: {application.matchScore}%</span>
                   </div>
 
@@ -132,7 +132,7 @@ export const ApplicationTracker: React.FC<ApplicationTrackerProps> = ({ applicat
                       href={application.url}
                       target="_blank"
                       rel="noreferrer"
-                      className="text-xs font-semibold text-brand-500 hover:underline"
+                      className="text-xs font-semibold text-brand-fg hover:underline"
                     >
                       Otwórz ofertę
                     </a>
