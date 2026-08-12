@@ -212,7 +212,7 @@ function extractWorkExperience(clean: string, lines: string[], fallbackTitle: st
       company,
       role,
       startDate: '',
-      endDate: 'Obecnie',
+      endDate: '',
       description: '',
     });
   }
@@ -222,18 +222,18 @@ function extractWorkExperience(clean: string, lines: string[], fallbackTitle: st
       history.push({
         id: `exp_${Date.now()}_${index}`,
         company: entry.company,
-        role: entry.role || fallbackTitle || 'Specjalista',
-        location: extractLocation(clean) || 'Polska',
+        role: entry.role || fallbackTitle || '',
+        location: extractLocation(clean) || '',
         startDate: entry.startDate,
         endDate: entry.endDate,
         isCurrent: /obecnie|present/i.test(entry.endDate),
-        description: entry.description || 'Udział w realizacji zadań zawodowych i projektów.',
+        description: entry.description || '',
         highlights: [{
           id: `hl_${Date.now()}_${index}`,
-          text: entry.description || 'Realizacja zadań zawodowych i usprawnianie procesów.',
-          action: 'Realizacja',
-          target: 'zadań',
-          tool: 'Zespół / projekty',
+          text: entry.description || '',
+          action: '',
+          target: '',
+          tool: '',
           metric: '',
           keywords: [],
         }],
@@ -242,27 +242,7 @@ function extractWorkExperience(clean: string, lines: string[], fallbackTitle: st
     return history;
   }
 
-  const fallbackRole = fallbackTitle || 'Specjalista';
-  const fallbackCompany = /(?:firma|company|przedsiębiorstwo)/i.test(clean) ? clean.match(/(?:firma|company|przedsiębiorstwo)\s*[:\-]?\s*([^\n]+)/i)?.[1]?.trim() : 'Firma';
-  return [{
-    id: `exp_${Date.now()}_0`,
-    company: fallbackCompany || 'Firma',
-    role: fallbackRole,
-    location: extractLocation(clean) || 'Polska',
-    startDate: '',
-    endDate: 'Obecnie',
-    isCurrent: true,
-    description: 'Realizacja obowiązków i projektów zawodowych.',
-    highlights: [{
-      id: `hl_${Date.now()}_0`,
-      text: 'Realizacja obowiązków i projektów zawodowych.',
-      action: 'Realizacja',
-      target: 'obowiązków',
-      tool: 'Kluczowe zadania',
-      metric: '',
-      keywords: [],
-    }],
-  }];
+  return [];
 }
 
 function extractEducation(clean: string, lines: string[]): Education[] {
@@ -276,11 +256,11 @@ function extractEducation(clean: string, lines: string[]): Education[] {
 
   return [{
     id: `edu_${Date.now()}`,
-    institution: institution || 'Uczelnia',
-    degree: degree || 'Wykształcenie',
-    fieldOfStudy: degree || 'Studia',
+    institution: institution || '',
+    degree: degree || '',
+    fieldOfStudy: degree || '',
     startDate: '',
-    endDate: 'Obecnie',
+    endDate: '',
   }];
 }
 
@@ -294,7 +274,7 @@ function extractCertifications(clean: string): Certification[] {
       certs.push({
         id: `cert_${Date.now()}_${certs.length}`,
         name: certMatch[1].trim(),
-        issuer: 'Not specified',
+        issuer: '',
         date: '',
       });
     }
@@ -317,7 +297,7 @@ export function parseTextToMasterVault(text: string, format: string = 'TXT'): Pa
   const phone = phoneMatch ? phoneMatch[0] : '';
 
   const fullName = extractFullName(lines);
-  const title = extractTitle(clean, lines) || 'Specjalista';
+  const title = extractTitle(clean, lines) || '';
   const summary = extractSummary(clean) || '';
   const location = extractLocation(clean);
   const skillSet = extractSkills(clean);
@@ -334,7 +314,7 @@ export function parseTextToMasterVault(text: string, format: string = 'TXT'): Pa
 
   return {
     personalInfo: {
-      fullName: fullName || 'Kandydat',
+      fullName: fullName || '',
       title,
       email,
       phone,
