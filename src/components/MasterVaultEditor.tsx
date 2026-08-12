@@ -48,10 +48,13 @@ import {
 } from 'lucide-react';
 import { AdvisorButton } from './ui/AdvisorButton';
 import { Input, Textarea } from './ui/Field';
+import { Button } from './ui/Button';
+import { Card } from './ui/Card';
 import { extractTextFromAnyFile } from '../lib/cvUniversalParser';
 import { saveVaultToLocalStorage } from '../lib/vaultCrypto';
 import { AutocompleteInput } from './AutocompleteInput';
 import { useAuth } from '../context/AuthContext';
+import { inferRoleKnowledge, buildRoleRequirements } from '../lib/roleKnowledge';
 import {
   SPECIALIZATION_CATEGORIES,
   DOMAIN_SPECIALIZATIONS,
@@ -84,6 +87,19 @@ export const MasterVaultEditor: React.FC<MasterVaultEditorProps> = ({ vault, onC
   const { user } = useAuth();
   const [activeSubTab, setActiveSubTab] = useState<'quiz' | 'info' | 'skills' | 'history' | 'edu' | 'security'>('quiz');
   const [quizStep, setQuizStep] = useState<number>(1);
+  // Which single question is showing within Quiz Step 1 (one field per screen).
+  const [personalMicroStep, setPersonalMicroStep] = useState<number>(0);
+  // Imię/Nazwisko for the Quiz screens, split once from the existing fullName (still
+  // a single string in MasterVault) and then edited independently — see setImie/
+  // setNazwisko below for why they must NOT be re-derived from fullName on every edit.
+  const [quizFirstName, setQuizFirstName] = useState<string>(() => {
+    const parts = vault.personalInfo.fullName.trim().split(/\s+/).filter(Boolean);
+    return parts.length > 1 ? parts.slice(0, -1).join(' ') : (parts[0] || '');
+  });
+  const [quizLastName, setQuizLastName] = useState<string>(() => {
+    const parts = vault.personalInfo.fullName.trim().split(/\s+/).filter(Boolean);
+    return parts.length > 1 ? parts[parts.length - 1] : '';
+  });
   const [isAiAuditing, setIsAiAuditing] = useState(false);
   const [aiAuditResults, setAiAuditResults] = useState<{ score: number; suggestions: string[]; issues: string[] } | null>(null);
   const [isSavedEncrypted, setIsSavedEncrypted] = useState(false);
@@ -958,6 +974,7 @@ export const MasterVaultEditor: React.FC<MasterVaultEditorProps> = ({ vault, onC
                 type="button"
                 onClick={() => {
                   setQuizStep(1);
+                  setPersonalMicroStep(0);
                 }}
                 className="px-3 py-1.5 bg-slate-800/80 hover:bg-rose-950 hover:text-rose-200 border border-slate-700 rounded-lg text-xs font-semibold flex items-center space-x-1.5 transition-colors"
               >
@@ -997,173 +1014,153 @@ export const MasterVaultEditor: React.FC<MasterVaultEditorProps> = ({ vault, onC
             </div>
           </div>
 
-          {/* STEP 1: Podstawy Profilu */}
-          {quizStep === 1 && (
-            <div className="bg-white border border-slate-200 rounded-2xl p-5 space-y-4 shadow-2xs">
-              <div className="flex items-center justify-between border-b border-slate-100 pb-3">
-                <h4 className="text-sm font-extrabold text-slate-900 flex items-center space-x-2">
-                  <User className="w-4 h-4 text-indigo-600" />
-                  <span>Krok 1 z 5: Kim jesteś i jakie masz podstawowe dane?</span>
-                </h4>
-                <button
-                  type="button"
-                  onClick={() => {
-                    clearPersonalInfoField('fullName');
-                    clearPersonalInfoField('email');
-                    clearPersonalInfoField('phone');
-                    clearPersonalInfoField('location');
-                    clearPersonalInfoField('title');
-                    clearPersonalInfoField('summary');
-                  }}
-                  className="text-xs text-rose-600 hover:text-rose-800 font-semibold flex items-center space-x-1"
-                >
-                  <Trash2 className="w-3.5 h-3.5" />
-                  <span>Wyczyść dane krok 1</span>
-                </button>
-              </div>
+          {/* STEP 1: Podstawy Profilu — one question per screen, Typeform-style.
+              A single "Imię i Nazwisko" input used to hide compound Polish first names
+              (e.g. "Bogumił Radosław") inside one free-text field with no clear split.
+              Imię/Nazwisko are derived from personalInfo.fullName (still a single string
+              in MasterVault) by splitting on the last space, so no data model change was
+              needed elsewhere (PDF/DOCX export, ATS simulator, etc. keep reading fullName
+              unchanged). */}
+          {quizStep === 1 && (() => {
+            // quizFirstName/quizLastName are the single source of truth for these two
+            // screens — each is edited independently and never re-derived from the
+            // combined fullName string on keystroke. An earlier version re-split
+            // fullName on every render (last word = surname), which corrupted
+            // compound first names: typing "Bogumił Radosław" then a surname caused
+            // "Radosław" to be misread back as the surname and silently dropped.
+            const setImie = (val: string) => {
+              setQuizFirstName(val);
+              updatePersonalInfo('fullName', [val, quizLastName].filter(Boolean).join(' '));
+            };
+            const setNazwisko = (val: string) => {
+              setQuizLastName(val);
+              updatePersonalInfo('fullName', [quizFirstName, val].filter(Boolean).join(' '));
+            };
 
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div>
-                  <div className="flex items-center justify-between mb-1">
-                    <label className="text-xs font-bold text-slate-700">Imię i Nazwisko</label>
-                    {draftVault.personalInfo.fullName && (
-                      <button
-                        type="button"
-                        onClick={() => clearPersonalInfoField('fullName')}
-                        className="text-[11px] text-slate-400 hover:text-rose-600 flex items-center space-x-0.5"
-                      >
-                        <Trash2 className="w-3 h-3" />
-                        <span>wyczyść</span>
-                      </button>
-                    )}
-                  </div>
-                  <input
-                    type="text"
-                    value={draftVault.personalInfo.fullName}
-                    onChange={(e) => updatePersonalInfo('fullName', e.target.value)}
-                    placeholder="Wpisz imię i nazwisko"
-                    className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs text-slate-900 focus:bg-white focus:outline-none focus:border-indigo-500"
-                  />
-                </div>
-
-                <div>
-                  <div className="flex items-center justify-between mb-1">
-                    <label className="text-xs font-bold text-slate-700">Główny Tytuł Zawodowy</label>
-                    {draftVault.personalInfo.title && (
-                      <button
-                        type="button"
-                        onClick={() => clearPersonalInfoField('title')}
-                        className="text-[11px] text-slate-400 hover:text-rose-600 flex items-center space-x-0.5"
-                      >
-                        <Trash2 className="w-3 h-3" />
-                        <span>wyczyść</span>
-                      </button>
-                    )}
-                  </div>
-                  <input
-                    type="text"
+            const microFields: { key: string; question: string; hint?: string; render: () => React.ReactNode }[] = [
+              {
+                key: 'imie',
+                question: 'Jak masz na imię?',
+                hint: 'Jeśli masz więcej niż jedno imię (np. Bogumił Radosław), wpisz oba.',
+                render: () => (
+                  <Input autoFocus value={quizFirstName} onChange={(e) => setImie(e.target.value)} placeholder="np. Bogumił Radosław" />
+                ),
+              },
+              {
+                key: 'nazwisko',
+                question: 'A jakie jest Twoje nazwisko?',
+                render: () => (
+                  <Input autoFocus value={quizLastName} onChange={(e) => setNazwisko(e.target.value)} placeholder="np. Kowalski" />
+                ),
+              },
+              {
+                key: 'title',
+                question: 'Jaki jest Twój główny tytuł zawodowy?',
+                hint: 'Tak, jak chcesz, żeby wyglądał nagłówek Twojego CV.',
+                render: () => (
+                  <AutocompleteInput
                     value={draftVault.personalInfo.title}
-                    onChange={(e) => updatePersonalInfo('title', e.target.value)}
-                    placeholder="np. Specjalista ds. Obsługi Klienta / React Developer"
-                    className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs text-slate-900 focus:bg-white focus:outline-none focus:border-indigo-500"
+                    onChange={(val) => updatePersonalInfo('title', val)}
+                    suggestions={SUGGESTED_JOB_TITLES}
+                    placeholder="np. Senior Full-Stack Engineer"
+                    showQuickPills
+                    maxPills={4}
                   />
-                </div>
-
-                <div>
-                  <div className="flex items-center justify-between mb-1">
-                    <label className="text-xs font-bold text-slate-700">Adres Email</label>
-                    {draftVault.personalInfo.email && (
-                      <button
-                        type="button"
-                        onClick={() => clearPersonalInfoField('email')}
-                        className="text-[11px] text-slate-400 hover:text-rose-600 flex items-center space-x-0.5"
-                      >
-                        <Trash2 className="w-3 h-3" />
-                        <span>wyczyść</span>
-                      </button>
-                    )}
-                  </div>
-                  <input
-                    type="email"
-                    value={draftVault.personalInfo.email}
-                    onChange={(e) => updatePersonalInfo('email', e.target.value)}
-                    placeholder="jan@example.com"
-                    className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs text-slate-900 focus:bg-white focus:outline-none focus:border-indigo-500"
+                ),
+              },
+              {
+                key: 'email',
+                question: 'Jaki adres email mamy podać pracodawcom?',
+                render: () => (
+                  <Input type="email" autoFocus value={draftVault.personalInfo.email} onChange={(e) => updatePersonalInfo('email', e.target.value)} placeholder="jan.kowalski@example.com" />
+                ),
+              },
+              {
+                key: 'phone',
+                question: 'Jaki jest Twój numer telefonu?',
+                render: () => (
+                  <Input autoFocus value={draftVault.personalInfo.phone} onChange={(e) => updatePersonalInfo('phone', e.target.value)} placeholder="+48 123 456 789" />
+                ),
+              },
+              {
+                key: 'location',
+                question: 'Gdzie mieszkasz lub szukasz pracy?',
+                render: () => (
+                  <AutocompleteInput
+                    value={draftVault.personalInfo.location}
+                    onChange={(val) => updatePersonalInfo('location', val)}
+                    suggestions={SUGGESTED_LOCATIONS}
+                    placeholder="np. Kraków"
+                    showQuickPills
+                    maxPills={4}
                   />
-                </div>
+                ),
+              },
+              {
+                key: 'summary',
+                question: 'Krótko o Tobie — podsumowanie zawodowe',
+                hint: 'Kilka zdań o Twoim doświadczeniu i celach. Możesz zostawić puste i wrócić tu później.',
+                render: () => (
+                  <Textarea rows={4} value={draftVault.personalInfo.summary} onChange={(e) => updatePersonalInfo('summary', e.target.value)} placeholder="Opisz krótko swoje cele zawodowe, doświadczenie i najważniejsze atuty..." />
+                ),
+              },
+            ];
 
-                <div>
-                  <div className="flex items-center justify-between mb-1">
-                    <label className="text-xs font-bold text-slate-700">Telefon / Miasto</label>
-                    {draftVault.personalInfo.phone && (
+            const current = microFields[personalMicroStep];
+            const isFirst = personalMicroStep === 0;
+            const isLast = personalMicroStep === microFields.length - 1;
+
+            return (
+              <Card className="p-5 sm:p-6 space-y-5">
+                <div className="flex items-center justify-between gap-3">
+                  <div className="flex items-center gap-1.5">
+                    {microFields.map((f, idx) => (
                       <button
+                        key={f.key}
                         type="button"
-                        onClick={() => {
-                          clearPersonalInfoField('phone');
-                          clearPersonalInfoField('location');
-                        }}
-                        className="text-[11px] text-slate-400 hover:text-rose-600 flex items-center space-x-0.5"
-                      >
-                        <Trash2 className="w-3 h-3" />
-                        <span>wyczyść</span>
-                      </button>
-                    )}
+                        onClick={() => setPersonalMicroStep(idx)}
+                        aria-label={`Przejdź do pytania ${idx + 1}: ${f.question}`}
+                        className={`h-1.5 rounded-full transition-all ${
+                          idx === personalMicroStep ? 'w-6 bg-brand-500' : idx < personalMicroStep ? 'w-1.5 bg-brand-500/50' : 'w-1.5 bg-line'
+                        }`}
+                      />
+                    ))}
                   </div>
-                  <div className="grid grid-cols-2 gap-2">
-                    <input
-                      type="text"
-                      value={draftVault.personalInfo.phone}
-                      onChange={(e) => updatePersonalInfo('phone', e.target.value)}
-                      placeholder="+48 123 456 789"
-                      className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs text-slate-900 focus:bg-white focus:outline-none focus:border-indigo-500"
-                    />
-                    <input
-                      type="text"
-                      value={draftVault.personalInfo.location}
-                      onChange={(e) => updatePersonalInfo('location', e.target.value)}
-                      placeholder="Kraków"
-                      className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs text-slate-900 focus:bg-white focus:outline-none focus:border-indigo-500"
-                    />
-                  </div>
+                  <span className="text-xs font-semibold text-subtle shrink-0">
+                    Krok 1 z 5 · Pytanie {personalMicroStep + 1}/{microFields.length}
+                  </span>
                 </div>
-              </div>
 
-              <div>
-                <div className="flex items-center justify-between mb-1">
-                  <label className="text-xs font-bold text-slate-700">Podsumowanie Zawodowe</label>
-                  {draftVault.personalInfo.summary && (
-                    <button
-                      type="button"
-                      onClick={() => clearPersonalInfoField('summary')}
-                      className="text-[11px] text-rose-600 hover:text-rose-800 flex items-center space-x-0.5 font-semibold"
-                    >
-                      <Trash2 className="w-3 h-3" />
-                      <span>wyczyść opis</span>
-                    </button>
-                  )}
+                <div className="space-y-1.5">
+                  <h4 className="text-lg font-black text-ink">{current.question}</h4>
+                  {current.hint && <p className="text-xs text-muted">{current.hint}</p>}
                 </div>
-                <textarea
-                  rows={3}
-                  value={draftVault.personalInfo.summary}
-                  onChange={(e) => updatePersonalInfo('summary', e.target.value)}
-                  placeholder="Opisz krótko swoje cele zawodowe, doświadczenie i najważniejsze atuty..."
-                  className="w-full bg-slate-50 border border-slate-200 rounded-xl p-3 text-xs text-slate-900 focus:bg-white focus:outline-none focus:border-indigo-500"
-                />
-              </div>
 
-              {/* Step 1 Actions */}
-              <div className="flex justify-end pt-2">
-                <button
-                  type="button"
-                  onClick={() => setQuizStep(2)}
-                  className="px-5 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-bold flex items-center space-x-2 transition-all shadow-md"
-                >
-                  <span>Przejdź do Kroku 2: Historia Pracy</span>
-                  <Check className="w-4 h-4" />
-                </button>
-              </div>
-            </div>
-          )}
+                <div key={current.key}>{current.render()}</div>
+
+                <div className="flex items-center justify-between pt-2 border-t border-line">
+                  <Button type="button" variant="ghost" size="sm" disabled={isFirst} onClick={() => setPersonalMicroStep((s) => Math.max(0, s - 1))}>
+                    ← Wstecz
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="primary"
+                    size="sm"
+                    iconRight={Check}
+                    onClick={() => {
+                      if (isLast) {
+                        setQuizStep(2);
+                      } else {
+                        setPersonalMicroStep((s) => Math.min(microFields.length - 1, s + 1));
+                      }
+                    }}
+                  >
+                    {isLast ? 'Przejdź do Kroku 2: Historia Pracy' : 'Dalej'}
+                  </Button>
+                </div>
+              </Card>
+            );
+          })()}
 
           {/* STEP 2: Historia Gdzie Pracowałeś */}
           {quizStep === 2 && (
@@ -1175,7 +1172,7 @@ export const MasterVaultEditor: React.FC<MasterVaultEditorProps> = ({ vault, onC
                     <span>Krok 2 z 5: Gdzie pracowałeś?</span>
                   </h4>
                   <p className="text-xs text-slate-500 mt-0.5">
-                    Wybierz gotowy szablon historii doświadczenia lub dodaj własny wpis.
+                    Dodaj swoje stanowiska — jedno po drugim, tak jak faktycznie pracowałeś.
                   </p>
                 </div>
 
@@ -1189,69 +1186,6 @@ export const MasterVaultEditor: React.FC<MasterVaultEditorProps> = ({ vault, onC
                     <span>Wyczyść całą historię</span>
                   </button>
                 )}
-              </div>
-
-              {/* Quick pre-fill history presets */}
-              <div className="bg-slate-50 border border-slate-200 rounded-xl p-3.5 space-y-2">
-                <div className="text-xs font-bold text-slate-700 flex items-center space-x-1.5">
-                  <Sparkles className="w-3.5 h-3.5 text-amber-500" />
-                  <span>Szybkie szablony historii, kliknij aby dodać:</span>
-                </div>
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
-                  {[
-                    {
-                      company: 'Bank Pekao S.A.',
-                      role: 'Inspektor ds. Obsługi Klienta',
-                      period: '05.2026 - 07.2026',
-                      location: 'Kraków',
-                      metrics: 'Wskaźnik jakości: 4.40/5.00',
-                    },
-                    {
-                      company: 'PartWork',
-                      role: 'Koordynator Zgłoszeń i Korespondencji',
-                      period: '2023',
-                      location: 'Kraków',
-                      metrics: 'Obsługa procedur SLA & zgłoszeń międzydziałowych',
-                    },
-                    {
-                      company: 'Interia.pl / Grupa Polsat-Interia',
-                      role: 'Wsparcie Działu Technicznego',
-                      period: '2018',
-                      location: 'Kraków',
-                      metrics: 'Diagnostyka sprzęt/OS, serwis peryferii',
-                    },
-                  ].map((preset, pIdx) => (
-                    <button
-                      key={pIdx}
-                      type="button"
-                      onClick={() => {
-                        const exists = draftVault.history.some((h) => h.company === preset.company);
-                        if (!exists) {
-                          const newExp: WorkExperience = {
-                            id: 'exp_' + Date.now() + '_' + pIdx,
-                            company: preset.company,
-                            role: preset.role,
-                            location: preset.location,
-                            startDate: preset.period.split('-')[0]?.trim() || '2026',
-                            endDate: preset.period.split('-')[1]?.trim() || '2026',
-                            isCurrent: false,
-                            highlights: [{ id: 'm_' + Date.now(), text: preset.metrics, action: 'Obsługa', target: 'Procedury', tool: 'CRM', metric: preset.metrics, keywords: ['SLA'] }],
-                          };
-                          updateDraft({
-                            ...draftVault,
-                            history: [newExp, ...draftVault.history],
-                            updatedAt: new Date().toISOString(),
-                          });
-                        }
-                      }}
-                      className="p-2.5 bg-white border border-slate-200 hover:border-indigo-400 hover:bg-indigo-50/50 rounded-xl text-left transition-all"
-                    >
-                      <div className="font-bold text-xs text-slate-900">{preset.company}</div>
-                      <div className="text-[11px] text-slate-600">{preset.role}</div>
-                      <div className="text-[10px] text-indigo-600 font-mono font-semibold mt-1">{preset.metrics}</div>
-                    </button>
-                  ))}
-                </div>
               </div>
 
               {/* Current History List with Individual Delete Icons */}
@@ -1270,7 +1204,7 @@ export const MasterVaultEditor: React.FC<MasterVaultEditorProps> = ({ vault, onC
 
                 {draftVault.history.length === 0 ? (
                   <div className="text-xs text-slate-400 p-4 border border-dashed border-slate-200 rounded-xl text-center italic">
-                    Brak dodanych stanowisk. Kliknij szablon powyżej lub dodaj własną historię pracy.
+                    Brak dodanych stanowisk. Kliknij „+ Dodaj własne stanowisko" powyżej, aby zacząć.
                   </div>
                 ) : (
                   draftVault.history.map((exp) => (
@@ -1374,77 +1308,123 @@ export const MasterVaultEditor: React.FC<MasterVaultEditorProps> = ({ vault, onC
                 </button>
               </div>
 
-              {/* Skill Presets */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {[
-                  {
-                    title: 'Obsługa Klienta & Procedury',
-                    field: 'hardSkills' as const,
-                    items: ['Obsługa Klienta', 'Deeskalacja Problemów', 'Reżim procedur SLA', 'Systemy Bankowe', 'Koordynacja Zgłoszeń'],
-                  },
-                  {
-                    title: 'Programowanie & Web Dev',
-                    field: 'toolsAndTech' as const,
-                    items: ['TypeScript', 'React 19', 'SQL', 'Git & GitHub', 'Tailwind CSS', 'Node.js', 'REST API'],
-                  },
-                  {
-                    title: 'Języki Obce & Przekładoznawstwo',
-                    field: 'hardSkills' as const,
-                    items: ['Język Angielski C1', 'Język Rosyjski B2/C1', 'Przekładoznawstwo', 'Terminologia Techniczna'],
-                  },
-                  {
-                    title: 'Umiejętności Miękkie',
-                    field: 'softSkills' as const,
-                    items: ['Komunikatywność', 'Praca pod presją czasu', 'Rozwiązywanie problemów', 'Skrupulatność & Procedury'],
-                  },
-                ].map((cat, cIdx) => (
-                  <div key={cIdx} className="bg-slate-50 border border-slate-200 rounded-xl p-3.5 space-y-2">
-                    <div className="flex items-center justify-between text-xs font-bold text-slate-800 border-b border-slate-200 pb-1.5">
-                      <span>{cat.title}</span>
-                      <button
-                        type="button"
-                        onClick={() => clearSkillsCategory(cat.field)}
-                        className="text-[11px] text-slate-400 hover:text-rose-600 flex items-center space-x-1"
-                        title="Wyczyść tę kategorię"
-                      >
-                        <Trash2 className="w-3 h-3" />
-                        <span>wyczyść</span>
-                      </button>
+              {/* Skill Presets — derived from the job title entered in Step 1 instead of
+                  a fixed, one-size-fits-all list. The old static list mixed web dev
+                  (TypeScript, SQL, React) with customer-service and translation skills
+                  and showed ALL of it to every single user, regardless of profession —
+                  someone whose title is "Fryzjer" or "Urzędnik" doesn't need "SQL"
+                  suggested to them. When the title doesn't match a known role family,
+                  we show nothing invented instead — just a nudge to search manually
+                  (see below), which already covers every profession in the dictionary. */}
+              {(() => {
+                const inferredRole = inferRoleKnowledge(draftVault.personalInfo.title);
+                if (!inferredRole) {
+                  return (
+                    <div className="rounded-xl border border-dashed border-line bg-sunken p-4 text-center space-y-1">
+                      <p className="text-xs font-semibold text-ink">
+                        {draftVault.personalInfo.title.trim()
+                          ? `Nie mamy gotowych podpowiedzi dla "${draftVault.personalInfo.title.trim()}"`
+                          : 'Wpisz najpierw tytuł zawodowy w Kroku 1'}
+                      </p>
+                      <p className="text-xs text-muted">
+                        Zamiast zgadywać umiejętności, których możesz nie potrzebować, użyj wyszukiwarki poniżej —
+                        obejmuje wszystkie zawody, nie tylko IT.
+                      </p>
                     </div>
+                  );
+                }
 
-                    <div className="flex flex-wrap gap-1.5">
-                      {cat.items.map((item) => {
-                        const list = draftVault.skillsMatrix[cat.field] || [];
-                        const exists = list.some((s) => s.toLowerCase() === item.toLowerCase());
-                        return (
+                const categories: { title: string; field: 'hardSkills' | 'softSkills' | 'toolsAndTech'; items: string[] }[] = [
+                  { title: `Typowe dla: ${inferredRole.family}`, field: 'hardSkills', items: buildRoleRequirements(draftVault.personalInfo.title) },
+                  { title: 'Umiejętności Miękkie', field: 'softSkills', items: inferredRole.softSkills },
+                ];
+
+                return (
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {categories.map((cat, cIdx) => (
+                      <div key={cIdx} className="bg-slate-50 border border-slate-200 rounded-xl p-3.5 space-y-2">
+                        <div className="flex items-center justify-between text-xs font-bold text-slate-800 border-b border-slate-200 pb-1.5">
+                          <span>{cat.title}</span>
                           <button
-                            key={item}
                             type="button"
-                            onClick={() => {
-                              if (!exists) {
-                                addSkill(cat.field, item);
-                              } else {
-                                removeSkill(cat.field, item);
-                              }
-                            }}
-                            className={`px-2.5 py-1 rounded-lg text-xs font-semibold transition-all flex items-center space-x-1.5 border ${
-                              exists
-                                ? 'bg-indigo-600 text-white border-indigo-700 shadow-xs'
-                                : 'bg-white hover:bg-slate-100 text-slate-700 border-slate-200'
-                            }`}
+                            onClick={() => clearSkillsCategory(cat.field)}
+                            className="text-[11px] text-slate-400 hover:text-rose-600 flex items-center space-x-1"
+                            title="Wyczyść tę kategorię"
                           >
-                            <span>{item}</span>
-                            {exists ? (
-                              <Trash2 className="w-3 h-3 text-indigo-200 hover:text-rose-300" />
-                            ) : (
-                              <Plus className="w-3 h-3 text-indigo-500" />
-                            )}
+                            <Trash2 className="w-3 h-3" />
+                            <span>wyczyść</span>
                           </button>
-                        );
-                      })}
-                    </div>
+                        </div>
+
+                        <div className="flex flex-wrap gap-1.5">
+                          {cat.items.map((item) => {
+                            const list = draftVault.skillsMatrix[cat.field] || [];
+                            const exists = list.some((s) => s.toLowerCase() === item.toLowerCase());
+                            return (
+                              <button
+                                key={item}
+                                type="button"
+                                onClick={() => {
+                                  if (!exists) {
+                                    addSkill(cat.field, item);
+                                  } else {
+                                    removeSkill(cat.field, item);
+                                  }
+                                }}
+                                className={`px-2.5 py-1 rounded-lg text-xs font-semibold transition-all flex items-center space-x-1.5 border ${
+                                  exists
+                                    ? 'bg-indigo-600 text-white border-indigo-700 shadow-xs'
+                                    : 'bg-white hover:bg-slate-100 text-slate-700 border-slate-200'
+                                }`}
+                              >
+                                <span>{item}</span>
+                                {exists ? (
+                                  <Trash2 className="w-3 h-3 text-indigo-200 hover:text-rose-300" />
+                                ) : (
+                                  <Plus className="w-3 h-3 text-indigo-500" />
+                                )}
+                              </button>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    ))}
                   </div>
-                ))}
+                );
+              })()}
+
+              {/* Manual search covering every profession, not just the matched role family */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <AutocompleteInput
+                  label="Szukaj i dodaj umiejętność"
+                  value={newSkillText.hard}
+                  onChange={(val) => setNewSkillText({ ...newSkillText, hard: val })}
+                  onSelectSuggestion={(selected) => {
+                    addSkill('hardSkills', selected);
+                    setNewSkillText({ ...newSkillText, hard: '' });
+                  }}
+                  onKeyDownEnter={() => {
+                    addSkill('hardSkills', newSkillText.hard);
+                    setNewSkillText({ ...newSkillText, hard: '' });
+                  }}
+                  suggestions={SUGGESTED_HARD_SKILLS}
+                  placeholder="np. Fryzjerstwo, Obsługa Kasy Fiskalnej, SQL..."
+                />
+                <AutocompleteInput
+                  label="Szukaj i dodaj narzędzie / technologię"
+                  value={newSkillText.tool}
+                  onChange={(val) => setNewSkillText({ ...newSkillText, tool: val })}
+                  onSelectSuggestion={(selected) => {
+                    addSkill('toolsAndTech', selected);
+                    setNewSkillText({ ...newSkillText, tool: '' });
+                  }}
+                  onKeyDownEnter={() => {
+                    addSkill('toolsAndTech', newSkillText.tool);
+                    setNewSkillText({ ...newSkillText, tool: '' });
+                  }}
+                  suggestions={SUGGESTED_TOOLS_AND_TECH}
+                  placeholder="np. Excel, SAP, Figma..."
+                />
               </div>
 
               {/* Active Selected Skills Summary with Delete Badges */}
