@@ -1,6 +1,6 @@
 import React from 'react';
 import {
-  Shield, Zap, Database, FileText, UserCog, ChevronLeft, LucideIcon, Lightbulb, X, BriefcaseBusiness,
+  Shield, Zap, Database, FileText, UserCog, ChevronLeft, LucideIcon, Lightbulb, X, BriefcaseBusiness, Newspaper,
 } from 'lucide-react';
 import { AppTab } from '../../types';
 
@@ -12,6 +12,7 @@ export interface NavItem {
 }
 
 export const NAV_ITEMS: NavItem[] = [
+  { id: 'home', label: 'Strona Główna', icon: Newspaper, description: 'Porady zawodowe i blog o szukaniu pracy' },
   { id: 'matcher', label: 'Agregator Ofert', icon: Zap, description: 'Zbieraj oferty z OLX, Pracuj.pl i innych portali' },
   { id: 'applications', label: 'Aplikacje', icon: BriefcaseBusiness, description: 'Tracker z datą i godziną wysłania aplikacji' },
   { id: 'vault', label: 'Profil Kandydata', icon: Database, description: 'Twoje kompetencje, doświadczenie i preferencje' },

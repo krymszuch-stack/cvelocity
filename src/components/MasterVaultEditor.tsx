@@ -445,6 +445,16 @@ export const MasterVaultEditor: React.FC<MasterVaultEditorProps> = ({ vault, onC
     });
   };
 
+  /** Picks the grammatically correct Polish phrasing for the Quiz's second-person
+   * questions based on the gender form the user chose in Step 1 (or a genderless
+   * phrasing when they didn't specify one). */
+  const genderedVerb = (masculine: string, feminine: string, neutral: string) => {
+    const form = draftVault.personalInfo.genderForm;
+    if (form === 'meska') return masculine;
+    if (form === 'zenska') return feminine;
+    return neutral;
+  };
+
   // Skill Adding
   const addSkill = (type: 'hardSkills' | 'softSkills' | 'toolsAndTech', value: string) => {
     if (!value.trim()) return;
@@ -987,7 +997,7 @@ export const MasterVaultEditor: React.FC<MasterVaultEditorProps> = ({ vault, onC
             <div className="grid grid-cols-5 gap-1.5 pt-1">
               {[
                 { step: 1, label: '1. Dane', desc: 'Podstawy' },
-                { step: 2, label: '2. Historia', desc: 'Gdzie pracowałeś' },
+                { step: 2, label: '2. Historia', desc: genderedVerb('Gdzie pracowałeś', 'Gdzie pracowałaś', 'Twoje miejsca pracy') },
                 { step: 3, label: '3. Umiejętności', desc: 'Narzędzia & Skill' },
                 { step: 4, label: '4. Rekomendacje', desc: 'Docelowa Rola' },
                 { step: 5, label: '5. Weryfikacja AI', desc: 'Audyt Błędów' },
@@ -1052,6 +1062,41 @@ export const MasterVaultEditor: React.FC<MasterVaultEditorProps> = ({ vault, onC
                 render: () => (
                   <Input autoFocus value={quizLastName} onChange={(e) => setNazwisko(e.target.value)} placeholder="np. Kowalski" />
                 ),
+              },
+              {
+                key: 'genderForm',
+                question: 'Jakiej formy gramatycznej mamy używać w pytaniach?',
+                hint: 'Wyłącznie żeby poprawnie odmieniać czasowniki w dalszej części Quizu (np. "pracowałeś" / "pracowałaś"). Nie trafia do Twojego CV.',
+                render: () => {
+                  const currentGenderForm = draftVault.personalInfo.genderForm || 'neutralna';
+                  const genderOptions: { value: 'zenska' | 'meska' | 'neutralna'; label: string; icon: string }[] = [
+                    { value: 'zenska', label: 'Kobieta', icon: '♀' },
+                    { value: 'meska', label: 'Mężczyzna', icon: '♂' },
+                    { value: 'neutralna', label: 'Nie chcę udzielać odpowiedzi', icon: '✦' },
+                  ];
+                  return (
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                      {genderOptions.map((opt) => {
+                        const isSelected = currentGenderForm === opt.value;
+                        return (
+                          <button
+                            key={opt.value}
+                            type="button"
+                            onClick={() => updatePersonalInfo('genderForm', opt.value)}
+                            className={`flex flex-col items-center gap-1.5 rounded-xl border p-3.5 text-center transition-all ${
+                              isSelected
+                                ? 'border-brand-500 bg-brand-soft ring-2 ring-brand-500/30'
+                                : 'border-line bg-surface hover:border-line-strong'
+                            }`}
+                          >
+                            <span className="text-lg" aria-hidden>{opt.icon}</span>
+                            <span className="text-xs font-semibold text-ink">{opt.label}</span>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  );
+                },
               },
               {
                 key: 'title',
@@ -1169,10 +1214,14 @@ export const MasterVaultEditor: React.FC<MasterVaultEditorProps> = ({ vault, onC
                 <div>
                   <h4 className="text-sm font-extrabold text-slate-900 flex items-center space-x-2">
                     <Briefcase className="w-4 h-4 text-blue-600" />
-                    <span>Krok 2 z 5: Gdzie pracowałeś?</span>
+                    <span>Krok 2 z 5: {genderedVerb('Gdzie pracowałeś?', 'Gdzie pracowałaś?', 'Twoje miejsca pracy')}</span>
                   </h4>
                   <p className="text-xs text-slate-500 mt-0.5">
-                    Dodaj swoje stanowiska — jedno po drugim, tak jak faktycznie pracowałeś.
+                    {genderedVerb(
+                      'Dodaj swoje stanowiska — jedno po drugim, tak jak faktycznie pracowałeś.',
+                      'Dodaj swoje stanowiska — jedno po drugim, tak jak faktycznie pracowałaś.',
+                      'Dodaj swoje stanowiska — jedno po drugim, zgodnie z rzeczywistym przebiegiem kariery.'
+                    )}
                   </p>
                 </div>
 
