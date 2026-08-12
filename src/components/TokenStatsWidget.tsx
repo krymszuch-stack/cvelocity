@@ -114,6 +114,21 @@ export const TokenStatsWidget: React.FC<TokenStatsWidgetProps> = ({
             </span>
           </div>
         </div>
+
+        <div className="grid grid-cols-3 gap-3 rounded-xl border border-line bg-sunken p-3 text-[11px] text-muted">
+          <div>
+            <div className="text-[10px] uppercase tracking-[0.16em] text-subtle">Prompt</div>
+            <div className="mt-1 font-mono font-bold text-ink">{(stats.apiPromptTokens ?? 0).toLocaleString()}</div>
+          </div>
+          <div>
+            <div className="text-[10px] uppercase tracking-[0.16em] text-subtle">Output</div>
+            <div className="mt-1 font-mono font-bold text-ink">{(stats.apiOutputTokens ?? 0).toLocaleString()}</div>
+          </div>
+          <div>
+            <div className="text-[10px] uppercase tracking-[0.16em] text-subtle">Live sync</div>
+            <div className="mt-1 font-mono font-bold text-ink">{stats.lastSyncedAt ? new Date(stats.lastSyncedAt).toLocaleTimeString('pl-PL', { hour: '2-digit', minute: '2-digit', second: '2-digit' }) : '—'}</div>
+          </div>
+        </div>
       </div>
     </Modal>
   );

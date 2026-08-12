@@ -1,10 +1,10 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { AppTab, MasterVault, TokenStats } from './types';
+import { AppTab, ApplicationRecord, MasterVault, TokenStats } from './types';
 import { createEmptyVault } from './lib/sampleVault';
 import { loadVaultFromLocalStorage, saveVaultToLocalStorage, clearVaultLocalStorage } from './lib/vaultCrypto';
 import { getActiveSessionUser, loadUserVault } from './lib/auth';
 import { semanticCacheInstance } from './lib/semanticCache';
-import { warmUpApi } from './lib/apiClient';
+import { apiFetch, warmUpApi } from './lib/apiClient';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { ThemeProvider } from './context/ThemeContext';
 import { AuthModal } from './components/AuthModal';
@@ -16,11 +16,25 @@ import { MasterVaultEditor } from './components/MasterVaultEditor';
 import { ProfilerSection } from './components/ProfilerSection';
 import { CVParserModal } from './components/CVParserModal';
 import { GeminiAdvisorModal } from './components/GeminiAdvisorModal';
+import { ApplicationTracker } from './components/ApplicationTracker';
+
+const APPLICATIONS_STORAGE_KEY = 'skillvault_applications_v1';
 
 function MainApp() {
   const [activeTab, setActiveTab] = useState<AppTab>('matcher');
   const [isNavCollapsed, setIsNavCollapsed] = useState(false);
   const [isMobileNavOpen, setIsMobileNavOpen] = useState(false);
+  const [applications, setApplications] = useState<ApplicationRecord[]>(() => {
+    if (typeof window === 'undefined') return [];
+    const stored = window.localStorage.getItem(APPLICATIONS_STORAGE_KEY);
+    if (!stored) return [];
+
+    try {
+      return JSON.parse(stored) as ApplicationRecord[];
+    } catch {
+      return [];
+    }
+  });
   const { userVault, saveUserVault } = useAuth();
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
   const [isAdvisorOpen, setIsAdvisorOpen] = useState(false);
@@ -62,6 +76,38 @@ function MainApp() {
   const [tokenStats, setTokenStats] = useState<TokenStats>(() => semanticCacheInstance.getStats());
   const [isTokenModalOpen, setIsTokenModalOpen] = useState(false);
 
+  const syncTokenStats = async () => {
+    const localStats = semanticCacheInstance.getStats();
+    try {
+      const response = await apiFetch('/api/usage/stats');
+      const payload = await response.json();
+      const providerStats = payload?.stats ?? {};
+      setTokenStats({
+        ...localStats,
+        ...providerStats,
+        totalTokensSaved: localStats.totalTokensSaved,
+        estimatedCostSavedUSD: localStats.estimatedCostSavedUSD,
+        geminiDeltaCalls: Number(providerStats.geminiDeltaCalls ?? localStats.geminiDeltaCalls ?? 0),
+        apiPromptTokens: Number(providerStats.apiPromptTokens ?? localStats.apiPromptTokens ?? 0),
+        apiOutputTokens: Number(providerStats.apiOutputTokens ?? localStats.apiOutputTokens ?? 0),
+        apiTotalTokens: Number(providerStats.apiTotalTokens ?? localStats.apiTotalTokens ?? 0),
+        apiCostUSD: Number(providerStats.apiCostUSD ?? localStats.apiCostUSD ?? 0),
+        lastSyncedAt: providerStats.lastSyncedAt || localStats.lastSyncedAt || new Date().toISOString(),
+        providerName: providerStats.providerName || localStats.providerName || 'Google Gemini',
+      });
+    } catch {
+      setTokenStats(localStats);
+    }
+  };
+
+  useEffect(() => {
+    void syncTokenStats();
+    const intervalId = window.setInterval(() => {
+      void syncTokenStats();
+    }, 5000);
+    return () => window.clearInterval(intervalId);
+  }, []);
+
   // Auto-save vault on changes with 500ms debounce to avoid performance degradation (ADR-79)
   const { isAuthenticated } = useAuth();
   useEffect(() => {
@@ -83,8 +129,16 @@ function MainApp() {
     return () => clearTimeout(timer);
   }, [vault, userVault, saveUserVault, isAuthenticated]);
 
+  useEffect(() => {
+    try {
+      window.localStorage.setItem(APPLICATIONS_STORAGE_KEY, JSON.stringify(applications));
+    } catch (err) {
+      console.error('Błąd podczas zapisu aplikacji w localStorage:', err);
+    }
+  }, [applications]);
+
   const refreshStats = () => {
-    setTokenStats(semanticCacheInstance.getStats());
+    void syncTokenStats();
   };
 
   const handleResetStats = () => {
@@ -152,6 +206,10 @@ function MainApp() {
     setIsAdvisorOpen(true);
   };
 
+  const handleAddApplication = (record: ApplicationRecord) => {
+    setApplications((prev) => [record, ...prev]);
+  };
+
   return (
     <div className="min-h-screen bg-canvas text-ink font-sans flex selection:bg-brand-500/25">
       <Sidebar
@@ -183,6 +241,8 @@ function MainApp() {
                 onUpdateStats={refreshStats}
                 onUpdateVault={setVault}
                 onOpenAdvisor={handleOpenAdvisor}
+                onSwitchTab={setActiveTab}
+                onAddApplication={handleAddApplication}
               />
             )}
 
@@ -200,11 +260,15 @@ function MainApp() {
             {activeTab === 'parser' && (
               <CVParserModal currentVault={vault} onApplyParsedVault={handleApplyParsedVault} />
             )}
+
+            {activeTab === 'applications' && (
+              <ApplicationTracker applications={applications} onAddApplication={handleAddApplication} />
+            )}
           </div>
         </main>
 
         <footer className="border-t border-line py-5 px-6 text-center text-xs text-subtle">
-          SkillVault © 2026 — 0-Token Local Slot Filling + Gemini Delta Prompting.
+          SkillVault © 2026 — Aggregator ofert + dopasowanie kompetencji do realnych wymagań.
         </footer>
       </div>
 
