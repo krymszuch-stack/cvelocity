@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { ArrowRight, Lightbulb, Newspaper, Sparkles } from 'lucide-react';
+import { ArrowRight, Code2, Lightbulb, Link2, Newspaper, Sparkles, UserRound } from 'lucide-react';
 import { Card, CardHeader, PageHeader } from './ui/Card';
 import { Button } from './ui/Button';
 import { QUICK_TIPS, BLOG_POSTS } from '../data/careerAdvice';
@@ -49,6 +49,33 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onEnterApp }) => {
               </Card>
             ))}
           </div>
+
+          <Card className="p-3.5 space-y-2.5">
+            <div className="flex items-center gap-2 text-xs font-bold text-ink">
+              <UserRound className="w-3.5 h-3.5 text-brand-fg shrink-0" />
+              <span>O twórcy</span>
+            </div>
+            <p className="text-xs leading-relaxed text-muted">
+              SkillVault stworzył{' '}
+              <a href="https://oathcry.com" target="_blank" rel="noreferrer" className="font-semibold text-brand-fg hover:underline">
+                Adrian Koziński
+              </a>{' '}
+              — wsparcie techniczne, automatyzacja i AI. Więcej projektów na{' '}
+              <a href="https://oathcry.com" target="_blank" rel="noreferrer" className="font-semibold text-brand-fg hover:underline">
+                oathcry.com
+              </a>.
+            </p>
+            <div className="flex items-center gap-3 pt-1">
+              <a href="https://github.com/krymszuch-stack" target="_blank" rel="noreferrer" className="flex items-center gap-1.5 text-xs font-semibold text-muted hover:text-brand-fg">
+                <Code2 className="w-3.5 h-3.5" />
+                GitHub
+              </a>
+              <a href="https://www.linkedin.com/in/adrian-kozi%C5%84ski-6847162a6/" target="_blank" rel="noreferrer" className="flex items-center gap-1.5 text-xs font-semibold text-muted hover:text-brand-fg">
+                <Link2 className="w-3.5 h-3.5" />
+                LinkedIn
+              </a>
+            </div>
+          </Card>
         </div>
 
         {/* Main: mikroblog feed */}

@@ -234,8 +234,22 @@ function MainApp() {
           </div>
         </main>
 
-        <footer className="border-t border-line py-5 px-6 text-center text-xs text-subtle">
-          SkillVault © 2026 — Aggregator ofert + dopasowanie kompetencji do realnych wymagań.
+        <footer className="border-t border-line py-5 px-6 text-center text-xs text-subtle space-y-1">
+          <p>SkillVault © 2026 — Aggregator ofert + dopasowanie kompetencji do realnych wymagań.</p>
+          <p>
+            Stworzone przez{' '}
+            <a href="https://oathcry.com" target="_blank" rel="noreferrer" className="font-semibold text-brand-fg hover:underline">
+              Adriana Kozińskiego
+            </a>
+            {' · '}
+            <a href="https://github.com/krymszuch-stack" target="_blank" rel="noreferrer" className="hover:underline">
+              GitHub
+            </a>
+            {' · '}
+            <a href="https://www.linkedin.com/in/adrian-kozi%C5%84ski-6847162a6/" target="_blank" rel="noreferrer" className="hover:underline">
+              LinkedIn
+            </a>
+          </p>
         </footer>
       </div>
 
