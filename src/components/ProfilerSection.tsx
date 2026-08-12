@@ -1,6 +1,9 @@
 import React from 'react';
 import { FlagCategory, ExperienceLevel, ProfilerState, LanguageProficiency } from '../types';
 import { Settings, MapPin, Globe, Award, Shield, Check, Plus, Trash2 } from 'lucide-react';
+import { Card } from './ui/Card';
+import { Input, Select, Toggle } from './ui/Field';
+import { Button, IconButton } from './ui/Button';
 
 interface ProfilerSectionProps {
   profiler: ProfilerState;
@@ -64,7 +67,7 @@ export const ProfilerSection: React.FC<ProfilerSectionProps> = ({ profiler, onCh
   };
 
   return (
-    <div className="bg-surface border border-line rounded-2xl p-6 text-ink space-y-8 shadow-xs">
+    <Card tone="raised" padded={false} className="p-6 text-ink space-y-8 shadow-xs">
       {/* Header */}
       <div className="flex items-center justify-between border-b border-line pb-4">
         <div className="flex items-center space-x-3">
@@ -94,10 +97,12 @@ export const ProfilerSection: React.FC<ProfilerSectionProps> = ({ profiler, onCh
           {ALL_FLAGS.map((flag) => {
             const isSelected = profiler.flags.includes(flag.id);
             return (
-              <div
+              <Card
                 key={flag.id}
+                tone="flat"
+                padded={false}
                 onClick={() => toggleFlag(flag.id)}
-                className={`cursor-pointer p-4 rounded-xl border transition-all flex items-start space-x-3 ${
+                className={`cursor-pointer p-4 transition-all flex items-start space-x-3 ${
                   isSelected
                     ? 'bg-brand-soft border-brand-500 shadow-2xs ring-1 ring-brand-500/30'
                     : 'bg-sunken border-line hover:border-line-strong'
@@ -114,7 +119,7 @@ export const ProfilerSection: React.FC<ProfilerSectionProps> = ({ profiler, onCh
                   <h4 className="text-sm font-bold text-ink">{flag.label}</h4>
                   <p className="text-xs text-muted mt-1">{flag.desc}</p>
                 </div>
-              </div>
+              </Card>
             );
           })}
         </div>
@@ -130,10 +135,12 @@ export const ProfilerSection: React.FC<ProfilerSectionProps> = ({ profiler, onCh
           {EXPERIENCE_LEVELS.map((lvl) => {
             const isSelected = profiler.experienceLevel === lvl.id;
             return (
-              <div
+              <Card
                 key={lvl.id}
+                tone="flat"
+                padded={false}
                 onClick={() => handleLevelChange(lvl.id)}
-                className={`cursor-pointer p-3.5 rounded-xl border transition-all text-left ${
+                className={`cursor-pointer p-3.5 transition-all text-left ${
                   isSelected
                     ? 'bg-warning-soft border-warning-500 ring-1 ring-warning-500/30'
                     : 'bg-sunken border-line hover:border-line-strong'
@@ -141,14 +148,14 @@ export const ProfilerSection: React.FC<ProfilerSectionProps> = ({ profiler, onCh
               >
                 <div className="text-xs font-bold text-ink">{lvl.label}</div>
                 <div className="text-[11px] text-muted mt-1">{lvl.desc}</div>
-              </div>
+              </Card>
             );
           })}
         </div>
       </div>
 
       {/* 3. Location Preferences */}
-      <div className="bg-sunken p-5 rounded-xl border border-line space-y-4">
+      <Card tone="flat" className="space-y-4">
         <div className="flex items-center space-x-2 text-xs font-bold text-ink">
           <MapPin className="w-4 h-4 text-brand-fg" />
           <span>Lokalizacja & Mobilność Zawodowa</span>
@@ -156,64 +163,53 @@ export const ProfilerSection: React.FC<ProfilerSectionProps> = ({ profiler, onCh
 
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div>
-            <label className="block text-xs font-semibold text-muted mb-1">Główne Miasto / Region</label>
-            <input
+            <Input
+              label="Główne Miasto / Region"
               type="text"
               value={profiler.location.city}
               onChange={(e) => handleLocationChange('city', e.target.value)}
               placeholder="np. Warszawa, Kraków"
-              className="w-full bg-surface border border-line rounded-lg px-3 py-2 text-xs text-ink focus:outline-none focus:border-brand-500"
             />
           </div>
 
-          <div>
-            <label className="block text-xs font-semibold text-muted mb-1">
+          <div className="flex flex-col gap-1.5">
+            <label className="block text-xs font-semibold text-muted">
               Promień Dojazdów: <span className="text-brand-fg font-bold sv-tnum">{profiler.location.radiusKm} km</span>
             </label>
-            <input
-              type="range"
-              min="0"
-              max="150"
-              step="5"
-              value={profiler.location.radiusKm}
-              onChange={(e) => handleLocationChange('radiusKm', parseInt(e.target.value))}
-              className="w-full accent-brand-600 h-2 bg-line-strong rounded-lg cursor-pointer"
-            />
+            <div className="flex items-center h-10">
+              <input
+                type="range"
+                min="0"
+                max="150"
+                step="5"
+                value={profiler.location.radiusKm}
+                onChange={(e) => handleLocationChange('radiusKm', parseInt(e.target.value))}
+                className="w-full accent-brand-600 h-2 bg-line-strong rounded-lg cursor-pointer"
+              />
+            </div>
           </div>
         </div>
 
-        <div className="flex flex-wrap gap-4 pt-2 text-xs text-ink">
-          <label className="flex items-center space-x-2 cursor-pointer">
-            <input
-              type="checkbox"
-              checked={profiler.location.willingnessToTravel}
-              onChange={(e) => handleLocationChange('willingnessToTravel', e.target.checked)}
-              className="rounded border-line-strong text-brand-600 focus:ring-brand-500"
-            />
-            <span>Gotowość do wyjazdów służbowych</span>
-          </label>
+        <div className="flex flex-wrap gap-6 pt-2">
+          <Toggle
+            checked={profiler.location.willingnessToTravel}
+            onChange={(checked) => handleLocationChange('willingnessToTravel', checked)}
+            label="Gotowość do wyjazdów służbowych"
+          />
 
-          <label className="flex items-center space-x-2 cursor-pointer">
-            <input
-              type="checkbox"
-              checked={profiler.location.hybridWork}
-              onChange={(e) => handleLocationChange('hybridWork', e.target.checked)}
-              className="rounded border-line-strong text-brand-600 focus:ring-brand-500"
-            />
-            <span>Praca hybrydowa</span>
-          </label>
+          <Toggle
+            checked={profiler.location.hybridWork}
+            onChange={(checked) => handleLocationChange('hybridWork', checked)}
+            label="Praca hybrydowa"
+          />
 
-          <label className="flex items-center space-x-2 cursor-pointer">
-            <input
-              type="checkbox"
-              checked={profiler.location.remoteOnly}
-              onChange={(e) => handleLocationChange('remoteOnly', e.target.checked)}
-              className="rounded border-line-strong text-brand-600 focus:ring-brand-500"
-            />
-            <span>Wyłącznie praca zdalna Remote</span>
-          </label>
+          <Toggle
+            checked={profiler.location.remoteOnly}
+            onChange={(checked) => handleLocationChange('remoteOnly', checked)}
+            label="Wyłącznie praca zdalna Remote"
+          />
         </div>
-      </div>
+      </Card>
 
       {/* 4. Languages Matrix */}
       <div>
@@ -222,36 +218,37 @@ export const ProfilerSection: React.FC<ProfilerSectionProps> = ({ profiler, onCh
             <Globe className="w-4 h-4 text-brand-fg" />
             <span>Języki Obce & Kontekst Stosowania CEFR</span>
           </label>
-          <button
+          <Button
             onClick={addLanguage}
-            className="flex items-center space-x-1 px-3 py-1.5 bg-brand-600 hover:bg-brand-700 text-white rounded-lg text-xs font-bold transition-colors shadow-2xs"
+            variant="primary"
+            size="sm"
+            icon={Plus}
           >
-            <Plus className="w-3.5 h-3.5" />
-            <span>Dodaj Język</span>
-          </button>
+            Dodaj Język
+          </Button>
         </div>
 
         <div className="space-y-3">
           {profiler.languages.map((lang) => (
-            <div
+            <Card
               key={lang.id}
-              className="bg-sunken border border-line p-3.5 rounded-xl grid grid-cols-1 md:grid-cols-12 gap-3 items-center"
+              tone="flat"
+              padded={false}
+              className="p-3.5 grid grid-cols-1 md:grid-cols-12 gap-3 items-center"
             >
               <div className="md:col-span-3">
-                <input
+                <Input
                   type="text"
                   value={lang.language}
                   onChange={(e) => updateLanguage(lang.id, 'language', e.target.value)}
                   placeholder="np. Angielski, Niemiecki"
-                  className="w-full bg-surface border border-line rounded-md px-2.5 py-1.5 text-xs text-ink focus:outline-none focus:border-brand-500"
                 />
               </div>
 
               <div className="md:col-span-2">
-                <select
+                <Select
                   value={lang.level}
                   onChange={(e) => updateLanguage(lang.id, 'level', e.target.value)}
-                  className="w-full bg-surface border border-line rounded-md px-2.5 py-1.5 text-xs text-ink focus:outline-none focus:border-brand-500"
                 >
                   <option value="A1">A1 (Początkujący)</option>
                   <option value="A2">A2 (Podstawowy)</option>
@@ -260,32 +257,32 @@ export const ProfilerSection: React.FC<ProfilerSectionProps> = ({ profiler, onCh
                   <option value="C1">C1 (Biegły)</option>
                   <option value="C2">C2 (Mastery)</option>
                   <option value="Native">Ojczysty (Native)</option>
-                </select>
+                </Select>
               </div>
 
               <div className="md:col-span-6">
-                <input
+                <Input
                   type="text"
                   value={lang.context}
                   onChange={(e) => updateLanguage(lang.id, 'context', e.target.value)}
                   placeholder="Kontekst: np. Dokumentacja techniczna, rozmowy biznesowe"
-                  className="w-full bg-surface border border-line rounded-md px-2.5 py-1.5 text-xs text-ink focus:outline-none focus:border-brand-500"
                 />
               </div>
 
               <div className="md:col-span-1 flex justify-end">
-                <button
+                <IconButton
                   onClick={() => removeLanguage(lang.id)}
-                  className="p-1.5 text-subtle hover:text-danger-fg transition-colors"
-                >
-                  <Trash2 className="w-4 h-4" />
-                </button>
+                  icon={Trash2}
+                  variant="ghost"
+                  size="sm"
+                  title="Usuń język"
+                  className="text-subtle hover:text-danger-fg"
+                />
               </div>
-            </div>
+            </Card>
           ))}
         </div>
       </div>
-    </div>
+    </Card>
   );
 };
-
