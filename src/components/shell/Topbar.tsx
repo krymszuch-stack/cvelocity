@@ -48,13 +48,13 @@ export const Topbar: React.FC<TopbarProps> = ({
         <div className="flex items-center gap-2 shrink-0">
           <button
             onClick={onOpenTokenStats}
-            title="Statystyki oszczędności tokenów API"
+            title="Zużycie tokenów API Gemini"
             className="hidden sm:flex items-center gap-2 h-9 px-3 rounded-[10px] bg-surface border border-line
                        hover:border-line-strong transition-colors"
           >
             <BarChart3 className="w-4 h-4 text-brand-fg" />
             <span className="text-xs font-bold text-ink sv-tnum">
-              {tokenStats.totalTokensSaved.toLocaleString('pl-PL')}
+              {(tokenStats.apiTotalTokens ?? 0).toLocaleString('pl-PL')}
             </span>
             <span className="text-[10px] text-subtle font-semibold">tk</span>
           </button>
