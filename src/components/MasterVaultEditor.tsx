@@ -49,9 +49,7 @@ import {
 import { AdvisorButton } from './ui/AdvisorButton';
 import { Input, Textarea } from './ui/Field';
 import { extractTextFromAnyFile } from '../lib/cvUniversalParser';
-import { saveVaultToLocalStorage } from '../lib/vaultCrypto';
 import { AutocompleteInput } from './AutocompleteInput';
-import { useAuth } from '../context/AuthContext';
 import {
   SPECIALIZATION_CATEGORIES,
   DOMAIN_SPECIALIZATIONS,
@@ -81,12 +79,10 @@ interface MasterVaultEditorProps {
 }
 
 export const MasterVaultEditor: React.FC<MasterVaultEditorProps> = ({ vault, onChange, onOpenAdvisor }) => {
-  const { user } = useAuth();
   const [activeSubTab, setActiveSubTab] = useState<'quiz' | 'info' | 'skills' | 'history' | 'edu' | 'security'>('quiz');
   const [quizStep, setQuizStep] = useState<number>(1);
   const [isAiAuditing, setIsAiAuditing] = useState(false);
   const [aiAuditResults, setAiAuditResults] = useState<{ score: number; suggestions: string[]; issues: string[] } | null>(null);
-  const [isSavedEncrypted, setIsSavedEncrypted] = useState(false);
   const [newSkillText, setNewSkillText] = useState({ hard: '', soft: '', tool: '' });
   const [specSearchQuery, setSpecSearchQuery] = useState('');
   const [selectedSpecCategory, setSelectedSpecCategory] = useState<string>('all');
@@ -745,12 +741,6 @@ export const MasterVaultEditor: React.FC<MasterVaultEditorProps> = ({ vault, onC
     a.download = `MasterVault_${draftVault.personalInfo.fullName.replace(/\s+/g, '_') || 'profil'}.json`;
     a.click();
     URL.revokeObjectURL(url);
-  };
-
-  const handleSaveLocalBackup = () => {
-    saveVaultToLocalStorage(draftVault, user?.id);
-    setIsSavedEncrypted(true);
-    setTimeout(() => setIsSavedEncrypted(false), 3000);
   };
 
   return (
@@ -2761,37 +2751,23 @@ export const MasterVaultEditor: React.FC<MasterVaultEditorProps> = ({ vault, onC
         </div>
       )}
 
-      {/* SUB-TAB 4: AES Security */}
+      {/* SUB-TAB 4: Security */}
       {activeSubTab === 'security' && (
         <div className="bg-slate-50 border border-slate-200 rounded-xl p-5 space-y-4">
           <div className="flex items-center space-x-3">
-            <div className="p-2 bg-amber-50 border border-amber-200 rounded text-amber-700">
+            <div className="p-2 bg-emerald-50 border border-emerald-200 rounded text-emerald-700">
               <ShieldCheck className="w-5 h-5" />
             </div>
             <div>
-              <h3 className="text-sm font-bold text-slate-900">Dane lokalne i kopia zapasowa</h3>
+              <h3 className="text-sm font-bold text-slate-900">Dane w chmurze i kopia zapasowa</h3>
               <p className="text-xs text-slate-500">
-                Twój profil zapisywany jest w tej przeglądarce i nigdy nie trafia na serwer.
+                Twój profil zapisuje się automatycznie na Twoim koncie (Firestore), dostępny z każdego urządzenia po zalogowaniu.
               </p>
             </div>
           </div>
 
-          <div className="p-3 bg-amber-50 border border-amber-200 rounded-lg text-xs text-amber-800 leading-relaxed">
-            <strong>Dane nie są szyfrowane.</strong> Profil jest przechowywany w pamięci przeglądarki
-            (localStorage) jako zwykły tekst — każdy, kto ma dostęp do tego komputera i profilu
-            przeglądarki, może go odczytać. Nie wpisuj tu danych, których nie chcesz tam trzymać.
-          </div>
-
           <div className="max-w-md space-y-3 pt-1">
             <div className="flex items-center flex-wrap gap-3">
-              <button
-                onClick={handleSaveLocalBackup}
-                className="px-4 py-2 bg-brand-600 hover:bg-brand-700 text-white rounded-lg text-xs font-bold transition-colors flex items-center space-x-1.5 shadow-2xs"
-              >
-                <Lock className="w-3.5 h-3.5" />
-                <span>Zapisz kopię w tej przeglądarce</span>
-              </button>
-
               <button
                 onClick={handleExportJson}
                 className="px-4 py-2 bg-white border border-slate-300 hover:bg-slate-50 text-slate-700 rounded-lg text-xs font-bold transition-colors flex items-center space-x-1.5 shadow-2xs"
@@ -2799,13 +2775,6 @@ export const MasterVaultEditor: React.FC<MasterVaultEditorProps> = ({ vault, onC
                 <Key className="w-3.5 h-3.5" />
                 <span>Pobierz kopię do pliku (.json)</span>
               </button>
-
-              {isSavedEncrypted && (
-                <span className="text-xs text-success-500 font-bold animate-fade-in flex items-center gap-1">
-                  <Check className="w-3.5 h-3.5 shrink-0" />
-                  Zapisano pomyślnie!
-                </span>
-              )}
             </div>
           </div>
         </div>

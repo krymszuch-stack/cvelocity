@@ -1,180 +1,153 @@
-import React, { createContext, useContext, useState, useCallback, useMemo } from 'react';
+import React, { createContext, useContext, useState, useCallback, useEffect, useMemo, useRef } from 'react';
 import {
-  UserAccount,
-  getActiveSessionUser,
-  loginUser as authLogin,
-  registerUser as authRegister,
-  loginWithOAuthAccount,
-  logoutUser as authLogout,
-  deleteUserAccount,
-  saveUserVault,
-  loadUserVault,
-  completeLogin,
-  enableTwoFactor as authEnableTwoFactor,
-  disableTwoFactor as authDisableTwoFactor,
-} from '../lib/auth';
-import { verifyTwoFactorToken } from '../lib/twoFactorAuth';
-import { deleteCurrentFirebaseUser, signOutFirebaseUser } from '../lib/firebaseClient';
+  AuthUserInfo,
+  isFirebaseConfigured,
+  onAuthChange,
+  registerWithEmail,
+  signInWithEmail,
+  signInWithGooglePopup,
+  signOutFirebaseUser,
+  deleteCurrentFirebaseUser,
+} from '../lib/firebaseClient';
+import { loadVaultFromFirestore, saveVaultToFirestore, deleteVaultFromFirestore } from '../lib/firestoreVault';
+import { findLegacyVaultForEmail, clearLegacyLocalData } from '../lib/legacyVaultMigration';
+import { createEmptyVault } from '../lib/sampleVault';
 import { MasterVault } from '../types';
-import { loadVaultFromLocalStorage, saveVaultToLocalStorage } from '../lib/vaultCrypto';
 
 interface AuthContextType {
-  user: UserAccount | null;
+  user: AuthUserInfo | null;
   isAuthenticated: boolean;
+  /** True until the first Firebase Auth state resolves — avoids flashing the sign-in screen. */
+  authLoading: boolean;
+  /** False when VITE_FIREBASE_* env vars aren't set — nothing here will work without them. */
+  firebaseConfigured: boolean;
   userVault: MasterVault | null;
-  /** Throws Requires2FAError (see lib/auth.ts) if the account has 2FA enabled — catch it and call completeTwoFactorLogin. */
-  login: (email: string, pass: string) => MasterVault;
-  register: (email: string, pass: string, fullName: string) => MasterVault;
-  loginOAuth: (email: string, fullName: string, provider: 'google') => MasterVault;
-  /** Verifies a TOTP code for a pending 2FA login and finalizes the session. */
-  completeTwoFactorLogin: (pendingUser: UserAccount, password: string, token: string) => MasterVault;
-  enableTwoFactor: (secret: string) => void;
-  disableTwoFactor: (password?: string) => void;
-  logout: () => void;
+  /** True while the vault is being fetched/migrated right after sign-in. */
+  vaultLoading: boolean;
+  login: (email: string, pass: string) => Promise<void>;
+  register: (email: string, pass: string, fullName: string) => Promise<void>;
+  loginOAuth: () => Promise<void>;
+  logout: () => Promise<void>;
   deleteAccount: () => Promise<void>;
-  saveUserVault: (vault: MasterVault, userSecret?: string) => void;
-  saveCurrentVault: (vault: MasterVault, userSecret?: string) => void;
+  saveCurrentVault: (vault: MasterVault) => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-export const AuthProvider: React.FC<{ children: React.ReactNode; onVaultLoaded?: (vault: MasterVault) => void }> = ({
-  children,
-  onVaultLoaded,
-}) => {
-  const [user, setUser] = useState<UserAccount | null>(() => getActiveSessionUser());
-  const [userVault, setUserVault] = useState<MasterVault | null>(() => {
-    const sessionUser = getActiveSessionUser();
-    if (sessionUser) {
-      return loadUserVault(sessionUser.id) || loadVaultFromLocalStorage(sessionUser.id);
+/** Strips characters that don't belong in personal-info fields before anything gets saved. */
+function sanitizeVault(vault: MasterVault): MasterVault {
+  const strip = (value: string | undefined) => (value || '').replace(/<[^>]+>/g, '').trim();
+  const p = vault.personalInfo;
+  const cleaned = {
+    fullName: strip(p.fullName),
+    email: strip(p.email),
+    phone: strip(p.phone),
+    location: strip(p.location),
+  };
+  const changed = cleaned.fullName !== p.fullName
+    || cleaned.email !== p.email
+    || cleaned.phone !== p.phone
+    || cleaned.location !== p.location;
+  return changed ? { ...vault, personalInfo: { ...p, ...cleaned } } : vault;
+}
+
+export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  const [user, setUser] = useState<AuthUserInfo | null>(null);
+  const [authLoading, setAuthLoading] = useState(true);
+  const [userVault, setUserVault] = useState<MasterVault | null>(null);
+  const [vaultLoading, setVaultLoading] = useState(false);
+  const activeUidRef = useRef<string | null>(null);
+
+  useEffect(() => {
+    if (!isFirebaseConfigured()) {
+      // No VITE_FIREBASE_* env vars — calling any Firebase Auth API throws
+      // (auth/invalid-api-key) instead of resolving, which would otherwise leave
+      // the app stuck on the loading screen with no explanation. Fail visibly instead.
+      setAuthLoading(false);
+      return;
     }
-    return null;
-  });
 
-  const login = useCallback((email: string, pass: string): MasterVault => {
-    const result = authLogin(email, pass);
-    setUser(result.user);
-    setUserVault(result.vault);
-    if (onVaultLoaded) {
-      onVaultLoaded(result.vault);
-    }
-    return result.vault;
-  }, [onVaultLoaded]);
+    const unsubscribe = onAuthChange((nextUser) => {
+      setUser(nextUser);
+      setAuthLoading(false);
 
-  const completeTwoFactorLogin = useCallback((pendingUser: UserAccount, password: string, token: string): MasterVault => {
-    if (!pendingUser.twoFactorSecret || !verifyTwoFactorToken(pendingUser.twoFactorSecret, token)) {
-      throw new Error('Nieprawidłowy kod weryfikacyjny 2FA.');
-    }
-    const result = completeLogin(pendingUser, password);
-    setUser(result.user);
-    setUserVault(result.vault);
-    if (onVaultLoaded) {
-      onVaultLoaded(result.vault);
-    }
-    return result.vault;
-  }, [onVaultLoaded]);
+      if (!nextUser) {
+        activeUidRef.current = null;
+        setUserVault(null);
+        return;
+      }
 
-  const enableTwoFactor = useCallback((secret: string) => {
-    if (!user) return;
-    authEnableTwoFactor(user.id, secret);
-    setUser({ ...user, twoFactorEnabled: true, twoFactorSecret: secret });
-  }, [user]);
+      // Guard against a slower, stale load resolving after a newer sign-in/out.
+      activeUidRef.current = nextUser.uid;
+      setVaultLoading(true);
 
-  const disableTwoFactor = useCallback((password?: string) => {
-    if (!user) return;
-    authDisableTwoFactor(user.id, password);
-    setUser({ ...user, twoFactorEnabled: false, twoFactorSecret: undefined });
-  }, [user]);
+      void (async () => {
+        let vault = await loadVaultFromFirestore(nextUser.uid);
 
-  const register = useCallback((email: string, pass: string, fullName: string): MasterVault => {
-    const result = authRegister(email, pass, fullName);
-    setUser(result.user);
-    setUserVault(result.initialVault);
-    if (onVaultLoaded) {
-      onVaultLoaded(result.initialVault);
-    }
-    return result.initialVault;
-  }, [onVaultLoaded]);
+        if (!vault) {
+          const legacyVault = findLegacyVaultForEmail(nextUser.email);
+          vault = legacyVault || createEmptyVault(nextUser.displayName, nextUser.email);
+          await saveVaultToFirestore(nextUser.uid, vault);
+          if (legacyVault) clearLegacyLocalData();
+        }
 
-  const loginOAuth = useCallback((email: string, fullName: string, provider: 'google'): MasterVault => {
-    const result = loginWithOAuthAccount(email, fullName, provider);
-    setUser(result.user);
-    setUserVault(result.vault);
-    if (onVaultLoaded) {
-      onVaultLoaded(result.vault);
-    }
-    return result.vault;
-  }, [onVaultLoaded]);
+        if (activeUidRef.current === nextUser.uid) {
+          setUserVault(vault);
+          setVaultLoading(false);
+        }
+      })();
+    });
 
-  const logout = useCallback(() => {
-    authLogout();
-    void signOutFirebaseUser().catch(() => {});
-    setUser(null);
-    setUserVault(null);
+    return unsubscribe;
+  }, []);
+
+  const login = useCallback(async (email: string, pass: string) => {
+    await signInWithEmail(email, pass);
+  }, []);
+
+  const register = useCallback(async (email: string, pass: string, fullName: string) => {
+    await registerWithEmail(email, pass, fullName);
+  }, []);
+
+  const loginOAuth = useCallback(async () => {
+    await signInWithGooglePopup();
+  }, []);
+
+  const logout = useCallback(async () => {
+    await signOutFirebaseUser();
   }, []);
 
   const deleteAccount = useCallback(async () => {
     if (!user) return;
-    const emailToDelete = user.email;
-    deleteUserAccount(user.id);
-    try {
-      await deleteCurrentFirebaseUser(emailToDelete);
-    } catch (err) {
-      console.warn('Firebase user deletion skipped:', err);
-    }
-    setUser(null);
-    setUserVault(null);
+    // Delete the Firestore doc first — it needs the still-valid auth session (rules check
+    // request.auth.uid), which disappears the moment the Firebase Auth user itself is deleted.
+    await deleteVaultFromFirestore(user.uid);
+    await deleteCurrentFirebaseUser(user.email);
   }, [user]);
 
-  const saveUserVaultFunc = useCallback((vault: MasterVault, userSecret: string = 'default_key') => {
-    if (user) {
-      const cleanFullName = (vault.personalInfo.fullName || '').replace(/<[^>]+>/g, '').trim();
-      const cleanEmail = (vault.personalInfo.email || '').replace(/<[^>]+>/g, '').trim();
-      const cleanPhone = (vault.personalInfo.phone || '').replace(/<[^>]+>/g, '').trim();
-      const cleanLocation = (vault.personalInfo.location || '').replace(/<[^>]+>/g, '').trim();
-
-      const needsSanitization =
-        cleanFullName !== vault.personalInfo.fullName ||
-        cleanEmail !== vault.personalInfo.email ||
-        cleanPhone !== vault.personalInfo.phone ||
-        cleanLocation !== vault.personalInfo.location;
-
-      const sanitizedVault: MasterVault = needsSanitization
-        ? {
-            ...vault,
-            personalInfo: {
-              ...vault.personalInfo,
-              fullName: cleanFullName,
-              email: cleanEmail,
-              phone: cleanPhone,
-              location: cleanLocation,
-            },
-          }
-        : vault;
-
-      saveUserVault(user.id, sanitizedVault, userSecret);
-      saveVaultToLocalStorage(sanitizedVault, user.id);
-      setUserVault(sanitizedVault);
-    }
+  const saveCurrentVault = useCallback(async (vault: MasterVault) => {
+    if (!user) return;
+    const sanitized = sanitizeVault(vault);
+    await saveVaultToFirestore(user.uid, sanitized);
+    setUserVault(sanitized);
   }, [user]);
 
   const value = useMemo(
     () => ({
       user,
       isAuthenticated: !!user,
+      authLoading,
+      firebaseConfigured: isFirebaseConfigured(),
       userVault,
+      vaultLoading,
       login,
       register,
       loginOAuth,
-      completeTwoFactorLogin,
-      enableTwoFactor,
-      disableTwoFactor,
       logout,
       deleteAccount,
-      saveUserVault: saveUserVaultFunc,
-      saveCurrentVault: saveUserVaultFunc,
+      saveCurrentVault,
     }),
-    [user, userVault, login, register, loginOAuth, completeTwoFactorLogin, enableTwoFactor, disableTwoFactor, logout, deleteAccount, saveUserVaultFunc]
+    [user, authLoading, userVault, vaultLoading, login, register, loginOAuth, logout, deleteAccount, saveCurrentVault]
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

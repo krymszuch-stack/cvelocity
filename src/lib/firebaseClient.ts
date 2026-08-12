@@ -1,5 +1,19 @@
 import { initializeApp, getApps, FirebaseApp } from 'firebase/app';
-import { getAuth, GoogleAuthProvider, signInWithPopup, deleteUser, signOut, Auth } from 'firebase/auth';
+import {
+  getAuth,
+  GoogleAuthProvider,
+  signInWithPopup,
+  createUserWithEmailAndPassword,
+  signInWithEmailAndPassword,
+  sendPasswordResetEmail,
+  onAuthStateChanged,
+  updateProfile,
+  deleteUser,
+  signOut,
+  Auth,
+  User,
+} from 'firebase/auth';
+import { getFirestore, Firestore } from 'firebase/firestore';
 
 // Firebase project configuration loaded securely from environment variables
 const firebaseConfig = {
@@ -14,36 +28,87 @@ const firebaseConfig = {
 
 let app: FirebaseApp | null = null;
 let auth: Auth | null = null;
+let firestore: Firestore | null = null;
 
 /**
  * Whether a real Firebase project is wired up. `apiKey` is the only field with no
- * usable default, so its absence means Google sign-in cannot work at all — the UI
- * uses this to disable the button up front rather than failing after a click.
+ * usable default, so its absence means sign-in cannot work at all — the UI uses
+ * this to disable auth entirely rather than failing after a click.
  */
 export function isFirebaseConfigured(): boolean {
   return Boolean(firebaseConfig.apiKey && firebaseConfig.appId);
 }
 
 // Lazily initialize Firebase on first actual use instead of at module load.
+function getFirebaseApp(): FirebaseApp {
+  if (!app) {
+    app = getApps().length > 0 ? getApps()[0] : initializeApp(firebaseConfig);
+  }
+  return app;
+}
+
 function getFirebaseAuth(): Auth {
   if (!auth) {
-    app = getApps().length > 0 ? getApps()[0] : initializeApp(firebaseConfig);
-    auth = getAuth(app);
+    auth = getAuth(getFirebaseApp());
   }
   return auth;
 }
 
-export async function signInWithGooglePopup() {
+/** SkillVault's single source of truth for persisted data — see src/lib/firestoreVault.ts. */
+export function getFirestoreDb(): Firestore {
+  if (!firestore) {
+    firestore = getFirestore(getFirebaseApp());
+  }
+  return firestore;
+}
+
+export interface AuthUserInfo {
+  uid: string;
+  email: string;
+  displayName: string;
+}
+
+function toAuthUserInfo(user: User): AuthUserInfo {
+  return {
+    uid: user.uid,
+    email: user.email || '',
+    displayName: user.displayName || '',
+  };
+}
+
+/** Fires immediately with the current user (or null), then on every sign-in/sign-out. */
+export function onAuthChange(callback: (user: AuthUserInfo | null) => void): () => void {
+  return onAuthStateChanged(getFirebaseAuth(), (user) => {
+    callback(user ? toAuthUserInfo(user) : null);
+  });
+}
+
+export async function registerWithEmail(email: string, password: string, fullName: string): Promise<AuthUserInfo> {
+  const authInstance = getFirebaseAuth();
+  const credential = await createUserWithEmailAndPassword(authInstance, email.trim().toLowerCase(), password);
+  if (fullName.trim()) {
+    await updateProfile(credential.user, { displayName: fullName.trim() });
+  }
+  return toAuthUserInfo(credential.user);
+}
+
+export async function signInWithEmail(email: string, password: string): Promise<AuthUserInfo> {
+  const authInstance = getFirebaseAuth();
+  const credential = await signInWithEmailAndPassword(authInstance, email.trim().toLowerCase(), password);
+  return toAuthUserInfo(credential.user);
+}
+
+export async function sendPasswordReset(email: string): Promise<void> {
+  const authInstance = getFirebaseAuth();
+  await sendPasswordResetEmail(authInstance, email.trim().toLowerCase());
+}
+
+export async function signInWithGooglePopup(): Promise<AuthUserInfo> {
   const authInstance = getFirebaseAuth();
   const provider = new GoogleAuthProvider();
   provider.setCustomParameters({ prompt: 'select_account' });
   const result = await signInWithPopup(authInstance, provider);
-  return {
-    email: result.user.email || '',
-    displayName: result.user.displayName || 'Użytkownik Google',
-    photoURL: result.user.photoURL || '',
-    uid: result.user.uid,
-  };
+  return toAuthUserInfo(result.user);
 }
 
 /**
