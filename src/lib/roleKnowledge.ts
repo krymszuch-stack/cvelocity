@@ -94,12 +94,24 @@ export function normalizeRoleQuery(value: string): string {
 
 export function inferRoleKnowledge(title: string): RoleKnowledge | null {
   const normalized = normalizeRoleQuery(title);
-  if (!normalized) return null;
+  // A raw substring match let a couple of typed characters ("ja", "an") match as a
+  // fragment of nearly any alias, surfacing an unrelated role's "typical requirements"
+  // the moment the user started typing. Require enough signal, and match whole words
+  // only — not an arbitrary character run.
+  if (normalized.length < 3) return null;
+
+  const queryWords = normalized.split(' ').filter(Boolean);
 
   for (const role of ROLE_KNOWLEDGE) {
     const matches = role.aliases.some((alias) => {
       const normalizedAlias = normalizeRoleQuery(alias);
-      return normalized.includes(normalizedAlias) || normalizedAlias.includes(normalized);
+      if (!normalizedAlias) return false;
+      const aliasWords = normalizedAlias.split(' ').filter(Boolean);
+      return (
+        normalized === normalizedAlias ||
+        queryWords.includes(normalizedAlias) ||
+        aliasWords.every((word) => queryWords.includes(word))
+      );
     });
 
     if (matches) return role;

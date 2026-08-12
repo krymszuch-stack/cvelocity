@@ -149,6 +149,10 @@ const NON_SKILL_ACRONYMS = new Set([
   's.a', 'sa', 'spzoo', 'zoo', 'gmbh', 'ltd', 'inc',
   'nip', 'krs', 'regon', 'cv', 'rodo', 'gdpr', 'ue', 'onz', 'uodo',
   'ul', 'al', 'nr', 'tel', 'pon', 'pt',
+  // Benefit-provider / institution acronyms that show up in the "co oferujemy"
+  // section of Polish job ads. They pass the all-caps acronym shape check but are
+  // never a skill — "opieka medyczna PZU" surfaced "PZU" as a mandatory requirement.
+  'pzu', 'nfz', 'zus', 'ppk',
 ]);
 
 const FORMAL_REQ_KEYWORDS = [
@@ -419,8 +423,15 @@ export function simulateAtsCheck(
   }
 
   const isVaultEmpty = !fullCvText || fullCvText.trim().length === 0;
-  const hardSkillsCoverage = totalHardWeight > 0 ? Math.round((matchedHardWeight / totalHardWeight) * 100) : (isVaultEmpty ? 0 : 100);
-  const formalReqsCoverage = totalFormalWeight > 0 ? Math.round((matchedFormalWeight / totalFormalWeight) * 100) : (isVaultEmpty ? 0 : 100);
+  // When zero requirements could be extracted from the job ad (empty JD, or ad text
+  // the local dictionary doesn't recognise), there is nothing to have matched — that
+  // must never read as "100% covered". It used to default to 100%, so an empty or
+  // unparseable job description silently produced a perfect ATS score regardless of
+  // what was actually in the CV.
+  const hasExtractedRequirements = totalHardWeight > 0;
+  const hasExtractedFormalReqs = totalFormalWeight > 0;
+  const hardSkillsCoverage = hasExtractedRequirements ? Math.round((matchedHardWeight / totalHardWeight) * 100) : 0;
+  const formalReqsCoverage = hasExtractedFormalReqs ? Math.round((matchedFormalWeight / totalFormalWeight) * 100) : 0;
 
   // ==================== LAYER 3: SCORING ALGEBRA (RECENCY & TITLE DENSITY) ====================
   
@@ -494,6 +505,9 @@ export function simulateAtsCheck(
   if (isVaultEmpty) {
     gapAnalysis.push('Brak danych w Master Vault. Uzupełnij profil CV, aby wykonać analizę dopasowania ATS.');
     recommendations.push('Dodaj swoje doświadczenie i umiejętności w edytorze Master Vault.');
+  } else if (!hasExtractedRequirements && !hasExtractedFormalReqs) {
+    gapAnalysis.push('Nie udało się wyodrębnić żadnych wymagań z treści ogłoszenia — wynik nie jest miarodajny.');
+    recommendations.push('Wklej pełną treść ogłoszenia (nie tylko sam tytuł stanowiska), aby analiza ATS mogła porównać ją z Twoim profilem.');
   } else if (missingHardSkills.length > 0) {
     gapAnalysis.push(
       `Brakujące wymagania twarde z ogłoszenia: ${missingHardSkills.slice(0, 6).join(', ')}.`

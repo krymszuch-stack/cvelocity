@@ -7,6 +7,7 @@ import {
   advisorEducationalAdviceResponseSchema,
   coverLetterResponseSchema,
   interviewCheatSheetResponseSchema,
+  parseJobDescriptionWithGemini,
 } from '../../server/gemini';
 
 describe('Gemini Response Validation and Fallback Tests', () => {
@@ -156,5 +157,23 @@ describe('Gemini Response Validation and Fallback Tests', () => {
 
     const result = safeParseAndValidateJsonResponse(invalidJson, interviewCheatSheetResponseSchema, fallback);
     expect(result).toEqual(fallback);
+  });
+
+  it('parseJobDescriptionWithGemini powinien spaść do lokalnego parsera zamiast rzucać błąd, gdy Gemini jest niedostępny', async () => {
+    // No GEMINI_API_KEY is set in the test environment, which is the same situation
+    // as a 429 rate-limit or an outage in production: previously this call threw and
+    // the whole "wklej link do oferty" / "wklej treść ogłoszenia" flow failed with
+    // nothing shown to the user, instead of degrading to the local, token-free parser.
+    const originalKey = process.env.GEMINI_API_KEY;
+    delete process.env.GEMINI_API_KEY;
+    try {
+      const result = await parseJobDescriptionWithGemini(
+        'Senior Frontend Developer\nWymagania: React, TypeScript, Docker.'
+      );
+      expect(result.requiredHardSkills).toEqual(expect.arrayContaining(['React', 'TypeScript']));
+      expect(result.jobTitle).toBeTruthy();
+    } finally {
+      if (originalKey !== undefined) process.env.GEMINI_API_KEY = originalKey;
+    }
   });
 });
