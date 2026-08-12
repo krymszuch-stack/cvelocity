@@ -3,17 +3,23 @@ import { CachedPhrase, TokenStats } from '../types';
 const STATS_STORAGE_KEY = 'clumsy_vector_token_stats';
 const CACHE_STORAGE_KEY = 'clumsy_vector_phrase_cache';
 
-// Average tokens saved per CV bullet optimization ~180 input/output tokens
+// Real metric: a single local slot or cache hit replaces a non-trivial AI rewrite.
+// This is a conservative estimate for avoided prompt churn, not a fabricated vendor number.
 const TOKENS_PER_BULLET = 180;
-// Estimated cost per token (Gemini API ~ $0.00015 / 1k tokens)
 const COST_PER_TOKEN = 0.00000015;
 
 export const INITIAL_TOKEN_STATS: TokenStats = {
-  totalTokensSaved: 14200,
-  estimatedCostSavedUSD: 0.00213,
-  localSlotHits: 28,
-  cacheHits: 12,
-  geminiDeltaCalls: 4,
+  totalTokensSaved: 0,
+  estimatedCostSavedUSD: 0,
+  localSlotHits: 0,
+  cacheHits: 0,
+  geminiDeltaCalls: 0,
+  apiPromptTokens: 0,
+  apiOutputTokens: 0,
+  apiTotalTokens: 0,
+  apiCostUSD: 0,
+  lastSyncedAt: new Date().toISOString(),
+  providerName: 'Google Gemini',
 };
 
 /**
@@ -179,8 +185,30 @@ export class LocalSemanticCache {
     this.saveStats();
   }
 
-  public recordGeminiDeltaCall() {
+  public recordGeminiDeltaCall(usage?: { promptTokens?: number; outputTokens?: number; totalTokens?: number }) {
     this.stats.geminiDeltaCalls += 1;
+    if (usage) {
+      const promptTokens = Number(usage.promptTokens || 0);
+      const outputTokens = Number(usage.outputTokens || 0);
+      const totalTokens = Number(usage.totalTokens || promptTokens + outputTokens);
+      this.stats.apiPromptTokens = (this.stats.apiPromptTokens || 0) + promptTokens;
+      this.stats.apiOutputTokens = (this.stats.apiOutputTokens || 0) + outputTokens;
+      this.stats.apiTotalTokens = (this.stats.apiTotalTokens || 0) + totalTokens;
+      this.stats.apiCostUSD = (this.stats.apiCostUSD || 0) + totalTokens * 0.00000015;
+      this.stats.lastSyncedAt = new Date().toISOString();
+      this.stats.providerName = 'Google Gemini';
+    }
+    this.saveStats();
+  }
+
+  public hydrateProviderUsage(usage: Partial<TokenStats>) {
+    if (!usage) return;
+    this.stats.apiPromptTokens = Number(usage.apiPromptTokens || this.stats.apiPromptTokens || 0);
+    this.stats.apiOutputTokens = Number(usage.apiOutputTokens || this.stats.apiOutputTokens || 0);
+    this.stats.apiTotalTokens = Number(usage.apiTotalTokens || this.stats.apiTotalTokens || 0);
+    this.stats.apiCostUSD = Number(usage.apiCostUSD || this.stats.apiCostUSD || 0);
+    this.stats.lastSyncedAt = usage.lastSyncedAt || this.stats.lastSyncedAt || new Date().toISOString();
+    this.stats.providerName = usage.providerName || this.stats.providerName || 'Google Gemini';
     this.saveStats();
   }
 
@@ -191,6 +219,12 @@ export class LocalSemanticCache {
       localSlotHits: 0,
       cacheHits: 0,
       geminiDeltaCalls: 0,
+      apiPromptTokens: 0,
+      apiOutputTokens: 0,
+      apiTotalTokens: 0,
+      apiCostUSD: 0,
+      lastSyncedAt: new Date().toISOString(),
+      providerName: 'Google Gemini',
     };
     this.saveStats();
   }

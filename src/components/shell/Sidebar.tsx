@@ -1,6 +1,6 @@
 import React from 'react';
 import {
-  Shield, Zap, Database, FileText, UserCog, ChevronLeft, LucideIcon, Lightbulb, X,
+  Shield, Zap, Database, FileText, UserCog, ChevronLeft, LucideIcon, Lightbulb, X, BriefcaseBusiness,
 } from 'lucide-react';
 import { AppTab } from '../../types';
 
@@ -12,10 +12,11 @@ export interface NavItem {
 }
 
 export const NAV_ITEMS: NavItem[] = [
-  { id: 'matcher', label: 'Dopasuj Ofertę', icon: Zap, description: 'Analiza i dopasowanie CV do ogłoszenia' },
-  { id: 'vault', label: 'Baza CV', icon: Database, description: 'Twój Master Vault — dane źródłowe' },
-  { id: 'parser', label: 'Wczytaj Plik', icon: FileText, description: 'Import CV z PDF / DOCX / LinkedIn' },
-  { id: 'profiler', label: 'Profiler', icon: UserCog, description: 'Preferencje stylu i ton wypowiedzi' },
+  { id: 'matcher', label: 'Agregator Ofert', icon: Zap, description: 'Zbieraj oferty z OLX, Pracuj.pl i innych portali' },
+  { id: 'applications', label: 'Aplikacje', icon: BriefcaseBusiness, description: 'Tracker z datą i godziną wysłania aplikacji' },
+  { id: 'vault', label: 'Profil Kandydata', icon: Database, description: 'Twoje kompetencje, doświadczenie i preferencje' },
+  { id: 'parser', label: 'Wczytaj CV', icon: FileText, description: 'Import PDF / DOCX / LinkedIn i uzupełnianie danych' },
+  { id: 'profiler', label: 'Filtry i Priorytety', icon: UserCog, description: 'Dojazd, prawa jazdy, wymagania formalne i wybór poziomu' },
 ];
 
 interface SidebarProps {
@@ -67,7 +68,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
           <div className={`min-w-0 ${collapsed ? 'lg:hidden' : ''}`}>
             <div className="font-extrabold text-[15px] text-ink tracking-tight leading-none">SkillVault</div>
             <div className="text-[10px] text-subtle font-semibold uppercase tracking-wider mt-1">
-              CV & ATS Studio
+              Offer Aggregator
             </div>
           </div>
           <button

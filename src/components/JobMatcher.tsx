@@ -3,6 +3,7 @@ import { apiFetch } from '../lib/apiClient';
 import { MasterVault } from '../types';
 import {
   Sparkles, AlertCircle, Search, Link as LinkIcon, Globe, ShieldAlert, Check, ChevronDown, Building2,
+  FileText, FolderOpen, ArrowRight,
 } from 'lucide-react';
 import { AdvisorButton } from './ui/AdvisorButton';
 import { Button } from './ui/Button';
@@ -15,18 +16,41 @@ import { JDParserModal } from './JDParserModal';
 import { RealtimeLivePreview } from './RealtimeLivePreview';
 import { AutocompleteInput } from './AutocompleteInput';
 import { SUGGESTED_JOB_TITLES } from '../lib/autocompleteSuggestions';
+import { buildRoleRequirements, inferRoleKnowledge } from '../lib/roleKnowledge';
 
 interface JobMatcherProps {
   vault: MasterVault;
   onUpdateStats: () => void;
   onUpdateVault?: (updated: MasterVault) => void;
   onOpenAdvisor?: (question?: string) => void;
+  onSwitchTab?: (tab: 'matcher' | 'vault' | 'parser' | 'profiler' | 'applications') => void;
+  onAddApplication?: (record: {
+    id: string;
+    jobTitle: string;
+    company: string;
+    source: string;
+    status: 'saved' | 'applied' | 'interview' | 'rejected';
+    appliedAt: string;
+    matchScore: number;
+    notes?: string;
+    url?: string;
+  }) => void;
 }
 
-export const JobMatcher: React.FC<JobMatcherProps> = ({ vault, onUpdateStats, onUpdateVault, onOpenAdvisor }) => {
+export const JobMatcher: React.FC<JobMatcherProps> = ({
+  vault,
+  onUpdateStats,
+  onUpdateVault,
+  onOpenAdvisor,
+  onSwitchTab,
+  onAddApplication,
+}) => {
   const [jobTitle, setJobTitle] = useState('');
   const [companyName, setCompanyName] = useState('');
   const [jobDescription, setJobDescription] = useState('');
+  const [startChoice, setStartChoice] = useState<'offer' | 'cv' | 'vault' | null>(null);
+  const roleKnowledge = inferRoleKnowledge(jobTitle);
+  const predictedRequirements = buildRoleRequirements(jobTitle);
 
   const handleLoadSampleOffer = () => {
     setJobTitle('Senior Full-Stack Engineer & Cloud Systems Architect');
@@ -109,10 +133,114 @@ export const JobMatcher: React.FC<JobMatcherProps> = ({ vault, onUpdateStats, on
     setAddedSkills((prev) => [...prev, skill]);
   };
 
+  const handleSaveApplication = () => {
+    if (!onAddApplication || !jobTitle.trim() || !companyName.trim()) return;
+
+    onAddApplication({
+      id: `${Date.now()}`,
+      jobTitle: jobTitle.trim(),
+      company: companyName.trim(),
+      source: jdUrlInput.trim() || 'manual',
+      status: 'saved',
+      appliedAt: new Date().toISOString(),
+      matchScore: matchAudit?.overallMatchPercentage ?? 0,
+      notes: jobDescription.trim() ? 'Zapisana z powrotem do trackera aplikacji.' : undefined,
+      url: jdUrlInput.trim() || undefined,
+    });
+
+    if (onSwitchTab) {
+      onSwitchTab('applications');
+    }
+  };
+
+  const quickStartOptions = [
+    {
+      key: 'offer' as const,
+      title: 'Szukaj ofert',
+      description: 'Łap oferty z OLX, Pracuj.pl, No Fluff Jobs i innych portali, a potem porównaj je z Twoim profilem.',
+      icon: LinkIcon,
+      accent: 'bg-brand-soft text-brand-fg border-brand-500/25',
+    },
+    {
+      key: 'cv' as const,
+      title: 'Sprawdź wymagania',
+      description: 'Filtruj wymagania formalne, dojazd, prawa jazdy, lokalizację i kryteria priorytetowe.',
+      icon: FileText,
+      accent: 'bg-success-soft text-success-fg border-success-500/25',
+    },
+    {
+      key: 'vault' as const,
+      title: 'Dopasuj kompetencje',
+      description: 'Porównaj swoje doświadczenie, stack i preferencje z realną ofertą bez szumu z Indeed i innych tablic.',
+      icon: FolderOpen,
+      accent: 'bg-warning-soft text-warning-fg border-warning-500/25',
+    },
+  ];
+
   return (
     <div className="space-y-5">
+      {startChoice === null && (
+        <Card className="overflow-hidden relative">
+          <div className="relative p-5 sm:p-6">
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+              <div>
+                <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-subtle">Szybki start</p>
+                <h2 className="mt-2 text-2xl font-black tracking-tight text-ink">Zacznij od realnych ofert</h2>
+              </div>
+              <Button
+                variant="ghost"
+                size="sm"
+                iconRight={ArrowRight}
+                onClick={() => setStartChoice('offer')}
+              >
+                Przejdź do ofert
+              </Button>
+            </div>
+
+            <div className="mt-5 grid gap-3 lg:grid-cols-3">
+              {quickStartOptions.map((option) => {
+                const Icon = option.icon;
+                return (
+                  <button
+                    key={option.key}
+                    type="button"
+                    onClick={() => {
+                      if (option.key === 'offer') {
+                        setStartChoice('offer');
+                        return;
+                      }
+
+                      if (option.key === 'cv' && onSwitchTab) {
+                        onSwitchTab('parser');
+                        return;
+                      }
+
+                      if (option.key === 'vault' && onSwitchTab) {
+                        onSwitchTab('vault');
+                        return;
+                      }
+                    }}
+                    className={`text-left rounded-2xl border p-4 transition-all duration-150 hover:-translate-y-0.5 hover:border-line-strong ${option.accent}`}
+                  >
+                    <div className="flex items-center justify-between gap-2">
+                      <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-white/50 dark:bg-black/10">
+                        <Icon className="w-4 h-4" />
+                      </span>
+                      <ArrowRight className="w-4 h-4 opacity-75" />
+                    </div>
+                    <h3 className="mt-4 text-base font-bold text-ink">{option.title}</h3>
+                    <p className="mt-2 text-sm leading-relaxed opacity-80">{option.description}</p>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        </Card>
+      )}
+
       {/* ---------- Offer intake ---------- */}
-      <Card className="overflow-hidden relative">
+      {startChoice === 'offer' && (
+        <Card className="overflow-hidden relative">
         {/* Ambient brand wash, purely decorative */}
         <div
           aria-hidden
@@ -126,6 +254,14 @@ export const JobMatcher: React.FC<JobMatcherProps> = ({ vault, onUpdateStats, on
             subtitle="Pobierzemy treść ogłoszenia i od razu dopasujemy Twoje CV."
             actions={
               <>
+                <Button size="sm" variant="ghost" onClick={() => setStartChoice(null)}>
+                  Wybierz ścieżkę
+                </Button>
+                {onAddApplication && (
+                  <Button size="sm" variant="outline" onClick={handleSaveApplication}>
+                    Zapisz aplikację
+                  </Button>
+                )}
                 {onOpenAdvisor && (
                   <AdvisorButton
                     onClick={() => onOpenAdvisor(`Jak najlepiej przygotować CV pod stanowisko "${jobTitle}"?`)}
@@ -241,6 +377,7 @@ export const JobMatcher: React.FC<JobMatcherProps> = ({ vault, onUpdateStats, on
           )}
         </div>
       </Card>
+    )}
 
       {/* ---------- Offer details (collapsible) ---------- */}
       <Card padded={false}>
@@ -268,15 +405,35 @@ export const JobMatcher: React.FC<JobMatcherProps> = ({ vault, onUpdateStats, on
         {isDetailsOpen && (
           <div className="px-5 pb-5 pt-1 space-y-4 border-t border-line animate-fade-in">
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-4">
-              <AutocompleteInput
-                label="Docelowe stanowisko"
-                value={jobTitle}
-                onChange={setJobTitle}
-                suggestions={SUGGESTED_JOB_TITLES}
-                placeholder="np. Senior Full-Stack Engineer"
-                showQuickPills
-                maxPills={4}
-              />
+              <div className="space-y-3">
+                <AutocompleteInput
+                  label="Docelowe stanowisko"
+                  value={jobTitle}
+                  onChange={setJobTitle}
+                  suggestions={SUGGESTED_JOB_TITLES}
+                  placeholder="np. Senior Full-Stack Engineer"
+                  showQuickPills
+                  maxPills={4}
+                />
+
+                {roleKnowledge && predictedRequirements.length > 0 && (
+                  <div className="rounded-xl border border-line bg-sunken p-3">
+                    <p className="text-[10px] font-bold uppercase tracking-wide text-subtle">
+                      Typowe wymagania dla {roleKnowledge.family}
+                    </p>
+                    <div className="mt-2 flex flex-wrap gap-1.5">
+                      {predictedRequirements.map((requirement) => (
+                        <span
+                          key={requirement}
+                          className="rounded-full border border-line bg-surface px-2 py-1 text-[11px] text-muted"
+                        >
+                          {requirement}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
               <Input
                 label="Nazwa firmy / pracodawcy"
                 value={companyName}

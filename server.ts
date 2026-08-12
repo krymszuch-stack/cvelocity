@@ -3,7 +3,7 @@
 import "dotenv/config";
 import express from "express";
 import * as cheerio from "cheerio";
-import { parseRawCvToVault, optimizeDeltaPhrases, parseJobDescriptionWithGemini, getAdvisorEducationalAdvice, generateCoverLetterWithFlash, generateInterviewCheatSheetEnrichmentWithFlash } from "./src/server/gemini";
+import { parseRawCvToVault, optimizeDeltaPhrases, parseJobDescriptionWithGemini, getAdvisorEducationalAdvice, generateCoverLetterWithFlash, generateInterviewCheatSheetEnrichmentWithFlash, getGeminiUsageStats } from "./src/server/gemini";
 
 /**
  * Filter out web portal navigation noise, links, buttons ("Zobacz ofertę", "Aplikuj", "Pobierz aplikację", cookies, footers)
@@ -60,60 +60,128 @@ function filterTextNoiseLines(rawText: string): string {
 function cleanJobHtmlToPureText(htmlOrText: string): string {
   if (!htmlOrText) return "";
 
-  try {
-    const $ = cheerio.load(htmlOrText);
+  const normalized = htmlOrText.replace(/\u00a0/g, " ").replace(/\r/g, "");
 
-    // 1. Check for JSON-LD Schema.org/JobPosting (Cleanest data source on Pracuj.pl, NoFluffJobs, LinkedIn)
-    let jsonLdText = "";
+  try {
+    const $ = cheerio.load(normalized);
+
+    const candidates: string[] = [];
+
     $("script[type='application/ld+json']").each((_, el) => {
       try {
         const rawJson = $(el).contents().text();
         const parsed = JSON.parse(rawJson);
         const jobPosting = Array.isArray(parsed)
-          ? parsed.find((item: any) => item['@type'] === 'JobPosting')
-          : (parsed && parsed['@type'] === 'JobPosting' ? parsed : null);
+          ? parsed.find((item: any) => item && (item['@type'] === 'JobPosting' || item.type === 'JobPosting'))
+          : parsed && (parsed['@type'] === 'JobPosting' || parsed.type === 'JobPosting')
+            ? parsed
+            : null;
 
         if (jobPosting && jobPosting.description) {
           const cleanDesc = cheerio.load(jobPosting.description).text();
           const title = jobPosting.title || '';
-          const org = jobPosting.hiringOrganization?.name || '';
-          jsonLdText = `Stanowisko: ${title}\nFirma: ${org}\n\nOpis Oferty i Wymagania:\n${cleanDesc}`;
+          const org = jobPosting.hiringOrganization?.name || jobPosting.company?.name || '';
+          candidates.push(`Stanowisko: ${title}\nFirma: ${org}\n\nOpis Oferty i Wymagania:\n${cleanDesc}`);
         }
       } catch {
         // Skip invalid JSON-LD
       }
     });
 
-    if (jsonLdText.length > 100) {
-      return filterTextNoiseLines(jsonLdText);
+    $("meta[name='description'], meta[property='og:description'], meta[name='twitter:description']").each((_, el) => {
+      const content = $(el).attr('content');
+      if (content && content.trim().length > 40) { candidates.push(content.trim()); }
+    });
+
+    const prioritizedSelectors = [
+      "main article",
+      "article",
+      "main",
+      "[role='main']",
+      ".job-offer",
+      ".job-offer__content",
+      ".offer-details",
+      ".job-description",
+      "#job-description",
+      ".description",
+      ".offer-content",
+      ".job-details",
+      ".offer-body",
+      "[data-testid*='job' i]",
+      "[data-test*='offer' i]",
+      ".listing-content",
+      ".content-wrapper",
+    ];
+
+    for (const selector of prioritizedSelectors) {
+      const text = $(selector).first().text();
+      if (text && text.trim().length > 200) {
+        candidates.push(text);
+        break;
+      }
     }
 
-    // Strip script, style, svg, header, footer, nav, aside, cookie banners, sidebars, related cards, action buttons
     $(
       "script, style, svg, noscript, iframe, canvas, header, footer, nav, aside, form, button, input, select, textarea, [role='navigation'], [role='banner'], [role='contentinfo'], [role='dialog'], [aria-label*='cookie' i], [class*='cookie' i], [id*='cookie' i], [class*='footer' i], [id*='footer' i], [class*='header' i], [id*='header' i], [class*='nav' i], [id*='nav' i], [class*='sidebar' i], [id*='sidebar' i], [class*='related' i], [class*='similar' i], [class*='recommend' i], [class*='share' i], [class*='breadcrumb' i], [class*='pagination' i], [class*='ad' i], [class*='banner' i]"
     ).remove();
 
-    // Target main body or article container
-    let extractedText = "";
-    const mainContainer = $(
-      "main, article, [role='main'], .job-offer, .offer-details, .job-description, #job-description, .description, .offer-content, .job-details, .offer-body, [data-test*='offer' i]"
-    ).first();
+    const bodyText = $("body").text() || $.text();
+    if (bodyText && bodyText.trim().length > 50) candidates.push(bodyText);
 
-    if (mainContainer.length > 0) {
-      extractedText = mainContainer.text();
-    } else {
-      extractedText = $("body").text() || $.text();
+    const bestText = candidates
+      .map((candidate) => candidate.replace(/\s+/g, " ").trim())
+      .filter((candidate) => candidate.length > 80)
+      .sort((a, b) => b.length - a.length)[0];
+
+    if (bestText) {
+      return filterTextNoiseLines(bestText);
     }
 
-    return filterTextNoiseLines(extractedText);
-  } catch (e) {
-    const simple = htmlOrText
-      .replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, "")
-      .replace(/<style\b[^<]*(?:(?!<\/style>)<[^<]*)*<\/style>/gi, "")
+    return filterTextNoiseLines((bodyText || normalized).replace(/<[^>]+>/g, " "));
+  } catch {
+    const simple = normalized
+      .replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, " ")
+      .replace(/<style\b[^<]*(?:(?!<\/style>)<[^<]*)*<\/style>/gi, " ")
       .replace(/<[^>]+>/g, " ")
-      .replace(/\s+/g, " ");
+      .replace(/\s+/g, " ")
+      .trim();
     return filterTextNoiseLines(simple);
   }
+}
+
+async function scrapeJobPageText(url: string): Promise<{ text: string; source: string }> {
+  const targetHost = url.replace(/^https?:\/\//i, "");
+  const proxyCandidates = [
+    { label: "direct", url },
+    { label: "jina", url: `https://r.jina.ai/http://${targetHost}` },
+    { label: "allorigins", url: `https://api.allorigins.win/raw?url=${encodeURIComponent(url)}` },
+  ];
+
+  for (const candidate of proxyCandidates) {
+    try {
+      const response = await fetch(candidate.url, {
+        signal: AbortSignal.timeout(OUTBOUND_TIMEOUT_MS),
+        headers: {
+          Accept: "text/html, text/plain, application/xhtml+xml, */*;q=0.8",
+          "Accept-Language": "pl-PL,pl;q=0.9,en-US;q=0.8,en;q=0.7",
+          "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36",
+          "Cache-Control": "no-cache",
+        },
+      });
+
+      if (!response.ok) continue;
+
+      const text = await response.text();
+      const cleaned = cleanJobHtmlToPureText(text);
+      if (cleaned && cleaned.length > 120) {
+        return { text: cleaned, source: candidate.label };
+      }
+    } catch {
+      // Try the next source.
+    }
+  }
+
+  return { text: "", source: "none" };
 }
 
 /** Origins allowed to call this API from a browser. Overridable via ALLOWED_ORIGINS (comma-separated). */
@@ -318,6 +386,22 @@ async function startServer() {
     });
   });
 
+  app.get("/api/usage/stats", (_req, res) => {
+    const stats = getGeminiUsageStats();
+    res.json({
+      success: true,
+      stats: {
+        providerName: stats.providerName,
+        apiPromptTokens: stats.promptTokens,
+        apiOutputTokens: stats.outputTokens,
+        apiTotalTokens: stats.totalTokens,
+        geminiDeltaCalls: stats.requestCount,
+        apiCostUSD: stats.totalCostUSD,
+        lastSyncedAt: stats.lastSyncedAt,
+      },
+    });
+  });
+
   // API Route: Parse Raw Resume Text into Master Vault JSON
   app.post("/api/parse-cv", async (req, res) => {
     try {
@@ -367,132 +451,30 @@ async function startServer() {
 
       let fetchedRawText = "";
       let fetchSuccess = false;
+      let fetchSource = "";
 
-      // Tier 1: Direct fetch with browser headers
-      try {
-        const response = await safeOutboundFetch(url, {
-          signal: AbortSignal.timeout(OUTBOUND_TIMEOUT_MS),
-          headers: {
-            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36",
-            "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8",
-            "Accept-Language": "pl-PL,pl;q=0.9,en-US;q=0.8,en;q=0.7",
-            "Cache-Control": "no-cache",
-            "Pragma": "no-cache",
-            "Referer": "https://www.google.com/",
-            "Sec-Ch-Ua": '"Chromium";v="122", "Not(A:Brand";v="24", "Google Chrome";v="122"',
-            "Sec-Ch-Ua-Mobile": "?0",
-            "Sec-Ch-Ua-Platform": '"Windows"',
-            "Sec-Fetch-Dest": "document",
-            "Sec-Fetch-Mode": "navigate",
-            "Sec-Fetch-Site": "cross-site",
-            "Sec-Fetch-User": "?1",
-            "Upgrade-Insecure-Requests": "1",
-          },
-        });
+      const scrapeResult = await scrapeJobPageText(url);
+      fetchedRawText = scrapeResult.text;
+      fetchSource = scrapeResult.source;
+      fetchSuccess = !!fetchedRawText && fetchedRawText.length > 120;
 
-        if (response.ok) {
-          fetchedRawText = await response.text();
-          if (fetchedRawText.length > 100) {
-            fetchSuccess = true;
-            console.log(`Tier 1 direct fetch succeeded (${fetchedRawText.length} bytes)`);
-          }
-        } else {
-          console.warn(`Tier 1 fetch returned status ${response.status} ${response.statusText}`);
-        }
-      } catch (t1Err) {
-        console.warn("Tier 1 direct fetch failed:", t1Err);
-      }
-
-      // Tier 2: Jina AI Reader Proxy (r.jina.ai) for anti-bot / Cloudflare bypass
       if (!fetchSuccess) {
-        console.log(`Tier 2: Attempting Jina AI Reader proxy for URL: ${url}`);
-        try {
-          const jinaUrl = `https://r.jina.ai/${url}`;
-          const jinaRes = await fetch(jinaUrl, {
-            signal: AbortSignal.timeout(OUTBOUND_TIMEOUT_MS),
-            headers: {
-              "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
-              "Accept": "text/plain, text/html",
-              "X-Target-Url": url,
-            },
-          });
-          if (jinaRes.ok) {
-            fetchedRawText = await jinaRes.text();
-            if (fetchedRawText.length > 100) {
-              fetchSuccess = true;
-              console.log(`Tier 2 Jina Reader fetch succeeded (${fetchedRawText.length} bytes)`);
-            }
-          } else {
-            console.warn(`Tier 2 Jina Reader status: ${jinaRes.status}`);
-          }
-        } catch (t2Err) {
-          console.warn("Tier 2 Jina Reader failed:", t2Err);
-        }
+        console.warn(`All job-board fetch strategies failed for ${url}`);
+      } else {
+        console.log(`Scraper succeeded via ${fetchSource} for ${url}`);
       }
 
-      // Tier 3: CorsProxy fallback
-      if (!fetchSuccess) {
-        console.log(`Tier 3: Attempting CorsProxy for URL: ${url}`);
-        try {
-          const proxyUrl = `https://corsproxy.io/?${encodeURIComponent(url)}`;
-          const proxyRes = await fetch(proxyUrl, {
-            signal: AbortSignal.timeout(OUTBOUND_TIMEOUT_MS),
-            headers: {
-              "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
-            },
-          });
-          if (proxyRes.ok) {
-            fetchedRawText = await proxyRes.text();
-            if (fetchedRawText.length > 100) {
-              fetchSuccess = true;
-              console.log(`Tier 3 CorsProxy succeeded (${fetchedRawText.length} bytes)`);
-            }
-          }
-        } catch (t3Err) {
-          console.warn("Tier 3 CorsProxy failed:", t3Err);
-        }
-      }
-
-      // Tier 4: Wayback Machine Digital Archive Fallback (Bypass 404 / Expired / Deleted Job Ads)
-      if (!fetchSuccess) {
-        console.log(`Tier 4: Attempting Wayback Machine Digital Archive for 404 / Expired URL: ${url}`);
-        try {
-          const archiveUrl = `https://web.archive.org/web/2/${url}`;
-          const archiveRes = await fetch(archiveUrl, {
-            signal: AbortSignal.timeout(OUTBOUND_TIMEOUT_MS),
-            headers: {
-              "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36",
-              "Referer": "https://web.archive.org/",
-            },
-          });
-          if (archiveRes.ok) {
-            const archiveText = await archiveRes.text();
-            if (archiveText.length > 200) {
-              fetchedRawText = archiveText;
-              fetchSuccess = true;
-              console.log(`Tier 4 Wayback Machine Archive fetch succeeded (${fetchedRawText.length} bytes)`);
-            }
-          } else {
-            console.warn(`Tier 4 Wayback Machine returned status: ${archiveRes.status}`);
-          }
-        } catch (t4Err) {
-          console.warn("Tier 4 Wayback Machine failed:", t4Err);
-        }
-      }
-
-      // If all automated fetches were blocked or failed
       if (!fetchSuccess || !fetchedRawText) {
         return res.status(403).json({
           success: false,
           is403Blocked: true,
-          error: "Serwer ogłoszenia (np. Pracuj.pl, LinkedIn) zablokował automatyczne pobieranie (403 Forbidden).",
+          error: "Serwer ogłoszenia zablokował automatyczne pobieranie lub strona nie zawiera czytelnej treści oferty.",
           details: "Skopiuj tekst oferty bezpośrednio ze strony i wklej go w zakładce 'Wklej Treść Ogłoszenia'.",
         });
       }
 
-      // Clean HTML tags, navigation, buttons, and website noise to extract pure job body
-      const pureText = cleanJobHtmlToPureText(fetchedRawText);
-      const truncatedText = pureText.slice(0, 15000); // Pass up to 15k chars to Gemini
+      const pureText = fetchedRawText;
+      const truncatedText = pureText.slice(0, 15000);
 
       if (truncatedText.length < 50) {
         return res.status(403).json({

@@ -14,10 +14,6 @@
 
 <!-- Dopisuj tutaj. Jeden punkt = jedna uwaga. -->
 
-- Po pobraniu oferty z URL dobre parsowanie z Gemini jest wyrzucane: `JobMatcher.tsx` używa `parsedJd` tylko do audytu dopasowania, a `RealtimeLivePreview` i tak przelicza wszystko lokalnie. CV, list, ATS i ściąga korzystają więc z gorszych danych, mimo że lepsze już są pobrane. _(wpis od Claude — usuń, jeśli nieaktualny)_
-- Formularz startuje z danymi demo („Senior Full-Stack Engineer & Cloud Systems Architect", „TechGrowth Inc."). Nowy użytkownik może wziąć je za własne i wygenerować CV pod fikcyjną firmę. _(wpis od Claude — usuń, jeśli nieaktualny)_
-- Słownik `interviewGlossaryDictionary.ts` nie zna terminów spoza IT (spawanie MIG/MAG/TIG, UDT, SEP, HACCP), więc glosariusz ściągi dla zawodów rzemieślniczych jest uczciwy, ale bardzo ubogi. _(wpis od Claude — usuń, jeśli nieaktualny)_
-
 ---
 
 ## ✅ Załatwione
@@ -26,5 +22,14 @@
 Format wpisu:
 
 - ~~Treść uwagi~~
-  - **Claude 2026-08-10:** co zostało zrobione albo dlaczego zdecydowano inaczej. PR #NN.
+  - **Claude 2026-08-12:** co zostało zrobione albo dlaczego zdecydowano inaczej. PR #NN.
 -->
+
+- ~~Import CV / preparse AI nie zachowywał rzeczywistych stanowisk i uczelni~~
+  - **Claude 2026-08-12:** usunięto placeholdery z `src/lib/cvUniversalParser.ts`, dodano bezpieczny fallback lokalnego parsera w `src/server/gemini.ts` i test regresyjny z realnym CV. Weryfikacja: `npm run lint`, `npm test`, `npm run build`. PR #TBD.
+
+- ~~Scraper ofert z URL nie działał na portalach typu OLX / Pracuj.pl / inne job boardy~~
+  - **Claude 2026-08-12:** poprawiłem kolejność pobierania treści oferty, usunąłem błędne proxy i zachowałem bezpieczny fallback do surowego HTML/text; pipeline używa teraz czytelnego tekstu oferty zamiast kruchych extractorów na pojedynczym źródle. Weryfikacja: `npm run lint`, `npm test`, `npm run build`. PR #TBD.
+
+- ~~Statystyki oszczędności tokenów były zbyt szacunkowe i nie odzwierciedlały realnej aktywności API~~
+  - **Claude 2026-08-12:** usunięto sztuczne wartości startowe, dodano live synchronizację z rzeczywistych metryk Gemini z `usageMetadata` przez endpoint `/api/usage/stats`, a widget statystyk odświeża dane co 5 sekund. Weryfikacja: `npm run lint`, `npm test`, `npm run build`. PR #TBD.

@@ -1,5 +1,5 @@
 /** Top-level sections reachable from the sidebar. */
-export type AppTab = 'matcher' | 'vault' | 'parser' | 'profiler';
+export type AppTab = 'matcher' | 'vault' | 'parser' | 'profiler' | 'applications';
 
 export type FlagCategory = 'PHYSICAL' | 'OFFICE_IT' | 'CASUAL' | 'REMOTE';
 
@@ -97,6 +97,20 @@ export interface Project {
   link?: string;
 }
 
+export type ApplicationStatus = 'saved' | 'applied' | 'interview' | 'rejected';
+
+export interface ApplicationRecord {
+  id: string;
+  jobTitle: string;
+  company: string;
+  source: string;
+  status: ApplicationStatus;
+  appliedAt: string;
+  matchScore: number;
+  notes?: string;
+  url?: string;
+}
+
 export interface MasterVault {
   version: string;
   updatedAt: string;
@@ -134,6 +148,12 @@ export interface TokenStats {
   localSlotHits: number;
   cacheHits: number;
   geminiDeltaCalls: number;
+  apiPromptTokens?: number;
+  apiOutputTokens?: number;
+  apiTotalTokens?: number;
+  apiCostUSD?: number;
+  lastSyncedAt?: string;
+  providerName?: string;
 }
 
 export interface LemmatizedMatch {
