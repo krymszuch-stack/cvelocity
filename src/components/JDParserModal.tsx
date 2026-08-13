@@ -5,9 +5,6 @@ import { parseJobDescriptionLocal, analyzeJdMatchWithVault, JDVaultMatchAnalysis
 import { Search, Sparkles, CheckCircle2, AlertTriangle, ArrowRight, PlusCircle, Check, Target, Link, Globe, Gift, ShieldAlert, AlertCircle } from 'lucide-react';
 import { Modal } from './ui/Modal';
 import { Button } from './ui/Button';
-import { Alert } from './ui/Feedback';
-import { Tabs } from './ui/Tabs';
-import { Input, Textarea } from './ui/Field';
 
 interface JDParserModalProps {
   isOpen: boolean;
@@ -155,11 +152,6 @@ export const JDParserModal: React.FC<JDParserModalProps> = ({
     onClose();
   };
 
-  const tabItems = [
-    { id: 'url' as const, label: 'Wklej Link z Ogłoszeniem URL', icon: Link },
-    { id: 'text' as const, label: 'Wklej Treść Ogłoszenia Tekst', icon: Search },
-  ];
-
   return (
     <Modal
       isOpen={isOpen}
@@ -170,35 +162,64 @@ export const JDParserModal: React.FC<JDParserModalProps> = ({
       size="xl"
     >
       {/* Mode Selector Tabs */}
-      <Tabs
-        items={tabItems}
-        active={inputMode}
-        onChange={setInputMode}
-        variant="underline"
-        className="mb-4"
-      />
+      <div className="flex border-b border-line space-x-4 mb-4">
+        <button
+          onClick={() => setInputMode('url')}
+          className={`flex items-center space-x-2 pb-2 text-xs font-bold border-b-2 transition-colors ${
+            inputMode === 'url'
+              ? 'border-brand-600 text-brand-fg'
+              : 'border-transparent text-muted hover:text-ink'
+          }`}
+        >
+          <Link className="w-4 h-4" />
+          <span>Wklej Link z Ogłoszeniem URL</span>
+        </button>
+
+        <button
+          onClick={() => setInputMode('text')}
+          className={`flex items-center space-x-2 pb-2 text-xs font-bold border-b-2 transition-colors ${
+            inputMode === 'text'
+              ? 'border-brand-600 text-brand-fg'
+              : 'border-transparent text-muted hover:text-ink'
+          }`}
+        >
+          <Search className="w-4 h-4" />
+          <span>Wklej Treść Ogłoszenia Tekst</span>
+        </button>
+      </div>
 
       {/* Input Views */}
       {inputMode === 'url' ? (
         <div className="space-y-3">
-          <Input
-            type="url"
-            label="Podaj link do ogłoszenia (np. Pracuj.pl, NoFluffJobs, JustJoin.it, LinkedIn):"
-            value={jdUrl}
-            onChange={(e) => setJdUrl(e.target.value)}
-            placeholder="https://www.pracuj.pl/praca/senior-react-developer..."
-            suffix={
-              <Button
-                variant="primary"
-                size="sm"
-                loading={isAnalyzing}
-                onClick={handleRunUrlParser}
-              >
-                {!isAnalyzing && <Sparkles className="w-4 h-4 shrink-0" />}
-                <span>Pobierz i Przeanalizuj Ofertę</span>
-              </Button>
-            }
-          />
+          <label className="block text-xs font-bold text-ink">
+            Podaj link do ogłoszenia (np. Pracuj.pl, NoFluffJobs, JustJoin.it, LinkedIn):
+          </label>
+          <div className="flex gap-2">
+            <input
+              type="url"
+              value={jdUrl}
+              onChange={(e) => setJdUrl(e.target.value)}
+              placeholder="https://www.pracuj.pl/praca/senior-react-developer..."
+              className="flex-1 bg-sunken border border-line rounded-xl px-4 py-2.5 text-xs text-ink focus:outline-none focus:border-brand-500 focus:bg-surface"
+            />
+            <button
+              onClick={handleRunUrlParser}
+              disabled={isAnalyzing}
+              className="px-6 py-2.5 bg-brand-600 hover:bg-brand-700 text-white rounded-xl font-bold text-xs shadow-2xs flex items-center space-x-2 shrink-0 transition-all disabled:opacity-50"
+            >
+              {isAnalyzing ? (
+                <>
+                  <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                  <span>Pobieranie strony...</span>
+                </>
+              ) : (
+                <>
+                  <Sparkles className="w-4 h-4 text-warning-fg" />
+                  <span>Pobierz i Przeanalizuj Ofertę</span>
+                </>
+              )}
+            </button>
+          </div>
           <p className="text-[11px] text-muted flex items-start gap-1">
             <Sparkles className="w-3.5 h-3.5 shrink-0 mt-0.5 text-brand-fg" />
             System automatycznie połączy się z portalem, oczyści kod HTML i wyekstrahuje kluczowe dane, widełki płacowe oraz benefity.
@@ -206,32 +227,42 @@ export const JDParserModal: React.FC<JDParserModalProps> = ({
         </div>
       ) : (
         <div className="space-y-3">
-          <Textarea
+          <label className="block text-xs font-bold text-ink">
+            Wklej surową treść ogłoszenia o pracę (Job Description):
+          </label>
+          <textarea
             rows={5}
-            label="Wklej surową treść ogłoszenia o pracę (Job Description):"
             value={jdText}
             onChange={(e) => setJdText(e.target.value)}
             placeholder="np. Poszukujemy Senior React Engineer. Wymagania: TypeScript, Docker, Prawo jazdy kat. B, Angielski C1. Oferujemy: LuxMed, MultiSport, B2B 18 000 - 24 000 PLN..."
-            className="font-mono"
+            className="w-full bg-sunken border border-line rounded-xl p-3 text-xs text-ink font-mono focus:outline-none focus:border-brand-500 focus:bg-surface"
           />
-          <Button
-            variant="primary"
-            size="md"
-            fullWidth
-            loading={isAnalyzing}
+          <button
             onClick={handleRunTextParser}
+            disabled={isAnalyzing}
+            className="w-full py-3 bg-brand-600 hover:bg-brand-700 text-white rounded-xl font-bold text-xs shadow-2xs flex items-center justify-center space-x-2 transition-all disabled:opacity-50"
           >
-            {!isAnalyzing && <Sparkles className="w-4 h-4 text-warning-fg" />}
-            <span>{isAnalyzing ? 'Analizowanie wymóg oferty...' : 'Przeanalizuj i Wyekstrahuj Słowa Kluczowe'}</span>
-          </Button>
+            {isAnalyzing ? (
+              <>
+                <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                <span>Analizowanie wymóg oferty...</span>
+              </>
+            ) : (
+              <>
+                <Sparkles className="w-4 h-4 text-warning-fg" />
+                <span>Przeanalizuj i Wyekstrahuj Słowa Kluczowe</span>
+              </>
+            )}
+          </button>
         </div>
       )}
 
       {/* Error Alert */}
       {fetchError && (
-        <Alert variant="warning" className="mt-4">
+        <div className="mt-4 p-3.5 bg-warning-soft border border-warning-500/30 rounded-xl text-xs text-warning-fg flex items-center space-x-2">
+          <AlertTriangle className="w-4 h-4 shrink-0" />
           <span>{fetchError}</span>
-        </Alert>
+        </div>
       )}
 
       {/* Analysis Results View */}
@@ -297,14 +328,14 @@ export const JDParserModal: React.FC<JDParserModalProps> = ({
                       </div>
 
                       {warn.canQuickAdd && !isAdded && (
-                        <Button
-                          variant="danger"
-                          size="xs"
-                          icon={PlusCircle}
+                        <button
+                          type="button"
                           onClick={() => handleAddMissingSkillToVault(warn.quickAddValue)}
+                          className="px-3 py-1 bg-danger-600 hover:bg-danger-700 text-white font-bold rounded-lg text-[11px] shrink-0 transition-colors shadow-2xs flex items-center space-x-1"
                         >
-                          <span>Dodaj '{warn.quickAddValue}' do Vault</span>
-                        </Button>
+                          <PlusCircle className="w-3.5 h-3.5" />
+                          <span>+ Dodaj '{warn.quickAddValue}' do Vault</span>
+                        </button>
                       )}
 
                       {isAdded && (
@@ -358,10 +389,10 @@ export const JDParserModal: React.FC<JDParserModalProps> = ({
                     onClick={() => !isAlreadyInVault && handleAddMissingSkillToVault(skill)}
                     className={`px-3 py-1.5 rounded-lg text-xs font-bold border transition-all flex items-center space-x-1.5 ${
                       isAlreadyInVault
-                        ? 'bg-success-soft border-success-500/25 text-success-fg cursor-default'
+                        ? 'bg-success-soft border-success-500/30 text-success-fg cursor-default'
                         : isAdded
-                        ? 'bg-brand-soft border-brand-200 text-brand-fg'
-                        : 'bg-warning-soft border-warning-500/25 text-warning-fg hover:bg-warning-soft/80'
+                        ? 'bg-brand-soft border-brand-300 text-brand-fg'
+                        : 'bg-warning-soft border-warning-500/30 text-warning-fg hover:bg-warning-soft/80'
                     }`}
                   >
                     {isAlreadyInVault ? (

@@ -2,17 +2,22 @@ import React from 'react';
 import { AtsCheckResult } from '../types';
 import { ShieldCheck, CheckCircle2, FileText, Calendar, Target, Cpu, Check, X, Layers, Sparkles, Binary, Award, Info, AlertTriangle } from 'lucide-react';
 import { StatusBadge } from './ui/StatusBadge';
-import { ScoreRing, ProgressBar, StatTile } from './ui/Feedback';
 
 interface AtsSimulatorViewProps {
   result: AtsCheckResult;
 }
 
 export const AtsSimulatorView: React.FC<AtsSimulatorViewProps> = ({ result }) => {
+  const getScoreColor = (score: number) => {
+    if (score >= 80) return 'text-success-fg border-success-500/30 bg-success-soft';
+    if (score >= 60) return 'text-warning-fg border-warning-500/30 bg-warning-soft';
+    return 'text-danger-fg border-danger-500/30 bg-danger-soft';
+  };
+
   return (
     <div className="bg-surface border border-line rounded-2xl p-5 sm:p-6 text-ink shadow-xs space-y-5 animate-fade-in">
       <div className="flex items-center space-x-3 border-b border-line pb-4">
-        <div className="p-2.5 bg-brand-soft border border-brand-500/25 rounded-xl text-brand-fg">
+        <div className="p-2.5 bg-brand-soft border border-brand-200 rounded-xl text-brand-fg">
           <ShieldCheck className="w-5 h-5" />
         </div>
         <div>
@@ -25,37 +30,34 @@ export const AtsSimulatorView: React.FC<AtsSimulatorViewProps> = ({ result }) =>
 
       {/* Main Score Gauge Bar */}
       <div className="grid grid-cols-1 sm:grid-cols-4 gap-4">
-        <div className="bg-sunken border border-line p-4 rounded-xl flex flex-col items-center justify-center text-center">
-          <div className="text-xs uppercase tracking-wider text-muted font-sans font-bold mb-3">Wynik Kompatybilności</div>
-          <ScoreRing value={result.overallScore} size={110} label="ATS" />
-          <div className="text-[10px] text-subtle mt-3">Wyliczenie algebry ważonej</div>
+        <div className={`p-4 rounded-xl border text-center font-mono ${getScoreColor(result.overallScore)}`}>
+          <div className="text-xs uppercase tracking-wider text-muted font-sans font-bold mb-1">Wynik Kompatybilności</div>
+          <div className="text-4xl font-extrabold sv-tnum">{result.overallScore}%</div>
+          <div className="text-[10px] text-subtle mt-1">Wyliczenie algebry ważonej</div>
         </div>
 
-        <div className="bg-sunken border border-line p-4 rounded-xl flex flex-col justify-between">
-          <ProgressBar
-            label="Umiejętności Twarde (Sh - 3x)"
-            value={result.layer3Scoring?.hardSkillScore ?? result.keywordCoverageScore}
-            tone="auto"
-          />
-          <div className="text-[10px] text-subtle mt-2">Dopasowanie z lematyzacją</div>
+        <div className="bg-sunken border border-line p-4 rounded-xl text-center">
+          <div className="text-xs text-muted font-medium mb-1">Umiejętności Twarde (Sh - 3x)</div>
+          <div className="text-2xl font-bold font-mono text-brand-fg sv-tnum">
+            {result.layer3Scoring?.hardSkillScore ?? result.keywordCoverageScore}%
+          </div>
+          <div className="text-[10px] text-subtle mt-1">Dopasowanie z lematyzacją</div>
         </div>
 
-        <div className="bg-sunken border border-line p-4 rounded-xl flex flex-col justify-between">
-          <ProgressBar
-            label="Świeżość Umiejętności (Sr - 1.5x)"
-            value={result.layer3Scoring?.recencyScore ?? 80}
-            tone="auto"
-          />
-          <div className="text-[10px] text-subtle mt-2">Waga nowszych stanowisk</div>
+        <div className="bg-sunken border border-line p-4 rounded-xl text-center">
+          <div className="text-xs text-muted font-medium mb-1">Świeżość Umiejętności (Sr - 1.5x)</div>
+          <div className="text-2xl font-bold font-mono text-success-fg sv-tnum">
+            {result.layer3Scoring?.recencyScore ?? 80}%
+          </div>
+          <div className="text-[10px] text-subtle mt-1">Waga nowszych stanowisk</div>
         </div>
 
-        <div className="bg-sunken border border-line p-4 rounded-xl flex flex-col justify-between">
-          <ProgressBar
-            label="Zgodność Tytułu (St - 1.5x)"
-            value={result.layer3Scoring?.titleMatchScore ?? 75}
-            tone="auto"
-          />
-          <div className="text-[10px] text-subtle mt-2">Gęstość nagłówka vs JD</div>
+        <div className="bg-sunken border border-line p-4 rounded-xl text-center">
+          <div className="text-xs text-muted font-medium mb-1">Zgodność Tytułu (St - 1.5x)</div>
+          <div className="text-2xl font-bold font-mono text-brand-fg sv-tnum">
+            {result.layer3Scoring?.titleMatchScore ?? 75}%
+          </div>
+          <div className="text-[10px] text-subtle mt-1">Gęstość nagłówka vs JD</div>
         </div>
       </div>
 
@@ -75,14 +77,15 @@ export const AtsSimulatorView: React.FC<AtsSimulatorViewProps> = ({ result }) =>
             <Layers className="w-4 h-4 text-brand-fg" />
             <span>WARSTWA 1: Struktura & Układ</span>
           </div>
-          <div className="space-y-3 text-xs">
-            <ProgressBar
-              label="Standardyzacja Nagłówków"
-              value={result.layer1Structure?.headerNormalizationScore ?? result.structureScore}
-              tone="brand"
-            />
+          <div className="space-y-2 text-xs">
             <div className="flex justify-between items-center text-muted">
-              <span className="font-semibold text-muted">Bezpieczeństwo Jednokolumnowe:</span>
+              <span>Standardyzacja Nagłówków:</span>
+              <span className="font-bold font-mono text-brand-fg sv-tnum">
+                {result.layer1Structure?.headerNormalizationScore ?? result.structureScore}%
+              </span>
+            </div>
+            <div className="flex justify-between items-center text-muted">
+              <span>Bezpieczeństwo Jednokolumnowe:</span>
               <StatusBadge variant={result.layer1Structure?.isSingleColumnCompliant ? 'success' : 'warning'}>
                 {result.layer1Structure?.isSingleColumnCompliant ? 'TAK' : 'ZŁOŻONE'}
               </StatusBadge>
@@ -91,7 +94,7 @@ export const AtsSimulatorView: React.FC<AtsSimulatorViewProps> = ({ result }) =>
               <span className="text-[11px] text-subtle font-medium">Wykryte sekcje:</span>
               <div className="flex flex-wrap gap-1 mt-1">
                 {(result.layer1Structure?.detectedSections || ['Doświadczenie', 'Wykształcenie', 'Umiejętności', 'Kontakt']).map((sec) => (
-                  <span key={sec} className="px-1.5 py-0.5 bg-brand-soft border border-brand-500/25 text-brand-fg rounded text-[10px]">
+                  <span key={sec} className="px-1.5 py-0.5 bg-brand-soft border border-brand-200 text-brand-fg rounded text-[10px]">
                     {sec}
                   </span>
                 ))}
@@ -106,20 +109,21 @@ export const AtsSimulatorView: React.FC<AtsSimulatorViewProps> = ({ result }) =>
             <Sparkles className="w-4 h-4 text-brand-fg" />
             <span>WARSTWA 2: NLP & Lematyzacja</span>
           </div>
-          <div className="space-y-3 text-xs">
+          <div className="space-y-2 text-xs">
             <div className="flex justify-between items-center text-muted">
-              <span className="font-semibold text-muted">Wykryte Frazy z Oferty:</span>
+              <span>Wykryte Frazy z Oferty:</span>
               <span className="font-bold font-mono text-brand-fg sv-tnum">
                 {result.layer2Nlp?.extractedJdPhrasesCount || result.matchedKeywords.length}
               </span>
             </div>
-            <ProgressBar
-              label="Pokrycie Wymagań Formalnych"
-              value={result.layer2Nlp?.formalReqsCoverage ?? 100}
-              tone="auto"
-            />
             <div className="flex justify-between items-center text-muted">
-              <span className="font-semibold text-muted">Słowa Miękkie, Szum Odfiltrowany:</span>
+              <span>Pokrycie Wymagań Formalnych:</span>
+              <span className="font-bold font-mono text-success-fg sv-tnum">
+                {result.layer2Nlp?.formalReqsCoverage ?? 100}%
+              </span>
+            </div>
+            <div className="flex justify-between items-center text-muted">
+              <span>Słowa Miękkie, Szum Odfiltrowany:</span>
               <span className="font-bold font-mono text-subtle sv-tnum">
                 {result.layer2Nlp?.softSkillsFilterCount ?? 0}
               </span>
@@ -133,22 +137,25 @@ export const AtsSimulatorView: React.FC<AtsSimulatorViewProps> = ({ result }) =>
             <Award className="w-4 h-4 text-warning-fg" />
             <span>WARSTWA 3: Algebra Punktacji</span>
           </div>
-          <div className="space-y-3 text-xs">
-            <ProgressBar
-              label="Waga Hard Skills 3.0x"
-              value={result.layer3Scoring?.hardSkillScore ?? result.keywordCoverageScore}
-              tone="brand"
-            />
-            <ProgressBar
-              label="Waga Świeżości 1.5x"
-              value={result.layer3Scoring?.recencyScore ?? 80}
-              tone="auto"
-            />
-            <ProgressBar
-              label="Zgodność Tytułu 1.5x"
-              value={result.layer3Scoring?.titleMatchScore ?? 75}
-              tone="brand"
-            />
+          <div className="space-y-2 text-xs">
+            <div className="flex justify-between items-center text-muted">
+              <span>Waga Hard Skills 3.0x:</span>
+              <span className="font-bold font-mono text-brand-fg sv-tnum">
+                {result.layer3Scoring?.hardSkillScore ?? result.keywordCoverageScore}%
+              </span>
+            </div>
+            <div className="flex justify-between items-center text-muted">
+              <span>Waga Świeżości 1.5x:</span>
+              <span className="font-bold font-mono text-success-fg sv-tnum">
+                {result.layer3Scoring?.recencyScore ?? 80}%
+              </span>
+            </div>
+            <div className="flex justify-between items-center text-muted">
+              <span>Zgodność Tytułu 1.5x:</span>
+              <span className="font-bold font-mono text-brand-fg sv-tnum">
+                {result.layer3Scoring?.titleMatchScore ?? 75}%
+              </span>
+            </div>
           </div>
         </div>
       </div>
@@ -161,35 +168,27 @@ export const AtsSimulatorView: React.FC<AtsSimulatorViewProps> = ({ result }) =>
             Analizowane Czynniki Zgodności ATS
           </h3>
         </div>
-        <div className="grid grid-cols-1 sm:grid-cols-4 gap-3 pt-1">
-          <StatTile
-            icon={Target}
-            accent="brand"
-            label="Wymagania Twarde"
-            value={`${result.layer3Scoring?.hardSkillScore ?? result.keywordCoverageScore}%`}
-            hint="Pokrycie umiejętności z oferty (waga 3x)"
-          />
-          <StatTile
-            icon={Calendar}
-            accent="success"
-            label="Świeżość Wiedzy"
-            value={`${result.layer3Scoring?.recencyScore ?? 0}%`}
-            hint="Obecność w najnowszych stanowiskach (waga 1.5x)"
-          />
-          <StatTile
-            icon={Award}
-            accent="brand"
-            label="Zgodność Tytułu"
-            value={`${result.layer3Scoring?.titleMatchScore ?? 0}%`}
-            hint="Zbieżność z nazwą stanowiska (waga 1.5x)"
-          />
-          <StatTile
-            icon={FileText}
-            accent="neutral"
-            label="Układ & Daty"
-            value={`${result.structureScore}%`}
-            hint="Jednokolumnowy układ i standardowe daty"
-          />
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 pt-1">
+          <div className="bg-sunken border border-line p-3 rounded-lg space-y-1">
+            <div className="text-[11px] font-bold text-ink">Wymagania Twarde</div>
+            <div className="text-lg font-extrabold font-mono text-brand-fg sv-tnum">{result.layer3Scoring?.hardSkillScore ?? result.keywordCoverageScore}%</div>
+            <div className="text-[9px] text-muted leading-tight">Pokrycie umiejętności z oferty (waga 3x)</div>
+          </div>
+          <div className="bg-sunken border border-line p-3 rounded-lg space-y-1">
+            <div className="text-[11px] font-bold text-ink">Świeżość Wiedzy</div>
+            <div className="text-lg font-extrabold font-mono text-brand-fg sv-tnum">{result.layer3Scoring?.recencyScore ?? 0}%</div>
+            <div className="text-[9px] text-muted leading-tight">Obecność w najnowszych stanowiskach (waga 1.5x)</div>
+          </div>
+          <div className="bg-sunken border border-line p-3 rounded-lg space-y-1">
+            <div className="text-[11px] font-bold text-ink">Zgodność Tytułu</div>
+            <div className="text-lg font-extrabold font-mono text-brand-fg sv-tnum">{result.layer3Scoring?.titleMatchScore ?? 0}%</div>
+            <div className="text-[9px] text-muted leading-tight">Zbieżność z nazwą stanowiska (waga 1.5x)</div>
+          </div>
+          <div className="bg-sunken border border-line p-3 rounded-lg space-y-1">
+            <div className="text-[11px] font-bold text-ink">Układ & Daty</div>
+            <div className="text-lg font-extrabold font-mono text-brand-fg sv-tnum">{result.structureScore}%</div>
+            <div className="text-[9px] text-muted leading-tight">Jednokolumnowy układ i standardowe daty</div>
+          </div>
         </div>
       </div>
 
@@ -208,7 +207,7 @@ export const AtsSimulatorView: React.FC<AtsSimulatorViewProps> = ({ result }) =>
               {result.matchedKeywords.map((kw) => (
                 <span
                   key={kw}
-                  className="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-success-soft border border-success-500/25 text-success-fg font-mono text-[11px] font-medium"
+                  className="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-success-soft border border-success-500/30 text-success-fg font-mono text-[11px] font-medium"
                 >
                   <Check className="w-3 h-3 shrink-0" />
                   {kw}
@@ -231,7 +230,7 @@ export const AtsSimulatorView: React.FC<AtsSimulatorViewProps> = ({ result }) =>
               {result.missingHardSkills.map((kw) => (
                 <span
                   key={kw}
-                  className="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-danger-soft border border-danger-500/25 text-danger-fg font-mono text-[11px] font-medium"
+                  className="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-danger-soft border border-danger-500/30 text-danger-fg font-mono text-[11px] font-medium"
                 >
                   <X className="w-3 h-3 shrink-0" />
                   {kw}
@@ -244,7 +243,7 @@ export const AtsSimulatorView: React.FC<AtsSimulatorViewProps> = ({ result }) =>
 
       {/* Recommendations Box */}
       {result.recommendations.length > 0 && (
-        <div className="bg-warning-soft border border-warning-500/25 rounded-xl p-4 space-y-2">
+        <div className="bg-warning-soft border border-warning-500/30 rounded-xl p-4 space-y-2">
           <h3 className="text-xs font-bold text-warning-fg flex items-center space-x-1.5">
             <Target className="w-4 h-4 text-warning-fg" />
             <span>Rekomendacje Optymalizacyjne Dla ATS</span>
@@ -272,7 +271,7 @@ export const AtsSimulatorView: React.FC<AtsSimulatorViewProps> = ({ result }) =>
           ) : (
             <div className="space-y-1">
               {result.badDateFormats.map((err, i) => (
-                <div key={i} className="text-xs text-danger-fg bg-danger-soft p-2 rounded border border-danger-500/25 flex items-start gap-1.5">
+                <div key={i} className="text-xs text-danger-fg bg-danger-soft p-2 rounded border border-danger-500/30 flex items-start gap-1.5">
                   <AlertTriangle className="w-3.5 h-3.5 shrink-0 mt-0.5" />
                   <span>{err}</span>
                 </div>
@@ -294,13 +293,13 @@ export const AtsSimulatorView: React.FC<AtsSimulatorViewProps> = ({ result }) =>
           ) : (
             <div className="space-y-1">
               {result.ocrWarnings.map((warn, i) => (
-                <div key={i} className="text-xs text-warning-fg bg-warning-soft p-2 rounded border border-warning-500/25 flex items-start gap-1.5">
+                <div key={i} className="text-xs text-warning-fg bg-warning-soft p-2 rounded border border-warning-500/30 flex items-start gap-1.5">
                   <Info className="w-3.5 h-3.5 shrink-0 mt-0.5" />
                   <span>{warn}</span>
                 </div>
               ))}
               {result.layer1Structure?.unparsableElementsWarnings.map((warn, i) => (
-                <div key={`u-${i}`} className="text-xs text-danger-fg bg-danger-soft p-2 rounded border border-danger-500/25 flex items-start gap-1.5">
+                <div key={`u-${i}`} className="text-xs text-danger-fg bg-danger-soft p-2 rounded border border-danger-500/30 flex items-start gap-1.5">
                   <AlertTriangle className="w-3.5 h-3.5 shrink-0 mt-0.5" />
                   <span>{warn}</span>
                 </div>

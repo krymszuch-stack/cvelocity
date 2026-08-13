@@ -1,9 +1,6 @@
 import React from 'react';
 import { FlagCategory, ExperienceLevel, ProfilerState, LanguageProficiency } from '../types';
 import { Settings, MapPin, Globe, Award, Shield, Check, Plus, Trash2 } from 'lucide-react';
-import { Card, CardHeader } from './ui/Card';
-import { Input, Select, Toggle } from './ui/Field';
-import { Button, IconButton } from './ui/Button';
 
 interface ProfilerSectionProps {
   profiler: ProfilerState;
@@ -67,15 +64,21 @@ export const ProfilerSection: React.FC<ProfilerSectionProps> = ({ profiler, onCh
   };
 
   return (
-    <Card className="space-y-8">
+    <div className="bg-surface border border-line rounded-2xl p-6 text-ink space-y-8 shadow-xs">
       {/* Header */}
-      <CardHeader
-        icon={Settings}
-        title="Matryca Profilu & Ingestion Flags"
-        subtitle="Wielokryterialne flagi preferencji (bitmask) i parametry kandydata"
-        accent="brand"
-        className="border-b border-line pb-4"
-      />
+      <div className="flex items-center justify-between border-b border-line pb-4">
+        <div className="flex items-center space-x-3">
+          <div className="p-2.5 bg-brand-soft border border-brand-200 rounded-xl text-brand-fg shadow-2xs">
+            <Settings className="w-5 h-5" />
+          </div>
+          <div>
+            <h2 className="text-xl font-bold text-ink">Matryca Profilu & Ingestion Flags</h2>
+            <p className="text-xs text-muted">
+              Wielokryterialne flagi preferencji (bitmask) i parametry kandydata
+            </p>
+          </div>
+        </div>
+      </div>
 
       {/* 1. Flag Matrix */}
       <div>
@@ -153,18 +156,20 @@ export const ProfilerSection: React.FC<ProfilerSectionProps> = ({ profiler, onCh
 
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div>
-            <Input
-              label="Główne Miasto / Region"
+            <label className="block text-xs font-semibold text-muted mb-1">Główne Miasto / Region</label>
+            <input
+              type="text"
               value={profiler.location.city}
               onChange={(e) => handleLocationChange('city', e.target.value)}
               placeholder="np. Warszawa, Kraków"
+              className="w-full bg-surface border border-line rounded-lg px-3 py-2 text-xs text-ink focus:outline-none focus:border-brand-500"
             />
           </div>
 
-          <div className="flex flex-col gap-1.5">
-            <span className="text-xs font-semibold text-muted">
+          <div>
+            <label className="block text-xs font-semibold text-muted mb-1">
               Promień Dojazdów: <span className="text-brand-fg font-bold sv-tnum">{profiler.location.radiusKm} km</span>
-            </span>
+            </label>
             <input
               type="range"
               min="0"
@@ -177,27 +182,36 @@ export const ProfilerSection: React.FC<ProfilerSectionProps> = ({ profiler, onCh
           </div>
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 pt-2">
-          <Toggle
-            checked={profiler.location.willingnessToTravel}
-            onChange={(checked) => handleLocationChange('willingnessToTravel', checked)}
-            label="Wyjazdy służbowe"
-            description="Gotowość do podróży służbowych"
-          />
+        <div className="flex flex-wrap gap-4 pt-2 text-xs text-ink">
+          <label className="flex items-center space-x-2 cursor-pointer">
+            <input
+              type="checkbox"
+              checked={profiler.location.willingnessToTravel}
+              onChange={(e) => handleLocationChange('willingnessToTravel', e.target.checked)}
+              className="rounded border-line-strong text-brand-600 focus:ring-brand-500"
+            />
+            <span>Gotowość do wyjazdów służbowych</span>
+          </label>
 
-          <Toggle
-            checked={profiler.location.hybridWork}
-            onChange={(checked) => handleLocationChange('hybridWork', checked)}
-            label="Praca hybrydowa"
-            description="Częściowo z biura, częściowo zdalnie"
-          />
+          <label className="flex items-center space-x-2 cursor-pointer">
+            <input
+              type="checkbox"
+              checked={profiler.location.hybridWork}
+              onChange={(e) => handleLocationChange('hybridWork', e.target.checked)}
+              className="rounded border-line-strong text-brand-600 focus:ring-brand-500"
+            />
+            <span>Praca hybrydowa</span>
+          </label>
 
-          <Toggle
-            checked={profiler.location.remoteOnly}
-            onChange={(checked) => handleLocationChange('remoteOnly', checked)}
-            label="Wyłącznie zdalnie"
-            description="100% pracy zdalnej bez dojazdów"
-          />
+          <label className="flex items-center space-x-2 cursor-pointer">
+            <input
+              type="checkbox"
+              checked={profiler.location.remoteOnly}
+              onChange={(e) => handleLocationChange('remoteOnly', e.target.checked)}
+              className="rounded border-line-strong text-brand-600 focus:ring-brand-500"
+            />
+            <span>Wyłącznie praca zdalna Remote</span>
+          </label>
         </div>
       </div>
 
@@ -208,14 +222,13 @@ export const ProfilerSection: React.FC<ProfilerSectionProps> = ({ profiler, onCh
             <Globe className="w-4 h-4 text-brand-fg" />
             <span>Języki Obce & Kontekst Stosowania CEFR</span>
           </label>
-          <Button
-            size="sm"
-            variant="primary"
-            icon={Plus}
+          <button
             onClick={addLanguage}
+            className="flex items-center space-x-1 px-3 py-1.5 bg-brand-600 hover:bg-brand-700 text-white rounded-lg text-xs font-bold transition-colors shadow-2xs"
           >
-            Dodaj Język
-          </Button>
+            <Plus className="w-3.5 h-3.5" />
+            <span>Dodaj Język</span>
+          </button>
         </div>
 
         <div className="space-y-3">
@@ -225,17 +238,20 @@ export const ProfilerSection: React.FC<ProfilerSectionProps> = ({ profiler, onCh
               className="bg-sunken border border-line p-3.5 rounded-xl grid grid-cols-1 md:grid-cols-12 gap-3 items-center"
             >
               <div className="md:col-span-3">
-                <Input
+                <input
+                  type="text"
                   value={lang.language}
                   onChange={(e) => updateLanguage(lang.id, 'language', e.target.value)}
                   placeholder="np. Angielski, Niemiecki"
+                  className="w-full bg-surface border border-line rounded-md px-2.5 py-1.5 text-xs text-ink focus:outline-none focus:border-brand-500"
                 />
               </div>
 
-              <div className="md:col-span-3">
-                <Select
+              <div className="md:col-span-2">
+                <select
                   value={lang.level}
                   onChange={(e) => updateLanguage(lang.id, 'level', e.target.value)}
+                  className="w-full bg-surface border border-line rounded-md px-2.5 py-1.5 text-xs text-ink focus:outline-none focus:border-brand-500"
                 >
                   <option value="A1">A1 (Początkujący)</option>
                   <option value="A2">A2 (Podstawowy)</option>
@@ -244,31 +260,31 @@ export const ProfilerSection: React.FC<ProfilerSectionProps> = ({ profiler, onCh
                   <option value="C1">C1 (Biegły)</option>
                   <option value="C2">C2 (Mastery)</option>
                   <option value="Native">Ojczysty (Native)</option>
-                </Select>
+                </select>
               </div>
 
-              <div className="md:col-span-5">
-                <Input
+              <div className="md:col-span-6">
+                <input
+                  type="text"
                   value={lang.context}
                   onChange={(e) => updateLanguage(lang.id, 'context', e.target.value)}
-                  placeholder="Kontekst: np. Dokumentacja, rozmowy"
+                  placeholder="Kontekst: np. Dokumentacja techniczna, rozmowy biznesowe"
+                  className="w-full bg-surface border border-line rounded-md px-2.5 py-1.5 text-xs text-ink focus:outline-none focus:border-brand-500"
                 />
               </div>
 
               <div className="md:col-span-1 flex justify-end">
-                <IconButton
-                  icon={Trash2}
-                  title="Usuń język"
-                  variant="ghost"
-                  size="sm"
-                  className="text-subtle hover:text-danger-fg"
+                <button
                   onClick={() => removeLanguage(lang.id)}
-                />
+                  className="p-1.5 text-subtle hover:text-danger-fg transition-colors"
+                >
+                  <Trash2 className="w-4 h-4" />
+                </button>
               </div>
             </div>
           ))}
         </div>
       </div>
-    </Card>
+    </div>
   );
 };

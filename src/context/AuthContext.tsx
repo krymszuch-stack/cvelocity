@@ -16,7 +16,6 @@ import {
 import { verifyTwoFactorToken } from '../lib/twoFactorAuth';
 import { deleteCurrentFirebaseUser, signOutFirebaseUser } from '../lib/firebaseClient';
 import { MasterVault } from '../types';
-import { loadVaultFromLocalStorage, saveVaultToLocalStorage } from '../lib/vaultCrypto';
 
 interface AuthContextType {
   user: UserAccount | null;
@@ -46,7 +45,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode; onVaultLoaded?:
   const [userVault, setUserVault] = useState<MasterVault | null>(() => {
     const sessionUser = getActiveSessionUser();
     if (sessionUser) {
-      return loadUserVault(sessionUser.id) || loadVaultFromLocalStorage(sessionUser.id);
+      return loadUserVault(sessionUser.id);
     }
     return null;
   });
@@ -153,7 +152,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode; onVaultLoaded?:
         : vault;
 
       saveUserVault(user.id, sanitizedVault, userSecret);
-      saveVaultToLocalStorage(sanitizedVault, user.id);
       setUserVault(sanitizedVault);
     }
   }, [user]);
