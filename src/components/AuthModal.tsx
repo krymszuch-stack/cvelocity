@@ -1,10 +1,7 @@
 import React, { useState } from 'react';
 import { useAuth } from '../context/AuthContext';
-import { User, Lock, Mail, ShieldCheck, ArrowRight, UserPlus, LogIn, CheckCircle2, Trash2, AlertTriangle, Eye, EyeOff, KeyRound, Smartphone } from 'lucide-react';
-import { MasterVault } from '../types';
-import { Requires2FAError, UserAccount } from '../lib/auth';
-import { generateTwoFactorSetup, verifyTwoFactorToken, TwoFactorSetup } from '../lib/twoFactorAuth';
-import { signInWithGooglePopup, isFirebaseConfigured } from '../lib/firebaseClient';
+import { User, Lock, Mail, ArrowRight, UserPlus, LogIn, CheckCircle2, Trash2, AlertTriangle, Eye, EyeOff } from 'lucide-react';
+import { sendPasswordReset, isFirebaseConfigured } from '../lib/firebaseClient';
 import { Modal } from './ui/Modal';
 import { Button } from './ui/Button';
 import { StatusBadge } from './ui/StatusBadge';
@@ -12,15 +9,41 @@ import { StatusBadge } from './ui/StatusBadge';
 interface AuthModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onSuccessVaultLoaded?: (vault: MasterVault) => void;
 }
 
-export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onSuccessVaultLoaded }) => {
-  const { login, register, loginOAuth, completeTwoFactorLogin, enableTwoFactor, disableTwoFactor, isAuthenticated, user, logout, deleteAccount } = useAuth();
+/** Maps Firebase Auth error codes to a message a candidate (not a developer) can act on. */
+function describeAuthError(err: unknown): string {
+  const code = (err as { code?: string })?.code;
+  switch (code) {
+    case 'auth/email-already-in-use':
+      return 'Konto z tym adresem email już istnieje. Zaloguj się zamiast rejestrować nowe konto.';
+    case 'auth/invalid-email':
+      return 'Adres email wygląda na nieprawidłowy.';
+    case 'auth/weak-password':
+      return 'Hasło musi zawierać co najmniej 6 znaków.';
+    case 'auth/wrong-password':
+    case 'auth/invalid-credential':
+    case 'auth/user-not-found':
+      return 'Nieprawidłowy adres email lub hasło.';
+    case 'auth/too-many-requests':
+      return 'Zbyt wiele prób logowania. Spróbuj ponownie za chwilę.';
+    case 'auth/popup-closed-by-user':
+    case 'auth/cancelled-popup-request':
+      return 'Zamknięto okno logowania Google.';
+    case 'auth/unauthorized-domain':
+      return 'Ta domena nie jest autoryzowana w konsoli Firebase. Dodaj ją w Authentication → Settings → Authorized domains.';
+    default:
+      return (err as { message?: string })?.message || 'Wystąpił błąd autoryzacji.';
+  }
+}
+
+export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
+  const { login, register, loginOAuth, isAuthenticated, user, logout, deleteAccount } = useAuth();
   const [isRegisterTab, setIsRegisterTab] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   // Form states
   const [email, setEmail] = useState('');
@@ -29,21 +52,11 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onSuccess
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
 
-  // Login-time 2FA challenge
-  const [pendingTwoFactorUser, setPendingTwoFactorUser] = useState<UserAccount | null>(null);
-  const [twoFactorCode, setTwoFactorCode] = useState('');
-
-  // 2FA setup flow (from the logged-in account panel)
-  const [is2FASetupOpen, setIs2FASetupOpen] = useState(false);
-  const [setupData, setSetupData] = useState<TwoFactorSetup | null>(null);
-  const [setupCode, setSetupCode] = useState('');
-  const [setupError, setSetupError] = useState<string | null>(null);
-  const [confirmDisable2FA, setConfirmDisable2FA] = useState(false);
-
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setErrorMsg(null);
     setSuccessMsg(null);
+    setIsSubmitting(true);
 
     try {
       if (isRegisterTab) {
@@ -51,86 +64,67 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onSuccess
           setErrorMsg('Proszę podać Imię i Nazwisko.');
           return;
         }
-        const vault = register(email, password, fullName);
+        await register(email, password, fullName);
         setSuccessMsg('Konto zostało pomyślnie utworzone! Zostałeś zalogowany.');
-        if (onSuccessVaultLoaded) onSuccessVaultLoaded(vault);
-        setTimeout(() => {
-          onClose();
-        }, 1200);
+        setTimeout(onClose, 1200);
       } else {
-        const vault = login(email, password);
+        await login(email, password);
         setSuccessMsg('Pomyślnie zalogowano!');
-        if (onSuccessVaultLoaded) onSuccessVaultLoaded(vault);
-        setTimeout(() => {
-          onClose();
-        }, 1000);
+        setTimeout(onClose, 1000);
       }
-    } catch (err: any) {
-      if (err instanceof Requires2FAError) {
-        setPendingTwoFactorUser(err.user);
-        setErrorMsg(null);
-        return;
-      }
-      setErrorMsg(err.message || 'Wystąpił błąd autoryzacji.');
+    } catch (err) {
+      setErrorMsg(describeAuthError(err));
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
-  const handleTwoFactorSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!pendingTwoFactorUser) return;
+  const handlePasswordReset = async () => {
     setErrorMsg(null);
-    try {
-      const vault = completeTwoFactorLogin(pendingTwoFactorUser, password, twoFactorCode);
-      setSuccessMsg('Pomyślnie zalogowano!');
-      if (onSuccessVaultLoaded) onSuccessVaultLoaded(vault);
-      setTimeout(() => {
-        onClose();
-      }, 1000);
-    } catch (err: any) {
-      setErrorMsg(err.message || 'Nieprawidłowy kod 2FA.');
-    }
-  };
-
-  const openTwoFactorSetup = async () => {
-    if (!user) return;
-    setSetupError(null);
-    setSetupCode('');
-    const setup = await generateTwoFactorSetup(user.email);
-    setSetupData(setup);
-    setIs2FASetupOpen(true);
-  };
-
-  const confirmTwoFactorSetup = () => {
-    if (!setupData) return;
-    if (!verifyTwoFactorToken(setupData.secret, setupCode)) {
-      setSetupError('Nieprawidłowy kod. Sprawdź czas na urządzeniu i spróbuj ponownie.');
+    setSuccessMsg(null);
+    if (!email.trim()) {
+      setErrorMsg('Wpisz adres email, żeby wysłać link do resetu hasła.');
       return;
     }
-    enableTwoFactor(setupData.secret);
-    setIs2FASetupOpen(false);
-    setSetupData(null);
-    setSetupCode('');
-    setSuccessMsg('Weryfikacja dwuetapowa (2FA) została włączona.');
+    try {
+      await sendPasswordReset(email);
+      setSuccessMsg(`Wysłaliśmy link do resetu hasła na adres ${email}, jeśli istnieje takie konto.`);
+    } catch (err) {
+      setErrorMsg(describeAuthError(err));
+    }
   };
 
+  const handleGoogleLogin = async () => {
+    setErrorMsg(null);
+    setSuccessMsg(null);
+    try {
+      await loginOAuth();
+      setSuccessMsg('Zalogowano pomyślnie z Google!');
+      setTimeout(onClose, 1000);
+    } catch (err) {
+      console.error('Google popup auth error:', err);
+      setErrorMsg(
+        isFirebaseConfigured()
+          ? describeAuthError(err)
+          : 'Logowanie przez Google jest niedostępne — brak konfiguracji Firebase. Użyj logowania e-mailem i hasłem.'
+      );
+    }
+  };
+
+  const displayName = user?.displayName || user?.email || '';
+
   const modalTitle = isAuthenticated && user
-    ? user.fullName
-    : pendingTwoFactorUser
-    ? 'Weryfikacja dwuetapowa (2FA)'
+    ? displayName
     : isRegisterTab
     ? 'Utwórz Nowe Konto'
     : 'Logowanie do CVELOCITY';
 
   const modalSubtitle = isAuthenticated && user
     ? user.email
-    : pendingTwoFactorUser
-    ? `Wpisz kod 2FA z aplikacji Authenticator dla ${pendingTwoFactorUser.email}`
     : 'Bezpieczny dostęp do własnego profilu Master Vault';
 
   const modalIcon = isAuthenticated && user
     ? User
-    : pendingTwoFactorUser
-    ? ShieldCheck
     : isRegisterTab
     ? UserPlus
     : LogIn;
@@ -143,126 +137,16 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onSuccess
       subtitle={modalSubtitle}
       icon={modalIcon}
       size="sm"
-      dismissable={!pendingTwoFactorUser}
+      dismissable={isAuthenticated || false}
     >
       {isAuthenticated && user ? (
         /* Logged In View */
         <div className="space-y-6 py-2">
           <div className="text-center">
             <div className="w-16 h-16 bg-success-soft border border-success-500/30 rounded-full flex items-center justify-center mx-auto text-success-fg font-bold text-xl shadow-xs mb-3">
-              {user.fullName.slice(0, 2).toUpperCase()}
+              {displayName.slice(0, 2).toUpperCase()}
             </div>
             <StatusBadge variant="success">Konto aktywne</StatusBadge>
-          </div>
-
-          {/* Two-Factor Authentication management */}
-          <div className="text-left border-t border-line pt-4">
-            {!is2FASetupOpen ? (
-              <div className="flex items-center justify-between gap-2 p-3 rounded-xl border border-line bg-sunken">
-                <div className="flex items-center gap-2 min-w-0">
-                  <KeyRound className={`w-4 h-4 shrink-0 ${user.twoFactorEnabled ? 'text-success-fg' : 'text-subtle'}`} />
-                  <div className="min-w-0">
-                    <div className="text-xs font-bold text-ink">Weryfikacja dwuetapowa (2FA)</div>
-                    <div className="text-[11px] text-muted">{user.twoFactorEnabled ? 'Włączona — kod z aplikacji Authenticator' : 'Wyłączona'}</div>
-                  </div>
-                </div>
-                {user.twoFactorEnabled ? (
-                  !confirmDisable2FA ? (
-                    <Button
-                      variant="danger"
-                      size="xs"
-                      onClick={() => setConfirmDisable2FA(true)}
-                    >
-                      Wyłącz
-                    </Button>
-                  ) : (
-                    <div className="shrink-0 flex items-center gap-1.5">
-                      <Button
-                        variant="danger"
-                        size="xs"
-                        onClick={() => {
-                          const pwd = window.prompt('Wprowadź swoje hasło dostępowe, aby wyłączyć 2FA:');
-                          if (!pwd) return;
-                          try {
-                            disableTwoFactor(pwd);
-                            setConfirmDisable2FA(false);
-                            setSuccessMsg('Weryfikacja dwuetapowa (2FA) została wyłączona.');
-                          } catch (err: any) {
-                            setErrorMsg(err?.message || 'Nie udało się wyłączyć 2FA.');
-                          }
-                        }}
-                      >
-                        Potwierdź
-                      </Button>
-                      <Button
-                        variant="secondary"
-                        size="xs"
-                        onClick={() => setConfirmDisable2FA(false)}
-                      >
-                        Anuluj
-                      </Button>
-                    </div>
-                  )
-                ) : (
-                  <Button
-                    variant="primary"
-                    size="xs"
-                    onClick={openTwoFactorSetup}
-                  >
-                    Włącz
-                  </Button>
-                )}
-              </div>
-            ) : (
-              <div className="p-4 rounded-xl border border-brand-300 bg-brand-soft space-y-3">
-                <div className="flex items-center gap-2 text-brand-fg font-bold text-xs">
-                  <Smartphone className="w-4 h-4 shrink-0" />
-                  Zeskanuj kod w aplikacji Authenticator
-                </div>
-                {setupData && (
-                  <>
-                    <img src={setupData.qrCodeDataUrl} alt="Kod QR 2FA" className="mx-auto rounded-lg border border-brand-200 bg-surface p-2" width={180} height={180} />
-                    <p className="text-[10px] text-muted text-center">
-                      Brak możliwości skanowania? Wpisz ręcznie: <span className="font-mono font-bold text-ink break-all">{setupData.secret}</span>
-                    </p>
-                  </>
-                )}
-                {setupError && (
-                  <div className="p-2 bg-danger-soft border border-danger-500/30 text-danger-fg text-[11px] rounded-lg flex items-center gap-1.5">
-                    <AlertTriangle className="w-3.5 h-3.5 shrink-0" />
-                    {setupError}
-                  </div>
-                )}
-                <input
-                  type="text"
-                  inputMode="numeric"
-                  maxLength={6}
-                  value={setupCode}
-                  onChange={(e) => setSetupCode(e.target.value.replace(/\D/g, ''))}
-                  placeholder="Wpisz 6-cyfrowy kod z aplikacji"
-                  className="w-full bg-surface border border-line rounded-lg px-3 py-2 text-xs text-center font-mono tracking-widest focus:outline-none focus:border-brand-500 text-ink"
-                />
-                <div className="flex gap-2">
-                  <Button
-                    variant="secondary"
-                    size="sm"
-                    fullWidth
-                    onClick={() => { setIs2FASetupOpen(false); setSetupData(null); setSetupCode(''); setSetupError(null); }}
-                  >
-                    Anuluj
-                  </Button>
-                  <Button
-                    variant="primary"
-                    size="sm"
-                    fullWidth
-                    disabled={setupCode.length !== 6}
-                    onClick={confirmTwoFactorSetup}
-                  >
-                    Potwierdź i włącz
-                  </Button>
-                </div>
-              </div>
-            )}
           </div>
 
           <div className="pt-4 border-t border-line flex items-center justify-between">
@@ -270,7 +154,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onSuccess
               variant="danger"
               size="sm"
               onClick={() => {
-                logout();
+                void logout();
                 setSuccessMsg('Wylogowano z konta.');
               }}
             >
@@ -305,7 +189,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onSuccess
                 <AlertTriangle className="w-4 h-4 text-danger-fg mt-0.5 shrink-0" />
                 <div>
                   <p className="text-xs font-bold text-danger-fg">Tej operacji nie można cofnąć!</p>
-                  <p className="text-xs text-danger-fg/90 mt-0.5">Twoje konto, dane vault i historia zostaną trwale usunięte z Firebase i localStorage.</p>
+                  <p className="text-xs text-danger-fg/90 mt-0.5">Twoje konto i dane vault zostaną trwale usunięte z Firebase.</p>
                 </div>
               </div>
               <div className="flex gap-2">
@@ -329,8 +213,8 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onSuccess
                     try {
                       await deleteAccount();
                       onClose();
-                    } catch (err: any) {
-                      setErrorMsg(err.message || 'Błąd usuwania konta.');
+                    } catch (err) {
+                      setErrorMsg(describeAuthError(err));
                       setConfirmDelete(false);
                     } finally {
                       setIsDeleting(false);
@@ -343,49 +227,6 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onSuccess
             </div>
           )}
         </div>
-      ) : pendingTwoFactorUser ? (
-        /* Login-time 2FA challenge */
-        <form onSubmit={handleTwoFactorSubmit} className="space-y-5 py-2">
-          {errorMsg && (
-            <div className="p-3 bg-danger-soft border border-danger-500/30 text-danger-fg text-xs rounded-xl font-medium flex items-start gap-1.5">
-              <AlertTriangle className="w-3.5 h-3.5 shrink-0 mt-0.5" />
-              <span>{errorMsg}</span>
-            </div>
-          )}
-
-          <input
-            type="text"
-            inputMode="numeric"
-            maxLength={6}
-            autoFocus
-            required
-            value={twoFactorCode}
-            onChange={(e) => setTwoFactorCode(e.target.value.replace(/\D/g, ''))}
-            placeholder="000000"
-            className="w-full bg-sunken border border-line rounded-xl px-3 py-3 text-center text-lg font-mono text-ink tracking-[0.5em] focus:outline-none focus:border-brand-500 focus:bg-surface"
-          />
-
-          <div className="flex gap-2">
-            <Button
-              variant="secondary"
-              size="md"
-              fullWidth
-              type="button"
-              onClick={() => { setPendingTwoFactorUser(null); setTwoFactorCode(''); setErrorMsg(null); }}
-            >
-              Wróć
-            </Button>
-            <Button
-              variant="primary"
-              size="md"
-              fullWidth
-              type="submit"
-              disabled={twoFactorCode.length !== 6}
-            >
-              Zweryfikuj
-            </Button>
-          </div>
-        </form>
       ) : (
         /* Authentication Form (Login / Register) */
         <div className="space-y-5 py-2">
@@ -437,43 +278,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onSuccess
           <div className="space-y-3">
             <button
               type="button"
-              onClick={async () => {
-                setErrorMsg(null);
-                setSuccessMsg(null);
-                try {
-                  const googleUser = await signInWithGooglePopup();
-                  if (!googleUser.email) {
-                    setErrorMsg('Nie udało się pobrać adresu e-mail z Google.');
-                    return;
-                  }
-                  const vault = loginOAuth(googleUser.email, googleUser.displayName, 'google');
-                  setSuccessMsg(`Zalogowano pomyślnie z Google jako ${googleUser.email}!`);
-                  if (onSuccessVaultLoaded) onSuccessVaultLoaded(vault);
-                  setTimeout(() => {
-                    onClose();
-                  }, 1000);
-                } catch (err: any) {
-                  if (err instanceof Requires2FAError) {
-                    setPendingTwoFactorUser(err.user);
-                    setErrorMsg(null);
-                    return;
-                  }
-                  console.error('Google popup auth error:', err);
-                  if (err?.code === 'auth/popup-closed-by-user' || err?.code === 'auth/cancelled-popup-request') {
-                    setErrorMsg('Zamknięto okno logowania Google.');
-                    return;
-                  }
-                  if (err?.code === 'auth/unauthorized-domain') {
-                    setErrorMsg('Ta domena nie jest autoryzowana w konsoli Firebase. Dodaj ją w Authentication → Settings → Authorized domains.');
-                    return;
-                  }
-                  setErrorMsg(
-                    isFirebaseConfigured()
-                      ? 'Logowanie przez Google nie powiodło się. Spróbuj ponownie lub użyj logowania e-mailem i hasłem.'
-                      : 'Logowanie przez Google jest niedostępne — brak konfiguracji Firebase. Użyj logowania e-mailem i hasłem.'
-                  );
-                }
-              }}
+              onClick={() => void handleGoogleLogin()}
               disabled={!isFirebaseConfigured()}
               title={
                 isFirebaseConfigured()
@@ -543,7 +348,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onSuccess
                 {!isRegisterTab && (
                   <button
                     type="button"
-                    onClick={() => alert('Konta lokalne są zabezpieczone szyfrowaniem w przeglądarce. Ze względów bezpieczeństwa zresetowanie zapomnianego hasła lokalnego nie jest możliwe. Możesz zalogować się za pomocą Google lub odzyskać profil z kopii zapasowej.')}
+                    onClick={() => void handlePasswordReset()}
                     className="text-[11px] font-medium text-brand-fg hover:underline"
                   >
                     Nie pamiętasz hasła?
@@ -572,7 +377,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onSuccess
               </div>
               {isRegisterTab && (
                 <p className="text-[10px] text-subtle mt-1">
-                  Min. 6 znaków. Weryfikację dwuetapową (2FA) możesz włączyć po zalogowaniu.
+                  Min. 6 znaków.
                 </p>
               )}
             </div>
@@ -584,8 +389,9 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onSuccess
               fullWidth
               icon={ArrowRight}
               className="mt-2"
+              disabled={isSubmitting}
             >
-              {isRegisterTab ? 'Utwórz Konto i Zaloguj' : 'Zaloguj się'}
+              {isSubmitting ? 'Chwileczkę…' : isRegisterTab ? 'Utwórz Konto i Zaloguj' : 'Zaloguj się'}
             </Button>
           </form>
         </div>
@@ -593,4 +399,3 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onSuccess
     </Modal>
   );
 };
-

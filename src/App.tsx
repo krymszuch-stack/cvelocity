@@ -1,9 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { AppTab, ApplicationRecord, MasterVault, TokenStats } from './types';
 import { createEmptyVault } from './lib/sampleVault';
-import { loadVaultFromLocalStorage, saveVaultToLocalStorage, clearVaultLocalStorage } from './lib/vaultCrypto';
 import { mergeParsedVaultIntoMaster } from './lib/layeredVaultEngine';
-import { getActiveSessionUser, loadUserVault } from './lib/auth';
 import { semanticCacheInstance } from './lib/semanticCache';
 import { apiFetch, warmUpApi } from './lib/apiClient';
 import { AuthProvider, useAuth } from './context/AuthContext';
@@ -37,42 +35,19 @@ function MainApp() {
       return [];
     }
   });
-  const { userVault, saveUserVault } = useAuth();
+  const { userVault, saveCurrentVault, isAuthenticated, authLoading, vaultLoading, firebaseConfigured } = useAuth();
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
   const [isAdvisorOpen, setIsAdvisorOpen] = useState(false);
   const [advisorInitialQuestion, setAdvisorInitialQuestion] = useState<string | undefined>(undefined);
 
-  const [vault, setVault] = useState<MasterVault>(() => {
-    // Authenticated user: load their personal vault
-    const sessionUser = getActiveSessionUser();
-    if (sessionUser) {
-      const userVaultData = loadUserVault(sessionUser.id) || loadVaultFromLocalStorage(sessionUser.id);
-      if (userVaultData) return userVaultData;
-      return createEmptyVault(sessionUser.fullName, sessionUser.email);
-    }
-
-    // Unauthenticated: check global cache
-    const loaded = loadVaultFromLocalStorage();
-    if (loaded) {
-      return loaded;
-    }
-    return createEmptyVault();
-  });
-
+  const [vault, setVault] = useState<MasterVault>(() => userVault || createEmptyVault());
   const lastUserVaultRef = useRef<MasterVault | null>(null);
 
-  // Sync user vault when authenticated user changes
+  // Pick up the vault Firestore just resolved (initial load, migration, or a fresh sign-in).
   useEffect(() => {
-    if (userVault) {
-      if (userVault !== lastUserVaultRef.current) {
-        lastUserVaultRef.current = userVault;
-        setVault(userVault);
-      }
-    } else {
-      // User is logged out / unauthenticated
-      lastUserVaultRef.current = null;
-      const loaded = loadVaultFromLocalStorage();
-      setVault(loaded || createEmptyVault());
+    if (userVault && userVault !== lastUserVaultRef.current) {
+      lastUserVaultRef.current = userVault;
+      setVault(userVault);
     }
   }, [userVault]);
 
@@ -124,25 +99,18 @@ function MainApp() {
   }, []);
 
   // Auto-save vault on changes with 500ms debounce to avoid performance degradation (ADR-79)
-  const { isAuthenticated, user } = useAuth();
   useEffect(() => {
+    if (!isAuthenticated) return;
     if (vault === userVault) return;
 
     const timer = setTimeout(() => {
-      try {
-        if (!isAuthenticated) {
-          saveVaultToLocalStorage(vault);
-        } else {
-          saveVaultToLocalStorage(vault, user?.id);
-          saveUserVault(vault);
-        }
-      } catch (err) {
-        console.error('Błąd podczas autozapisu danych w localStorage:', err);
-      }
+      void saveCurrentVault(vault).catch((err) => {
+        console.error('Błąd podczas autozapisu vaulta do Firestore:', err);
+      });
     }, 500);
 
     return () => clearTimeout(timer);
-  }, [vault, userVault, saveUserVault, isAuthenticated, user]);
+  }, [vault, userVault, saveCurrentVault, isAuthenticated]);
 
   useEffect(() => {
     try {
@@ -174,6 +142,35 @@ function MainApp() {
   const handleAddApplication = (record: ApplicationRecord) => {
     setApplications((prev) => [record, ...prev]);
   };
+
+  if (!firebaseConfigured) {
+    return (
+      <div className="min-h-screen bg-canvas flex items-center justify-center p-6">
+        <div className="max-w-md w-full bg-surface border border-line rounded-2xl p-6 text-center space-y-3 shadow-xs">
+          <h1 className="text-sm font-bold text-ink">Brak konfiguracji Firebase</h1>
+          <p className="text-xs text-muted leading-relaxed">
+            SkillVault potrzebuje projektu Firebase (Auth + Firestore), żeby działać — konto i
+            vault nie mają już lokalnego zapasowego magazynu. Uzupełnij zmienne <code className="font-mono text-[11px] bg-sunken px-1 rounded">VITE_FIREBASE_*</code> w
+            pliku <code className="font-mono text-[11px] bg-sunken px-1 rounded">.env</code> (zobacz <code className="font-mono text-[11px] bg-sunken px-1 rounded">.env.example</code>) i uruchom ponownie.
+          </p>
+        </div>
+      </div>
+    );
+  }
+
+  if (authLoading || (isAuthenticated && vaultLoading)) {
+    return (
+      <div className="min-h-screen bg-canvas flex items-center justify-center">
+        <div className="w-8 h-8 border-2 border-line-strong border-t-brand-600 rounded-full animate-spin" />
+      </div>
+    );
+  }
+
+  if (!isAuthenticated) {
+    // SkillVault's vault lives in Firestore now, keyed by account — there's no local
+    // fallback, so using the app at all starts with signing in.
+    return <AuthModal isOpen onClose={() => {}} />;
+  }
 
   return (
     <div className="min-h-screen bg-canvas text-ink font-sans flex selection:bg-brand-500/25">
@@ -270,14 +267,10 @@ function MainApp() {
         isConnected={isStatsConnected}
       />
 
-      {/* Auth Modal */}
+      {/* Auth Modal (account management — already signed in here) */}
       <AuthModal
         isOpen={isAuthModalOpen}
         onClose={() => setIsAuthModalOpen(false)}
-        onSuccessVaultLoaded={(loadedVault) => {
-          lastUserVaultRef.current = loadedVault;
-          setVault(loadedVault);
-        }}
       />
     </div>
   );

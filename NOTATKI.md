@@ -51,3 +51,6 @@ Format wpisu:
 
 - ~~Audyt kodu pod kątem 0-Halucynacji (AGENTS.md §8.3) i nieprzetestowanych modułów security/api.~~
   - **Antigravity 2026-08-13:** Usunięto zmyśloną wartość domyślną ('Adrian Koziński') z `linkedinParser.ts` w przypadku braku danych, zsynchronizowano czyszczenie zmiennych oraz dodano 3 nowe zestawy testów jednostkowych (`linkedin_parser.test.ts`, `security_guardrails.test.ts`, `api_client.test.ts`).
+
+- ~~Konta użytkowników i vault żyły wyłącznie w localStorage — aplikacja nie działała między urządzeniami/przeglądarkami, co czyniło ją de facto bezużyteczną~~
+  - **Claude 2026-08-12:** zastąpiono domową bazę kont (`lib/auth.ts`, PBKDF2 + localStorage) prawdziwym Firebase Auth (email/hasło + Google), a vault przeniesiono do Firestore (`vaults/{uid}`, `lib/firestoreVault.ts`) z regułami bezpieczeństwa (`firestore.rules`) ograniczającymi dostęp do własnego uid. PR #64.

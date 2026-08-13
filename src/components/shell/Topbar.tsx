@@ -71,10 +71,10 @@ export const Topbar: React.FC<TopbarProps> = ({
               <>
                 <span className="w-6 h-6 rounded-lg bg-gradient-to-br from-brand-500 to-brand-700 text-brand-solid-fg
                                  text-[11px] font-bold flex items-center justify-center shrink-0">
-                  {user.fullName.charAt(0).toUpperCase()}
+                  {(user.displayName || user.email || '?').charAt(0).toUpperCase()}
                 </span>
                 <span className="text-xs font-semibold text-ink hidden md:inline max-w-[110px] truncate">
-                  {user.fullName.split(' ')[0]}
+                  {(user.displayName || user.email).split(' ')[0]}
                 </span>
                 <ChevronDown className="w-3.5 h-3.5 text-subtle hidden md:inline" />
               </>
