@@ -13,7 +13,7 @@ import { TokenStatsWidget } from './components/TokenStatsWidget';
 import { JobMatcher } from './components/JobMatcher';
 import { MasterVaultEditor } from './components/MasterVaultEditor';
 import { ProfilerSection } from './components/ProfilerSection';
-import { CVParserModal } from './components/CVParserModal';
+const CVParserModal = React.lazy(() => import('./components/CVParserModal').then(module => ({ default: module.CVParserModal })));
 import { GeminiAdvisorModal } from './components/GeminiAdvisorModal';
 import { ApplicationTracker } from './components/ApplicationTracker';
 import { LandingPage } from './components/LandingPage';
@@ -222,7 +222,15 @@ function MainApp() {
             )}
 
             {activeTab === 'parser' && (
-              <CVParserModal currentVault={vault} onApplyParsedVault={handleApplyParsedVault} />
+              <React.Suspense
+                fallback={
+                  <div className="flex items-center justify-center py-12">
+                    <div className="w-8 h-8 border-2 border-line-strong border-t-brand-600 rounded-full animate-spin" />
+                  </div>
+                }
+              >
+                <CVParserModal currentVault={vault} onApplyParsedVault={handleApplyParsedVault} />
+              </React.Suspense>
             )}
 
             {activeTab === 'applications' && (
