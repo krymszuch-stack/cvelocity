@@ -115,6 +115,19 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const logout = useCallback(async () => {
     await signOutFirebaseUser();
+    try {
+      sessionStorage.clear();
+    } catch (e) {
+      // Ignore if sessionStorage is not accessible (e.g. privacy mode)
+    }
+    try {
+      clearLegacyLocalData();
+    } catch (e) {
+      // Ignore
+    }
+    activeUidRef.current = null;
+    setUser(null);
+    setUserVault(null);
   }, []);
 
   const deleteAccount = useCallback(async () => {
