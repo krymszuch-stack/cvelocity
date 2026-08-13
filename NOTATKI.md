@@ -54,3 +54,9 @@ Format wpisu:
 
 - ~~Konta użytkowników i vault żyły wyłącznie w localStorage — aplikacja nie działała między urządzeniami/przeglądarkami, co czyniło ją de facto bezużyteczną~~
   - **Claude 2026-08-12:** zastąpiono domową bazę kont (`lib/auth.ts`, PBKDF2 + localStorage) prawdziwym Firebase Auth (email/hasło + Google), a vault przeniesiono do Firestore (`vaults/{uid}`, `lib/firestoreVault.ts`) z regułami bezpieczeństwa (`firestore.rules`) ograniczającymi dostęp do własnego uid. PR #64.
+
+- ~~Pełny i surowy audyt techniczny i funkcjonalny aplikacji CVELOCITY wraz z raportem audit_results.md i wdrożeniem logotypu Oathcry.~~
+  - **Antigravity 2026-08-13:** Przeprowadzono audyt bezpieczeńtwa, wydajności i logiki domenowej. Zweryfikowano 187 unit testów (25 plików), zbudowano produkcyjne bundel klienta i serwera oraz utworzono dedykowany sygnet Oathcry `OathcryLogoMark.tsx`. Raport zapisano w `audit_results.md`.
+
+- ~~Utworzenie zadań z etykietą `jules` i oznaczeniem `@jules` dla automatycznych poprawek z audytu.~~
+  - **Antigravity 2026-08-13:** Utworzono GitHub Issues #66 (React.lazy Code Splitting), #67 (AI-extracted Job Requirements in Live Preview), #68 (Session Storage cleanup in AuthContext) z wytycznymi z `JULES_PLAYBOOK.md` §7 i etykietą `jules`.
