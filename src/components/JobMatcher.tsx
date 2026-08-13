@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { apiFetch } from '../lib/apiClient';
-import { ApplicationRecord, MasterVault } from '../types';
+import { MasterVault } from '../types';
 import {
   Sparkles, AlertCircle, Search, Link as LinkIcon, Globe, ShieldAlert, Check, ChevronDown, Building2,
   FileText, FolderOpen, ArrowRight,
@@ -24,7 +24,17 @@ interface JobMatcherProps {
   onUpdateVault?: (updated: MasterVault) => void;
   onOpenAdvisor?: (question?: string) => void;
   onSwitchTab?: (tab: 'matcher' | 'vault' | 'parser' | 'profiler' | 'applications') => void;
-  onAddApplication?: (record: ApplicationRecord) => void;
+  onAddApplication?: (record: {
+    id: string;
+    jobTitle: string;
+    company: string;
+    source: string;
+    status: 'saved' | 'applied' | 'interview' | 'rejected';
+    appliedAt: string;
+    matchScore: number;
+    notes?: string;
+    url?: string;
+  }) => void;
 }
 
 export const JobMatcher: React.FC<JobMatcherProps> = ({

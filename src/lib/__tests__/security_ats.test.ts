@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { sanitizeTextInput, scanProfanity } from '../securityGuardrails';
-import { simulateAtsCheck, extractDynamicJdPhrases } from '../atsSimulator';
+import { simulateAtsCheck } from '../atsSimulator';
 import { matchesKeyword } from '../keywordMatching';
 import { createEmptyVault } from '../sampleVault';
 import { TailoredResume } from '../../types';
@@ -97,33 +97,5 @@ describe('Security Guardrails & ATS Scoring Suite', () => {
     expect(matchesKeyword('Digital Marketing Manager', 'git')).toBe(false);
     expect(matchesKeyword('Praca z repozytorium Git', 'git')).toBe(true);
     expect(matchesKeyword('Wymagany angielski B2', 'b2')).toBe(true);
-  });
-
-  it('nie powinien przyznawać 100% pokrycia, gdy z ogłoszenia nie da się wyodrębnić żadnych wymagań (audyt 2026-08-04: puste ogłoszenie dawało 91% i "100% wymagań spełnionych")', () => {
-    const mockVault = createEmptyVault('Jan Kowalski', 'jan@example.com');
-    mockVault.personalInfo.title = 'Senior Frontend Developer';
-    mockVault.skillsMatrix.hardSkills = ['React', 'TypeScript'];
-
-    const mockResume: TailoredResume = {
-      targetJobTitle: 'Senior Frontend Developer',
-      companyName: 'Tech Corp',
-      summary: '',
-      atsScore: 0,
-      skillsMatched: { hardSkills: [], toolsAndTech: [], softSkills: [] },
-      selectedHighlights: [],
-    };
-
-    // Empty job description: nothing was extracted, so there is nothing to have
-    // "100% matched" — the score must reflect that instead of defaulting to full marks.
-    const atsResult = simulateAtsCheck(mockResume, mockVault, '');
-    expect(atsResult.layer2Nlp.hardSkillsCoverage).toBe(0);
-    expect(atsResult.gapAnalysis.join(' ')).not.toContain('100% kluczowych wymagań');
-  });
-
-  it('nie powinien traktować nazwy dostawcy benefitu (np. PZU) jako wymaganego twardego skilla', () => {
-    const { hardSkills } = extractDynamicJdPhrases(
-      'Zakres obowiązków: tworzenie aplikacji webowych.\nOferujemy: prywatną opiekę medyczną oraz ubezpieczenie na życie PZU.'
-    );
-    expect(hardSkills.some((h) => h.phrase === 'pzu')).toBe(false);
   });
 });

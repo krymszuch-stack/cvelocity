@@ -119,6 +119,10 @@ export function registerUser(email: string, password: string, fullName: string):
   users.push(newUser);
   saveRegisteredUsers(users);
 
+  if (typeof window !== 'undefined') {
+    sessionStorage.setItem(`skillvault_user_secret_${newUser.id}`, password);
+  }
+
   const initialVault = createEmptyVault(fullName, normalizedEmail);
   saveUserVault(newUser.id, initialVault, password);
   saveActiveSession(newUser);
@@ -175,6 +179,10 @@ export function loginUser(email: string, password: string): { user: UserAccount;
   saveRegisteredUsers(users);
   saveActiveSession(foundUser);
 
+  if (typeof window !== 'undefined') {
+    sessionStorage.setItem(`skillvault_user_secret_${foundUser.id}`, password);
+  }
+
   const vault = loadUserVault(foundUser.id, password) || createEmptyVault(foundUser.fullName, foundUser.email);
   return { user: foundUser, vault };
 }
@@ -210,8 +218,13 @@ export function loginWithOAuthAccount(email: string, fullName: string, _provider
     saveRegisteredUsers(users);
   }
 
+  const oauthSecret = CryptoJS.SHA256(foundUser.id + foundUser.salt).toString();
+  if (typeof window !== 'undefined') {
+    sessionStorage.setItem(`skillvault_user_secret_${foundUser.id}`, oauthSecret);
+  }
+
   saveActiveSession(foundUser);
-  const vault = loadUserVault(foundUser.id) || createEmptyVault(foundUser.fullName, foundUser.email);
+  const vault = loadUserVault(foundUser.id, oauthSecret) || createEmptyVault(foundUser.fullName, foundUser.email);
   return { user: foundUser, vault };
 }
 
@@ -272,6 +285,10 @@ export function completeLogin(pendingUser: UserAccount, password?: string): { us
   saveRegisteredUsers(users);
   saveActiveSession(user);
 
+  if (password && typeof window !== 'undefined') {
+    sessionStorage.setItem(`skillvault_user_secret_${user.id}`, password);
+  }
+
   const vault = loadUserVault(user.id, password) || createEmptyVault(user.fullName, user.email);
   return { user, vault };
 }
@@ -311,6 +328,9 @@ export function logoutUser(): void {
   const activeUser = getActiveSessionUser();
   if (activeUser) {
     delete IN_MEMORY_VAULT_CACHE[activeUser.id];
+    if (typeof window !== 'undefined') {
+      sessionStorage.removeItem(`skillvault_user_secret_${activeUser.id}`);
+    }
   }
   localStorage.removeItem(CURRENT_SESSION_KEY);
 }
@@ -328,11 +348,16 @@ export function saveUserVault(userId: string, vault: MasterVault, userSecret?: s
   const storageKey = `skillvault_vault_encrypted_${userId}`;
   const legacyActiveKey = `skillvault_vault_active_${userId}`;
 
-  if (userSecret) {
-    const encrypted = encryptUserVault(vault, userSecret);
+  let secret = userSecret;
+  if (!secret && typeof window !== 'undefined') {
+    secret = sessionStorage.getItem(`skillvault_user_secret_${userId}`) || undefined;
+  }
+
+  if (secret) {
+    const encrypted = encryptUserVault(vault, secret);
     localStorage.setItem(storageKey, encrypted);
   } else {
-    localStorage.removeItem(storageKey);
+    throw new Error('Nie można zapisać danych — brak klucza deszyfrującego sesji.');
   }
 
   localStorage.removeItem(legacyActiveKey);
@@ -348,17 +373,22 @@ export function loadUserVault(userId: string, userSecret?: string): MasterVault 
     return memoryVault;
   }
 
-  const encryptedKey = `skillvault_vault_encrypted_${userId}`;
-  if (!userSecret) {
+  let secret = userSecret;
+  if (!secret && typeof window !== 'undefined') {
+    secret = sessionStorage.getItem(`skillvault_user_secret_${userId}`) || undefined;
+  }
+
+  if (!secret) {
     return null;
   }
 
+  const encryptedKey = `skillvault_vault_encrypted_${userId}`;
   const encrypted = localStorage.getItem(encryptedKey);
   if (!encrypted) {
     return null;
   }
 
-  const decrypted = decryptUserVault(encrypted, userSecret);
+  const decrypted = decryptUserVault(encrypted, secret);
   if (decrypted) {
     IN_MEMORY_VAULT_CACHE[userId] = decrypted;
   }
@@ -371,6 +401,9 @@ export function loadUserVault(userId: string, userSecret?: string): MasterVault 
  */
 export function deleteUserAccount(userId: string): void {
   delete IN_MEMORY_VAULT_CACHE[userId];
+  if (typeof window !== 'undefined') {
+    sessionStorage.removeItem(`skillvault_user_secret_${userId}`);
+  }
   localStorage.removeItem(`skillvault_vault_encrypted_${userId}`);
   localStorage.removeItem(`skillvault_vault_active_${userId}`);
   localStorage.removeItem(CURRENT_SESSION_KEY);
