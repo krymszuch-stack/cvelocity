@@ -57,37 +57,20 @@ export function parseStoredVault(serialized: string, key?: string): MasterVault 
   }
 }
 
-export function saveVaultToLocalStorage(vault: MasterVault): void {
-  if (typeof window === 'undefined') return;
-  const key = getOrCreateLocalSessionKey();
-  const json = JSON.stringify(vault);
-  const encrypted = CryptoJS.AES.encrypt(json, key).toString();
-  localStorage.setItem(STORAGE_KEY, encrypted);
+export function saveVaultToLocalStorage(vault: MasterVault, userId?: string): void {
+  const key = userId ? `sv_${userId}_vault` : STORAGE_KEY;
+  localStorage.setItem(key, JSON.stringify(vault));
 }
 
-export function loadVaultFromLocalStorage(): MasterVault | null {
-  if (typeof window === 'undefined') return null;
-  const stored = localStorage.getItem(STORAGE_KEY);
+export function loadVaultFromLocalStorage(userId?: string): MasterVault | null {
+  const key = userId ? `sv_${userId}_vault` : STORAGE_KEY;
+  const stored = localStorage.getItem(key);
   if (!stored) return null;
   const key = sessionStorage.getItem(SESSION_KEY_NAME);
   return parseStoredVault(stored, key || undefined);
 }
 
-export function clearVaultLocalStorage(): void {
-  if (typeof window === 'undefined') return;
-  localStorage.removeItem(STORAGE_KEY);
-  sessionStorage.removeItem(SESSION_KEY_NAME);
-}
-
-/**
- * Sprawdza, czy w localStorage istnieje zaszyfrowany vault, którego nie można odszyfrować
- * z powodu braku klucza sesyjnego (np. otwarcie w nowej zakładce lub wyczyszczenie sesji).
- */
-export function isLocalVaultLocked(): boolean {
-  if (typeof window === 'undefined') return false;
-  const stored = localStorage.getItem(STORAGE_KEY);
-  if (!stored) return false;
-  const key = sessionStorage.getItem(SESSION_KEY_NAME);
-  if (!key) return true;
-  return parseStoredVault(stored, key) === null;
+export function clearVaultLocalStorage(userId?: string): void {
+  const key = userId ? `sv_${userId}_vault` : STORAGE_KEY;
+  localStorage.removeItem(key);
 }

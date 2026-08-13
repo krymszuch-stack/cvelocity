@@ -1,5 +1,5 @@
 /** Top-level sections reachable from the sidebar. */
-export type AppTab = 'matcher' | 'vault' | 'parser' | 'profiler' | 'applications';
+export type AppTab = 'home' | 'matcher' | 'vault' | 'parser' | 'profiler' | 'applications';
 
 export type FlagCategory = 'PHYSICAL' | 'OFFICE_IT' | 'CASUAL' | 'REMOTE';
 
@@ -38,6 +38,10 @@ export interface PersonalInfo {
   photoUrl?: string;
   title: string;
   summary: string;
+  /** Which Polish grammatical form to use for gendered verb endings in the UI
+   * (e.g. "pracowałeś" vs "pracowałaś"). Not demographic data — purely a
+   * grammar preference, optional, defaults to a gender-neutral phrasing when unset. */
+  genderForm?: 'meska' | 'zenska' | 'neutralna';
 }
 
 export interface Certification {

@@ -1,6 +1,83 @@
 import { MasterVault, LayeredFactItem, PreFlightCheckItem, ApplicationHistoryRecord } from '../types';
 
 /**
+ * Dual design system & safe merge function for parsed CV imports.
+ * Deduplicates:
+ * - Work experience by (company + role + startDate)
+ * - Education by (institution + degree)
+ * - Certifications by name
+ * - Projects by name
+ */
+export function mergeParsedVaultIntoMaster(
+  prev: MasterVault,
+  parsed: Partial<MasterVault>
+): MasterVault {
+  // If prev has sample experience (TechCorp, FinTech) and parsed has items, we might overwrite instead of merging
+  const isPrevSample = prev.history.some((h) => (h.company || '').includes('TechCorp') || (h.company || '').includes('FinTech'));
+
+  // Merge history without duplicate company + role + startDate entries
+  const existingHistoryKeys = new Set(
+    prev.history.map((h) => `${(h.company || '').toLowerCase().trim()}_${(h.role || '').toLowerCase().trim()}_${(h.startDate || '').toLowerCase().trim()}`)
+  );
+  const newHistory = (parsed.history || []).filter(
+    (h) => !existingHistoryKeys.has(`${(h.company || '').toLowerCase().trim()}_${(h.role || '').toLowerCase().trim()}_${(h.startDate || '').toLowerCase().trim()}`)
+  );
+
+  const mergedHistory = isPrevSample && parsed.history && parsed.history.length > 0
+    ? parsed.history
+    : [...prev.history, ...newHistory];
+
+  // Merge education without duplicate institution + degree
+  const isPrevEduSample = prev.education.some((e) => (e.institution || '').includes('Politechnika Warszawska') && prev.education.length === 1);
+
+  const existingEduKeys = new Set(
+    prev.education.map((e) => `${(e.institution || '').toLowerCase().trim()}_${(e.degree || '').toLowerCase().trim()}`)
+  );
+  const newEdu = (parsed.education || []).filter(
+    (e) => !existingEduKeys.has(`${(e.institution || '').toLowerCase().trim()}_${(e.degree || '').toLowerCase().trim()}`)
+  );
+
+  const mergedEducation = isPrevEduSample && parsed.education && parsed.education.length > 0
+    ? parsed.education
+    : [...prev.education, ...newEdu];
+
+  // Merge certifications
+  const existingCertNames = new Set((prev.skillsMatrix?.certifications || []).map((c) => c.name.toLowerCase().trim()));
+  const newCerts = (parsed.skillsMatrix?.certifications || []).filter((c) => !existingCertNames.has(c.name.toLowerCase().trim()));
+  const mergedCertifications = [...(prev.skillsMatrix?.certifications || []), ...newCerts];
+
+  // Merge projects
+  const existingProjNames = new Set((prev.projects || []).map((p) => p.name.toLowerCase().trim()));
+  const newProjects = (parsed.projects || []).filter((p) => !existingProjNames.has(p.name.toLowerCase().trim()));
+  const mergedProjects = [...(prev.projects || []), ...newProjects];
+
+  return {
+    ...prev,
+    personalInfo: {
+      ...prev.personalInfo,
+      fullName: parsed.personalInfo?.fullName || prev.personalInfo.fullName,
+      title: parsed.personalInfo?.title || prev.personalInfo.title,
+      summary: parsed.personalInfo?.summary || prev.personalInfo.summary,
+      location: parsed.personalInfo?.location || prev.personalInfo.location,
+      email: parsed.personalInfo?.email || prev.personalInfo.email,
+      phone: parsed.personalInfo?.phone || prev.personalInfo.phone,
+      linkedin: parsed.personalInfo?.linkedin || prev.personalInfo.linkedin,
+    },
+    skillsMatrix: {
+      ...prev.skillsMatrix,
+      hardSkills: Array.from(new Set([...(parsed.skillsMatrix?.hardSkills || []), ...(prev.skillsMatrix?.hardSkills || [])])),
+      softSkills: Array.from(new Set([...(parsed.skillsMatrix?.softSkills || []), ...(prev.skillsMatrix?.softSkills || [])])),
+      toolsAndTech: Array.from(new Set([...(parsed.skillsMatrix?.toolsAndTech || []), ...(prev.skillsMatrix?.toolsAndTech || [])])),
+      certifications: mergedCertifications,
+    },
+    history: mergedHistory,
+    education: mergedEducation,
+    projects: mergedProjects,
+    updatedAt: new Date().toISOString(),
+  };
+}
+
+/**
  * FILAR 1: Layered Fact Helper - Promotes per-job edit to MasterVault or keeps per-job override
  */
 export function handleFactEditPromotion(

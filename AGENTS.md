@@ -64,6 +64,27 @@ npm run build   # klient + serwer
 Wszystkie trzy muszą być zielone. **Nie otwieraj PR-a z czerwonym którymkolwiek z nich.**
 Jeśli zmiana dotyczy UI — sprawdź **oba motywy** (przełącznik w topbarze), nie tylko jeden.
 
+### 3.1 Znane pułapki przy bumpach zależności (Dependabot)
+
+Zanim uznasz czerwony PR Dependabota za "trzeba to naprawić" albo od razu za "nie da się zmergować" —
+sprawdź, czy to nie jeden ze znanych, powtarzalnych przypadków:
+
+- **`@vitejs/plugin-react` w wersji major wymaga `vite` w tej samej major wersji.** Repo pinuje
+  `vite@^6.x`; `@vitejs/plugin-react@6.x` deklaruje `peerDependencies: { vite: "^8.0.0" }`, więc
+  `npm install` kończy się `ERESOLVE`. Same-osobny bump pluginu **nie jest bezpieczny do zmergowania**
+  — albo bumpuj `vite` razem z nim (osobny, większy PR, wymaga pełnej regresji builda), albo zostaw
+  PR otwarty do czasu, aż ktoś celowo zaplanuje upgrade Vite 8.
+- **Duże majory `lucide-react` bywają CI-green mimo realnego błędu kompilacji**, jeśli test lokalny
+  różni się od CI (np. lockfile drift). `lucide-react` w wersjach 1.x usunął część ikon
+  powiązanych ze znakami towarowymi — np. `Linkedin` nie ma już żadnego eksportu w pakiecie.
+  Po takim bumpie **zawsze uruchom `npm run lint` lokalnie z czystym `node_modules`** — `tsc`
+  złapie brakujący import (`TS2305: has no exported member`); zamień na neutralną ikonę
+  (np. `Link2`) w miejscach czysto dekoracyjnych, nie usuwaj funkcjonalności.
+- **Czerwone CI na starym PR-ze Dependabota bywa nieaktualne** — jeśli commit bazowy PR-a jest
+  sprzed dawna, błąd mógł już zniknąć wraz z innymi zmianami na `main` (np. literówka typu w
+  zupełnie niepowiązanym pliku). Zawsze przetestuj bump lokalnie po rebase'ie na aktualny `main`,
+  zamiast ufać staremu logowi CI z dnia utworzenia PR-a.
+
 ## 4. Design system — kontrakt
 
 `src/index.css` definiuje dwie warstwy tokenów: surową paletę `--sv-*` przełączaną przez `[data-theme]`

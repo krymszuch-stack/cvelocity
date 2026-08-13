@@ -196,14 +196,14 @@ export function mergeLinkedInIntoVault(currentVault: MasterVault, profile: Thoro
   const newCerts = profile.certifications.filter((c) => !existingCertNames.has(c.name.toLowerCase()));
   const mergedCerts = [...currentVault.skillsMatrix.certifications, ...newCerts];
 
-  // Merge experience (add missing ones by company & role)
-  const existingExpKeys = new Set(currentVault.history.map((e) => `${e.company.toLowerCase()}_${e.role.toLowerCase()}`));
-  const newExps = profile.history.filter((e) => !existingExpKeys.has(`${e.company.toLowerCase()}_${e.role.toLowerCase()}`));
+  // Merge experience (add missing ones by company & role & startDate)
+  const existingExpKeys = new Set(currentVault.history.map((e) => `${(e.company || '').toLowerCase().trim()}_${(e.role || '').toLowerCase().trim()}_${(e.startDate || '').toLowerCase().trim()}`));
+  const newExps = profile.history.filter((e) => !existingExpKeys.has(`${(e.company || '').toLowerCase().trim()}_${(e.role || '').toLowerCase().trim()}_${(e.startDate || '').toLowerCase().trim()}`));
   const mergedHistory = [...currentVault.history, ...newExps];
 
-  // Merge education
-  const existingEduKeys = new Set(currentVault.education.map((e) => `${e.institution.toLowerCase()}_${e.degree.toLowerCase()}`));
-  const newEdus = profile.education.filter((e) => !existingEduKeys.has(`${e.institution.toLowerCase()}_${e.degree.toLowerCase()}`));
+  // Merge education without duplicate institution + degree
+  const existingEduKeys = new Set(currentVault.education.map((e) => `${(e.institution || '').toLowerCase().trim()}_${(e.degree || '').toLowerCase().trim()}`));
+  const newEdus = profile.education.filter((e) => !existingEduKeys.has(`${(e.institution || '').toLowerCase().trim()}_${(e.degree || '').toLowerCase().trim()}`));
   const mergedEducation = [...currentVault.education, ...newEdus];
 
   // Merge projects

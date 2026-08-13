@@ -1,8 +1,131 @@
 import { GoogleGenAI, Type } from "@google/genai";
+import { z } from "zod";
 import { MasterVault } from "../types";
 import { parseTextToMasterVault } from "../lib/cvUniversalParser";
+import { parseJobDescriptionLocal } from "../lib/jdParser";
 import { UNIVERSAL_CV_REFRAMING_SYSTEM_PROMPT } from "../data/universalCvReframingPrompt";
 import { ATS_CV_REFRAMING_SYSTEM_PROMPT } from "../data/atsCvReframingPrompt";
+
+export const cvParserResponseSchema = z.object({
+  personalInfo: z.object({
+    fullName: z.string().optional().default(""),
+    title: z.string().optional().default(""),
+    email: z.string().optional().default(""),
+    phone: z.string().optional().default(""),
+    location: z.string().optional().default(""),
+    linkedin: z.string().optional().default(""),
+    github: z.string().optional().default(""),
+    summary: z.string().optional().default(""),
+  }).default({
+    fullName: "",
+    title: "",
+    email: "",
+    phone: "",
+    location: "",
+    linkedin: "",
+    github: "",
+    summary: "",
+  }),
+  skillsMatrix: z.object({
+    hardSkills: z.array(z.string()).default([]),
+    softSkills: z.array(z.string()).default([]),
+    toolsAndTech: z.array(z.string()).default([]),
+    certifications: z.array(z.object({
+      id: z.string().optional().default(""),
+      name: z.string().optional().default(""),
+      issuer: z.string().optional().default(""),
+      date: z.string().optional().default(""),
+    })).default([]),
+  }).default({
+    hardSkills: [],
+    softSkills: [],
+    toolsAndTech: [],
+    certifications: [],
+  }),
+  history: z.array(z.object({
+    id: z.string().optional().default(""),
+    role: z.string().optional().default(""),
+    company: z.string().optional().default(""),
+    startDate: z.string().optional().default(""),
+    endDate: z.string().optional().default(""),
+    highlights: z.array(z.union([
+      z.string(),
+      z.object({
+        id: z.string().optional().default(""),
+        text: z.string().optional().default(""),
+        action: z.string().optional().default(""),
+        target: z.string().optional().default(""),
+        tool: z.string().optional().default(""),
+        metric: z.string().optional().default(""),
+        keywords: z.array(z.string()).optional().default([]),
+      })
+    ])).optional().default([]),
+  })).default([]),
+  education: z.array(z.object({
+    id: z.string().optional().default(""),
+    degree: z.string().optional().default(""),
+    institution: z.string().optional().default(""),
+    fieldOfStudy: z.string().optional().default(""),
+    startDate: z.string().optional().default(""),
+    endDate: z.string().optional().default(""),
+  })).default([]),
+  profiler: z.object({
+    languages: z.array(z.object({
+      language: z.string().optional().default(""),
+      level: z.string().optional().default(""),
+    })).default([]),
+  }).default({
+    languages: [],
+  }),
+});
+
+export const optimizeDeltaPhrasesResponseSchema = z.object({
+  optimizedText: z.string(),
+  keywordsMatched: z.array(z.string()),
+});
+
+export const jobDescriptionResponseSchema = z.object({
+  jobTitle: z.string().optional().default("Specjalista"),
+  companyName: z.string().optional().default("Firma"),
+  seniorityLevel: z.string().optional().default("Mid / Senior"),
+  requiredHardSkills: z.array(z.string()).optional().default([]),
+  toolsAndTech: z.array(z.string()).optional().default([]),
+  niceToHaveSkills: z.array(z.string()).optional().default([]),
+  languages: z.array(z.object({
+    language: z.string().optional().default(""),
+    level: z.string().optional().default(""),
+  })).optional().default([]),
+  dealbreakerWarnings: z.array(z.string()).optional().default([]),
+  benefitsList: z.array(z.string()).optional().default([]),
+  salaryRange: z.string().optional().default("Nie podano"),
+  workModel: z.string().optional().default("Hybrydowa"),
+  cleanBodyText: z.string().optional().default(""),
+});
+
+export const advisorEducationalAdviceResponseSchema = z.object({
+  explanation: z.string(),
+  tips: z.array(z.string()),
+  actionItems: z.array(z.string()),
+});
+
+export const coverLetterResponseSchema = z.object({
+  hook: z.string(),
+  proofPoints: z.array(z.string()),
+  callToAction: z.string(),
+  fullText: z.string(),
+});
+
+export const interviewCheatSheetResponseSchema = z.object({
+  starPoints: z.array(z.object({
+    requirement: z.string(),
+    situation: z.string(),
+    task: z.string(),
+    action: z.string(),
+    result: z.string(),
+  })),
+  emergencyPhrases: z.array(z.string()),
+  companyQuestions: z.array(z.string()),
+});
 
 /**
  * Lazy initialization of GoogleGenAI client using process.env.GEMINI_API_KEY.
@@ -34,6 +157,35 @@ export function safeParseJsonResponse<T>(rawText: string | undefined, fallback: 
     return JSON.parse(cleaned) as T;
   } catch (err) {
     console.warn("Failed to parse JSON response from Gemini API, using fallback:", err);
+    return fallback;
+  }
+}
+
+/**
+ * Safely parses LLM JSON output and validates it against a Zod schema.
+ * If parsing or schema validation fails, a fallback is returned seamlessly.
+ */
+export function safeParseAndValidateJsonResponse<T>(
+  rawText: string | undefined,
+  schema: z.ZodSchema<T>,
+  fallback: T
+): T {
+  if (!rawText || typeof rawText !== "string") return fallback;
+
+  try {
+    let cleaned = rawText.trim();
+    if (cleaned.startsWith("```")) {
+      cleaned = cleaned.replace(/^```(?:json)?\s*/i, "").replace(/\s*```$/i, "").trim();
+    }
+    const parsedObj = JSON.parse(cleaned);
+    const validationResult = schema.safeParse(parsedObj);
+    if (!validationResult.success) {
+      console.warn("Zod schema validation failed for Gemini API response, using fallback. Errors:", validationResult.error.issues);
+      return fallback;
+    }
+    return validationResult.data;
+  } catch (err) {
+    console.warn("Failed to parse/validate JSON response from Gemini API, using fallback:", err);
     return fallback;
   }
 }
@@ -277,10 +429,10 @@ try {
     })
   );
 
-  const parsed = safeParseJsonResponse<Partial<MasterVault>>(response.text, {});
+  const parsed = safeParseAndValidateJsonResponse<any>(response.text, cvParserResponseSchema, {});
 
   if (parsed.history && Array.isArray(parsed.history)) {
-    parsed.history = parsed.history.map((exp, idx) => ({
+    parsed.history = parsed.history.map((exp: any, idx: number) => ({
       ...exp,
       id: exp.id || `exp_${Date.now()}_${idx}`,
       highlights: (exp.highlights || []).map((h: any, hIdx: number) =>
@@ -346,13 +498,51 @@ INSTRUKCJA (KROK 5 - REFRAMING FAZ):
     })
   );
 
-  return safeParseJsonResponse(response.text, { optimizedText: existingBullet, keywordsMatched: [] });
+  return safeParseAndValidateJsonResponse(response.text, optimizeDeltaPhrasesResponseSchema, { optimizedText: existingBullet, keywordsMatched: [] });
+}
+
+/**
+ * Maps the local, token-free JD parser's output onto the shape the Gemini-backed
+ * parser normally returns, so callers (server routes, frontend) don't need a second
+ * code path when Gemini is unavailable or rate-limited. Only data actually found in
+ * the ad is included — no field is back-filled with a guess (0-Hallucination).
+ */
+function mapLocalJdToGeminiShape(rawJdText: string): z.infer<typeof jobDescriptionResponseSchema> {
+  const local = parseJobDescriptionLocal(rawJdText);
+
+  const languages = (local.languagesRequired || []).map((entry) => {
+    const match = entry.match(/^(.+?)\s*\(([^)]+)\)\s*$/);
+    return match
+      ? { language: match[1].trim(), level: match[2].trim() }
+      : { language: entry.trim(), level: "" };
+  });
+
+  return {
+    jobTitle: local.jobTitle || "Specjalista",
+    companyName: local.companyName || "Firma",
+    seniorityLevel: local.seniorityLevel || "Mid / Senior",
+    requiredHardSkills: local.requiredHardSkills,
+    toolsAndTech: local.toolsAndTech,
+    niceToHaveSkills: [],
+    languages,
+    dealbreakerWarnings: [],
+    benefitsList: local.benefits || [],
+    salaryRange: local.salaryRange || "Nie podano",
+    workModel: local.workModel || "Hybrydowa",
+    cleanBodyText: rawJdText,
+  };
 }
 
 /**
  * Server-side function: Parse Job Description text into structured requirements JSON
  */
 export async function parseJobDescriptionWithGemini(rawJdText: string): Promise<any> {
+  const hasGeminiKey = !!process.env.GEMINI_API_KEY && process.env.GEMINI_API_KEY.trim() !== "";
+  if (!hasGeminiKey) {
+    return mapLocalJdToGeminiShape(rawJdText);
+  }
+
+  try {
   const ai = getGeminiClient();
 
   const prompt = `
@@ -415,7 +605,7 @@ Zwróć odpowiedź WYŁĄCZNIE jako obiekt JSON.
     })
   );
 
-  return safeParseJsonResponse(response.text, {
+  return safeParseAndValidateJsonResponse(response.text, jobDescriptionResponseSchema, {
     jobTitle: "Specjalista",
     companyName: "Firma",
     seniorityLevel: "Mid / Senior",
@@ -429,6 +619,10 @@ Zwróć odpowiedź WYŁĄCZNIE jako obiekt JSON.
     workModel: "Hybrydowa",
     cleanBodyText: rawJdText,
   });
+  } catch (err) {
+    console.warn("Gemini JD parsing failed, using local parser fallback:", err);
+    return mapLocalJdToGeminiShape(rawJdText);
+  }
 }
 
 /**
@@ -484,7 +678,7 @@ Zwróć odpowiedź WYŁĄCZNIE jako obiekt JSON z polami "explanation", "tips", 
     })
   );
 
-  return safeParseJsonResponse(response.text, {
+  return safeParseAndValidateJsonResponse(response.text, advisorEducationalAdviceResponseSchema, {
     explanation: "Nie udało się pobrać szczegółowej porady. Spróbuj zadać pytanie inaczej.",
     tips: ["Sprawdź czy Twoje słowa kluczowe zgadzają się z ogłoszeniem."],
     actionItems: ["Przejrzyj dopasowanie słów w zakładce Generator CV."],
@@ -562,7 +756,12 @@ Zwróć odpowiedź WYŁĄCZNIE jako ustrukturyzowany obiekt JSON.
     })
   );
 
-  const parsed = safeParseJsonResponse<any>(response.text, {});
+  const parsed = safeParseAndValidateJsonResponse<any>(response.text, coverLetterResponseSchema, {
+    hook: "",
+    proofPoints: [],
+    callToAction: "",
+    fullText: "",
+  });
 
   return {
     targetJobTitle: role,
@@ -652,7 +851,7 @@ Zwróć obiekt JSON zawierający:
     })
   );
 
-  return safeParseJsonResponse<any>(response.text, {
+  return safeParseAndValidateJsonResponse<any>(response.text, interviewCheatSheetResponseSchema, {
     starPoints: [],
     emergencyPhrases: [],
     companyQuestions: [],
