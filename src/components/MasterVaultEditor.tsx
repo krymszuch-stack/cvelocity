@@ -51,7 +51,6 @@ import { Input, Textarea } from './ui/Field';
 import { Button } from './ui/Button';
 import { Card } from './ui/Card';
 import { extractTextFromAnyFile } from '../lib/cvUniversalParser';
-import { saveVaultToLocalStorage } from '../lib/vaultCrypto';
 import { AutocompleteInput } from './AutocompleteInput';
 import { useAuth } from '../context/AuthContext';
 import { inferRoleKnowledge, buildRoleRequirements } from '../lib/roleKnowledge';
@@ -84,7 +83,7 @@ interface MasterVaultEditorProps {
 }
 
 export const MasterVaultEditor: React.FC<MasterVaultEditorProps> = ({ vault, onChange, onOpenAdvisor }) => {
-  const { user } = useAuth();
+  const { user, saveCurrentVault } = useAuth() || {};
   const [activeSubTab, setActiveSubTab] = useState<'quiz' | 'info' | 'skills' | 'history' | 'edu' | 'security'>('quiz');
   const [quizStep, setQuizStep] = useState<number>(1);
   // Which single question is showing within Quiz Step 1 (one field per screen).
@@ -774,7 +773,9 @@ export const MasterVaultEditor: React.FC<MasterVaultEditorProps> = ({ vault, onC
   };
 
   const handleSaveLocalBackup = () => {
-    saveVaultToLocalStorage(draftVault, user?.id);
+    if (saveCurrentVault) {
+      void saveCurrentVault(draftVault);
+    }
     setIsSavedEncrypted(true);
     setTimeout(() => setIsSavedEncrypted(false), 3000);
   };
