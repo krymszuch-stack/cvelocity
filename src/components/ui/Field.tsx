@@ -198,7 +198,7 @@ export const Toggle: React.FC<{
                    peer-focus-visible:ring-4 peer-focus-visible:ring-brand-500/25"
       />
       <span
-        className="absolute top-[3px] left-[3px] w-4 h-4 rounded-full bg-white shadow-sm
+        className="absolute top-[3px] left-[3px] w-4 h-4 rounded-full bg-surface shadow-sm
                    transition-transform duration-200 peer-checked:translate-x-[18px]"
       />
     </span>

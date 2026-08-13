@@ -1,4 +1,4 @@
-# AGENTS.md — kontrakt dla agentów pracujących nad SkillVault
+# AGENTS.md — kontrakt dla agentów pracujących nad CVELOCITY
 
 Ten plik czytają agenci automatyczni (Jules, Claude Code i inne) **przed** pierwszą zmianą w repo.
 Jeśli coś tutaj kłóci się z Twoim domyślnym zachowaniem — wygrywa ten plik.
@@ -34,7 +34,7 @@ Zmiany w `NOTATKI.md` dołączaj do PR-a, którego dotyczą — nie rób z tego 
 
 ## 1. Czym jest ten projekt
 
-SkillVault dopasowuje CV do konkretnej oferty pracy: parsuje ogłoszenie, przestawia i przeformułowuje
+CVELOCITY dopasowuje CV do konkretnej oferty pracy: parsuje ogłoszenie, przestawia i przeformułowuje
 treść CV, symuluje ocenę ATS i generuje list motywacyjny. Znaczna część logiki jest **lokalna i bez-tokenowa**
 (slot filling, ranking trafności, symulator ATS) — Gemini jest wołane tylko tam, gdzie lokalny algorytm nie wystarcza.
 

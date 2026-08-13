@@ -1,4 +1,4 @@
-// User Authentication & Crypto Storage Module for SkillVault
+// User Authentication & Crypto Storage Module for CVELOCITY
 import CryptoJS from 'crypto-js';
 import { MasterVault } from '../types';
 import { createEmptyVault } from './sampleVault';
@@ -24,8 +24,10 @@ export interface SafeUserSession {
   twoFactorEnabled?: boolean;
 }
 
-const USERS_STORAGE_KEY = 'skillvault_users_db_v1';
-const CURRENT_SESSION_KEY = 'skillvault_active_session_v1';
+const USERS_STORAGE_KEY = 'cvelocity_users_db_v1';
+const LEGACY_USERS_STORAGE_KEY = 'cvelocity_legacy_users_db_v1';
+const CURRENT_SESSION_KEY = 'cvelocity_active_session_v1';
+const LEGACY_CURRENT_SESSION_KEY = 'cvelocity_legacy_active_session_v1';
 
 /**
  * Generate a salt for hashing
@@ -73,7 +75,7 @@ export function decryptUserVault(encryptedData: string, secretKey: string): Mast
  */
 export function getRegisteredUsers(): UserAccount[] {
   try {
-    const raw = localStorage.getItem(USERS_STORAGE_KEY);
+    const raw = localStorage.getItem(USERS_STORAGE_KEY) || localStorage.getItem(LEGACY_USERS_STORAGE_KEY);
     if (!raw) return [];
     return JSON.parse(raw);
   } catch (err) {
@@ -296,7 +298,7 @@ export function saveActiveSession(user: UserAccount): void {
  */
 export function getActiveSessionUser(): UserAccount | null {
   try {
-    const raw = localStorage.getItem(CURRENT_SESSION_KEY);
+    const raw = localStorage.getItem(CURRENT_SESSION_KEY) || localStorage.getItem(LEGACY_CURRENT_SESSION_KEY);
     if (!raw) return null;
     return JSON.parse(raw);
   } catch (err) {
@@ -313,6 +315,7 @@ export function logoutUser(): void {
     delete IN_MEMORY_VAULT_CACHE[activeUser.id];
   }
   localStorage.removeItem(CURRENT_SESSION_KEY);
+  localStorage.removeItem(LEGACY_CURRENT_SESSION_KEY);
 }
 
 /**
@@ -325,8 +328,8 @@ const IN_MEMORY_VAULT_CACHE: Record<string, MasterVault> = {};
  * Save encrypted vault for specific user
  */
 export function saveUserVault(userId: string, vault: MasterVault, userSecret?: string): void {
-  const storageKey = `skillvault_vault_encrypted_${userId}`;
-  const legacyActiveKey = `skillvault_vault_active_${userId}`;
+  const storageKey = `cvelocity_vault_encrypted_${userId}`;
+  const legacyStorageKey = `skillvault_vault_encrypted_${userId}`;
 
   if (userSecret) {
     const encrypted = encryptUserVault(vault, userSecret);
@@ -335,7 +338,9 @@ export function saveUserVault(userId: string, vault: MasterVault, userSecret?: s
     localStorage.removeItem(storageKey);
   }
 
-  localStorage.removeItem(legacyActiveKey);
+  localStorage.removeItem(legacyStorageKey);
+  localStorage.removeItem(`cvelocity_vault_active_${userId}`);
+  localStorage.removeItem(`skillvault_vault_active_${userId}`);
   IN_MEMORY_VAULT_CACHE[userId] = vault;
 }
 
@@ -348,12 +353,13 @@ export function loadUserVault(userId: string, userSecret?: string): MasterVault 
     return memoryVault;
   }
 
-  const encryptedKey = `skillvault_vault_encrypted_${userId}`;
+  const encryptedKey = `cvelocity_vault_encrypted_${userId}`;
+  const legacyKey = `skillvault_vault_encrypted_${userId}`;
   if (!userSecret) {
     return null;
   }
 
-  const encrypted = localStorage.getItem(encryptedKey);
+  const encrypted = localStorage.getItem(encryptedKey) || localStorage.getItem(legacyKey);
   if (!encrypted) {
     return null;
   }
@@ -371,12 +377,17 @@ export function loadUserVault(userId: string, userSecret?: string): MasterVault 
  */
 export function deleteUserAccount(userId: string): void {
   delete IN_MEMORY_VAULT_CACHE[userId];
+  localStorage.removeItem(`cvelocity_vault_encrypted_${userId}`);
   localStorage.removeItem(`skillvault_vault_encrypted_${userId}`);
+  localStorage.removeItem(`cvelocity_vault_active_${userId}`);
   localStorage.removeItem(`skillvault_vault_active_${userId}`);
   localStorage.removeItem(CURRENT_SESSION_KEY);
+  localStorage.removeItem(LEGACY_CURRENT_SESSION_KEY);
 
   const users = getRegisteredUsers();
   const filtered = users.filter((u) => u.id !== userId);
   saveRegisteredUsers(filtered);
-  localStorage.removeItem('skillvault_master_vault_enc');
+  localStorage.removeItem('cvelocity_master_vault_enc_v2');
+  localStorage.removeItem('legacy_master_vault_enc_v2');
+  localStorage.removeItem('legacy_master_vault_enc');
 }

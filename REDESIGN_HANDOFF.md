@@ -1,4 +1,4 @@
-# SkillVault — Redesign Handoff
+# CVELOCITY — Redesign Handoff
 
 Stan na: 2026-08-03. Branch: `chore/cleanup-dead-code-docs`.
 Ten dokument opisuje **niedokończony redesign UI**. Czytaj go w całości przed pierwszą zmianą.
@@ -24,7 +24,7 @@ Inspiracja stylistyczna: Linear / Vercel (dark), Stripe / Notion (light).
   1. `--sv-*` = surowa paleta, przełączana przez `[data-theme='light'|'dark']`
   2. `@theme --color-*` = tokeny Tailwinda wskazujące na warstwę 1 → każda klasa (`bg-surface`, `text-muted`) jest automatycznie reaktywna na motyw.
   Zawiera też: cienie, animacje (`animate-fade-in`, `animate-scale-in`, `.stagger`), `.sv-glass`, `.sv-skeleton`, `.sv-tnum`, scrollbar, focus-visible, `prefers-reduced-motion`.
-- **`src/context/ThemeContext.tsx`** — `ThemeProvider` + `useTheme()`. Zapis w `localStorage['skillvault_theme']`, fallback do preferencji systemu.
+- **`src/context/ThemeContext.tsx`** — `ThemeProvider` + `useTheme()`. Zapis w `localStorage['cvelocity_theme']`, fallback do preferencji systemu.
 - **`index.html`** — inline script ustawiający `data-theme` **przed pierwszym malowaniem** (brak mignięcia złym motywem). Nie usuwaj.
 
 ### Komponenty bazowe (`src/components/ui/`) — używaj ich, nie pisz nowych wariantów

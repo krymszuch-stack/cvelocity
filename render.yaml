@@ -1,8 +1,8 @@
-# Render Blueprint — SkillVault API only.
+# Render Blueprint — CVELOCITY API only.
 # The SPA is served by Firebase Hosting; this service exposes /api/* exclusively.
 services:
   - type: web
-    name: skillvault-api
+    name: cvelocity-api
     runtime: node
     plan: free
     region: frankfurt
@@ -23,7 +23,7 @@ services:
       - key: NODE_VERSION
         value: "20"
       - key: ALLOWED_ORIGINS
-        value: https://skillvault-99a72.web.app,https://skillvault-99a72.firebaseapp.com,https://skillvault.oathcry.com
+        value: https://cvelocity-99a72.web.app,https://cvelocity-99a72.firebaseapp.com,https://cvelocity.oathcry.com,https://cv.oathcry.com
       # Set manually in the Render dashboard — never stored in the repo.
       - key: GEMINI_API_KEY
         sync: false

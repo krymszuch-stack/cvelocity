@@ -1,5 +1,5 @@
 # ═══════════════════════════════════════════════════════════════════
-# SKILLVAULT: ARCHITEKTURA WERSJONOWANIA & EXPORT ENGINE (6 FILARÓW)
+# CVELOCITY: ARCHITEKTURA WERSJONOWANIA & EXPORT ENGINE (6 FILARÓW)
 # ═══════════════════════════════════════════════════════════════════
 
 ## 1. EDYCJA POPRZEZ "WARSTWY" (LAYERED EDITING)

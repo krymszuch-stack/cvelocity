@@ -1,6 +1,6 @@
-# SkillVault ⚡
+# CVELOCITY ⚡
 
-**SkillVault** to zaawansowany, niezależny system automatyzacji CV, generowania listów motywacyjnych oraz symulacji audytów ATS (Applicant Tracking Systems). 
+**CVELOCITY** to zaawansowany, niezależny system automatyzacji CV, generowania listów motywacyjnych oraz symulacji audytów ATS (Applicant Tracking Systems). 
 
 Aplikacja oferuje bez-tokenowy silnik lokalnej podmiany fraz (**0-Token Local Slot Filling**) połączony z ultrawydajnym modelem **Gemini 3.6 Flash** do szybkiej analizy i dopasowywania aplikacji pod oferty pracy.
 
@@ -21,8 +21,8 @@ Aplikacja oferuje bez-tokenowy silnik lokalnej podmiany fraz (**0-Token Local Sl
 
 ### 1. Klonowanie Repozytorium
 ```bash
-git clone https://github.com/twoj-login/skillvault.git
-cd skillvault
+git clone https://github.com/twoj-login/cvelocity.git
+cd cvelocity
 ```
 
 ### 2. Instalacja Zależności
@@ -86,23 +86,23 @@ W aplikacji skonfigurowano 2 równoległe ścieżki autentykacji, plus opcjonaln
 
 ## 🌐 Integracja jako Aplikacja Podrzędna w Portfolio
 
-Jeśli dodajesz `SkillVault` do swojego głównego serwisu portfolio:
+Jeśli dodajesz `CVELOCITY` do swojego głównego serwisu portfolio:
 
 ### Opcja A: Podpięcie w IFRAME lub Subdomenie
-1. Wdrożenie `SkillVault` na osobnej usłudze (np. Render / Cloud Run / Vercel / Railway).
+1. Wdrożenie `CVELOCITY` na osobnej usłudze (np. Render / Cloud Run / Vercel / Railway).
 2. Wklejenie komponentu `<iframe>` w swoim głównym portfolio:
    ```html
-   <iframe src="https://skillvault.twojadomena.pl" width="100%" height="800px" style="border:none;"></iframe>
+   <iframe src="https://cvelocity.oathcry.com" width="100%" height="800px" style="border:none;"></iframe>
    ```
 
 ### Opcja B: Przycisk / Link w Portfolio z automatycznym przekierowaniem
-Przekieruj rekrutera bezpośrednio ze swojego portfolio do aplikacji `SkillVault` z parametrem demo lub z własnym profilowanym CV.
+Przekieruj rekrutera bezpośrednio ze swojego portfolio do aplikacji `CVELOCITY` z parametrem demo lub z własnym profilowanym CV.
 
 ---
 
 ## 🌐 Wdrożenie (Deployment)
 
-Aplikacja SkillVault została zaprojektowana z jasnym podziałem na część frontendową (SPA) oraz backendową (Express API), które są wdrażane jako dwa osobne środowiska:
+Aplikacja CVELOCITY została zaprojektowana z jasnym podziałem na część frontendową (SPA) oraz backendową (Express API), które są wdrażane jako dwa osobne środowiska:
 
 1. **Frontend (SPA)**:
    - Hostowany na platformie **Firebase Hosting** (zgodnie z konfiguracją w `firebase.json` i workflow `.github/workflows/deploy-frontend.yml`).
@@ -138,4 +138,4 @@ Historycznie plik `vaultCrypto.ts` deklarował „zero-knowledge AES-256", ale f
 ---
 
 ## 📄 Licencja
-MIT © 2026 SkillVault
+MIT © 2026 CVELOCITY

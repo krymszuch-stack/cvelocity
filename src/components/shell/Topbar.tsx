@@ -69,7 +69,7 @@ export const Topbar: React.FC<TopbarProps> = ({
           >
             {isAuthenticated && user ? (
               <>
-                <span className="w-6 h-6 rounded-lg bg-gradient-to-br from-brand-500 to-brand-700 text-white
+                <span className="w-6 h-6 rounded-lg bg-gradient-to-br from-brand-500 to-brand-700 text-brand-solid-fg
                                  text-[11px] font-bold flex items-center justify-center shrink-0">
                   {user.fullName.charAt(0).toUpperCase()}
                 </span>

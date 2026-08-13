@@ -16,7 +16,9 @@ import { MasterVault } from '../types';
  * implementacja WebCrypto jest do odzyskania z historii gita.
  */
 
-const STORAGE_KEY = 'skillvault_master_vault_enc_v2';
+const STORAGE_KEY = 'cvelocity_master_vault_enc_v2';
+const LEGACY_STORAGE_KEY = 'legacy_master_vault_enc_v2';
+const LEGACY_STORAGE_KEY_V1 = 'legacy_master_vault_enc';
 
 /** Kształt zapisu używany przez starsze wersje: { v: 1, raw: "<json>" }. */
 interface LegacyEnvelope {
@@ -49,7 +51,7 @@ export function saveVaultToLocalStorage(vault: MasterVault, userId?: string): vo
 
 export function loadVaultFromLocalStorage(userId?: string): MasterVault | null {
   const key = userId ? `sv_${userId}_vault` : STORAGE_KEY;
-  const stored = localStorage.getItem(key);
+  const stored = localStorage.getItem(key) || localStorage.getItem(LEGACY_STORAGE_KEY) || localStorage.getItem(LEGACY_STORAGE_KEY_V1);
   if (!stored) return null;
   return parseStoredVault(stored);
 }
@@ -57,4 +59,6 @@ export function loadVaultFromLocalStorage(userId?: string): MasterVault | null {
 export function clearVaultLocalStorage(userId?: string): void {
   const key = userId ? `sv_${userId}_vault` : STORAGE_KEY;
   localStorage.removeItem(key);
+  localStorage.removeItem(LEGACY_STORAGE_KEY);
+  localStorage.removeItem(LEGACY_STORAGE_KEY_V1);
 }

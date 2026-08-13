@@ -204,11 +204,39 @@ export function generatePlainTextCvExport(
   vault.history.forEach(exp => {
     lines.push(`• ${exp.role.toUpperCase()} @ ${exp.company} (${exp.startDate} - ${exp.endDate})`);
     const expFacts = layeredFacts.filter(f => f.experienceId === exp.id);
-    expFacts.forEach(f => {
-      lines.push(`   - ${f.userOverrideText || f.jobReframedText || f.baseText}`);
-    });
+    if (expFacts.length > 0) {
+      expFacts.forEach(f => {
+        lines.push(`   - ${f.userOverrideText || f.jobReframedText || f.baseText}`);
+      });
+    } else {
+      // Fallback: use raw highlights from vault when no layered facts available
+      exp.highlights.forEach(h => {
+        const hText = typeof h === 'string' ? h : h.text;
+        if (hText) lines.push(`   - ${hText}`);
+      });
+    }
     lines.push(``);
   });
+
+  // Education section
+  if (vault.education && vault.education.length > 0) {
+    lines.push(`--- WYKSZTAŁCENIE ---`);
+    vault.education.forEach(edu => {
+      const period = [edu.startDate, edu.endDate].filter(Boolean).join(' - ');
+      lines.push(`• ${edu.degree} — ${edu.institution}${edu.fieldOfStudy ? `, ${edu.fieldOfStudy}` : ''}${period ? ` (${period})` : ''}`);
+      if (edu.description) lines.push(`   ${edu.description}`);
+    });
+    lines.push(``);
+  }
+
+  // Languages section
+  if (vault.profiler?.languages && vault.profiler.languages.length > 0) {
+    lines.push(`--- JĘZYKI OBCE ---`);
+    vault.profiler.languages.forEach(lang => {
+      lines.push(`• ${lang.language}: ${lang.level}${lang.context ? ` (${lang.context})` : ''}`);
+    });
+    lines.push(``);
+  }
 
   lines.push(`--- UMIEJĘTNOŚCI I NARZĘDZIA ---`);
   lines.push(`Twarde: ${vault.skillsMatrix.hardSkills.join(', ')}`);

@@ -4,7 +4,7 @@ import { generateTwoFactorSetup, verifyTwoFactorToken } from '../twoFactorAuth';
 
 function codeFor(secretBase32: string): string {
   const totp = new OTPAuth.TOTP({
-    issuer: 'SkillVault',
+    issuer: 'CVELOCITY',
     algorithm: 'SHA1',
     digits: 6,
     period: 30,

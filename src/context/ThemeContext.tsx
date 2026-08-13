@@ -2,7 +2,8 @@ import React, { createContext, useCallback, useContext, useEffect, useState } fr
 
 export type Theme = 'light' | 'dark';
 
-const STORAGE_KEY = 'skillvault_theme';
+const STORAGE_KEY = 'cvelocity_theme';
+const LEGACY_STORAGE_KEY = 'legacy_theme_v1';
 
 interface ThemeContextValue {
   theme: Theme;
@@ -15,7 +16,7 @@ const ThemeContext = createContext<ThemeContextValue | undefined>(undefined);
 /** Stored choice wins; otherwise follow the OS. */
 function resolveInitialTheme(): Theme {
   if (typeof window === 'undefined') return 'dark';
-  const stored = window.localStorage.getItem(STORAGE_KEY);
+  const stored = window.localStorage.getItem(STORAGE_KEY) || window.localStorage.getItem(LEGACY_STORAGE_KEY);
   if (stored === 'light' || stored === 'dark') return stored;
   return window.matchMedia?.('(prefers-color-scheme: light)').matches ? 'light' : 'dark';
 }

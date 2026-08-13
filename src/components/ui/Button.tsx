@@ -14,7 +14,7 @@ export type ButtonSize = 'xs' | 'sm' | 'md' | 'lg';
 const VARIANTS: Record<ButtonVariant, string> = {
   // Gradient + inset highlight gives the primary action real depth on both themes.
   primary:
-    'bg-gradient-to-b from-brand-500 to-brand-600 text-white border border-brand-600 ' +
+    'bg-gradient-to-b from-brand-500 to-brand-600 text-brand-solid-fg border border-brand-600 ' +
     'shadow-sm hover:from-brand-400 hover:to-brand-500 hover:shadow-md ' +
     'shadow-brand-600/25 hover:-translate-y-px',
   secondary:

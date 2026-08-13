@@ -39,6 +39,53 @@ export const INTERVIEW_GLOSSARY_DICTIONARY: Record<string, string> = {
   'sla': 'Service Level Agreement — umowa określająca gwarantowany poziom jakości/dostępności usługi.',
   'crm': 'Customer Relationship Management — system do zarządzania relacjami i historią kontaktów z klientami.',
   'erp': 'Enterprise Resource Planning — zintegrowany system zarządzania zasobami i procesami całej organizacji.',
+
+  // Spawalnictwo i obróbka metali
+  'mig': 'Metal Inert Gas — metoda spawania łukiem elektrycznym w osłonie gazu obojętnego (argon), popularna przy aluminium i stali nierdzewnej.',
+  'mag': 'Metal Active Gas — metoda spawania łukiem elektrycznym w osłonie gazu aktywnego (CO₂ lub mieszanki), najczęściej stosowana w przemyśle stalowym.',
+  'tig': 'Tungsten Inert Gas — precyzyjna metoda spawania elektrodą wolframową w osłonie argonu, stosowana tam, gdzie liczy się estetyka i jakość spoiny.',
+  'mig/mag': 'Spawanie łukowe w osłonie gazów — MIG (gaz obojętny) i MAG (gaz aktywny). Najczęściej spotykane metody spawania w przemyśle.',
+  'spawanie': 'Proces trwałego łączenia metali przez stopienie krawędzi elementów, często z użyciem materiału dodatkowego (drutu/elektrody).',
+
+  // Uprawnienia i certyfikaty przemysłowe
+  'udt': 'Urząd Dozoru Technicznego — instytucja wydająca uprawnienia do obsługi urządzeń technicznych (wózki widłowe, suwnice, żurawie, dźwigi).',
+  'sep': 'Stowarzyszenie Elektryków Polskich — wydaje świadectwa kwalifikacyjne E (eksploatacja) i D (dozór) uprawniające do pracy przy urządzeniach elektrycznych.',
+  'sep e': 'Świadectwo kwalifikacyjne SEP kategorii E (eksploatacja) — uprawnia do obsługi i konserwacji urządzeń elektroenergetycznych.',
+  'sep d': 'Świadectwo kwalifikacyjne SEP kategorii D (dozór) — uprawnia do nadzorowania pracy urządzeń elektroenergetycznych.',
+
+  // Bezpieczeństwo żywności i gastronomia
+  'haccp': 'Hazard Analysis and Critical Control Points — system zapewnienia bezpieczeństwa żywności przez identyfikację i kontrolę zagrożeń na każdym etapie produkcji.',
+  'ghp': 'Good Hygiene Practice — Dobra Praktyka Higieniczna, zestaw zasad zapewniających higieniczne warunki produkcji żywności.',
+  'gmp': 'Good Manufacturing Practice — Dobra Praktyka Produkcyjna, system zapewnienia jakości w produkcji (żywność, farmacja, kosmetyki).',
+  'sanepid': 'Stacja Sanitarno-Epidemiologiczna — organ kontrolujący warunki higieniczne i sanitarne w zakładach pracy, gastronomii i handlu.',
+
+  // BHP i prawo pracy
+  'bhp': 'Bezpieczeństwo i Higiena Pracy — zbiór przepisów i zasad zapobiegania wypadkom i chorobom zawodowym w miejscu pracy.',
+  'ppoż': 'Ochrona przeciwpożarowa — zasady, przepisy i środki techniczne zapobiegające pożarom i ograniczające ich skutki.',
+  'ohsas': 'Occupational Health and Safety Assessment Series — międzynarodowy standard zarządzania bezpieczeństwem i higieną pracy (obecnie zastąpiony przez ISO 45001).',
+  'iso 45001': 'Międzynarodowy standard systemu zarządzania bezpieczeństwem i higieną pracy, następca OHSAS 18001.',
+
+  // Logistyka i magazynowanie
+  'wms': 'Warehouse Management System — system informatyczny do zarządzania pracą magazynu (przyjęcia, wydania, lokalizacje, inwentaryzacja).',
+  'wózek widłowy': 'Pojazd do transportu i podnoszenia ładunków w magazynach — do obsługi wymagane uprawnienia UDT.',
+  'fifo': 'First In, First Out — zasada rotacji zapasów: towar przyjęty najwcześniej jest wydawany jako pierwszy.',
+  'lifo': 'Last In, First Out — zasada rotacji zapasów: towar przyjęty najpóźniej jest wydawany jako pierwszy.',
+  'supply chain': 'Łańcuch dostaw — cały przepływ towarów od surowca przez produkcję, magazynowanie, transport aż do klienta końcowego.',
+
+  // Budownictwo
+  'kosztorys': 'Dokument określający przewidywane koszty robót budowlanych na podstawie przedmiaru i cen jednostkowych.',
+  'uprawnienia budowlane': 'Kwalifikacje nadawane przez izbę inżynierów, uprawniające do projektowania lub kierowania robotami budowlanymi.',
+
+  // Księgowość i finanse (rozszerzenie)
+  'kpir': 'Księga Przychodów i Rozchodów — uproszczona forma ewidencji podatkowej dla małych przedsiębiorstw.',
+  'vat': 'Value Added Tax — podatek od towarów i usług doliczany do ceny na każdym etapie obrotu.',
+  'pit': 'Personal Income Tax — podatek dochodowy od osób fizycznych odprowadzany od wynagrodzeń i dochodów.',
+  'cit': 'Corporate Income Tax — podatek dochodowy od osób prawnych (spółek, fundacji itp.).',
+  'zus': 'Zakład Ubezpieczeń Społecznych — instytucja obsługująca składki i świadczenia z ubezpieczeń społecznych (emerytury, renty, zasiłki).',
+
+  // Opieka zdrowotna
+  'opieka paliatywna': 'Specjalistyczna opieka medyczna nad pacjentami z zaawansowanymi chorobami, nastawiona na łagodzenie bólu i poprawę jakości życia.',
+  'triażowanie': 'Segregacja pacjentów według pilności stanu zdrowia w celu ustalenia kolejności udzielania pomocy medycznej.',
 };
 
 /** Czy słownik zna ten termin (case-insensitive). */

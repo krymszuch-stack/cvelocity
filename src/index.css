@@ -1,7 +1,7 @@
 @import "tailwindcss";
 
 /* ============================================================================
-   SkillVault Design System
+   CVELOCITY Design System
    ----------------------------------------------------------------------------
    Two layers:
    1. RAW PALETTE (--sv-*) — flips between light/dark on [data-theme].
@@ -26,20 +26,22 @@
   --color-subtle: var(--sv-subtle);
   --color-inverse: var(--sv-inverse);
 
-  /* --- Brand (indigo) — the single accent --- */
+  /* --- Brand (Champagne Gold) — primary accent --- */
   --color-brand-50: var(--sv-brand-50);
   --color-brand-100: var(--sv-brand-100);
   --color-brand-200: var(--sv-brand-200);
   --color-brand-300: var(--sv-brand-300);
-  --color-brand-400: #818cf8;
-  --color-brand-500: #6366f1;
-  --color-brand-600: #4f46e5;
-  --color-brand-700: #4338ca;
-  --color-brand-800: #3730a3;
-  --color-brand-900: #312e81;
-  --color-brand-950: #1e1b4b;
+  --color-brand-400: var(--sv-brand-400);
+  --color-brand-500: var(--sv-brand-500);
+  --color-brand-600: var(--sv-brand-600);
+  --color-brand-700: var(--sv-brand-700);
+  --color-brand-800: var(--sv-brand-800);
+  --color-brand-900: var(--sv-brand-900);
+  --color-brand-950: var(--sv-brand-950);
   --color-brand-soft: var(--sv-brand-soft);
+  --color-brand-border: var(--sv-brand-border);
   --color-brand-fg: var(--sv-brand-fg);
+  --color-brand-solid-fg: var(--sv-brand-solid-fg);
 
   /* --- Status: emerald = success only, never brand --- */
   --color-success-500: #10b981;
@@ -77,26 +79,35 @@
 [data-theme='light'] {
   color-scheme: light;
 
-  --sv-canvas: #f7f8fa;
+  --sv-canvas: #f8fafc;
   --sv-surface: #ffffff;
   --sv-raised: #ffffff;
-  --sv-sunken: #f1f2f6;
-  --sv-overlay: rgba(15, 18, 32, 0.45);
+  --sv-sunken: #f1f5f9;
+  --sv-overlay: rgba(15, 23, 42, 0.5);
 
-  --sv-line: #e6e8ef;
-  --sv-line-strong: #d2d6e0;
+  --sv-line: #e2e8f0;
+  --sv-line-strong: #cbd5e1;
 
-  --sv-ink: #14161f;
-  --sv-muted: #565b6b;
-  --sv-subtle: #8a90a2;
+  --sv-ink: #0f172a;
+  --sv-muted: #475569;
+  --sv-subtle: #64748b;
   --sv-inverse: #ffffff;
 
-  --sv-brand-50: #eef2ff;
-  --sv-brand-100: #e0e7ff;
-  --sv-brand-200: #c7d2fe;
-  --sv-brand-300: #a5b4fc;
-  --sv-brand-soft: #eef2ff;
-  --sv-brand-fg: #4338ca;
+  --sv-brand-50: #faf6ea;
+  --sv-brand-100: #f3eacf;
+  --sv-brand-200: #e6d4a3;
+  --sv-brand-300: #d8bd77;
+  --sv-brand-400: #d4af37;
+  --sv-brand-500: #c5a059;
+  --sv-brand-600: #b38e47;
+  --sv-brand-700: #8f6e2e;
+  --sv-brand-800: #5f481b;
+  --sv-brand-900: #423211;
+  --sv-brand-950: #2e1e07;
+  --sv-brand-soft: #faf6ea;
+  --sv-brand-border: rgba(197, 160, 89, 0.28);
+  --sv-brand-fg: #795200;
+  --sv-brand-solid-fg: #0f172a;
 
   --sv-success-soft: #ecfdf5;
   --sv-success-fg: #047857;
@@ -105,34 +116,43 @@
   --sv-danger-soft: #fff1f2;
   --sv-danger-fg: #be123c;
 
-  --sv-shadow-color: rgba(19, 22, 40, 0.07);
-  --sv-shadow-strong: rgba(19, 22, 40, 0.16);
+  --sv-shadow-color: rgba(15, 23, 42, 0.06);
+  --sv-shadow-strong: rgba(15, 23, 42, 0.16);
 }
 
 /* ----------------------------------------------------------------- DARK --- */
 [data-theme='dark'] {
   color-scheme: dark;
 
-  --sv-canvas: #0a0b10;
-  --sv-surface: #121319;
-  --sv-raised: #171922;
-  --sv-sunken: #0e0f15;
-  --sv-overlay: rgba(4, 5, 10, 0.7);
+  --sv-canvas: #0f172a;
+  --sv-surface: #1e293b;
+  --sv-raised: #273549;
+  --sv-sunken: #0b1120;
+  --sv-overlay: rgba(2, 6, 23, 0.75);
 
-  --sv-line: #24262f;
-  --sv-line-strong: #333644;
+  --sv-line: #334155;
+  --sv-line-strong: #475569;
 
-  --sv-ink: #f2f3f7;
-  --sv-muted: #a2a7b8;
-  --sv-subtle: #6f7486;
-  --sv-inverse: #0a0b10;
+  --sv-ink: #f8fafc;
+  --sv-muted: #cbd5e1;
+  --sv-subtle: #94a3b8;
+  --sv-inverse: #0f172a;
 
-  --sv-brand-50: #1a1b33;
-  --sv-brand-100: #22244a;
-  --sv-brand-200: #2d3060;
-  --sv-brand-300: #a5b4fc;
-  --sv-brand-soft: rgba(99, 102, 241, 0.14);
-  --sv-brand-fg: #a5b4fc;
+  --sv-brand-50: #2e1e07;
+  --sv-brand-100: #423211;
+  --sv-brand-200: #5f481b;
+  --sv-brand-300: #8f6e2e;
+  --sv-brand-400: #d4af37;
+  --sv-brand-500: #c5a059;
+  --sv-brand-600: #b38e47;
+  --sv-brand-700: #d8bd77;
+  --sv-brand-800: #e6d4a3;
+  --sv-brand-900: #f3eacf;
+  --sv-brand-950: #faf6ea;
+  --sv-brand-soft: rgba(212, 175, 55, 0.12);
+  --sv-brand-border: rgba(212, 175, 55, 0.30);
+  --sv-brand-fg: #e5c158;
+  --sv-brand-solid-fg: #0f172a;
 
   --sv-success-soft: rgba(16, 185, 129, 0.14);
   --sv-success-fg: #4ade9f;
@@ -141,8 +161,8 @@
   --sv-danger-soft: rgba(244, 63, 94, 0.14);
   --sv-danger-fg: #fb7185;
 
-  --sv-shadow-color: rgba(0, 0, 0, 0.5);
-  --sv-shadow-strong: rgba(0, 0, 0, 0.7);
+  --sv-shadow-color: rgba(2, 6, 23, 0.45);
+  --sv-shadow-strong: rgba(2, 6, 23, 0.75);
 }
 
 @layer base {
@@ -173,6 +193,25 @@
 }
 
 /* Hard override to prevent dark theme borders leaking onto white A4 printable CV sheet (ADR-95, AGENTS.md §5) */
+.printable-area {
+  background-color: #ffffff;
+  color: #0f172a !important;
+  color-scheme: light !important;
+
+  --sv-canvas: #ffffff;
+  --sv-surface: #ffffff;
+  --sv-ink: #0f172a;
+  --sv-muted: #475569;
+  --sv-subtle: #64748b;
+  --sv-line: #cbd5e1;
+  --sv-line-strong: #94a3b8;
+}
+
+[data-theme='dark'] .printable-area {
+  background-color: #ffffff !important;
+  color: #0f172a !important;
+}
+
 .printable-area,
 .printable-area * {
   border-color: #cbd5e1;

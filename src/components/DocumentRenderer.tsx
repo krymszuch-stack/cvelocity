@@ -412,9 +412,23 @@ export const DocumentRenderer: React.FC<DocumentRendererProps> = ({ resume, vaul
       const imgData = canvas.toDataURL('image/png');
       const pdf = new jsPDF('p', 'mm', 'a4');
       const pdfWidth = pdf.internal.pageSize.getWidth();
-      const pdfHeight = (canvas.height * pdfWidth) / canvas.width;
+      const pageHeight = pdf.internal.pageSize.getHeight();
+      const imgHeight = (canvas.height * pdfWidth) / canvas.width;
 
-      pdf.addImage(imgData, 'PNG', 0, 0, pdfWidth, pdfHeight);
+      // Multi-page: slice the canvas image across A4 pages
+      let heightLeft = imgHeight;
+      let position = 0;
+
+      pdf.addImage(imgData, 'PNG', 0, position, pdfWidth, imgHeight);
+      heightLeft -= pageHeight;
+
+      while (heightLeft > 0) {
+        position -= pageHeight;
+        pdf.addPage();
+        pdf.addImage(imgData, 'PNG', 0, position, pdfWidth, imgHeight);
+        heightLeft -= pageHeight;
+      }
+
       pdf.save(`CV_${vault.personalInfo.fullName.replace(/\s+/g, '_')}_${renderVariant}.pdf`);
     } catch (err) {
       console.error('Błąd podczas generowania PDF:', err);
@@ -508,47 +522,47 @@ export const DocumentRenderer: React.FC<DocumentRendererProps> = ({ resume, vaul
   return (
     <div className="space-y-6">
       {/* Control Bar & Style Mixer */}
-      <div className="bg-white border border-slate-200 rounded-2xl p-4 sm:p-5 space-y-4 shadow-xs">
+      <div className="bg-surface border border-line rounded-2xl p-4 sm:p-5 space-y-4 shadow-xs">
         {/* Non-Invasive 3-Point Change Summary Banner (Dyrektywa 7) */}
-        <div className="bg-gradient-to-r from-slate-900 to-indigo-950 text-white rounded-xl p-3.5 border border-indigo-500/30 text-xs space-y-1.5 shadow-md">
-          <div className="flex items-center justify-between font-bold text-indigo-300">
+        <div className="bg-gradient-to-r from-slate-900 to-brand-950 text-white rounded-xl p-3.5 border border-brand-500/30 text-xs space-y-1.5 shadow-md">
+          <div className="flex items-center justify-between font-bold text-brand-300">
             <span className="flex items-center space-x-1.5">
-              <Sparkles className="w-4 h-4 text-indigo-400" />
+              <Sparkles className="w-4 h-4 text-brand-400" />
               <span>Dlaczego zmodyfikowaliśmy treść pod tę ofertę ({resume.companyName || 'Pracodawca'}):</span>
             </span>
-            <span className="text-[10px] bg-indigo-950 text-indigo-300 px-2 py-0.5 rounded border border-indigo-700/60 font-mono">
+            <span className="text-[10px] bg-brand-950 text-brand-300 px-2 py-0.5 rounded border border-brand-700/60 font-mono">
               Auto-Tailor Summary
             </span>
           </div>
           <ul className="grid grid-cols-1 sm:grid-cols-3 gap-2 text-[11px] text-slate-300 pt-1">
-            <li className="flex items-start space-x-1.5 bg-slate-950/50 p-2 rounded-lg border border-slate-800">
+            <li className="flex items-start space-x-1.5 bg-canvas/50 p-2 rounded-lg border border-line-strong">
               <span className="text-emerald-400 font-bold">1.</span>
               <span><strong>Słowa Kluczowe:</strong> Wzmocniono frazy ATS dla stanowiska <em>{resume.targetJobTitle}</em>.</span>
             </li>
-            <li className="flex items-start space-x-1.5 bg-slate-950/50 p-2 rounded-lg border border-slate-800">
+            <li className="flex items-start space-x-1.5 bg-canvas/50 p-2 rounded-lg border border-line-strong">
               <span className="text-emerald-400 font-bold">2.</span>
               <span><strong>Hierarchia Faktów:</strong> Wysunięto najistotniejsze projekty z MasterVault na początek list.</span>
             </li>
-            <li className="flex items-start space-x-1.5 bg-slate-950/50 p-2 rounded-lg border border-slate-800">
+            <li className="flex items-start space-x-1.5 bg-canvas/50 p-2 rounded-lg border border-line-strong">
               <span className="text-emerald-400 font-bold">3.</span>
               <span><strong>Wskaźniki Cyfrowe:</strong> Zachowano 100% zadeklarowanych metryk i ocen liczbowych.</span>
             </li>
           </ul>
         </div>
         {/* Top Controls: Render Variant Selector */}
-        <div className="flex flex-wrap items-center justify-between gap-4 border-b border-slate-200 pb-4">
+        <div className="flex flex-wrap items-center justify-between gap-4 border-b border-line pb-4">
           <div className="flex items-center space-x-2">
-            <span className="text-xs font-bold text-slate-700 flex items-center space-x-1">
-              <Layout className="w-4 h-4 text-indigo-600" />
+            <span className="text-xs font-bold text-muted flex items-center space-x-1">
+              <Layout className="w-4 h-4 text-brand-500" />
               <span>Wariant Renderowania:</span>
             </span>
-            <div className="bg-slate-100 p-1 rounded-xl border border-slate-200 flex flex-wrap gap-1">
+            <div className="bg-sunken p-1 rounded-xl border border-line flex flex-wrap gap-1">
               <button
                 onClick={() => setRenderVariant('ATS_SAFE')}
                 className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center space-x-1.5 ${
                   renderVariant === 'ATS_SAFE'
-                    ? 'bg-emerald-600 text-white shadow-2xs'
-                    : 'text-slate-600 hover:text-slate-900'
+                    ? 'bg-brand-500 text-brand-solid-fg shadow-2xs'
+                    : 'text-muted hover:text-ink'
                 }`}
               >
                 <ShieldCheck className="w-3.5 h-3.5" />
@@ -559,8 +573,8 @@ export const DocumentRenderer: React.FC<DocumentRendererProps> = ({ resume, vaul
                 onClick={() => setRenderVariant('ATS_VISUAL_PHOTO')}
                 className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center space-x-1.5 ${
                   renderVariant === 'ATS_VISUAL_PHOTO'
-                    ? 'bg-indigo-600 text-white shadow-2xs'
-                    : 'text-slate-600 hover:text-slate-900'
+                    ? 'bg-brand-600 text-brand-solid-fg shadow-2xs'
+                    : 'text-muted hover:text-ink'
                 }`}
               >
                 <UserCheck className="w-3.5 h-3.5" />
@@ -571,8 +585,8 @@ export const DocumentRenderer: React.FC<DocumentRendererProps> = ({ resume, vaul
                 onClick={() => setRenderVariant('PRINT_READY')}
                 className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center space-x-1.5 ${
                   renderVariant === 'PRINT_READY'
-                    ? 'bg-blue-600 text-white shadow-2xs'
-                    : 'text-slate-600 hover:text-slate-900'
+                    ? 'bg-brand-500 text-brand-solid-fg shadow-2xs'
+                    : 'text-muted hover:text-ink'
                 }`}
               >
                 <Sparkles className="w-3.5 h-3.5" />
@@ -583,8 +597,8 @@ export const DocumentRenderer: React.FC<DocumentRendererProps> = ({ resume, vaul
                 onClick={() => setRenderVariant('EXECUTIVE_MODERN')}
                 className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center space-x-1.5 ${
                   renderVariant === 'EXECUTIVE_MODERN'
-                    ? 'bg-slate-900 text-white shadow-2xs'
-                    : 'text-slate-600 hover:text-slate-900'
+                    ? 'bg-raised text-ink shadow-2xs'
+                    : 'text-muted hover:text-ink'
                 }`}
               >
                 <Briefcase className="w-3.5 h-3.5" />
@@ -598,32 +612,32 @@ export const DocumentRenderer: React.FC<DocumentRendererProps> = ({ resume, vaul
             {/* Pre-Flight Validation Modal Button */}
             <button
               onClick={() => setIsPreFlightOpen(true)}
-              className="flex items-center space-x-1 px-3 py-1.5 bg-amber-50 hover:bg-amber-100 text-amber-900 border border-amber-300 rounded-lg text-xs font-bold transition-colors shadow-2xs"
+              className="flex items-center space-x-1 px-3 py-1.5 bg-warning-soft hover:bg-warning-soft/80 text-warning-fg border border-warning-500/30 rounded-lg text-xs font-bold transition-colors shadow-2xs"
             >
-              <FileCheck className="w-3.5 h-3.5 text-amber-600" />
+              <FileCheck className="w-3.5 h-3.5 text-warning-500" />
               <span>Raport Walidacji</span>
             </button>
 
             {/* Compare Side-by-Side Button */}
             <button
               onClick={() => setIsCompareOpen(true)}
-              className="flex items-center space-x-1 px-3 py-1.5 bg-indigo-50 hover:bg-indigo-100 text-indigo-900 border border-indigo-300 rounded-lg text-xs font-bold transition-colors shadow-2xs"
+              className="flex items-center space-x-1 px-3 py-1.5 bg-brand-soft hover:bg-brand-soft/80 text-brand-fg border border-brand-border rounded-lg text-xs font-bold transition-colors shadow-2xs"
             >
-              <Eye className="w-3.5 h-3.5 text-indigo-600" />
+              <Eye className="w-3.5 h-3.5 text-brand-fg" />
               <span>Porównaj z Oryginałem</span>
             </button>
 
             <button
               onClick={handleCopyRawText}
-              className="flex items-center space-x-1 px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-800 border border-slate-200 rounded-lg text-xs font-bold transition-colors"
+              className="flex items-center space-x-1 px-3 py-1.5 bg-sunken hover:bg-raised text-ink border border-line rounded-lg text-xs font-bold transition-colors"
             >
-              {copied ? <Check className="w-3.5 h-3.5 text-emerald-600" /> : <Copy className="w-3.5 h-3.5" />}
+              {copied ? <Check className="w-3.5 h-3.5 text-success-fg" /> : <Copy className="w-3.5 h-3.5" />}
               <span>Kopiuj Tekst</span>
             </button>
 
             <button
               onClick={handlePrint}
-              className="flex items-center space-x-1 px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-800 border border-slate-200 rounded-lg text-xs font-bold transition-colors"
+              className="flex items-center space-x-1 px-3 py-1.5 bg-sunken hover:bg-raised text-ink border border-line rounded-lg text-xs font-bold transition-colors"
             >
               <Printer className="w-3.5 h-3.5" />
               <span>Drukuj</span>
@@ -633,20 +647,20 @@ export const DocumentRenderer: React.FC<DocumentRendererProps> = ({ resume, vaul
             <div ref={exportMenuRef} className="relative inline-block text-left">
               <button
                 onClick={() => setIsExportMenuOpen(!isExportMenuOpen)}
-                className="flex items-center space-x-1.5 px-4 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-xs font-bold shadow-2xs transition-colors"
+                className="flex items-center space-x-1.5 px-4 py-1.5 bg-brand-500 hover:bg-brand-600 text-brand-solid-fg rounded-lg text-xs font-bold shadow-2xs transition-colors"
               >
                 <Download className="w-3.5 h-3.5" />
                 <span>Opcje Eksportu ▾</span>
               </button>
 
               {isExportMenuOpen && (
-                <div className="absolute right-0 mt-2 w-56 bg-white border border-slate-200 rounded-xl shadow-xl z-50 p-2 space-y-1">
+                <div className="absolute right-0 mt-2 w-56 bg-surface border border-line rounded-xl shadow-xl z-50 p-2 space-y-1">
                   <button
                     onClick={() => { setIsExportMenuOpen(false); handleDownloadPDF(); }}
-                    className="w-full text-left px-3 py-2 text-xs font-bold hover:bg-slate-100 rounded-lg flex items-center justify-between text-slate-800"
+                    className="w-full text-left px-3 py-2 text-xs font-bold hover:bg-sunken rounded-lg flex items-center justify-between text-ink"
                   >
                     <span className="inline-flex items-center gap-1.5"><FileText className="w-3.5 h-3.5" />Pobierz PDF (Wektorowy)</span>
-                    <span className="text-[10px] bg-emerald-100 text-emerald-800 px-1.5 py-0.5 rounded">PDF</span>
+                    <span className="text-[10px] bg-brand-soft text-brand-fg px-1.5 py-0.5 rounded font-mono">PDF</span>
                   </button>
 
                   <button
@@ -655,10 +669,10 @@ export const DocumentRenderer: React.FC<DocumentRendererProps> = ({ resume, vaul
                       const { downloadNativeDocxCv } = await import('../lib/docxExporter');
                       await downloadNativeDocxCv({ ...vault, history: getOrderedHistory(vault, resume) }, [], resume.targetJobTitle, resume.companyName);
                     }}
-                    className="w-full text-left px-3 py-2 text-xs font-bold hover:bg-slate-100 rounded-lg flex items-center justify-between text-slate-800"
+                    className="w-full text-left px-3 py-2 text-xs font-bold hover:bg-sunken rounded-lg flex items-center justify-between text-ink"
                   >
                     <span className="inline-flex items-center gap-1.5"><BookOpen className="w-3.5 h-3.5" />Pobierz DOCX (Natywny Word)</span>
-                    <span className="text-[10px] bg-indigo-100 text-indigo-800 px-1.5 py-0.5 rounded font-mono">DOCX</span>
+                    <span className="text-[10px] bg-brand-soft text-brand-fg px-1.5 py-0.5 rounded font-mono">DOCX</span>
                   </button>
 
                   <button
@@ -675,10 +689,10 @@ export const DocumentRenderer: React.FC<DocumentRendererProps> = ({ resume, vaul
                       a.download = `CV_${cleanName}_${cleanCompany}_${cleanTitle}.txt`;
                       a.click();
                     }}
-                    className="w-full text-left px-3 py-2 text-xs font-bold hover:bg-slate-100 rounded-lg flex items-center justify-between text-slate-800"
+                    className="w-full text-left px-3 py-2 text-xs font-bold hover:bg-sunken rounded-lg flex items-center justify-between text-ink"
                   >
                     <span className="inline-flex items-center gap-1.5"><FileEdit className="w-3.5 h-3.5" />Czysty Tekst (TXT Korpo)</span>
-                    <span className="text-[10px] bg-blue-100 text-blue-800 px-1.5 py-0.5 rounded font-mono">TXT</span>
+                    <span className="text-[10px] bg-sunken text-subtle px-1.5 py-0.5 rounded font-mono">TXT</span>
                   </button>
 
                   <button
@@ -693,10 +707,10 @@ export const DocumentRenderer: React.FC<DocumentRendererProps> = ({ resume, vaul
                         alert('Nie udało się automatycznie skopiować tekstu LinkedIn. Zweryfikuj uprawnienia przeglądarki.');
                       }
                     }}
-                    className="w-full text-left px-3 py-2 text-xs font-bold hover:bg-slate-100 rounded-lg flex items-center justify-between text-slate-800"
+                    className="w-full text-left px-3 py-2 text-xs font-bold hover:bg-sunken rounded-lg flex items-center justify-between text-ink"
                   >
                     <span className="inline-flex items-center gap-1.5"><Link2 className="w-3.5 h-3.5" />Format LinkedIn-Ready</span>
-                    <span className="text-[10px] bg-sky-100 text-sky-800 px-1.5 py-0.5 rounded">Schowek</span>
+                    <span className="text-[10px] bg-brand-soft text-brand-fg px-1.5 py-0.5 rounded">Schowek</span>
                   </button>
                 </div>
               )}
@@ -705,29 +719,29 @@ export const DocumentRenderer: React.FC<DocumentRendererProps> = ({ resume, vaul
         </div>
 
         {/* Bottom Toolbar: Randomizer / Design Mixer */}
-        <div className="flex flex-wrap items-center justify-between gap-3 bg-slate-50 p-3 rounded-xl border border-slate-200">
+        <div className="flex flex-wrap items-center justify-between gap-3 bg-sunken p-3 rounded-xl border border-line">
           <div className="flex items-center space-x-3 flex-wrap gap-y-2">
             <button
               onClick={handleRandomizeDesign}
-              className="px-4 py-2 bg-gradient-to-r from-emerald-600 to-teal-700 hover:from-emerald-700 hover:to-teal-800 text-white font-extrabold text-xs rounded-xl shadow-md flex items-center space-x-2 transition-transform active:scale-95 shrink-0"
+              className="px-4 py-2 bg-gradient-to-r from-brand-500 to-brand-600 hover:from-brand-600 hover:to-brand-700 text-brand-solid-fg font-extrabold text-xs rounded-xl shadow-md flex items-center space-x-2 transition-transform active:scale-95 shrink-0"
             >
-              <Dices className="w-4 h-4 text-amber-300 animate-bounce" />
+              <Dices className="w-4 h-4 text-brand-solid-fg animate-bounce" />
               <span>LOSUJ DESIGN</span>
             </button>
 
             {/* Photo Edit Button */}
             <button
               onClick={() => setIsPhotoModalOpen(true)}
-              className="px-3 py-1.5 bg-white hover:bg-slate-100 border border-slate-300 text-slate-800 rounded-lg text-xs font-bold flex items-center space-x-1.5 transition-colors shrink-0"
+              className="px-3 py-1.5 bg-surface hover:bg-raised border border-line-strong text-ink rounded-lg text-xs font-bold flex items-center space-x-1.5 transition-colors shrink-0"
             >
-              <Camera className="w-3.5 h-3.5 text-emerald-600" />
+              <Camera className="w-3.5 h-3.5 text-brand-fg" />
               <span>Zmień Zdjęcie Kandydata</span>
             </button>
 
             {/* Current Active Style Badges */}
-            <div className="flex items-center space-x-2 text-[11px] text-slate-600 flex-wrap gap-y-1">
-              <span className="font-semibold text-slate-800 flex items-center space-x-1">
-                <Palette className="w-3 h-3 text-emerald-600" />
+            <div className="flex items-center space-x-2 text-[11px] text-muted flex-wrap gap-y-1">
+              <span className="font-semibold text-ink flex items-center space-x-1">
+                <Palette className="w-3 h-3 text-brand-fg" />
                 <span>Styl:</span>
               </span>
               <span
@@ -740,10 +754,10 @@ export const DocumentRenderer: React.FC<DocumentRendererProps> = ({ resume, vaul
               >
                 {activePalette.name}
               </span>
-              <span className="px-2 py-0.5 rounded bg-slate-200 text-slate-800 font-medium text-[10px]">
+              <span className="px-2 py-0.5 rounded bg-raised text-ink font-medium text-[10px]">
                 Font: {activeFont.name}
               </span>
-              <span className="px-2 py-0.5 rounded bg-slate-200 text-slate-800 font-medium text-[10px]">
+              <span className="px-2 py-0.5 rounded bg-raised text-ink font-medium text-[10px]">
                 Papier: {activePaper.name}
               </span>
             </div>
@@ -757,7 +771,7 @@ export const DocumentRenderer: React.FC<DocumentRendererProps> = ({ resume, vaul
                 onClick={() => setCurrentPaletteIndex(idx)}
                 title={pal.name}
                 className={`w-5 h-5 rounded-full border-2 transition-transform ${
-                  idx === currentPaletteIndex ? 'scale-125 border-slate-900 shadow-sm' : 'border-white hover:scale-110'
+                  idx === currentPaletteIndex ? 'scale-125 border-brand-500 shadow-sm' : 'border-line hover:scale-110'
                 }`}
                 style={{ backgroundColor: pal.primaryColor }}
               />
@@ -767,7 +781,7 @@ export const DocumentRenderer: React.FC<DocumentRendererProps> = ({ resume, vaul
       </div>
 
       {/* RENDER CANVAS CONTAINER */}
-      <div className="bg-slate-300/60 p-4 sm:p-8 rounded-2xl border border-slate-300 overflow-x-auto flex justify-center">
+      <div className="bg-canvas p-4 sm:p-8 rounded-2xl border border-line overflow-x-auto flex justify-center">
         <div
           ref={docRef}
           className={`w-[210mm] min-h-[297mm] p-10 shadow-2xl printable-area transition-all ${activeFont.cssClass} ${activePaper.bgClass}`}
@@ -1262,32 +1276,32 @@ export const DocumentRenderer: React.FC<DocumentRendererProps> = ({ resume, vaul
 
       {/* PHOTO EDIT MODAL */}
       {isPhotoModalOpen && (
-        <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4 animate-fade-in">
-          <div className="bg-white border border-slate-200 rounded-2xl max-w-md w-full p-6 text-slate-900 shadow-2xl relative space-y-4">
+        <div className="fixed inset-0 z-50 bg-overlay backdrop-blur-xs flex items-center justify-center p-4 animate-fade-in">
+          <div className="bg-surface border border-line rounded-2xl max-w-md w-full p-6 text-ink shadow-2xl relative space-y-4">
             <button
               onClick={() => setIsPhotoModalOpen(false)}
-              className="absolute top-4 right-4 text-slate-400 hover:text-slate-700 transition-colors"
+              className="absolute top-4 right-4 text-subtle hover:text-ink transition-colors"
             >
               <X className="w-5 h-5" />
             </button>
 
             <div className="flex items-center space-x-3">
-              <div className="p-2.5 bg-indigo-50 border border-indigo-200 rounded-xl text-indigo-600">
+              <div className="p-2.5 bg-brand-soft border border-brand-border rounded-xl text-brand-fg">
                 <Camera className="w-5 h-5" />
               </div>
-              <h3 className="text-base font-bold text-slate-900">Zarządzaj Zdjęciem Kandidata</h3>
+              <h3 className="text-base font-bold text-ink">Zarządzaj Zdjęciem Kandidata</h3>
             </div>
 
             {/* Current Photo Preview */}
             <div className="text-center space-y-2">
-              <img src={photoUrl} alt="Preview" className="w-24 h-24 rounded-full mx-auto object-cover border-2 border-indigo-600 shadow-md" />
-              <p className="text-xs text-slate-500">Podgląd aktualnego zdjęcia w dokumentach</p>
+              <img src={photoUrl} alt="Preview" className="w-24 h-24 rounded-full mx-auto object-cover border-2 border-brand-500 shadow-md" />
+              <p className="text-xs text-subtle">Podgląd aktualnego zdjęcia w dokumentach</p>
             </div>
 
             {/* Upload File Option */}
-            <div className="space-y-2 border-t border-slate-200 pt-4">
-              <label className="block text-xs font-bold text-slate-700">1. Wgraj własny plik ze zdjęciem PNG/JPG:</label>
-              <label className="flex items-center justify-center space-x-2 w-full py-2.5 bg-indigo-50 hover:bg-indigo-100 border border-indigo-200 text-indigo-700 rounded-xl font-bold text-xs cursor-pointer transition-colors">
+            <div className="space-y-2 border-t border-line pt-4">
+              <label className="block text-xs font-bold text-ink">1. Wgraj własny plik ze zdjęciem PNG/JPG:</label>
+              <label className="flex items-center justify-center space-x-2 w-full py-2.5 bg-brand-soft hover:bg-brand-soft/80 border border-brand-border text-brand-fg rounded-xl font-bold text-xs cursor-pointer transition-colors">
                 <Upload className="w-4 h-4" />
                 <span>Wybierz Plik ze Zdjęciem</span>
                 <input type="file" accept="image/*" onChange={handleFileUpload} className="hidden" />
@@ -1295,19 +1309,19 @@ export const DocumentRenderer: React.FC<DocumentRendererProps> = ({ resume, vaul
             </div>
 
             {/* URL Option */}
-            <div className="space-y-2 border-t border-slate-200 pt-3">
-              <label className="block text-xs font-bold text-slate-700">2. LUB Wklej bezpośredni adres URL:</label>
+            <div className="space-y-2 border-t border-line pt-3">
+              <label className="block text-xs font-bold text-ink">2. LUB Wklej bezpośredni adres URL:</label>
               <div className="flex gap-2">
                 <input
                   type="text"
                   value={customUrlInput}
                   onChange={(e) => setCustomUrlInput(e.target.value)}
                   placeholder="https://..."
-                  className="flex-1 bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs text-slate-900 focus:outline-none focus:border-indigo-500"
+                  className="flex-1 bg-sunken border border-line rounded-xl px-3 py-2 text-xs text-ink focus:outline-none focus:border-brand-500"
                 />
                 <button
                   onClick={handleApplyCustomUrl}
-                  className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl font-bold text-xs shadow-2xs transition-colors"
+                  className="px-4 py-2 bg-brand-500 hover:bg-brand-600 text-brand-solid-fg rounded-xl font-bold text-xs shadow-2xs transition-colors"
                 >
                   Zapisz URL
                 </button>
@@ -1319,22 +1333,22 @@ export const DocumentRenderer: React.FC<DocumentRendererProps> = ({ resume, vaul
 
       {/* PRE-FLIGHT VALIDATION CHECKLIST MODAL (FILAR 6) */}
       {isPreFlightOpen && (
-        <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4 animate-fade-in">
-          <div className="bg-white border border-slate-200 rounded-2xl max-w-xl w-full p-6 text-slate-900 shadow-2xl relative space-y-4">
+        <div className="fixed inset-0 z-50 bg-overlay backdrop-blur-xs flex items-center justify-center p-4 animate-fade-in">
+          <div className="bg-surface border border-line rounded-2xl max-w-xl w-full p-6 text-ink shadow-2xl relative space-y-4">
             <button
               onClick={() => setIsPreFlightOpen(false)}
-              className="absolute top-4 right-4 text-slate-400 hover:text-slate-700 transition-colors"
+              className="absolute top-4 right-4 text-subtle hover:text-ink transition-colors"
             >
               <X className="w-5 h-5" />
             </button>
 
             <div className="flex items-center space-x-3">
-              <div className="p-2.5 bg-amber-50 border border-amber-200 rounded-xl text-amber-600">
+              <div className="p-2.5 bg-warning-soft border border-warning-500/30 rounded-xl text-warning-fg">
                 <FileCheck className="w-5 h-5" />
               </div>
               <div>
-                <h3 className="text-base font-bold text-slate-900">Raport Walidacji przed Eksportem</h3>
-                <p className="text-xs text-slate-500">Audyt jakościowy wygenerowanego dokumentu CV</p>
+                <h3 className="text-base font-bold text-ink">Raport Walidacji przed Eksportem</h3>
+                <p className="text-xs text-subtle">Audyt jakościowy wygenerowanego dokumentu CV</p>
               </div>
             </div>
 
@@ -1357,16 +1371,16 @@ export const DocumentRenderer: React.FC<DocumentRendererProps> = ({ resume, vaul
                   key={chk.id}
                   className={`p-3.5 rounded-xl border flex items-start space-x-3 text-xs ${
                     chk.status === 'PASSED'
-                      ? 'bg-emerald-50/60 border-emerald-200 text-emerald-950'
+                      ? 'bg-success-soft border-success-500/30 text-success-fg'
                       : chk.status === 'WARNING'
-                      ? 'bg-amber-50/60 border-amber-200 text-amber-950'
-                      : 'bg-rose-50/60 border-rose-200 text-rose-950'
+                      ? 'bg-warning-soft border-warning-500/30 text-warning-fg'
+                      : 'bg-danger-soft border-danger-500/30 text-danger-fg'
                   }`}
                 >
                   {chk.status === 'PASSED' ? (
-                    <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0 mt-0.5" />
+                    <CheckCircle2 className="w-4 h-4 text-success-fg shrink-0 mt-0.5" />
                   ) : (
-                    <AlertTriangle className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
+                    <AlertTriangle className="w-4 h-4 text-warning-fg shrink-0 mt-0.5" />
                   )}
                   <div>
                     <div className="font-bold">{chk.title}</div>
@@ -1379,7 +1393,7 @@ export const DocumentRenderer: React.FC<DocumentRendererProps> = ({ resume, vaul
             <div className="pt-2 flex justify-end">
               <button
                 onClick={() => setIsPreFlightOpen(false)}
-                className="px-4 py-2 bg-slate-900 text-white rounded-xl font-bold text-xs shadow-2xs hover:bg-slate-800 transition-colors"
+                className="px-4 py-2 bg-surface hover:bg-raised text-ink border border-line rounded-xl font-bold text-xs shadow-2xs transition-colors"
               >
                 Zamknij Raport
               </button>
@@ -1390,22 +1404,22 @@ export const DocumentRenderer: React.FC<DocumentRendererProps> = ({ resume, vaul
 
       {/* SIDE-BY-SIDE COMPARE MODAL (FILAR 5) */}
       {isCompareOpen && (
-        <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4 animate-fade-in">
-          <div className="bg-white border border-slate-200 rounded-2xl max-w-4xl w-full p-6 text-slate-900 shadow-2xl relative space-y-4 max-h-[90vh] flex flex-col">
+        <div className="fixed inset-0 z-50 bg-overlay backdrop-blur-xs flex items-center justify-center p-4 animate-fade-in">
+          <div className="bg-surface border border-line rounded-2xl max-w-4xl w-full p-6 text-ink shadow-2xl relative space-y-4 max-h-[90vh] flex flex-col">
             <button
               onClick={() => setIsCompareOpen(false)}
-              className="absolute top-4 right-4 text-slate-400 hover:text-slate-700 transition-colors"
+              className="absolute top-4 right-4 text-subtle hover:text-ink transition-colors"
             >
               <X className="w-5 h-5" />
             </button>
 
             <div className="flex items-center space-x-3">
-              <div className="p-2.5 bg-indigo-50 border border-indigo-200 rounded-xl text-indigo-600">
+              <div className="p-2.5 bg-brand-soft border border-brand-border rounded-xl text-brand-fg">
                 <Eye className="w-5 h-5" />
               </div>
               <div>
-                <h3 className="text-base font-bold text-slate-900">Tryb: Porównaj z Oryginałem</h3>
-                <p className="text-xs text-slate-500">
+                <h3 className="text-base font-bold text-ink">Tryb: Porównaj z Oryginałem</h3>
+                <p className="text-xs text-subtle">
                   Weryfikacja zmian: Prawda Źródłowa MasterVault vs Reframing dla oferty ({resume.targetJobTitle})
                 </p>
               </div>
@@ -1413,34 +1427,34 @@ export const DocumentRenderer: React.FC<DocumentRendererProps> = ({ resume, vaul
 
             <div className="flex-1 overflow-y-auto space-y-4 pr-1">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs">
-                <div className="font-bold text-slate-500 uppercase tracking-wider pb-1 border-b border-slate-200">
+                <div className="font-bold text-subtle uppercase tracking-wider pb-1 border-b border-line">
                   Bazowy Fakt (MasterVault)
                 </div>
-                <div className="font-bold text-indigo-600 uppercase tracking-wider pb-1 border-b border-slate-200">
+                <div className="font-bold text-brand-fg uppercase tracking-wider pb-1 border-b border-line">
                   Reframing pod Ofertę ({resume.companyName || 'Target Job'})
                 </div>
               </div>
 
               {resume.selectedHighlights.map((h, idx) => (
-                <div key={idx} className="grid grid-cols-1 md:grid-cols-2 gap-4 p-3 bg-slate-50 border border-slate-200 rounded-xl text-xs">
+                <div key={idx} className="grid grid-cols-1 md:grid-cols-2 gap-4 p-3 bg-sunken border border-line rounded-xl text-xs">
                   <div className="space-y-1">
-                    <span className="inline-block px-2 py-0.5 bg-slate-200 text-slate-700 rounded text-[10px] font-bold">
+                    <span className="inline-block px-2 py-0.5 bg-raised text-muted rounded text-[10px] font-bold">
                       Źródło {h.company}
                     </span>
-                    <p className="text-slate-700 leading-relaxed font-mono text-[11px]">{h.originalText}</p>
+                    <p className="text-muted leading-relaxed font-mono text-[11px]">{h.originalText}</p>
                   </div>
-                  <div className="space-y-1 bg-white p-2.5 rounded-lg border border-indigo-100 shadow-2xs">
+                  <div className="space-y-1 bg-surface p-2.5 rounded-lg border border-brand-border shadow-2xs">
                     <div className="flex items-center justify-between">
-                      <span className="inline-block px-2 py-0.5 bg-indigo-100 text-indigo-800 rounded text-[10px] font-bold">
+                      <span className="inline-block px-2 py-0.5 bg-brand-soft text-brand-fg rounded text-[10px] font-bold">
                         Reframing AI / Moduł Delta
                       </span>
                       {h.keywordsMatched && h.keywordsMatched.length > 0 && (
-                        <span className="text-[10px] text-emerald-600 font-bold">
+                        <span className="text-[10px] text-success-fg font-bold">
                           +{h.keywordsMatched.length} Słów Kluczowych
                         </span>
                       )}
                     </div>
-                    <p className="text-slate-900 leading-relaxed font-medium">{h.optimizedText}</p>
+                    <p className="text-ink leading-relaxed font-medium">{h.optimizedText}</p>
                   </div>
                 </div>
               ))}
@@ -1449,7 +1463,7 @@ export const DocumentRenderer: React.FC<DocumentRendererProps> = ({ resume, vaul
             <div className="pt-2 flex justify-end">
               <button
                 onClick={() => setIsCompareOpen(false)}
-                className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl font-bold text-xs shadow-2xs transition-colors"
+                className="px-4 py-2 bg-brand-500 hover:bg-brand-600 text-brand-solid-fg rounded-xl font-bold text-xs shadow-2xs transition-colors"
               >
                 Zamknij Porównanie
               </button>

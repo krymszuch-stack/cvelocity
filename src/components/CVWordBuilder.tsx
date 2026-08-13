@@ -415,22 +415,22 @@ export const CVWordBuilder: React.FC<CVWordBuilderProps> = ({
   return (
     <div className="space-y-6">
       {/* Control Banner - Word Style Track Changes Mode */}
-      <div className="bg-white border border-slate-200 rounded-2xl p-5 shadow-xs space-y-4">
-        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 border-b border-slate-200 pb-4">
+      <div className="bg-surface border border-line rounded-2xl p-5 shadow-xs space-y-4">
+        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 border-b border-line pb-4">
           <div className="flex items-center space-x-3">
-            <div className="p-2.5 bg-blue-50 border border-blue-200 rounded-xl text-blue-600 shrink-0">
+            <div className="p-2.5 bg-brand-soft border border-brand-border rounded-xl text-brand-fg shrink-0">
               <Type className="w-5 h-5" />
             </div>
             <div>
               <div className="flex items-center space-x-2">
-                <h2 className="text-base font-bold text-slate-900">
+                <h2 className="text-base font-bold text-ink">
                   CV Builder (Śledzenie Zmian)
                 </h2>
-                <span className="px-2 py-0.5 rounded-full bg-blue-100 text-blue-800 font-bold text-[10px] uppercase">
+                <span className="px-2 py-0.5 rounded-full bg-brand-soft text-brand-fg font-bold text-[10px] uppercase">
                   Track Changes
                 </span>
               </div>
-              <p className="text-xs text-slate-500 mt-0.5">
+              <p className="text-xs text-subtle mt-0.5">
                 Edycja i dopasowanie sformułowań w Twoim CV.
               </p>
             </div>
@@ -444,7 +444,7 @@ export const CVWordBuilder: React.FC<CVWordBuilderProps> = ({
             <button
               onClick={handleAcceptAll}
               disabled={pendingCount === 0}
-              className="px-4 py-2 bg-emerald-600 hover:bg-emerald-500 active:scale-95 text-white rounded-xl font-bold text-xs shadow-xs flex items-center space-x-1.5 transition-all disabled:opacity-50"
+              className="px-4 py-2 bg-brand-500 hover:bg-brand-600 active:scale-95 text-brand-solid-fg rounded-xl font-bold text-xs shadow-xs flex items-center space-x-1.5 transition-all disabled:opacity-50"
             >
               <CheckCheck className="w-4 h-4" />
               <span>Zaakceptuj Wszystkie: {pendingCount}</span>
@@ -452,7 +452,7 @@ export const CVWordBuilder: React.FC<CVWordBuilderProps> = ({
 
             <button
               onClick={generateSubstitutions}
-              className="p-2 bg-slate-100 hover:bg-slate-200 active:scale-95 text-slate-700 rounded-xl transition-all border border-slate-300"
+              className="p-2 bg-sunken hover:bg-raised active:scale-95 text-muted rounded-xl transition-all border border-line-strong"
               title="Odśwież propozycje"
               aria-label="Odśwież propozycje podmieniające frazy"
             >
@@ -462,38 +462,38 @@ export const CVWordBuilder: React.FC<CVWordBuilderProps> = ({
         </div>
 
         {/* Stats & Filter Bar */}
-        <div className="flex flex-wrap items-center justify-between gap-3 bg-slate-50 p-3 rounded-xl border border-slate-200 text-xs">
+        <div className="flex flex-wrap items-center justify-between gap-3 bg-sunken p-3 rounded-xl border border-line text-xs">
           <div className="flex items-center space-x-4">
-            <span className="font-semibold text-slate-700">
-              Oczekujące podmiany: <strong className="text-amber-600">{pendingCount}</strong>
+            <span className="font-semibold text-muted">
+              Oczekujące podmiany: <strong className="text-warning-fg">{pendingCount}</strong>
             </span>
-            <span className="font-semibold text-slate-700">
-              Zaakceptowane: <strong className="text-emerald-600">{acceptedCount}</strong>
+            <span className="font-semibold text-muted">
+              Zaakceptowane: <strong className="text-success-fg">{acceptedCount}</strong>
             </span>
-            <span className="font-semibold text-slate-700">
+            <span className="font-semibold text-muted">
               Łącznie znaleziono: <strong>{substitutions.length}</strong>
             </span>
           </div>
 
-          <div className="flex items-center space-x-1 text-[11px] text-slate-600 bg-amber-50 px-2.5 py-1 rounded-lg border border-amber-200">
-            <Edit3 className="w-3.5 h-3.5 text-amber-600 shrink-0" />
+          <div className="flex items-center space-x-1 text-[11px] text-warning-fg bg-warning-soft px-2.5 py-1 rounded-lg border border-warning-500/30">
+            <Edit3 className="w-3.5 h-3.5 text-warning-500 shrink-0" />
             <span><strong>Ręczna edycja Word:</strong> Kliknij dowolny tekst na arkuszu A4 poniżej, aby bezpośrednio pisać i zmieniać treść!</span>
           </div>
         </div>
       </div>
 
       {/* Main Document Canvas with Tracked Changes & Live Word Editing */}
-      <div className="bg-slate-200/80 p-4 sm:p-8 rounded-2xl border border-slate-300 flex flex-col items-center overflow-x-auto space-y-4">
+      <div className="bg-canvas p-4 sm:p-8 rounded-2xl border border-line flex flex-col items-center overflow-x-auto space-y-4">
         {/* Sticky MS Word / Paint Style Ribbon Toolbar */}
-        <div className="sticky top-4 z-30 bg-slate-900/95 backdrop-blur-md text-white px-4 py-2.5 rounded-2xl border border-slate-700 shadow-2xl flex flex-wrap items-center justify-between gap-3 max-w-[210mm] w-full">
-          <div className="flex items-center space-x-1 border-r border-slate-700 pr-3">
-            <span className="text-[10px] uppercase tracking-wider font-extrabold text-indigo-400 mr-1 flex items-center gap-1">
+        <div className="sticky top-4 z-30 sv-glass bg-surface/90 text-ink px-4 py-2.5 rounded-2xl border border-line shadow-2xl flex flex-wrap items-center justify-between gap-3 max-w-[210mm] w-full">
+          <div className="flex items-center space-x-1 border-r border-line pr-3">
+            <span className="text-[10px] uppercase tracking-wider font-extrabold text-brand-fg mr-1 flex items-center gap-1">
               <Type className="w-3.5 h-3.5" /> Word Toolbar:
             </span>
             <button
               type="button"
               onClick={() => handleExecFormat('bold')}
-              className="p-1.5 hover:bg-slate-800 rounded-lg text-slate-200 hover:text-white transition-colors active:scale-95"
+              className="p-1.5 hover:bg-sunken rounded-lg text-muted hover:text-ink transition-colors active:scale-95"
               title="Pogrubienie (Ctrl+B)"
             >
               <Bold className="w-4 h-4" />
@@ -501,7 +501,7 @@ export const CVWordBuilder: React.FC<CVWordBuilderProps> = ({
             <button
               type="button"
               onClick={() => handleExecFormat('italic')}
-              className="p-1.5 hover:bg-slate-800 rounded-lg text-slate-200 hover:text-white transition-colors active:scale-95"
+              className="p-1.5 hover:bg-sunken rounded-lg text-muted hover:text-ink transition-colors active:scale-95"
               title="Kursywa (Ctrl+I)"
             >
               <Italic className="w-4 h-4" />
@@ -509,18 +509,18 @@ export const CVWordBuilder: React.FC<CVWordBuilderProps> = ({
             <button
               type="button"
               onClick={() => handleExecFormat('underline')}
-              className="p-1.5 hover:bg-slate-800 rounded-lg text-slate-200 hover:text-white transition-colors active:scale-95"
+              className="p-1.5 hover:bg-sunken rounded-lg text-muted hover:text-ink transition-colors active:scale-95"
               title="Podkreślenie (Ctrl+U)"
             >
               <Underline className="w-4 h-4" />
             </button>
           </div>
 
-          <div className="flex items-center space-x-1 border-r border-slate-700 pr-3">
+          <div className="flex items-center space-x-1 border-r border-line pr-3">
             <button
               type="button"
               onClick={() => handleExecFormat('justifyLeft')}
-              className="p-1.5 hover:bg-slate-800 rounded-lg text-slate-200 hover:text-white transition-colors active:scale-95"
+              className="p-1.5 hover:bg-sunken rounded-lg text-muted hover:text-ink transition-colors active:scale-95"
               title="Wyrównaj do lewej"
             >
               <AlignLeft className="w-4 h-4" />
@@ -528,7 +528,7 @@ export const CVWordBuilder: React.FC<CVWordBuilderProps> = ({
             <button
               type="button"
               onClick={() => handleExecFormat('justifyCenter')}
-              className="p-1.5 hover:bg-slate-800 rounded-lg text-slate-200 hover:text-white transition-colors active:scale-95"
+              className="p-1.5 hover:bg-sunken rounded-lg text-muted hover:text-ink transition-colors active:scale-95"
               title="Wyśrodkuj"
             >
               <AlignCenter className="w-4 h-4" />
@@ -536,18 +536,18 @@ export const CVWordBuilder: React.FC<CVWordBuilderProps> = ({
             <button
               type="button"
               onClick={() => handleExecFormat('justifyRight')}
-              className="p-1.5 hover:bg-slate-800 rounded-lg text-slate-200 hover:text-white transition-colors active:scale-95"
+              className="p-1.5 hover:bg-sunken rounded-lg text-muted hover:text-ink transition-colors active:scale-95"
               title="Wyrównaj do prawej"
             >
               <AlignRight className="w-4 h-4" />
             </button>
           </div>
 
-          <div className="flex items-center space-x-1 border-r border-slate-700 pr-3">
+          <div className="flex items-center space-x-1 border-r border-line pr-3">
             <button
               type="button"
               onClick={() => handleExecFormat('undo')}
-              className="p-1.5 hover:bg-slate-800 rounded-lg text-slate-200 hover:text-white transition-colors active:scale-95"
+              className="p-1.5 hover:bg-sunken rounded-lg text-muted hover:text-ink transition-colors active:scale-95"
               title="Cofnij (Ctrl+Z)"
             >
               <Undo className="w-4 h-4" />
@@ -555,7 +555,7 @@ export const CVWordBuilder: React.FC<CVWordBuilderProps> = ({
             <button
               type="button"
               onClick={() => handleExecFormat('redo')}
-              className="p-1.5 hover:bg-slate-800 rounded-lg text-slate-200 hover:text-white transition-colors active:scale-95"
+              className="p-1.5 hover:bg-sunken rounded-lg text-muted hover:text-ink transition-colors active:scale-95"
               title="Ponów (Ctrl+Y)"
             >
               <Redo className="w-4 h-4" />
@@ -563,14 +563,14 @@ export const CVWordBuilder: React.FC<CVWordBuilderProps> = ({
           </div>
 
           <div className="flex items-center space-x-2">
-            <span className="text-[11px] font-mono text-emerald-400 bg-emerald-950/60 border border-emerald-800/80 px-2.5 py-0.5 rounded-md flex items-center space-x-1">
-              <Ruler className="w-3 h-3 text-emerald-400 shrink-0" />
+            <span className="text-[11px] font-mono text-brand-fg bg-brand-soft border border-brand-border px-2.5 py-0.5 rounded-md flex items-center space-x-1">
+              <Ruler className="w-3 h-3 text-brand-fg shrink-0" />
               <span>Format A4 (210 × 297 mm)</span>
             </span>
           </div>
         </div>
 
-        <div className="w-[210mm] min-h-[297mm] p-10 bg-white shadow-2xl rounded-sm font-sans text-xs text-slate-900 space-y-6">
+        <div className="w-[210mm] min-h-[297mm] p-10 bg-white shadow-2xl rounded-sm font-sans text-xs text-slate-900 space-y-6 printable-area">
           {/* Header */}
           <div className="border-b-2 border-slate-900 pb-4">
             <h1
@@ -855,18 +855,18 @@ export const CVWordBuilder: React.FC<CVWordBuilderProps> = ({
 
       {/* Promotion to MasterVault Modal (Dyrektywa 4) */}
       {promotionPrompt && promotionPrompt.isOpen && (
-        <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4">
-          <div className="bg-white border border-slate-200 rounded-2xl max-w-lg w-full p-6 space-y-4 shadow-2xl text-slate-900">
-            <div className="flex items-center space-x-3 text-amber-600">
-              <Sparkles className="w-6 h-6 shrink-0 text-amber-500" />
-              <h3 className="text-base font-bold">Awansowanie Poprawki do MasterVault</h3>
+        <div className="fixed inset-0 z-50 bg-overlay backdrop-blur-xs flex items-center justify-center p-4">
+          <div className="bg-surface border border-line rounded-2xl max-w-lg w-full p-6 space-y-4 shadow-2xl text-ink">
+            <div className="flex items-center space-x-3 text-warning-fg">
+              <Sparkles className="w-6 h-6 shrink-0 text-warning-500" />
+              <h3 className="text-base font-bold text-ink">Awansowanie Poprawki do MasterVault</h3>
             </div>
 
-            <p className="text-xs text-slate-600 leading-relaxed">
+            <p className="text-xs text-muted leading-relaxed">
               Zmieniłeś treść pola <strong>{promotionPrompt.field}</strong>. Czy jest to poprawka wyłącznie pod tę ofertę pracy ({companyName || 'Pracodawca'}), czy chcesz zaktualizować ten fakt <strong>na stałe w Twoim głównym MasterVault</strong>?
             </p>
 
-            <div className="p-3 bg-amber-50 border border-amber-200 rounded-xl text-xs font-mono text-amber-900 max-h-32 overflow-y-auto">
+            <div className="p-3 bg-warning-soft border border-warning-500/30 rounded-xl text-xs font-mono text-warning-fg max-h-32 overflow-y-auto">
               "{promotionPrompt.editedText}"
             </div>
 
@@ -874,7 +874,7 @@ export const CVWordBuilder: React.FC<CVWordBuilderProps> = ({
               <button
                 type="button"
                 onClick={() => setPromotionPrompt(null)}
-                className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold rounded-xl text-xs transition-colors"
+                className="px-4 py-2 bg-sunken hover:bg-raised text-ink border border-line font-bold rounded-xl text-xs transition-colors"
               >
                 Tylko dla tej oferty
               </button>
@@ -884,7 +884,7 @@ export const CVWordBuilder: React.FC<CVWordBuilderProps> = ({
                   promotionPrompt.onConfirmPermanent();
                   setPromotionPrompt(null);
                 }}
-                className="px-4 py-2 bg-success-500 hover:bg-success-700 text-white font-bold rounded-xl text-xs shadow-xs transition-colors flex items-center gap-1.5"
+                className="px-4 py-2 bg-brand-500 hover:bg-brand-600 text-brand-solid-fg font-bold rounded-xl text-xs shadow-xs transition-colors flex items-center gap-1.5"
               >
                 <Sparkles className="w-3.5 h-3.5 shrink-0" />
                 Zaktualizuj w MasterVault na stałe

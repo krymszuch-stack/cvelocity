@@ -640,7 +640,7 @@ export async function getAdvisorEducationalAdvice(
   const ai = getGeminiClient();
 
   const prompt = `
-Jesteś ekspertowym doradcą zawodowym i samouczkiem ATS w aplikacji SkillVault. Udziel merytorycznej, biznesowej odpowiedzi na pytanie użytkownika.
+Jesteś ekspertowym doradcą zawodowym i samouczkiem ATS w aplikacji CVELOCITY. Udziel merytorycznej, biznesowej odpowiedzi na pytanie użytkownika.
 
 Pytanie użytkownika:
 "${question}"

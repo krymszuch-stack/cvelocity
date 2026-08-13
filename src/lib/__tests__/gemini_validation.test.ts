@@ -131,7 +131,7 @@ describe('Gemini Response Validation and Fallback Tests', () => {
 
     const result = safeParseAndValidateJsonResponse(validJson, coverLetterResponseSchema, null);
     expect(result).not.toBeNull();
-    expect(result?.hook).toBe('Haczyk');
+    expect((result as any)?.hook).toBe('Haczyk');
   });
 
   it('powinien walidować schemat Interview Cheat Sheet i zwracać fallback przy błędnym typie pola', () => {

@@ -1,6 +1,6 @@
 import * as OTPAuth from 'otpauth';
 
-const ISSUER = 'SkillVault';
+const ISSUER = 'CVELOCITY';
 
 export interface TwoFactorSetup {
   secret: string; // base32 secret, store on the user's account record

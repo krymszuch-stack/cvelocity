@@ -73,6 +73,7 @@ export class LocalSemanticCache {
   }
 
   private loadStats(): TokenStats {
+    if (typeof localStorage === 'undefined') return { ...INITIAL_TOKEN_STATS };
     const saved = localStorage.getItem(STATS_STORAGE_KEY);
     if (saved) {
       try {
@@ -85,10 +86,12 @@ export class LocalSemanticCache {
   }
 
   private saveStats() {
+    if (typeof localStorage === 'undefined') return;
     localStorage.setItem(STATS_STORAGE_KEY, JSON.stringify(this.stats));
   }
 
   private loadCache(): CachedPhrase[] {
+    if (typeof localStorage === 'undefined') return [];
     const saved = localStorage.getItem(CACHE_STORAGE_KEY);
     if (saved) {
       try {
@@ -101,6 +104,7 @@ export class LocalSemanticCache {
   }
 
   private saveCache() {
+    if (typeof localStorage === 'undefined') return;
     localStorage.setItem(CACHE_STORAGE_KEY, JSON.stringify(this.cache));
   }
 

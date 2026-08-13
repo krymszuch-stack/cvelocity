@@ -180,20 +180,34 @@ export function extractDynamicJdPhrases(jdText: string): {
   allExtractedCount: number;
 } {
   const normalized = jdText.toLowerCase();
+
+  // Build a Set of word tokens for O(1) single-word lookups.
+  const wordTokens = new Set(normalized.split(/[^\p{L}\p{N}#+./]+/u).filter(Boolean));
+
+  /** Match a phrase against the JD using word boundaries, not substring. */
+  function hasPhrase(phrase: string): boolean {
+    if (!phrase.includes(' ') && !phrase.includes('/')) {
+      return wordTokens.has(phrase);
+    }
+    const escaped = phrase.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    const re = new RegExp(`(?<![\\p{L}\\p{N}])${escaped}(?![\\p{L}\\p{N}])`, 'iu');
+    return re.test(normalized);
+  }
+
   const hardSkills: { phrase: string; weight: number }[] = [];
   const formalReqs: { phrase: string; weight: number }[] = [];
   const softSkills: { phrase: string; weight: number }[] = [];
 
   // 1. Stage 3 Compound N-Gram Check (Multi-word skills)
   for (const compound of KNOWN_COMPOUND_SKILLS) {
-    if (normalized.includes(compound)) {
+    if (hasPhrase(compound)) {
       hardSkills.push({ phrase: compound, weight: 3.0 });
     }
   }
 
   // 2. Stage 4 Known Hard Skills Dictionary Check
   for (const skill of KNOWN_HARD_SKILLS) {
-    if (normalized.includes(skill)) {
+    if (hasPhrase(skill)) {
       // Avoid adding single word if already covered in a compound
       if (!hardSkills.some((h) => h.phrase.includes(skill) && h.phrase !== skill)) {
         hardSkills.push({ phrase: skill, weight: 3.0 });
@@ -203,14 +217,14 @@ export function extractDynamicJdPhrases(jdText: string): {
 
   // 3. Stage 4 Formal Requirements Check
   for (const req of FORMAL_REQ_KEYWORDS) {
-    if (normalized.includes(req)) {
+    if (hasPhrase(req)) {
       formalReqs.push({ phrase: req, weight: 2.0 });
     }
   }
 
   // 4. Soft Skills Check
   for (const soft of SOFT_SKILLS_NOISE) {
-    if (normalized.includes(soft)) {
+    if (hasPhrase(soft)) {
       softSkills.push({ phrase: soft, weight: 0.5 });
     }
   }

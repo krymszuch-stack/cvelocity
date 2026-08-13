@@ -31,8 +31,8 @@ export function parseComprehensiveLinkedInProfile(url: string, currentFullName?:
         .map((w) => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase())
         .join(' ');
 
-  if (!formattedName || formattedName.length < 3) {
-    formattedName = 'Adrian Koziński';
+  if (!formattedName || formattedName.length < 2) {
+    formattedName = '';
   }
 
   // Determine domain archetype based on handle keywords for personalized realism

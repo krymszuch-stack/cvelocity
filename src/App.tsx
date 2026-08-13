@@ -235,7 +235,7 @@ function MainApp() {
         </main>
 
         <footer className="border-t border-line py-5 px-6 text-center text-xs text-subtle space-y-1">
-          <p>SkillVault © 2026 — Aggregator ofert + dopasowanie kompetencji do realnych wymagań.</p>
+          <p>CVELOCITY © 2026 — 0-Token Local Slot Filling + Gemini Delta Prompting.</p>
           <p>
             Stworzone przez{' '}
             <a href="https://oathcry.com" target="_blank" rel="noreferrer" className="font-semibold text-brand-fg hover:underline">

@@ -77,7 +77,7 @@ Bez tego dostawałbyś trzy śmieciowe issues tygodniowo w nieskończoność.
 **1 — poniedziałek 07:00**
 
 ```text
-Repozytorium: krymszuch-stack/skillvault, gałąź main.
+Repozytorium: krymszuch-stack/cvelocity, gałąź main.
 
 ZADANIE TYLKO RAPORTUJĄCE. Nie zmieniaj żadnego pliku. Nie twórz brancha.
 Nie otwieraj pull requesta.
@@ -98,7 +98,7 @@ miejscem, gdzie te podatności wypływają.
 **2 — środa 09:00**
 
 ```text
-Repozytorium: krymszuch-stack/skillvault, gałąź main.
+Repozytorium: krymszuch-stack/cvelocity, gałąź main.
 
 ZADANIE TYLKO RAPORTUJĄCE. Nie zmieniaj żadnego pliku. Nie pisz testów.
 Nie twórz brancha. Nie otwieraj pull requesta.
@@ -114,7 +114,7 @@ Nie twórz brancha. Nie otwieraj pull requesta.
 **3 — piątek 16:00**
 
 ```text
-Repozytorium: krymszuch-stack/skillvault, gałąź main.
+Repozytorium: krymszuch-stack/cvelocity, gałąź main.
 
 ZADANIE TYLKO RAPORTUJĄCE. Nie zmieniaj żadnego pliku. Nie twórz brancha.
 Nie otwieraj pull requesta.

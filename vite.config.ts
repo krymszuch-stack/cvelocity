@@ -11,6 +11,22 @@ export default defineConfig(() => {
         '@': path.resolve(__dirname, '.'),
       },
     },
+    build: {
+      chunkSizeWarningLimit: 1500,
+      rollupOptions: {
+        output: {
+          manualChunks(id) {
+            if (id.includes('node_modules')) {
+              if (id.includes('jspdf') || id.includes('html2canvas')) return 'pdf-exporter';
+              if (id.includes('docx') || id.includes('file-saver') || id.includes('pdfjs-dist') || id.includes('mammoth')) return 'parser-exporter-vendor';
+              if (id.includes('firebase')) return 'firebase-vendor';
+              if (id.includes('lucide-react')) return 'lucide-icons';
+              if (id.includes('crypto-js')) return 'crypto-vendor';
+            }
+          },
+        },
+      },
+    },
     server: {
       port: 3000,
       headers: {

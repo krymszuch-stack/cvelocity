@@ -119,7 +119,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onSuccess
     ? 'Weryfikacja dwuetapowa (2FA)'
     : isRegisterTab
     ? 'Utwórz Nowe Konto'
-    : 'Logowanie do SkillVault';
+    : 'Logowanie do CVELOCITY';
 
   const modalSubtitle = isAuthenticated && user
     ? user.email

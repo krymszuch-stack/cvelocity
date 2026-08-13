@@ -122,8 +122,9 @@ function cleanJobHtmlToPureText(htmlOrText: string): string {
       }
     }
 
+    // Strip non-content elements — use tag names and ARIA roles only.
     $(
-      "script, style, svg, noscript, iframe, canvas, header, footer, nav, aside, form, button, input, select, textarea, [role='navigation'], [role='banner'], [role='contentinfo'], [role='dialog'], [aria-label*='cookie' i], [class*='cookie' i], [id*='cookie' i], [class*='footer' i], [id*='footer' i], [class*='header' i], [id*='header' i], [class*='nav' i], [id*='nav' i], [class*='sidebar' i], [id*='sidebar' i], [class*='related' i], [class*='similar' i], [class*='recommend' i], [class*='share' i], [class*='breadcrumb' i], [class*='pagination' i], [class*='ad' i], [class*='banner' i]"
+      "script, style, svg, noscript, iframe, canvas, header, footer, nav, aside, form, button, input, select, textarea, [role='navigation'], [role='banner'], [role='contentinfo'], [role='dialog'], [aria-label*='cookie' i], [class*='cookie' i], [id*='cookie' i]"
     ).remove();
 
     const bodyText = $("body").text() || $.text();
@@ -190,9 +191,10 @@ async function scrapeJobPageText(url: string): Promise<{ text: string; source: s
 
 /** Origins allowed to call this API from a browser. Overridable via ALLOWED_ORIGINS (comma-separated). */
 const DEFAULT_ALLOWED_ORIGINS = [
-  "https://skillvault-99a72.web.app",
-  "https://skillvault-99a72.firebaseapp.com",
-  "https://skillvault.oathcry.com",
+  "https://cvelocity-99a72.web.app",
+  "https://cvelocity-99a72.firebaseapp.com",
+  "https://cvelocity.oathcry.com",
+  "https://cv.oathcry.com",
   "http://localhost:3000",
   "http://127.0.0.1:3000",
 ];
@@ -286,7 +288,7 @@ async function startServer() {
     res.status(hasGeminiKey ? 200 : 503).json({
       status: hasGeminiKey ? "ok" : "degraded",
       gemini: hasGeminiKey ? "ok" : "missing-key",
-      service: "SkillVault Core API",
+      service: "CVELOCITY Core API",
       timestamp: new Date().toISOString(),
     });
   });
@@ -521,7 +523,7 @@ async function startServer() {
     // Deliberately NO catch-all to index.html: that is exactly the misconfiguration
     // that made /api/* return HTML 200 on Firebase and silently break every AI call.
     app.get("/", (_req, res) => {
-      res.json({ service: "SkillVault Core API", status: "ok" });
+      res.json({ service: "CVELOCITY Core API", status: "ok" });
     });
     app.use((_req, res) => {
       res.status(404).json({ error: "Not found" });
@@ -529,7 +531,7 @@ async function startServer() {
   }
 
   app.listen(PORT, "0.0.0.0", () => {
-    console.log(`SkillVault API running on port ${PORT}`);
+    console.log(`CVELOCITY API running on port ${PORT}`);
   });
 }
 

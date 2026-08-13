@@ -82,7 +82,6 @@ export function extractSlotsFromHighlight(highlight: HighlightMetric | string): 
   }
 
   // Try extracting first word as action verb, and rest as target
-  const parts = text.split(/,\s*/);
   const words = text.split(/\s+/);
   const firstWord = words[0] || 'Realizowałem';
 
