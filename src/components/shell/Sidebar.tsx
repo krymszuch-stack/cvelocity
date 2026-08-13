@@ -3,6 +3,7 @@ import {
   Shield, Zap, Database, FileText, UserCog, ChevronLeft, LucideIcon, Lightbulb, X, BriefcaseBusiness, Newspaper,
 } from 'lucide-react';
 import { AppTab } from '../../types';
+import { OathcryLogoMark } from '../ui/OathcryLogoMark';
 
 export interface NavItem {
   id: AppTab;
@@ -63,13 +64,16 @@ export const Sidebar: React.FC<SidebarProps> = ({
       >
         {/* Brand */}
         <div className={`flex items-center gap-3 h-16 px-4 border-b border-line shrink-0 ${collapsed ? 'lg:justify-center lg:px-0' : ''}`}>
-          <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-brand-500 to-brand-700 flex items-center justify-center shrink-0 shadow-md shadow-brand-600/25">
-            <Shield className="w-[18px] h-[18px] text-brand-solid-fg" />
+          <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-brand-600 to-brand-800 flex items-center justify-center shrink-0 shadow-md shadow-brand-600/25 relative overflow-hidden text-brand-solid-fg">
+            <OathcryLogoMark className="w-6 h-6 text-white" />
           </div>
           <div className={`min-w-0 ${collapsed ? 'lg:hidden' : ''}`}>
-            <div className="font-extrabold text-[15px] text-ink tracking-tight leading-none">CVELOCITY</div>
+            <div className="font-extrabold text-[15px] text-ink tracking-tight leading-none flex items-center gap-1.5">
+              CVELOCITY
+              <span className="text-[9px] px-1.5 py-0.5 rounded bg-brand-500/10 text-brand-600 font-bold uppercase border border-brand-500/20">by oathcry</span>
+            </div>
             <div className="text-[10px] text-subtle font-semibold uppercase tracking-wider mt-1">
-              Offer Aggregator
+              Offer Aggregator & ATS
             </div>
           </div>
           <button

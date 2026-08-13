@@ -3,6 +3,7 @@ import { ArrowRight, Code2, Lightbulb, Link2, Newspaper, Sparkles, UserRound } f
 import { Card, CardHeader, PageHeader } from './ui/Card';
 import { Button } from './ui/Button';
 import { QUICK_TIPS, BLOG_POSTS } from '../data/careerAdvice';
+import { OathcryLogoMark } from './ui/OathcryLogoMark';
 
 interface LandingPageProps {
   onEnterApp: () => void;
@@ -23,7 +24,9 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onEnterApp }) => {
       <Card className="overflow-hidden relative">
         <div aria-hidden className="absolute -top-24 -right-16 w-72 h-72 rounded-full bg-brand-500/10 blur-3xl pointer-events-none" />
         <div className="relative p-6 sm:p-8 space-y-4">
-          <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-subtle">SkillVault</p>
+          <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-subtle flex items-center gap-1.5">
+            CVELOCITY <span className="text-brand-600 font-extrabold">by oathcry</span>
+          </p>
           <h1 className="text-3xl font-black tracking-tight text-ink">
             Dopasuj CV do oferty, popraw ocenę ATS, aplikuj świadomie.
           </h1>
@@ -52,15 +55,15 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onEnterApp }) => {
 
           <Card className="p-3.5 space-y-2.5">
             <div className="flex items-center gap-2 text-xs font-bold text-ink">
-              <UserRound className="w-3.5 h-3.5 text-brand-fg shrink-0" />
-              <span>O twórcy</span>
+              <OathcryLogoMark className="w-4 h-4 text-brand-500 shrink-0" />
+              <span>O twórcie (oathcry)</span>
             </div>
             <p className="text-xs leading-relaxed text-muted">
-              SkillVault stworzył{' '}
+              CVELOCITY stworzył{' '}
               <a href="https://oathcry.com" target="_blank" rel="noreferrer" className="font-semibold text-brand-fg hover:underline">
                 Adrian Koziński
               </a>{' '}
-              — wsparcie techniczne, automatyzacja i AI. Więcej projektów na{' '}
+              — organizacja wsparcia technicznego, automatyzacji i AI. Więcej projektów na{' '}
               <a href="https://oathcry.com" target="_blank" rel="noreferrer" className="font-semibold text-brand-fg hover:underline">
                 oathcry.com
               </a>.
