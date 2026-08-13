@@ -9,7 +9,7 @@ import { buildLocalInterviewCheatSheet } from '../lib/interviewCheatSheetEngine'
 import { DocumentRenderer } from './DocumentRenderer';
 import { AtsSimulatorView } from './AtsSimulatorView';
 import { CoverLetterView } from './CoverLetterView';
-import { CVWordBuilder } from './CVWordBuilder';
+const CVWordBuilder = React.lazy(() => import('./CVWordBuilder').then(module => ({ default: module.CVWordBuilder })));
 import { InterviewCheatSheetView } from './InterviewCheatSheetView';
 import { Eye, ShieldCheck, Layers, Type, Sparkles, GraduationCap } from 'lucide-react';
 import { Tabs } from './ui/Tabs';
@@ -149,14 +149,22 @@ export const RealtimeLivePreview: React.FC<RealtimeLivePreviewProps> = ({
 
       {/* View Output */}
       {activeView === 'builder' && (
-        <CVWordBuilder
-          vault={vault}
-          jobDescription={jobDescription}
-          jobTitle={jobTitle}
-          companyName={companyName}
-          onUpdateVault={onUpdateVault || (() => {})}
-          onOpenAdvisor={onOpenAdvisor}
-        />
+        <React.Suspense
+          fallback={
+            <div className="flex items-center justify-center py-12">
+              <div className="w-8 h-8 border-2 border-line-strong border-t-brand-600 rounded-full animate-spin" />
+            </div>
+          }
+        >
+          <CVWordBuilder
+            vault={vault}
+            jobDescription={jobDescription}
+            jobTitle={jobTitle}
+            companyName={companyName}
+            onUpdateVault={onUpdateVault || (() => {})}
+            onOpenAdvisor={onOpenAdvisor}
+          />
+        </React.Suspense>
       )}
 
       {activeView === 'document' && (
