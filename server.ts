@@ -214,11 +214,16 @@ const ALLOWED_ORIGINS = new Set(
 const RATE_LIMIT_WINDOW_MS = 15 * 60 * 1000;
 const RATE_LIMIT_MAX = process.env.RATE_LIMIT_MAX !== undefined && Number.isFinite(Number(process.env.RATE_LIMIT_MAX))
   ? Number(process.env.RATE_LIMIT_MAX)
-  : 20;
+  : 100;
 const rateLimitHits = new Map<string, number[]>();
 
 function isRateLimited(ip: string): boolean {
   if (RATE_LIMIT_MAX <= 0) return false;
+  const isLoopback = ip === "127.0.0.1" || ip === "::1" || ip === "::ffff:127.0.0.1" || ip === "localhost" || ip === "unknown";
+  if (isLoopback && process.env.NODE_ENV !== "production") {
+    return false;
+  }
+
   const now = Date.now();
   const recent = (rateLimitHits.get(ip) || []).filter((t) => now - t < RATE_LIMIT_WINDOW_MS);
   recent.push(now);
@@ -246,6 +251,7 @@ const OUTBOUND_TIMEOUT_MS = 8000;
 
 async function startServer() {
   const app = express();
+  app.set("trust proxy", 1);
   // Render injects PORT and requires the process to bind to it.
   const PORT = Number(process.env.PORT) || 3000;
 
@@ -269,9 +275,9 @@ async function startServer() {
   // on a 512MB instance.
   app.use(express.json({ limit: "2mb" }));
 
-  // Health check is deliberately exempt — Render probes it and it costs nothing.
+  // Health check and stats polling are exempt — costs zero AI tokens.
   app.use("/api", (req, res, next) => {
-    if (req.path === "/health") return next();
+    if (req.path === "/health" || req.path === "/usage/stats") return next();
     const ip = req.ip || req.socket.remoteAddress || "unknown";
     if (isRateLimited(ip)) {
       res.setHeader("Retry-After", "900");
