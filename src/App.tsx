@@ -149,7 +149,7 @@ function MainApp() {
         <div className="max-w-md w-full bg-surface border border-line rounded-2xl p-6 text-center space-y-3 shadow-xs">
           <h1 className="text-sm font-bold text-ink">Brak konfiguracji Firebase</h1>
           <p className="text-xs text-muted leading-relaxed">
-            SkillVault potrzebuje projektu Firebase (Auth + Firestore), żeby działać — konto i
+            CVELOCITY potrzebuje projektu Firebase (Auth + Firestore), żeby działać — konto i
             vault nie mają już lokalnego zapasowego magazynu. Uzupełnij zmienne <code className="font-mono text-[11px] bg-sunken px-1 rounded">VITE_FIREBASE_*</code> w
             pliku <code className="font-mono text-[11px] bg-sunken px-1 rounded">.env</code> (zobacz <code className="font-mono text-[11px] bg-sunken px-1 rounded">.env.example</code>) i uruchom ponownie.
           </p>

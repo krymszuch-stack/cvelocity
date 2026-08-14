@@ -2749,7 +2749,7 @@ export const MasterVaultEditor: React.FC<MasterVaultEditorProps> = ({ vault, onC
                     label="Nazwa projektu"
                     value={proj.name}
                     onChange={(e) => updateProject(proj.id, 'name', e.target.value)}
-                    placeholder="np. SkillVault CLI"
+                    placeholder="np. CVELOCITY CLI"
                   />
                   <Input
                     label="Rola w projekcie"
