@@ -77,12 +77,9 @@ function MainApp() {
     return createEmptyVault();
   });
 
-  const lastUserVaultRef = useRef<MasterVault | null>(null);
-
   // Sync user vault when authenticated user changes
   useEffect(() => {
-    if (userVault && userVault !== lastUserVaultRef.current) {
-      lastUserVaultRef.current = userVault;
+    if (userVault) {
       setVault(userVault);
     }
   }, [userVault]);
@@ -91,15 +88,11 @@ function MainApp() {
 
   // Auto-save vault on changes
   useEffect(() => {
-    if (vault === userVault) return;
-
-    if (!isAuthenticated) {
-      saveVaultToLocalStorage(vault);
-      return;
-    }
     saveVaultToLocalStorage(vault);
-    saveUserVault(vault);
-  }, [vault, userVault, saveUserVault, isAuthenticated]);
+    if (isAuthenticated && user) {
+      saveUserVault(vault);
+    }
+  }, [vault, isAuthenticated, user, saveUserVault]);
 
   const refreshStats = () => {
     setTokenStats(semanticCacheInstance.getStats());
@@ -275,7 +268,6 @@ function MainApp() {
         isOpen={isAuthModalOpen}
         onClose={() => setAuthModalOpen(false)}
         onSuccessVaultLoaded={(loadedVault) => {
-          lastUserVaultRef.current = loadedVault;
           setVault(loadedVault);
         }}
       />

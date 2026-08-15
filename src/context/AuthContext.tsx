@@ -168,7 +168,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode; onVaultLoaded?:
         : vault;
 
       saveUserVault(user.id, sanitizedVault, userSecret);
-      setUserVault(sanitizedVault);
+      setUserVault((prev) => (prev === sanitizedVault ? prev : sanitizedVault));
     }
   }, [user]);
 
