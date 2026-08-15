@@ -1,29 +1,51 @@
 import React from 'react';
-import { Lightbulb } from 'lucide-react';
+import { Sparkles, Lightbulb } from 'lucide-react';
+import { motion } from 'motion/react';
 
 interface AdvisorButtonProps {
   onClick: () => void;
   label?: string;
   title?: string;
   className?: string;
+  variant?: 'brand' | 'warning';
 }
 
-/** Shared "Ask AI Advisor" trigger — replaces the button previously duplicated in Header, JobMatcher, and CVWordBuilder. */
+/** Współdzielony przycisk Doradcy AI — dostępny w Topbar i widokach */
 export const AdvisorButton: React.FC<AdvisorButtonProps> = ({
   onClick,
   label = 'Doradca AI',
   title = 'Zapytaj Doradcę AI',
   className = '',
+  variant = 'brand',
 }) => {
+  const isBrand = variant === 'brand';
+
   return (
-    <button
+    <motion.button
       type="button"
       onClick={onClick}
       title={title}
-      className={`flex items-center space-x-1.5 px-3 py-2 rounded-xl bg-warning-50 hover:bg-warning-500/20 border border-warning-500/30 text-xs text-warning-700 transition-all active:scale-95 shadow-xs group ${className}`}
+      whileHover={{ scale: 1.03 }}
+      whileTap={{ scale: 0.97 }}
+      transition={{ duration: 0.18, ease: [0.19, 1, 0.22, 1] }}
+      className={`group flex items-center gap-2 rounded-xl border px-3 py-1.5 text-xs font-semibold shadow-sm transition-colors focus-visible:outline-none ${
+        isBrand
+          ? 'border-brand-200 bg-brand-50 text-brand-fg hover:bg-brand-100 hover:border-brand-500'
+          : 'border-warning/30 bg-warning-soft text-warning-fg hover:bg-warning-soft/80'
+      } ${className}`}
     >
-      <Lightbulb className="w-4 h-4 text-warning-500 group-hover:scale-110 transition-transform" />
-      <span className="font-bold hidden sm:inline">{label}</span>
-    </button>
+      <motion.div
+        whileHover={{ rotate: 12 }}
+        transition={{ duration: 0.2 }}
+        className="flex items-center"
+      >
+        {isBrand ? (
+          <Sparkles className="h-3.5 w-3.5 text-brand-600 group-hover:text-brand-500" />
+        ) : (
+          <Lightbulb className="h-3.5 w-3.5 text-warning-fg group-hover:scale-110 transition-transform" />
+        )}
+      </motion.div>
+      <span className="hidden sm:inline">{label}</span>
+    </motion.button>
   );
 };

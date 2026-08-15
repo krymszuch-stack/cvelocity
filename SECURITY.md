@@ -2,7 +2,7 @@
 
 ## Overview & Commitment
 
-Security and data privacy are foundational principles of **SkillVault**. SkillVault operates on a **Zero-Knowledge, Client-Side Encryption** model (AES-256-GCM with PBKDF2 600,000 iterations). Your raw personal data, credentials, and MasterVault facts remain encrypted at all times on the client side and are never stored in plaintext on central servers.
+Security and data privacy are foundational principles of **CVelocity**. CVelocity operates on a **Zero-Knowledge, Client-Side Encryption** model (AES-256-GCM with PBKDF2 600,000 iterations). Your raw personal data, credentials, and MasterVault facts remain encrypted at all times on the client side and are never stored in plaintext on central servers.
 
 ---
 
@@ -19,7 +19,7 @@ We provide security updates and patches for the following project versions:
 
 ## Reporting a Vulnerability
 
-We take all security reports seriously and appreciate the open-source community's efforts in keeping SkillVault safe.
+We take all security reports seriously and appreciate the open-source community's efforts in keeping CVelocity safe.
 
 ### How to Report
 If you discover a potential security vulnerability (e.g., encryption flaws, XSS vectors, or data exposure risks), **please do NOT open a public GitHub Issue**. 
@@ -28,7 +28,7 @@ Instead, report it responsibly via email:
 
 * **Security Contact:** Adrian Koziński
 * **Email:** `krymszuch00@outlook.com`
-* **Subject Line:** `[SECURITY VULNERABILITY] SkillVault - <Brief Description>`
+* **Subject Line:** `[SECURITY VULNERABILITY] CVelocity - <Brief Description>`
 
 ### What to Include in Your Report
 To help us triage and resolve the issue quickly, please include:
@@ -57,4 +57,4 @@ We kindly ask researchers to:
 * Avoid accessing, modifying, or destroying user data or privacy.
 * Act in good faith to avoid service disruption or degradation.
 
-Thank you for helping keep **SkillVault** and its users secure!
+Thank you for helping keep **CVelocity** and its users secure!

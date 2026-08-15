@@ -1,13 +1,14 @@
 import React from 'react';
 import { CheckCircle2, AlertTriangle, XCircle, Circle, LucideIcon } from 'lucide-react';
 
-export type StatusBadgeVariant = 'success' | 'warning' | 'danger' | 'neutral';
+export type StatusBadgeVariant = 'success' | 'warning' | 'danger' | 'neutral' | 'brand';
 
 const VARIANT_STYLES: Record<StatusBadgeVariant, string> = {
-  success: 'bg-success-50 text-success-700 border-success-500/30',
-  warning: 'bg-warning-50 text-warning-700 border-warning-500/30',
-  danger: 'bg-danger-50 text-danger-700 border-danger-500/30',
-  neutral: 'bg-slate-100 text-slate-700 border-slate-300',
+  success: 'bg-success-soft text-success-fg border-success/30',
+  warning: 'bg-warning-soft text-warning-fg border-warning/30',
+  danger: 'bg-danger-soft text-danger-fg border-danger/30',
+  neutral: 'bg-elevated text-muted border-line',
+  brand: 'bg-brand-50 text-brand-fg border-brand-200',
 };
 
 const VARIANT_ICONS: Record<StatusBadgeVariant, LucideIcon> = {
@@ -15,6 +16,7 @@ const VARIANT_ICONS: Record<StatusBadgeVariant, LucideIcon> = {
   warning: AlertTriangle,
   danger: XCircle,
   neutral: Circle,
+  brand: CheckCircle2,
 };
 
 interface StatusBadgeProps {

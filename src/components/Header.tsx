@@ -39,7 +39,7 @@ export const Header: React.FC<HeaderProps> = ({
             <div>
               <div className="flex items-center space-x-2">
                 <span className="font-extrabold text-lg tracking-tight bg-gradient-to-r from-white via-slate-100 to-brand-300 bg-clip-text text-transparent">
-                  SkillVault
+                  CVelocity
                 </span>
                 <span className="text-[10px] font-bold uppercase tracking-widest px-2 py-0.5 rounded-full bg-brand-950/80 text-brand-400 border border-brand-800/50 hidden sm:inline-block">
                   Fintech Grade

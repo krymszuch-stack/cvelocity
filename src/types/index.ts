@@ -8,6 +8,8 @@ export interface LocationPreferences {
   willingnessToTravel: boolean;
   hybridWork: boolean;
   remoteOnly: boolean;
+  relocationReady?: boolean;
+  commuteRadiusKm?: number;
 }
 
 export interface LanguageProficiency {
@@ -22,6 +24,7 @@ export interface ProfilerState {
   experienceLevel: ExperienceLevel;
   location: LocationPreferences;
   languages: LanguageProficiency[];
+  licenses?: string[];
 }
 
 export interface PersonalInfo {
@@ -244,6 +247,24 @@ export interface PreFlightCheckItem {
   category: 'FACT_ACCURACY' | 'DEALBREAKER' | 'PAGE_BUDGET' | 'METRICS' | 'LANGUAGE';
 }
 
+export interface JobOffer {
+  id: string;
+  title: string;
+  company: string;
+  salary: string;
+  location: string;
+  description?: string;
+  requirements?: string[];
+  tags?: string[];
+  techStack?: string[];
+  remote?: boolean;
+  isRemote?: boolean;
+  portal?: string;
+  level?: string;
+  url?: string;
+  rawDescription?: string;
+}
+
 export interface ApplicationHistoryRecord {
   id: string;
   companyName: string;
@@ -255,3 +276,5 @@ export interface ApplicationHistoryRecord {
   exportedFormats: Array<'PDF' | 'DOCX' | 'TXT' | 'LINKEDIN'>;
   jobDescriptionExcerpt: string;
 }
+
+

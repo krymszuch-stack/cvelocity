@@ -1,64 +1,155 @@
 @import "tailwindcss";
+@import "./styles/tokens.css";
 
-/* SkillVault design tokens — indigo is the single brand accent; emerald is
-   reserved exclusively for success/positive-status semantics (never brand). */
-@theme {
-  --color-brand-50: #eef2ff;
-  --color-brand-100: #e0e7ff;
-  --color-brand-400: #818cf8;
-  --color-brand-500: #6366f1;
-  --color-brand-600: #4f46e5;
-  --color-brand-700: #4338ca;
-  --color-brand-900: #312e81;
-  --color-brand-950: #1e1b4b;
-
-  --color-success-50: #ecfdf5;
-  --color-success-500: #10b981;
-  --color-success-700: #047857;
-
-  --color-warning-50: #fffbeb;
-  --color-warning-500: #f59e0b;
-  --color-warning-700: #b45309;
-
-  --color-danger-50: #fef2f2;
-  --color-danger-500: #f43f5e;
-  --color-danger-700: #be123c;
-}
-
+/* ============================================================
+   GLOBAL BASE STYLES
+   ============================================================ */
 @layer base {
+  * {
+    box-sizing: border-box;
+  }
+  html {
+    background-color: var(--surface);
+    color: var(--ink);
+    font-family: var(--font-sans);
+    transition: background-color 0.2s cubic-bezier(0.19, 1, 0.22, 1), color 0.2s cubic-bezier(0.19, 1, 0.22, 1);
+  }
   body {
-    font-family: 'Plus Jakarta Sans', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+    min-height: 100vh;
+    background-color: var(--surface);
+    color: var(--ink);
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+  }
+  button {
+    font-family: inherit;
+    cursor: pointer;
+  }
+  ::selection {
+    background-color: var(--brand-200);
+    color: var(--ink);
   }
 }
 
-/* Custom Scrollbar for Bank/Fintech Aesthetic */
-::-webkit-scrollbar {
-  width: 6px;
-  height: 6px;
-}
-::-webkit-scrollbar-track {
-  background: rgba(15, 23, 42, 0.6); /* slate dark */
-}
-::-webkit-scrollbar-thumb {
-  background: var(--color-brand-500);
-  border-radius: 9999px;
-}
-::-webkit-scrollbar-thumb:hover {
-  background: rgba(99, 102, 241, 0.5);
+/* Focus States (WCAG AA) */
+input:focus-visible,
+textarea:focus-visible,
+select:focus-visible,
+button:focus-visible,
+[tabindex]:focus-visible {
+  outline: 2px solid var(--brand-500) !important;
+  outline-offset: 2px !important;
 }
 
-/* Focus styles for forms & accessibility */
-input:focus-visible, textarea:focus-visible, select:focus-visible, button:focus-visible {
-  outline: 2px solid var(--color-brand-500) !important;
-  outline-offset: 1px !important;
+/* ============================================================
+   AURORA AMBIENT BACKGROUND (2026 Aesthetic)
+   ============================================================ */
+.aurora-bg {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  overflow: hidden;
 }
 
-/* Animation utilities */
-@keyframes fadeIn {
-  from { opacity: 0; transform: translateY(4px); }
-  to { opacity: 1; transform: translateY(0); }
+.aurora-blob {
+  position: absolute;
+  border-radius: 50%;
+  filter: blur(90px);
+  animation: aurora-drift 26s ease-in-out infinite alternate;
 }
 
-.animate-fade-in {
-  animation: fadeIn 0.2s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+.aurora-blob-1 {
+  width: 46vw;
+  height: 46vw;
+  left: -10vw;
+  top: -12vw;
+  background: radial-gradient(circle at center, color-mix(in srgb, var(--brand-600) 24%, transparent), transparent 70%);
+}
+
+.aurora-blob-2 {
+  width: 52vw;
+  height: 52vw;
+  right: -14vw;
+  top: 2vw;
+  background: radial-gradient(circle at center, color-mix(in srgb, var(--violet) 20%, transparent), transparent 70%);
+  animation-duration: 34s;
+  animation-delay: -9s;
+}
+
+.aurora-blob-3 {
+  width: 60vw;
+  height: 44vw;
+  left: 18vw;
+  bottom: -20vw;
+  background: radial-gradient(circle at center, color-mix(in srgb, var(--brand-500) 16%, transparent), transparent 70%);
+  animation-duration: 40s;
+  animation-delay: -17s;
+}
+
+@keyframes aurora-drift {
+  from {
+    transform: translate(0, 0) scale(1);
+  }
+  to {
+    transform: translate(60px, 35px) scale(1.08);
+  }
+}
+
+/* ============================================================
+   MICRO-INTERACTIONS ANIMATIONS (Prompt 11)
+   ============================================================ */
+
+/* Ripple Click Effect */
+@keyframes ripple {
+  0% {
+    transform: translate(-50%, -50%) scale(0);
+    opacity: 0.6;
+  }
+  100% {
+    transform: translate(-50%, -50%) scale(4);
+    opacity: 0;
+  }
+}
+
+.animate-ripple {
+  animation: ripple 0.6s cubic-bezier(0.19, 1, 0.22, 1) forwards;
+}
+
+/* Shake Validation Effect */
+@keyframes shake {
+  0%, 100% {
+    transform: translateX(0);
+  }
+  20%, 60% {
+    transform: translateX(-4px);
+  }
+  40%, 80% {
+    transform: translateX(4px);
+  }
+}
+
+.animate-shake {
+  animation: shake 0.4s cubic-bezier(0.19, 1, 0.22, 1);
+}
+
+/* Shimmer Loading Skeleton Effect */
+@keyframes shimmer {
+  0% {
+    background-position: -200% 0;
+  }
+  100% {
+    background-position: 200% 0;
+  }
+}
+
+.animate-shimmer {
+  background: linear-gradient(
+    90deg,
+    var(--sunken) 25%,
+    color-mix(in srgb, var(--brand-500) 12%, var(--sunken)) 50%,
+    var(--sunken) 75%
+  );
+  background-size: 200% 100%;
+  animation: shimmer 1.8s cubic-bezier(0.19, 1, 0.22, 1) infinite;
 }

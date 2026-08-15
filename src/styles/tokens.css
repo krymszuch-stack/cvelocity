@@ -1,0 +1,218 @@
+/* ============================================================
+   CVELOCITY DESIGN TOKENS ARCHITECTURE (Tailwind v4 @theme)
+   ============================================================ */
+
+@theme {
+  --font-sans: 'Geist Sans', 'Geist', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  --font-mono: 'Geist Mono', ui-monospace, 'SF Mono', 'JetBrains Mono', Menlo, Consolas, monospace;
+
+  /* Border Radii Tokens */
+  --radius-sm: 0.5rem;    /* 8px */
+  --radius-md: 0.75rem;   /* 12px */
+  --radius-xl: 1rem;      /* 16px */
+  --radius-2xl: 1.5rem;   /* 24px */
+
+  /* Surfaces */
+  --color-surface: var(--surface);
+  --color-sunken: var(--sunken);
+  --color-elevated: var(--elevated);
+
+  /* Typography / Ink */
+  --color-ink: var(--ink);
+  --color-muted: var(--muted);
+  --color-subtle: var(--subtle);
+
+  /* Borders / Lines */
+  --color-line: var(--line);
+  --color-line-strong: var(--line-strong);
+
+  /* Brand Accents Ramp */
+  --color-brand-50: var(--brand-50);
+  --color-brand-100: var(--brand-100);
+  --color-brand-200: var(--brand-200);
+  --color-brand-300: var(--brand-300);
+  --color-brand-400: var(--brand-400);
+  --color-brand-500: var(--brand-500);
+  --color-brand-600: var(--brand-600);
+  --color-brand-700: var(--brand-700);
+  --color-brand-800: var(--brand-800);
+  --color-brand-900: var(--brand-900);
+  --color-brand-950: var(--brand-950);
+  --color-brand-fg: var(--brand-fg);
+  --color-violet: var(--violet);
+  --color-violet-2: var(--violet-2);
+
+  /* Semantics */
+  --color-success: var(--success);
+  --color-success-fg: var(--success-fg);
+  --color-success-soft: var(--success-soft);
+
+  --color-warning: var(--warning);
+  --color-warning-fg: var(--warning-fg);
+  --color-warning-soft: var(--warning-soft);
+
+  --color-danger: var(--danger);
+  --color-danger-fg: var(--danger-fg);
+  --color-danger-soft: var(--danger-soft);
+
+  /* Box Shadows */
+  --shadow-raised: var(--shadow-raised);
+  --shadow-floating: var(--shadow-floating);
+}
+
+/* ============================================================
+   LIGHT THEME VARIABLES (:root)
+   ============================================================ */
+:root {
+  /* Surfaces */
+  --surface: #f6f6f5;
+  --sunken: #ececea;
+  --elevated: #ffffff;
+
+  /* Typography / Ink */
+  --ink: #17171a;
+  --muted: #595d65;
+  --subtle: #72767e;
+
+  /* Lines */
+  --line: #e5e5e3;
+  --line-strong: #d3d3d0;
+
+  /* Brand Ramp (Light) */
+  --brand-50: #f0f2fc;
+  --brand-100: #e2e6f9;
+  --brand-200: #c9cff3;
+  --brand-300: #a7b3ec;
+  --brand-400: #8391e4;
+  --brand-500: #6f7ad9;
+  --brand-600: #5e6ad2;
+  --brand-700: #4d57bd;
+  --brand-800: #3f479a;
+  --brand-900: #363c7b;
+  --brand-950: #202449;
+  --brand-fg: #4650a8;
+  --violet: #8b5cf6;
+  --violet-2: #a855f7;
+  --brand-grad: linear-gradient(120deg, #5e6ad2 0%, #8b5cf6 100%);
+
+  /* Semantics (Light) */
+  --success: #16a34a;
+  --success-fg: #0f7a37;
+  --success-soft: #e5f5ea;
+
+  --warning: #d97706;
+  --warning-fg: #b45309;
+  --warning-soft: #fdf0e0;
+
+  --danger: #dc2626;
+  --danger-fg: #b91c1c;
+  --danger-soft: #fdeaea;
+
+  /* Shadows */
+  --shadow-raised: 0 1px 2px rgba(23, 23, 26, 0.05), 0 4px 16px rgba(23, 23, 26, 0.06);
+  --shadow-floating: 0 8px 24px rgba(23, 23, 26, 0.14), 0 24px 64px rgba(23, 23, 26, 0.18);
+  --ease: cubic-bezier(0.19, 1, 0.22, 1);
+  --spring: cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+/* ============================================================
+   DARK THEME VARIABLES ([data-theme="dark"], .dark)
+   ============================================================ */
+[data-theme="dark"],
+.dark {
+  /* Surfaces */
+  --surface: #101013;
+  --sunken: #17171b;
+  --elevated: #1c1c21;
+
+  /* Typography / Ink */
+  --ink: #f1f1f3;
+  --muted: #a4a7b0;
+  --subtle: #9497a1;
+
+  /* Lines */
+  --line: #26262c;
+  --line-strong: #33343b;
+
+  /* Brand Ramp (Dark) */
+  --brand-50: #1b1d2f;
+  --brand-100: #222541;
+  --brand-200: #2c3060;
+  --brand-300: #42498b;
+  --brand-400: #5b65b6;
+  --brand-500: #7c86e0;
+  --brand-600: #8b93e8;
+  --brand-700: #a3aaf0;
+  --brand-800: #c1c6f7;
+  --brand-900: #dee1fb;
+  --brand-950: #f0f2fd;
+  --brand-fg: #b7bdf5;
+  --violet: #a78bfa;
+  --violet-2: #c4b5fd;
+  --brand-grad: linear-gradient(120deg, #8b93e8 0%, #a78bfa 100%);
+
+  /* Semantics (Dark) */
+  --success: #4ade80;
+  --success-fg: #86efac;
+  --success-soft: #12271b;
+
+  --warning: #fbbf24;
+  --warning-fg: #fcd34d;
+  --warning-soft: #2b2110;
+
+  --danger: #f87171;
+  --danger-fg: #fca5a5;
+  --danger-soft: #2b1212;
+
+  /* Shadows */
+  --shadow-raised: 0 1px 2px rgba(0, 0, 0, 0.4), 0 4px 16px rgba(0, 0, 0, 0.5);
+  --shadow-floating: 0 8px 32px rgba(0, 0, 0, 0.6), 0 24px 64px rgba(0, 0, 0, 0.7);
+}
+
+/* ============================================================
+   OPALESCENT & UTILITY TOKENS
+   ============================================================ */
+.bg-brand-500\/5 {
+  background-color: color-mix(in srgb, var(--brand-500) 5%, transparent);
+}
+
+.bg-brand-500\/10 {
+  background-color: color-mix(in srgb, var(--brand-500) 10%, transparent);
+}
+
+.bg-brand-500\/20 {
+  background-color: color-mix(in srgb, var(--brand-500) 20%, transparent);
+}
+
+.border-brand-500\/20 {
+  border-color: color-mix(in srgb, var(--brand-500) 20%, transparent);
+}
+
+.border-brand-500\/30 {
+  border-color: color-mix(in srgb, var(--brand-500) 30%, transparent);
+}
+
+/* Stable Scrollbar Gutter & Custom Scrollbar */
+html {
+  scrollbar-gutter: stable;
+  scrollbar-width: thin;
+  scrollbar-color: var(--line) var(--sunken);
+}
+
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--sunken);
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--line);
+  border-radius: 9999px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--brand-500);
+}

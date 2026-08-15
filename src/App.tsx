@@ -1,25 +1,55 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, Suspense, lazy } from 'react';
+import { motion, AnimatePresence } from 'motion/react';
 import { MasterVault, TokenStats } from './types';
 import { createEmptyVault } from './lib/sampleVault';
 import { loadVaultFromLocalStorage, saveVaultToLocalStorage, clearVaultLocalStorage } from './lib/vaultCrypto';
 import { getActiveSessionUser, loadUserVault } from './lib/auth';
 import { semanticCacheInstance } from './lib/semanticCache';
 import { AuthProvider, useAuth } from './context/AuthContext';
+import { ThemeProvider } from './providers/ThemeProvider';
+import { useAppStore } from './store/useAppStore';
 import { AuthModal } from './components/AuthModal';
-import { Header } from './components/Header';
+import { GlobalShell, NavTabId } from './components/GlobalShell';
 import { TokenStatsWidget } from './components/TokenStatsWidget';
-import { JobMatcher } from './components/JobMatcher';
-import { MasterVaultEditor } from './components/MasterVaultEditor';
-import { ProfilerSection } from './components/ProfilerSection';
-import { CVParserModal } from './components/CVParserModal';
-import { GeminiAdvisorModal } from './components/GeminiAdvisorModal';
+import { CommandPalette } from './components/CommandPalette';
+import { Skeleton } from './components/ui/Skeleton';
+import { HomeView } from './views/HomeView';
+
+// Lazy-loaded heavy views for fast initial bundle & LCP
+const JobMatcher = lazy(() => import('./components/JobMatcher').then((m) => ({ default: m.JobMatcher })));
+const MasterVaultEditor = lazy(() => import('./components/MasterVaultEditor').then((m) => ({ default: m.MasterVaultEditor })));
+const ProfilerSection = lazy(() => import('./components/ProfilerSection').then((m) => ({ default: m.ProfilerSection })));
+const CVParserModal = lazy(() => import('./components/CVParserModal').then((m) => ({ default: m.CVParserModal })));
+const GeminiAdvisorModal = lazy(() => import('./components/GeminiAdvisorModal').then((m) => ({ default: m.GeminiAdvisorModal })));
+const ApplicationTracker = lazy(() => import('./views/ApplicationTracker').then((m) => ({ default: m.ApplicationTracker })));
+const DesignTokensShowcaseModal = lazy(() => import('./components/DesignTokensShowcaseModal').then((m) => ({ default: m.DesignTokensShowcaseModal })));
+
+const ViewLoadingFallback = () => (
+  <div className="space-y-4 p-4 sm:p-6" aria-busy="true" aria-live="polite">
+    <Skeleton variant="card" height={140} />
+    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+      <Skeleton variant="card" height={200} />
+      <Skeleton variant="card" height={200} />
+    </div>
+  </div>
+);
 
 function MainApp() {
-  const [activeTab, setActiveTab] = useState<'matcher' | 'vault' | 'parser' | 'profiler'>('matcher');
-  const { userVault, saveUserVault } = useAuth();
-  const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
-  const [isAdvisorOpen, setIsAdvisorOpen] = useState(false);
-  const [advisorInitialQuestion, setAdvisorInitialQuestion] = useState<string | undefined>(undefined);
+  const {
+    activeTab,
+    setActiveTab,
+    isAdvisorOpen,
+    setAdvisorOpen,
+    isTokenModalOpen,
+    setTokenModalOpen,
+    isAuthModalOpen,
+    setAuthModalOpen,
+    isDesignTokensOpen,
+    setDesignTokensOpen,
+    advisorInitialQuestion,
+  } = useAppStore();
+
+  const { userVault, saveUserVault, user, isAuthenticated } = useAuth();
 
   const [vault, setVault] = useState<MasterVault>(() => {
     const SAMPLE_EMAIL = 'jan.kowalski@example.com';
@@ -28,7 +58,6 @@ function MainApp() {
     const sessionUser = getActiveSessionUser();
     if (sessionUser) {
       const userVaultData = loadUserVault(sessionUser.id);
-      // If stored vault is still the old sample data, clear it and return empty
       if (userVaultData && userVaultData.personalInfo.email === SAMPLE_EMAIL) {
         clearVaultLocalStorage();
         return createEmptyVault(sessionUser.fullName, sessionUser.email);
@@ -42,11 +71,9 @@ function MainApp() {
     if (loaded && loaded.personalInfo.email !== SAMPLE_EMAIL) {
       return loaded;
     }
-    // Clear polluted localStorage with sample data
     if (loaded && loaded.personalInfo.email === SAMPLE_EMAIL) {
       clearVaultLocalStorage();
     }
-    // Return a fresh empty vault for unauthenticated view
     return createEmptyVault();
   });
 
@@ -61,25 +88,15 @@ function MainApp() {
   }, [userVault]);
 
   const [tokenStats, setTokenStats] = useState<TokenStats>(() => semanticCacheInstance.getStats());
-  const [isTokenModalOpen, setIsTokenModalOpen] = useState(false);
 
-  // Auto-save vault on changes - only save to user storage if authenticated
-  // and the vault is NOT the sample/demo vault (prevents overwriting new user's clean slate)
-  const { isAuthenticated } = useAuth();
+  // Auto-save vault on changes
   useEffect(() => {
-    // `vault` was just set FROM `userVault` by the mirror effect above (same object reference) —
-    // there's nothing new to save. Skipping this case breaks a ping-pong loop between this effect
-    // and the mirror effect that otherwise fires right when isAuthenticated flips true (React's
-    // "Maximum update depth exceeded"): mirror copies userVault into vault -> this effect saves
-    // vault and writes it back into userVault -> mirror sees a "changed" userVault -> repeat.
     if (vault === userVault) return;
 
     if (!isAuthenticated) {
-      // Only save to global localStorage for unauthenticated/demo mode
       saveVaultToLocalStorage(vault);
       return;
     }
-    // Authenticated: save to both storages
     saveVaultToLocalStorage(vault);
     saveUserVault(vault);
   }, [vault, userVault, saveUserVault, isAuthenticated]);
@@ -95,123 +112,160 @@ function MainApp() {
 
   const handleApplyParsedVault = (parsed: Partial<MasterVault>) => {
     setVault((prev) => {
-      // Merge history without duplicate company + role entries
-      const existingHistoryKeys = new Set(prev.history.map((h) => `${h.company.toLowerCase().trim()}_${h.role.toLowerCase().trim()}`));
-      const newHistory = (parsed.history || []).filter((h) => !existingHistoryKeys.has(`${h.company.toLowerCase().trim()}_${h.role.toLowerCase().trim()}`));
-      
-      // If previous history was sample data or empty, prefer parsed history
+      const existingHistoryKeys = new Set(
+        prev.history.map((h) => `${h.company.toLowerCase().trim()}_${h.role.toLowerCase().trim()}`)
+      );
+      const newHistory = (parsed.history || []).filter(
+        (h) => !existingHistoryKeys.has(`${h.company.toLowerCase().trim()}_${h.role.toLowerCase().trim()}`)
+      );
+
       const isPrevSample = prev.history.some((h) => h.company.includes('TechCorp') || h.company.includes('FinTech'));
       const mergedHistory = isPrevSample && parsed.history && parsed.history.length > 0
         ? parsed.history
-        : [...parsed.history || [], ...prev.history.filter((h) => !(parsed.history || []).some((p) => p.company.toLowerCase().trim() === h.company.toLowerCase().trim() && p.role.toLowerCase().trim() === h.role.toLowerCase().trim()))];
+        : [...(parsed.history || []), ...newHistory];
 
-      // Merge education without duplicate institution + degree
-      const existingEduKeys = new Set(prev.education.map((e) => `${e.institution.toLowerCase().trim()}_${e.degree.toLowerCase().trim()}`));
-      const newEdu = (parsed.education || []).filter((e) => !existingEduKeys.has(`${e.institution.toLowerCase().trim()}_${e.degree.toLowerCase().trim()}`));
-      const isPrevEduSample = prev.education.some((e) => e.institution.includes('Politechnika Warszawska') && e.fieldOfStudy.includes('Informatyka'));
-      const mergedEducation = isPrevEduSample && parsed.education && parsed.education.length > 0
-        ? parsed.education
-        : [...parsed.education || [], ...newEdu];
-
-      // Merge certifications
-      const existingCertNames = new Set((prev.skillsMatrix.certifications || []).map((c) => c.name.toLowerCase().trim()));
-      const newCerts = (parsed.skillsMatrix?.certifications || []).filter((c) => !existingCertNames.has(c.name.toLowerCase().trim()));
-      const mergedCertifications = [...(prev.skillsMatrix.certifications || []), ...newCerts];
-
-      // Merge projects
-      const existingProjNames = new Set((prev.projects || []).map((p) => p.name.toLowerCase().trim()));
-      const newProjects = (parsed.projects || []).filter((p) => !existingProjNames.has(p.name.toLowerCase().trim()));
-      const mergedProjects = [...(prev.projects || []), ...newProjects];
+      const existingEduKeys = new Set(
+        prev.education.map((e) => `${e.institution.toLowerCase().trim()}_${e.degree.toLowerCase().trim()}`)
+      );
+      const newEducation = (parsed.education || []).filter(
+        (e) => !existingEduKeys.has(`${e.institution.toLowerCase().trim()}_${e.degree.toLowerCase().trim()}`)
+      );
 
       return {
         ...prev,
         personalInfo: {
           ...prev.personalInfo,
-          fullName: parsed.personalInfo?.fullName || prev.personalInfo.fullName,
-          title: parsed.personalInfo?.title || prev.personalInfo.title,
-          summary: parsed.personalInfo?.summary || prev.personalInfo.summary,
-          location: parsed.personalInfo?.location || prev.personalInfo.location,
-          email: parsed.personalInfo?.email || prev.personalInfo.email,
-          phone: parsed.personalInfo?.phone || prev.personalInfo.phone,
-          linkedin: parsed.personalInfo?.linkedin || prev.personalInfo.linkedin,
+          ...(parsed.personalInfo || {}),
         },
         skillsMatrix: {
           ...prev.skillsMatrix,
-          hardSkills: Array.from(new Set([...(parsed.skillsMatrix?.hardSkills || []), ...prev.skillsMatrix.hardSkills])),
-          softSkills: Array.from(new Set([...(parsed.skillsMatrix?.softSkills || []), ...prev.skillsMatrix.softSkills])),
-          toolsAndTech: Array.from(new Set([...(parsed.skillsMatrix?.toolsAndTech || []), ...prev.skillsMatrix.toolsAndTech])),
-          certifications: mergedCertifications,
+          hardSkills: Array.from(
+            new Set([...(prev.skillsMatrix?.hardSkills || []), ...(parsed.skillsMatrix?.hardSkills || [])])
+          ),
+          softSkills: Array.from(
+            new Set([...(prev.skillsMatrix?.softSkills || []), ...(parsed.skillsMatrix?.softSkills || [])])
+          ),
         },
-        history: mergedHistory.length > 0 ? mergedHistory : prev.history,
-        education: mergedEducation.length > 0 ? mergedEducation : prev.education,
-        projects: mergedProjects.length > 0 ? mergedProjects : prev.projects,
-        updatedAt: new Date().toISOString(),
+        profiler: {
+          ...prev.profiler,
+          languages: parsed.profiler?.languages || prev.profiler?.languages || [],
+        },
+        history: mergedHistory,
+        education: [...prev.education, ...newEducation],
       };
     });
-    setActiveTab('vault');
   };
 
-  const handleOpenAdvisor = (question?: string) => {
-    setAdvisorInitialQuestion(question);
-    setIsAdvisorOpen(true);
+  const handleOpenAdvisor = (initialQuestion?: string) => {
+    setAdvisorOpen(true, initialQuestion);
   };
 
   return (
-    <div className="min-h-screen bg-slate-950 text-slate-100 font-sans selection:bg-cyan-500 selection:text-slate-950">
-      {/* Top Header Navigation */}
-      <Header
-        activeTab={activeTab}
-        setActiveTab={setActiveTab}
-        tokenStats={tokenStats}
-        vaultStatus={{
-          isLoaded: !!vault.personalInfo.fullName,
-          itemCount: vault.history.length,
-          isEncrypted: false,
-        }}
-        onOpenTokenStats={() => setIsTokenModalOpen(true)}
-        onOpenAuthModal={() => setIsAuthModalOpen(true)}
-        onOpenAdvisor={handleOpenAdvisor}
-      />
+    <GlobalShell
+      activeTab={activeTab}
+      onSelectTab={setActiveTab}
+      onOpenAdvisor={handleOpenAdvisor}
+      onOpenTokenStats={() => setTokenModalOpen(true)}
+      onOpenAuthModal={() => setAuthModalOpen(true)}
+      onOpenDesignTokens={() => setDesignTokensOpen(true)}
+      tokenStats={tokenStats}
+      isAuthenticated={isAuthenticated}
+      userEmail={user?.email}
+    >
+      <AnimatePresence mode="wait">
+        <motion.div
+          key={activeTab}
+          initial={{ opacity: 0, y: 6 }}
+          animate={{ opacity: 1, y: 0 }}
+          exit={{ opacity: 0, y: -6 }}
+          transition={{ duration: 0.25, ease: [0.19, 1, 0.22, 1] }}
+        >
+          {/* Tab 1: Home View (Quick Start, Stats & Career Microblog) */}
+          {activeTab === 'home' && (
+            <HomeView
+              vault={vault}
+              tokenStats={tokenStats}
+              onNavigate={setActiveTab}
+              onOpenAdvisor={handleOpenAdvisor}
+            />
+          )}
 
-      {/* Main Content View Container */}
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {activeTab === 'matcher' && (
-          <JobMatcher
-            vault={vault}
-            onUpdateStats={refreshStats}
-            onUpdateVault={setVault}
-            onOpenAdvisor={handleOpenAdvisor}
-          />
-        )}
+          {/* Lazy Loaded Views */}
+          <Suspense fallback={<ViewLoadingFallback />}>
+            {/* Tab 2: Job Matcher & ATS Simulator */}
+            {activeTab === 'matcher' && (
+              <JobMatcher
+                vault={vault}
+                onUpdateStats={refreshStats}
+                onUpdateVault={setVault}
+                onOpenAdvisor={handleOpenAdvisor}
+              />
+            )}
 
-        {activeTab === 'vault' && (
-          <MasterVaultEditor vault={vault} onChange={setVault} onOpenAdvisor={handleOpenAdvisor} />
-        )}
+            {/* Tab 3: Master Vault Candidate Profile */}
+            {activeTab === 'vault' && (
+              <MasterVaultEditor
+                vault={vault}
+                onChange={setVault}
+                onOpenAdvisor={handleOpenAdvisor}
+              />
+            )}
 
-        {activeTab === 'profiler' && (
-          <ProfilerSection
-            profiler={vault.profiler}
-            onChange={(updatedProfiler) => setVault({ ...vault, profiler: updatedProfiler })}
-          />
-        )}
+            {/* Tab 4: CV Parser & Import */}
+            {activeTab === 'parser' && (
+              <CVParserModal
+                currentVault={vault}
+                onApplyParsedVault={handleApplyParsedVault}
+              />
+            )}
 
-        {activeTab === 'parser' && (
-          <CVParserModal currentVault={vault} onApplyParsedVault={handleApplyParsedVault} />
-        )}
-      </main>
+            {/* Tab 5: Profiler & Preferences */}
+            {activeTab === 'profiler' && (
+              <ProfilerSection
+                profiler={vault.profiler}
+                onChange={(updatedProfiler) => setVault({ ...vault, profiler: updatedProfiler })}
+              />
+            )}
 
-      {/* Gemini AI Advisor & Samouczek Modal ("Okienko Doradcy") */}
-      <GeminiAdvisorModal
-        isOpen={isAdvisorOpen}
-        onClose={() => setIsAdvisorOpen(false)}
-        vault={vault}
-        initialQuestion={advisorInitialQuestion}
-      />
+            {/* Tab 6: Recruitment Applications Tracker */}
+            {activeTab === 'applications' && <ApplicationTracker />}
+
+            {/* Tab 7: Pricing / Subscription Overview */}
+            {activeTab === 'pricing' && (
+              <div className="space-y-6">
+                <div className="rounded-2xl border border-line bg-elevated p-6 text-center shadow-sm">
+                  <h2 className="text-xl font-bold text-ink">Plany & Pakiety CVELOCITY</h2>
+                  <p className="mt-1 text-xs text-muted">
+                    Wszystkie podstawowe funkcje edycji CV, dopasowania ATS i eksportu PDF są bezpłatne.
+                  </p>
+                </div>
+              </div>
+            )}
+          </Suspense>
+        </motion.div>
+      </AnimatePresence>
+
+      {/* Lazy Modals outside AnimatePresence of page content */}
+      <Suspense fallback={null}>
+        {/* Gemini AI Advisor Modal */}
+        <GeminiAdvisorModal
+          isOpen={isAdvisorOpen}
+          onClose={() => setAdvisorOpen(false)}
+          vault={vault}
+          initialQuestion={advisorInitialQuestion}
+        />
+
+        {/* Design Tokens Showcase Modal */}
+        <DesignTokensShowcaseModal
+          isOpen={isDesignTokensOpen}
+          onClose={() => setDesignTokensOpen(false)}
+        />
+      </Suspense>
 
       {/* Token Savings Modal */}
       <TokenStatsWidget
         isOpen={isTokenModalOpen}
-        onClose={() => setIsTokenModalOpen(false)}
+        onClose={() => setTokenModalOpen(false)}
         stats={tokenStats}
         onResetStats={handleResetStats}
       />
@@ -219,25 +273,25 @@ function MainApp() {
       {/* Auth Modal */}
       <AuthModal
         isOpen={isAuthModalOpen}
-        onClose={() => setIsAuthModalOpen(false)}
+        onClose={() => setAuthModalOpen(false)}
         onSuccessVaultLoaded={(loadedVault) => {
           lastUserVaultRef.current = loadedVault;
           setVault(loadedVault);
         }}
       />
 
-      {/* Footer */}
-      <footer className="border-t border-slate-900 bg-slate-950 py-6 text-center text-xs text-slate-500">
-        <p>SkillVault © 2026 – System Automatyzacji CV & ATS. 0-Token Local Slot Filling + Gemini Delta Prompting.</p>
-      </footer>
-    </div>
+      {/* Command Palette (Cmd+K) */}
+      <CommandPalette />
+    </GlobalShell>
   );
 }
 
 export default function App() {
   return (
-    <AuthProvider>
-      <MainApp />
-    </AuthProvider>
+    <ThemeProvider>
+      <AuthProvider>
+        <MainApp />
+      </AuthProvider>
+    </ThemeProvider>
   );
 }
