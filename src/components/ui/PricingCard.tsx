@@ -1,5 +1,6 @@
 import React from 'react';
-import { Check, Minus } from 'lucide-react';
+import { Minus } from 'lucide-react';
+import { IconCheckCircle } from './icons/ModernIcons';
 import { Button } from './Button';
 
 export interface PricingCardProps {
@@ -54,7 +55,7 @@ export const PricingCard: React.FC<PricingCardProps> = ({
       <ul className="mt-5 flex flex-col gap-2.5 flex-1">
         {features.map((f, i) => (
           <li key={i} className="flex items-start gap-2 text-xs text-ink">
-            <Check className="mt-0.5 h-3.5 w-3.5 shrink-0 text-success-fg" />
+            <IconCheckCircle className="mt-0.5 h-3.5 w-3.5 shrink-0 text-success-fg" />
             <span>{f}</span>
           </li>
         ))}

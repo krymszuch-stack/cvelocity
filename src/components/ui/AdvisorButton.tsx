@@ -1,5 +1,6 @@
 import React from 'react';
-import { Sparkles, Lightbulb } from 'lucide-react';
+import { Lightbulb } from 'lucide-react';
+import { IconSparkles } from './icons/ModernIcons';
 import { motion } from 'motion/react';
 
 interface AdvisorButtonProps {
@@ -40,7 +41,7 @@ export const AdvisorButton: React.FC<AdvisorButtonProps> = ({
         className="flex items-center"
       >
         {isBrand ? (
-          <Sparkles className="h-3.5 w-3.5 text-brand-600 group-hover:text-brand-500" />
+          <IconSparkles className="h-3.5 w-3.5 text-brand-600 group-hover:text-brand-500" />
         ) : (
           <Lightbulb className="h-3.5 w-3.5 text-warning-fg group-hover:scale-110 transition-transform" />
         )}

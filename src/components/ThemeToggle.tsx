@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
-import { Moon, Sun } from 'lucide-react';
 import { motion } from 'motion/react';
+import { IconMoon, IconSun } from './ui/icons/ModernIcons';
 
 interface ThemeToggleProps {
   className?: string;
@@ -66,9 +66,9 @@ export function ThemeToggle({ className = '' }: ThemeToggleProps) {
         className="flex items-center justify-center"
       >
         {isDark ? (
-          <Sun className="h-4 w-4 text-warning-fg" />
+          <IconSun className="h-4 w-4 text-warning-fg" />
         ) : (
-          <Moon className="h-4 w-4 text-brand-600" />
+          <IconMoon className="h-4 w-4 text-brand-600" />
         )}
       </motion.div>
     </motion.button>

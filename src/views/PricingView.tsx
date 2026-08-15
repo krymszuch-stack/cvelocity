@@ -1,24 +1,18 @@
 import React, { useState } from 'react';
 import {
-  ShieldCheck,
-  Zap,
-  Sparkles,
-  Layers,
-  FileText,
-  Clock,
-  TrendingUp,
-  CheckCircle2,
-  Lock,
-  ArrowRight,
-  HelpCircle,
-  UploadCloud,
-  Check,
-  AlertTriangle,
-  FileCode,
-  Palette,
-  BarChart3,
-  Terminal,
-} from 'lucide-react';
+  IconShield,
+  IconZap,
+  IconSparkles,
+  IconVault,
+  IconDocument,
+  IconCheckCircle,
+  IconLock,
+  IconArrowRight,
+  IconAlertTriangle,
+  IconParser,
+  IconPalette,
+  IconRadar,
+} from '../components/ui/icons/ModernIcons';
 import { motion, AnimatePresence } from 'motion/react';
 import { PricingCard } from '../components/ui/PricingCard';
 import {
@@ -41,9 +35,9 @@ export const PricingView: React.FC = () => {
   const isPro = subscription.status === 'active' || subscription.status === 'trialing';
 
   const subTabs = [
-    { id: 'pricing' as PricingSubTab, label: 'Cennik & Plany', icon: Zap },
-    { id: 'features' as PricingSubTab, label: 'Funkcje Premium & Dema', icon: Sparkles },
-    { id: 'validation' as PricingSubTab, label: 'Standardy Uczciwości (Win-Win)', icon: ShieldCheck },
+    { id: 'pricing' as PricingSubTab, label: 'Cennik & Plany', icon: IconZap as any },
+    { id: 'features' as PricingSubTab, label: 'Funkcje Premium & Dema', icon: IconSparkles as any },
+    { id: 'validation' as PricingSubTab, label: 'Standardy Uczciwości (Win-Win)', icon: IconShield as any },
   ];
 
   const handleOpenProCheckout = () => {
@@ -88,14 +82,14 @@ export const PricingView: React.FC = () => {
           <div className="ml-auto flex items-center gap-2">
             {isPro ? (
               <div className="flex items-center gap-2 rounded-2xl bg-success-soft px-4 py-2 text-xs font-bold text-success-fg">
-                <CheckCircle2 className="h-4 w-4" />
+                <IconCheckCircle className="h-4 w-4" />
                 <span>Twój aktywny plan: PRO</span>
               </div>
             ) : (
               <Button
                 variant="primary"
                 size="md"
-                icon={Sparkles}
+                icon={IconSparkles as any}
                 onClick={handleOpenProCheckout}
               >
                 Wypróbuj Pro przez 30 dni
@@ -303,7 +297,7 @@ export const PricingView: React.FC = () => {
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-3">
                   <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-brand-50 text-brand-600">
-                    <UploadCloud className="h-5 w-5" />
+                    <IconParser className="h-5 w-5" />
                   </div>
                   <div>
                     <h3 className="text-sm font-bold text-ink">1. Instant-Import CV</h3>
@@ -339,7 +333,7 @@ export const PricingView: React.FC = () => {
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-3">
                   <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-brand-50 text-brand-600">
-                    <Sparkles className="h-5 w-5" />
+                    <IconSparkles className="h-5 w-5" />
                   </div>
                   <div>
                     <h3 className="text-sm font-bold text-ink">2. AI Gap-Fixer</h3>
@@ -378,7 +372,7 @@ export const PricingView: React.FC = () => {
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-3">
                   <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-brand-50 text-brand-600">
-                    <Palette className="h-5 w-5" />
+                    <IconPalette className="h-5 w-5" />
                   </div>
                   <div>
                     <h3 className="text-sm font-bold text-ink">3. Marketplace Szablonów A4</h3>
@@ -418,7 +412,7 @@ export const PricingView: React.FC = () => {
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-3">
                   <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-brand-50 text-brand-600">
-                    <BarChart3 className="h-5 w-5" />
+                    <IconRadar className="h-5 w-5" />
                   </div>
                   <div>
                     <h3 className="text-sm font-bold text-ink">4. Pro Insights CRM</h3>
@@ -463,7 +457,7 @@ export const PricingView: React.FC = () => {
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
             <div className="rounded-2xl border border-line bg-elevated p-5 shadow-xs">
               <div className="mb-3 flex h-9 w-9 items-center justify-center rounded-xl bg-brand-50 text-brand-600">
-                <Clock className="h-4 w-4" />
+                <IconZap className="h-4 w-4" />
               </div>
               <h4 className="text-xs font-bold text-ink">Realny Problem</h4>
               <p className="mt-1 text-[11px] text-muted leading-relaxed">
@@ -473,7 +467,7 @@ export const PricingView: React.FC = () => {
 
             <div className="rounded-2xl border border-line bg-elevated p-5 shadow-xs">
               <div className="mb-3 flex h-9 w-9 items-center justify-center rounded-xl bg-brand-50 text-brand-600">
-                <TrendingUp className="h-4 w-4" />
+                <IconRadar className="h-4 w-4" />
               </div>
               <h4 className="text-xs font-bold text-ink">Mierzalny Efekt</h4>
               <p className="mt-1 text-[11px] text-muted leading-relaxed">
@@ -483,7 +477,7 @@ export const PricingView: React.FC = () => {
 
             <div className="rounded-2xl border border-line bg-elevated p-5 shadow-xs">
               <div className="mb-3 flex h-9 w-9 items-center justify-center rounded-xl bg-brand-50 text-brand-600">
-                <Layers className="h-4 w-4" />
+                <IconVault className="h-4 w-4" />
               </div>
               <h4 className="text-xs font-bold text-ink">Pełna Opcjonalność</h4>
               <p className="mt-1 text-[11px] text-muted leading-relaxed">
@@ -493,7 +487,7 @@ export const PricingView: React.FC = () => {
 
             <div className="rounded-2xl border border-line bg-elevated p-5 shadow-xs">
               <div className="mb-3 flex h-9 w-9 items-center justify-center rounded-xl bg-brand-50 text-brand-600">
-                <ShieldCheck className="h-4 w-4" />
+                <IconShield className="h-4 w-4" />
               </div>
               <h4 className="text-xs font-bold text-ink">Zero Dark Patterns</h4>
               <p className="mt-1 text-[11px] text-muted leading-relaxed">
@@ -507,19 +501,19 @@ export const PricingView: React.FC = () => {
             <h3 className="text-sm font-bold text-ink">Checklista Etyki i Ochrony Użytkownika</h3>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-xs">
               <div className="flex items-center gap-2 rounded-xl bg-elevated p-3 border border-line">
-                <CheckCircle2 className="h-4 w-4 text-success-fg shrink-0" />
+                <IconCheckCircle className="h-4 w-4 text-success-fg shrink-0" />
                 <span>Brak ukrytych kosztów – ceny brutto z VAT widoczne przed płatnością</span>
               </div>
               <div className="flex items-center gap-2 rounded-xl bg-elevated p-3 border border-line">
-                <CheckCircle2 className="h-4 w-4 text-success-fg shrink-0" />
+                <IconCheckCircle className="h-4 w-4 text-success-fg shrink-0" />
                 <span>Anulowanie subskrypcji w $\le$ 2 kliknięciach przez Stripe Customer Portal</span>
               </div>
               <div className="flex items-center gap-2 rounded-xl bg-elevated p-3 border border-line">
-                <CheckCircle2 className="h-4 w-4 text-success-fg shrink-0" />
+                <IconCheckCircle className="h-4 w-4 text-success-fg shrink-0" />
                 <span>Brak confirmshamingu („Nie, nie chcę lepszej pracy”)</span>
               </div>
               <div className="flex items-center gap-2 rounded-xl bg-elevated p-3 border border-line">
-                <CheckCircle2 className="h-4 w-4 text-success-fg shrink-0" />
+                <IconCheckCircle className="h-4 w-4 text-success-fg shrink-0" />
                 <span>Darmowy rdzeń aplikacji – tworzenie CV i eksport PDF zawsze bezpłatne</span>
               </div>
             </div>
