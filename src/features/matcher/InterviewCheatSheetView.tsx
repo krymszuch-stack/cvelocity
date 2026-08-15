@@ -117,10 +117,10 @@ export const InterviewCheatSheetView: React.FC<InterviewCheatSheetViewProps> = (
                   <div className="flex items-start justify-between gap-2">
                     <span className="font-bold text-ink leading-snug">{q.question}</span>
                     <div className="flex items-center gap-1.5 shrink-0">
-                      <Chip variant={q.difficulty === 'Wymagające' ? 'danger' : 'warning'} className="text-[10px] py-0.2">
+                      <Chip variant={q.difficulty === 'Wymagające' ? 'danger' : 'warning'} className="text-[10px] py-px">
                         {q.difficulty}
                       </Chip>
-                      <Chip variant="neutral" className="text-[10px] py-0.2">
+                      <Chip variant="neutral" className="text-[10px] py-px">
                         {q.category}
                       </Chip>
                     </div>

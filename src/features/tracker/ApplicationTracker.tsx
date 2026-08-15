@@ -236,7 +236,7 @@ export const ApplicationTracker: React.FC = () => {
               >
                 <span>{btn.label}</span>
                 <span
-                  className={`rounded-md px-1.5 py-0.2 font-mono text-[10px] ${
+                  className={`rounded-md px-1.5 py-px font-mono text-[10px] ${
                     filterStatus === btn.id ? 'bg-surface/30 text-white' : 'bg-surface text-muted'
                   }`}
                 >

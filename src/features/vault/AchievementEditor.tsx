@@ -157,7 +157,7 @@ export const AchievementEditor: React.FC<AchievementEditorProps> = ({
                     <div className="flex flex-wrap items-center gap-1.5">
                       <Tag className="h-3 w-3 text-subtle" />
                       {(hl.keywords || []).slice(0, 4).map((kw, i) => (
-                        <Chip key={i} variant="neutral" className="text-[10px] py-0.2">
+                        <Chip key={i} variant="neutral" className="text-[10px] py-px">
                           {kw}
                         </Chip>
                       ))}
