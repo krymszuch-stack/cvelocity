@@ -1,18 +1,19 @@
-import React from 'react';
 import {
-  Home,
-  Briefcase,
-  Send,
-  Database,
-  Upload,
-  SlidersHorizontal,
-  Sparkles,
   PanelLeftClose,
   PanelLeft,
   ShieldCheck,
   LogIn,
-  CreditCard,
 } from 'lucide-react';
+import {
+  IconHome,
+  IconMatcher,
+  IconApplications,
+  IconVault,
+  IconParser,
+  IconProfiler,
+  IconPricing,
+  IconSparkles,
+} from '../ui/icons/ModernIcons';
 import { NavItem } from './NavItem';
 import { NavTabId } from '../GlobalShell';
 
@@ -42,13 +43,13 @@ export const Sidebar: React.FC<SidebarProps> = ({
   className = '',
 }) => {
   const navItems = [
-    { id: 'home' as NavTabId, label: 'Strona Główna', icon: Home },
-    { id: 'matcher' as NavTabId, label: 'Agregator Ofert', icon: Briefcase, badge: 'Live', badgeVariant: 'brand' as const },
-    { id: 'applications' as NavTabId, label: 'Aplikacje', icon: Send, badge: 'CRM', badgeVariant: 'success' as const },
-    { id: 'vault' as NavTabId, label: 'Master Vault', icon: Database, badge: 'Core', badgeVariant: 'brand' as const },
-    { id: 'parser' as NavTabId, label: 'Wczytaj CV', icon: Upload },
-    { id: 'profiler' as NavTabId, label: 'Filtry i Priorytety', icon: SlidersHorizontal },
-    { id: 'pricing' as NavTabId, label: 'Cennik & Pakiety', icon: CreditCard, badge: 'Pro', badgeVariant: 'brand' as const },
+    { id: 'home' as NavTabId, label: 'Strona Główna', icon: IconHome as any },
+    { id: 'matcher' as NavTabId, label: 'Agregator Ofert', icon: IconMatcher as any, badge: 'Live', badgeVariant: 'brand' as const },
+    { id: 'applications' as NavTabId, label: 'Aplikacje', icon: IconApplications as any, badge: 'CRM', badgeVariant: 'success' as const },
+    { id: 'vault' as NavTabId, label: 'Master Vault', icon: IconVault as any, badge: 'Core', badgeVariant: 'brand' as const },
+    { id: 'parser' as NavTabId, label: 'Wczytaj CV', icon: IconParser as any },
+    { id: 'profiler' as NavTabId, label: 'Filtry i Priorytety', icon: IconProfiler as any },
+    { id: 'pricing' as NavTabId, label: 'Cennik & Pakiety', icon: IconPricing as any, badge: 'Pro', badgeVariant: 'brand' as const },
   ];
 
   return (
@@ -64,7 +65,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
           {!isCollapsed ? (
             <div className="flex items-center gap-2.5">
               <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-gradient-to-tr from-brand-600 to-violet text-white shadow-xs">
-                <Sparkles className="h-4 w-4" />
+                <IconSparkles className="h-4 w-4" />
               </div>
               <div>
                 <span className="font-sans text-sm font-extrabold tracking-tight text-ink">
@@ -77,7 +78,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
             </div>
           ) : (
             <div className="mx-auto flex h-8 w-8 items-center justify-center rounded-xl bg-gradient-to-tr from-brand-600 to-violet text-white shadow-xs">
-              <Sparkles className="h-4 w-4" />
+              <IconSparkles className="h-4 w-4" />
             </div>
           )}
 
@@ -112,7 +113,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
       <div className="space-y-2 border-t border-line pt-3">
         {/* Quick Advisor Button */}
         <NavItem
-          icon={Sparkles}
+          icon={IconSparkles as any}
           label="Zapytaj Doradcę AI"
           isCollapsed={isCollapsed}
           onClick={onOpenAdvisor}

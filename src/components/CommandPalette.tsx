@@ -21,6 +21,19 @@ import { useAppStore } from '../store/useAppStore';
 import { useTheme } from '../providers/ThemeProvider';
 import { NavTabId } from './GlobalShell';
 
+import {
+  IconHome,
+  IconMatcher,
+  IconApplications,
+  IconVault,
+  IconParser,
+  IconProfiler,
+  IconPricing,
+  IconSparkles,
+  IconZap,
+  IconPalette,
+} from './ui/icons/ModernIcons';
+
 interface CommandItem {
   id: string;
   label: string;
@@ -64,70 +77,70 @@ export const CommandPalette: React.FC = () => {
       id: 'nav-home',
       label: 'Przejdź do: Strona Główna (Blog Karierowy)',
       category: 'Nawigacja',
-      icon: Home,
+      icon: IconHome,
       action: () => setActiveTab('home'),
     },
     {
       id: 'nav-matcher',
       label: 'Przejdź do: Agregator Ofert & Dopasowanie ATS',
       category: 'Nawigacja',
-      icon: Briefcase,
+      icon: IconMatcher,
       action: () => setActiveTab('matcher'),
     },
     {
       id: 'nav-tracker',
       label: 'Przejdź do: Pipeline Aplikacji (CRM)',
       category: 'Nawigacja',
-      icon: Layers,
+      icon: IconApplications,
       action: () => setActiveTab('applications'),
     },
     {
       id: 'nav-vault',
       label: 'Przejdź do: Master Vault (Profil & Doświadczenie)',
       category: 'Nawigacja',
-      icon: FileText,
+      icon: IconVault,
       action: () => setActiveTab('vault'),
     },
     {
       id: 'nav-parser',
       label: 'Przejdź do: Wczytaj i Scal CV (Parser & Diff)',
       category: 'Nawigacja',
-      icon: Upload,
+      icon: IconParser,
       action: () => setActiveTab('parser'),
     },
     {
       id: 'nav-profiler',
       label: 'Przejdź do: Filtry, Uprawnienia & Dealbreakery',
       category: 'Nawigacja',
-      icon: Sliders,
+      icon: IconProfiler,
       action: () => setActiveTab('profiler'),
     },
     {
       id: 'nav-pricing',
       label: 'Przejdź do: Cennik & Pakiety Pro',
       category: 'Nawigacja',
-      icon: CreditCard,
+      icon: IconPricing,
       action: () => setActiveTab('pricing'),
     },
     {
       id: 'act-advisor',
       label: 'Otwórz Okienko Doradcy AI (Gemini Advisor)',
       category: 'Narzędzia',
-      icon: Sparkles,
+      icon: IconSparkles,
       action: () => setAdvisorOpen(true),
     },
     {
       id: 'act-stats',
       label: 'Pokaż Telemetrię i Zaoszczędzone Tokeny AI',
       category: 'Narzędzia',
-      icon: Zap,
+      icon: IconZap,
       action: () => setTokenModalOpen(true),
     },
     {
       id: 'act-tokens',
       label: 'Pokaż Paletę Tokenów Design System',
       category: 'Narzędzia',
-      icon: Palette,
+      icon: IconPalette,
       action: () => setDesignTokensOpen(true),
     },
     {
