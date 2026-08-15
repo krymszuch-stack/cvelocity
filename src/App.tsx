@@ -22,6 +22,7 @@ const ProfilerSection = lazy(() => import('./components/ProfilerSection').then((
 const CVParserModal = lazy(() => import('./components/CVParserModal').then((m) => ({ default: m.CVParserModal })));
 const GeminiAdvisorModal = lazy(() => import('./components/GeminiAdvisorModal').then((m) => ({ default: m.GeminiAdvisorModal })));
 const ApplicationTracker = lazy(() => import('./views/ApplicationTracker').then((m) => ({ default: m.ApplicationTracker })));
+const PricingView = lazy(() => import('./views/PricingView').then((m) => ({ default: m.PricingView })));
 const DesignTokensShowcaseModal = lazy(() => import('./components/DesignTokensShowcaseModal').then((m) => ({ default: m.DesignTokensShowcaseModal })));
 
 const ViewLoadingFallback = () => (
@@ -224,16 +225,7 @@ function MainApp() {
             {activeTab === 'applications' && <ApplicationTracker />}
 
             {/* Tab 7: Pricing / Subscription Overview */}
-            {activeTab === 'pricing' && (
-              <div className="space-y-6">
-                <div className="rounded-2xl border border-line bg-elevated p-6 text-center shadow-sm">
-                  <h2 className="text-xl font-bold text-ink">Plany & Pakiety CVELOCITY</h2>
-                  <p className="mt-1 text-xs text-muted">
-                    Wszystkie podstawowe funkcje edycji CV, dopasowania ATS i eksportu PDF są bezpłatne.
-                  </p>
-                </div>
-              </div>
-            )}
+            {activeTab === 'pricing' && <PricingView />}
           </Suspense>
         </motion.div>
       </AnimatePresence>

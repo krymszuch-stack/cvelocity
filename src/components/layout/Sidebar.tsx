@@ -11,6 +11,7 @@ import {
   PanelLeft,
   ShieldCheck,
   LogIn,
+  CreditCard,
 } from 'lucide-react';
 import { NavItem } from './NavItem';
 import { NavTabId } from '../GlobalShell';
@@ -47,6 +48,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
     { id: 'vault' as NavTabId, label: 'Master Vault', icon: Database, badge: 'Core', badgeVariant: 'brand' as const },
     { id: 'parser' as NavTabId, label: 'Wczytaj CV', icon: Upload },
     { id: 'profiler' as NavTabId, label: 'Filtry i Priorytety', icon: SlidersHorizontal },
+    { id: 'pricing' as NavTabId, label: 'Cennik & Pakiety', icon: CreditCard, badge: 'Pro', badgeVariant: 'brand' as const },
   ];
 
   return (

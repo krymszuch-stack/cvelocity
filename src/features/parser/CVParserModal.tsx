@@ -9,6 +9,7 @@ import {
   ArrowRight,
   RefreshCw,
   Zap,
+  Lock,
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { MasterVault } from '../../types';
@@ -21,6 +22,8 @@ import { Textarea } from '../../components/ui/Field';
 import { ProgressBar } from '../../components/ui/ProgressBar';
 import { Tabs } from '../../components/ui/Tabs';
 import { PageHeader } from '../../components/ui/PageHeader';
+import { useAuthStore } from '../../store/useAuthStore';
+import { StripeCheckoutModal } from '../../components/payments/StripeCheckoutModal';
 
 export interface CVParserModalProps {
   currentVault: MasterVault;
@@ -43,10 +46,14 @@ export const CVParserModal: React.FC<CVParserModalProps> = ({
   const [statusMessage, setStatusMessage] = useState('');
   const [parsedResult, setParsedResult] = useState<ParsedCVResult | null>(null);
   const [successToast, setSuccessToast] = useState(false);
+  const [isCheckoutOpen, setIsCheckoutOpen] = useState(false);
+
+  const { subscription, usage, consumeImport } = useAuthStore();
+  const isPro = subscription.status === 'active' || subscription.status === 'trialing';
 
   const ingestTabs = [
     { id: 'file' as IngestMode, label: 'Plik z dysku (PDF/DOCX)', icon: UploadCloud },
-    { id: 'rawText' as IngestMode, label: 'Wklej surowy tekst', icon: FileCode },
+    { id: 'rawText' as IngestMode, label: 'Wklej surowy tekst (Darmowe)', icon: FileCode },
   ];
 
   const handleStartParsing = async () => {
@@ -55,6 +62,13 @@ export const CVParserModal: React.FC<CVParserModalProps> = ({
     if (ingestMode === 'file') {
       if (!selectedFile) {
         alert('Proszę najpierw wybrać lub upuścić plik.');
+        return;
+      }
+
+      // Check import limit
+      const canProceed = consumeImport();
+      if (!canProceed) {
+        setIsCheckoutOpen(true);
         return;
       }
 
@@ -122,8 +136,6 @@ export const CVParserModal: React.FC<CVParserModalProps> = ({
           strategy === 'replace'
             ? parsedResult.softSkills
             : Array.from(new Set([...(currentVault.skillsMatrix?.softSkills || []), ...parsedResult.softSkills])),
-        toolsAndTech: parsedResult.toolsAndTech || currentVault.skillsMatrix?.toolsAndTech || [],
-        certifications: currentVault.skillsMatrix?.certifications || [],
       },
       history:
         strategy === 'replace'
@@ -173,13 +185,26 @@ export const CVParserModal: React.FC<CVParserModalProps> = ({
       {!parsedResult ? (
         <div className="space-y-6">
           {/* Tabs: File vs Raw Text */}
-          <div className="flex justify-center">
+          <div className="flex flex-col items-center gap-2">
             <Tabs<IngestMode>
               items={ingestTabs}
               active={ingestMode}
               onChange={setIngestMode}
               className="max-w-md"
             />
+
+            {/* Fair Quota Indicator */}
+            {ingestMode === 'file' && (
+              <div className="flex items-center gap-2 text-[11px] font-mono text-muted">
+                {isPro ? (
+                  <span className="text-success-fg font-bold">Plan PRO: Nielimitowany Instant-Import</span>
+                ) : usage.importUses > 0 ? (
+                  <span>Pozostało darmowych importów pliku w tym miesiącu: <b className="text-ink">{usage.importUses}</b></span>
+                ) : (
+                  <span className="text-warning-fg font-bold">Wykorzystano miesięczny limit 1 pliku (Wklejanie tekstu nadal darmowe!)</span>
+                )}
+              </div>
+            )}
           </div>
 
           {/* Ingest Box */}
@@ -200,7 +225,7 @@ export const CVParserModal: React.FC<CVParserModalProps> = ({
                   className="font-mono text-xs"
                 />
                 <p className="font-mono text-[11px] text-muted">
-                  Znaków: {rawText.length} • Słów: {rawText.trim().split(/\s+/).filter(Boolean).length}
+                  Znaków: {rawText.length} • Słów: {rawText.trim().split(/\s+/).filter(Boolean).length} • Wklejanie tekstu jest w 100% bezpłatne i bez limitu.
                 </p>
               </div>
             )}
@@ -241,6 +266,25 @@ export const CVParserModal: React.FC<CVParserModalProps> = ({
           parsedData={parsedResult}
           onApplyMerge={handleApplyMerge}
           onCancel={() => setParsedResult(null)}
+        />
+      )}
+
+      {/* Stripe Checkout Modal for Instant Import Upgrade */}
+      {isCheckoutOpen && (
+        <StripeCheckoutModal
+          isOpen={isCheckoutOpen}
+          onClose={() => setIsCheckoutOpen(false)}
+          product={{
+            sku: 'price_cvelocity_pro_monthly',
+            title: 'CVELOCITY Pro (Nielimitowany Instant-Import)',
+            price: '49 zł',
+            period: '/ miesiąc brutto',
+            recurring: true,
+            trialDays: 30,
+          }}
+          onUnlocked={() => {
+            alert('Odblokowano plan Pro! Możesz teraz importować pliki bez limitu.');
+          }}
         />
       )}
     </div>

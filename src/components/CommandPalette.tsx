@@ -14,6 +14,7 @@ import {
   Sun,
   ArrowRight,
   CornerDownLeft,
+  CreditCard,
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { useAppStore } from '../store/useAppStore';
@@ -100,6 +101,13 @@ export const CommandPalette: React.FC = () => {
       category: 'Nawigacja',
       icon: Sliders,
       action: () => setActiveTab('profiler'),
+    },
+    {
+      id: 'nav-pricing',
+      label: 'Przejdź do: Cennik & Pakiety Pro',
+      category: 'Nawigacja',
+      icon: CreditCard,
+      action: () => setActiveTab('pricing'),
     },
     {
       id: 'act-advisor',
