@@ -11,6 +11,9 @@ export default defineConfig(() => {
         '@': path.resolve(__dirname, '.'),
       },
     },
+    test: {
+      exclude: ['**/node_modules/**', '**/dist/**', 'semantic-work-graph/**'],
+    },
     server: {
       port: 3000,
       headers: {

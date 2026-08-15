@@ -106,14 +106,14 @@ export const Topbar: React.FC<TopbarProps> = ({
         <button
           type="button"
           onClick={() => {
-            window.dispatchEvent(new KeyboardEvent('keydown', { key: 'k', ctrlKey: true, metaKey: true }));
+            window.dispatchEvent(new KeyboardEvent('keydown', { key: 'k', ctrlKey: true }));
           }}
           className="hidden sm:flex items-center gap-2 rounded-xl border border-line bg-elevated px-2.5 py-1.5 text-xs text-muted hover:border-line-strong hover:text-ink transition-colors"
           title="Otwórz Command Palette (Cmd+K)"
         >
           <Search className="h-3.5 w-3.5" />
           <span>Szukaj...</span>
-          <span className="rounded border border-line bg-sunken px-1.5 py-0.2 font-mono text-[9px] text-muted">
+          <span className="rounded border border-line bg-sunken px-1.5 py-px font-mono text-[9px] text-muted">
             Ctrl+K
           </span>
         </button>
@@ -221,7 +221,7 @@ export const Topbar: React.FC<TopbarProps> = ({
                   <div className="font-mono text-[10px] text-muted truncate">{userEmail}</div>
                   <div className="mt-1.5">
                     <span
-                      className={`inline-block rounded-md px-1.5 py-0.2 font-mono text-[9px] font-bold uppercase ${
+                      className={`inline-block rounded-md px-1.5 py-px font-mono text-[9px] font-bold uppercase ${
                         isPro ? 'bg-brand-50 text-brand-fg border border-brand-200' : 'bg-sunken text-muted'
                       }`}
                     >

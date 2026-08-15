@@ -135,7 +135,7 @@ export const PricingView: React.FC = () => {
               }`}
             >
               <span
-                className={`absolute top-0.5 left-0.5 h-4.5 w-4.5 rounded-full bg-white transition-transform ${
+                className={`absolute top-0.5 left-0.5 h-[18px] w-[18px] rounded-full bg-white transition-transform ${
                   billingCycle === 'annual' ? 'translate-x-5' : 'translate-x-0'
                 }`}
               />
@@ -176,7 +176,7 @@ export const PricingView: React.FC = () => {
                 'Szablony Executive & Creative',
                 'Analityka Pro Insights',
               ]}
-              disabled={!isPro}
+              disabled={isPro}
               ctaLabel={!isPro ? 'Twój obecny plan' : 'Plan Podstawowy'}
               onSelect={() => {}}
             />
@@ -506,7 +506,7 @@ export const PricingView: React.FC = () => {
               </div>
               <div className="flex items-center gap-2 rounded-xl bg-elevated p-3 border border-line">
                 <IconCheckCircle className="h-4 w-4 text-success-fg shrink-0" />
-                <span>Anulowanie subskrypcji w $\le$ 2 kliknięciach przez Stripe Customer Portal</span>
+                <span>Anulowanie subskrypcji w ≤ 2 kliknięciach przez Stripe Customer Portal</span>
               </div>
               <div className="flex items-center gap-2 rounded-xl bg-elevated p-3 border border-line">
                 <IconCheckCircle className="h-4 w-4 text-success-fg shrink-0" />

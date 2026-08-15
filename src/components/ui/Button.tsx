@@ -66,7 +66,7 @@ export const Button: React.FC<ButtonProps> = ({
   const iconSizes = {
     sm: 'h-3.5 w-3.5',
     md: 'h-4 w-4',
-    lg: 'h-4.5 w-4.5',
+    lg: 'h-[18px] w-[18px]',
   };
 
   const isDisabled = disabled || loading;

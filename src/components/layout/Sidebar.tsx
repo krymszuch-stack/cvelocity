@@ -71,7 +71,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
                 <span className="font-sans text-sm font-extrabold tracking-tight text-ink">
                   CVELOCITY
                 </span>
-                <span className="ml-1.5 rounded-sm bg-brand-50 px-1 py-0.2 font-mono text-[9px] font-bold text-brand-fg">
+                <span className="ml-1.5 rounded-sm bg-brand-50 px-1 py-px font-mono text-[9px] font-bold text-brand-fg">
                   v2.0
                 </span>
               </div>

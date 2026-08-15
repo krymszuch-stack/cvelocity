@@ -46,7 +46,7 @@ export const MobileSidebar: React.FC<MobileSidebarProps> = ({
             animate={{ x: 0 }}
             exit={{ x: -300 }}
             transition={{ duration: 0.25, ease: [0.19, 1, 0.22, 1] }}
-            className="fixed top-0 bottom-0 left-0 z-50 flex w-76 flex-col border-r border-line bg-sunken shadow-floating"
+            className="fixed top-0 bottom-0 left-0 z-50 flex w-[19rem] flex-col border-r border-line bg-sunken shadow-floating"
           >
             {/* Drawer Header */}
             <div className="flex h-16 shrink-0 items-center justify-between border-b border-line px-5">

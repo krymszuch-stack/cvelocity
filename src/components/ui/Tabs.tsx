@@ -48,7 +48,7 @@ export function Tabs<T extends string = string>({
                 {Icon && <Icon className="h-3.5 w-3.5" />}
                 <span>{tab.label}</span>
                 {tab.badge && (
-                  <span className="rounded-full bg-brand-50 px-1.5 py-0.2 font-mono text-[9px] font-bold text-brand-fg">
+                  <span className="rounded-full bg-brand-50 px-1.5 py-px font-mono text-[9px] font-bold text-brand-fg">
                     {tab.badge}
                   </span>
                 )}

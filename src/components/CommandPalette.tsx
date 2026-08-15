@@ -1,20 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import {
   Search,
-  Home,
-  Briefcase,
-  Layers,
-  FileText,
-  Upload,
-  Sliders,
-  Sparkles,
-  Zap,
-  Palette,
-  Moon,
-  Sun,
-  ArrowRight,
   CornerDownLeft,
-  CreditCard,
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { useAppStore } from '../store/useAppStore';
@@ -32,6 +19,8 @@ import {
   IconSparkles,
   IconZap,
   IconPalette,
+  IconSun,
+  IconMoon,
 } from './ui/icons/ModernIcons';
 
 interface CommandItem {
@@ -147,7 +136,7 @@ export const CommandPalette: React.FC = () => {
       id: 'act-theme',
       label: `Przełącz Motyw (Aktualny: ${theme === 'dark' ? 'Ciemny' : 'Jasny'})`,
       category: 'Ustawienia',
-      icon: theme === 'dark' ? Sun : Moon,
+      icon: theme === 'dark' ? IconSun : IconMoon,
       action: () => setTheme(theme === 'dark' ? 'light' : 'dark'),
     },
   ];
@@ -249,7 +238,7 @@ export const CommandPalette: React.FC = () => {
 
                         <div className="flex items-center gap-2 shrink-0">
                           <span
-                            className={`rounded-md px-1.5 py-0.2 font-mono text-[10px] uppercase ${
+                            className={`rounded-md px-1.5 py-px font-mono text-[10px] uppercase ${
                               isSelected ? 'bg-white/20 text-white' : 'bg-sunken text-muted border border-line/60'
                             }`}
                           >
