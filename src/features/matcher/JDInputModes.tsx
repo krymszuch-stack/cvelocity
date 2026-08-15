@@ -10,6 +10,7 @@ import {
   Sliders,
   Radio,
   ExternalLink,
+  AlertCircle,
 } from 'lucide-react';
 import { JobOffer } from '../../types';
 import { Card } from '../../components/ui/Card';
@@ -31,6 +32,8 @@ export interface JDInputModesProps {
   onMatchManual: (offer: Partial<JobOffer>) => void;
   onMatchUrl: (url: string) => void;
   isSearching?: boolean;
+  isFetchingUrl?: boolean;
+  urlError?: string | null;
   className?: string;
 }
 
@@ -53,6 +56,8 @@ export const JDInputModes: React.FC<JDInputModesProps> = ({
   onMatchManual,
   onMatchUrl,
   isSearching = false,
+  isFetchingUrl = false,
+  urlError = null,
   className = '',
 }) => {
   const [activeMode, setActiveMode] = useState<InputMode>('live');
@@ -68,12 +73,12 @@ export const JDInputModes: React.FC<JDInputModesProps> = ({
   const [jobUrl, setJobUrl] = useState('');
 
   // Mode 3: Manual State
-  const [manualTitle, setManualTitle] = useState('Senior Full-Stack Developer');
-  const [manualCompany, setManualCompany] = useState('TechScale Dynamics');
-  const [manualText, setManualText] = useState(SAMPLE_MANUAL_JD);
+  const [manualTitle, setManualTitle] = useState('');
+  const [manualCompany, setManualCompany] = useState('');
+  const [manualText, setManualText] = useState('');
 
   const modeTabs = [
-    { id: 'live' as InputMode, label: 'Agregator Live (Wyszukiwarka)', icon: Radio },
+    { id: 'live' as InputMode, label: 'Oferty przykładowe (demo)', icon: Radio },
     { id: 'url' as InputMode, label: 'Wklej Link do Oferty', icon: Globe },
     { id: 'manual' as InputMode, label: 'Wpisz Ręcznie / Wklej Treść', icon: FileCode },
   ];
@@ -129,9 +134,16 @@ export const JDInputModes: React.FC<JDInputModesProps> = ({
         />
       </div>
 
-      {/* Mode 1: Live Filters */}
+      {/* Mode 1: Demo offer filters */}
       {activeMode === 'live' && (
         <div className="space-y-4">
+          <div className="flex items-start gap-2 rounded-xl bg-warning-soft p-3 text-xs text-warning-fg">
+            <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />
+            <span>
+              Ta zakładka filtruje wbudowany zestaw ofert demonstracyjnych — nie jest to wyszukiwanie na żywo w portalach pracy. Aby dopasować CV do prawdziwej oferty, użyj zakładki z linkiem lub wklej jej treść.
+            </span>
+          </div>
+
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
             <Input
               label="Stanowisko / Słowa Kluczowe"
@@ -169,7 +181,7 @@ export const JDInputModes: React.FC<JDInputModesProps> = ({
               value={portal}
               onChange={(e) => setPortal(e.target.value)}
               options={[
-                { value: 'ALL', label: 'Wszystkie portale (Live)' },
+                { value: 'ALL', label: 'Wszystkie portale' },
                 { value: 'JustJoinIT', label: 'JustJoin.it' },
                 { value: 'NoFluffJobs', label: 'NoFluffJobs' },
                 { value: 'Pracuj.pl', label: 'Pracuj.pl' },
@@ -231,14 +243,22 @@ export const JDInputModes: React.FC<JDInputModesProps> = ({
               variant="primary"
               size="md"
               icon={Globe}
+              loading={isFetchingUrl}
               className="mb-0.5"
             >
               Pobierz i Dopasuj Ofertę
             </Button>
           </div>
 
+          {urlError && (
+            <div className="flex items-start gap-2 rounded-xl bg-danger-soft p-3 text-xs text-danger-fg">
+              <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />
+              <span>{urlError}</span>
+            </div>
+          )}
+
           <p className="text-xs text-muted">
-            Wklej bezpośredni link z dowolnego portalu. Nasz serwer pobierze treść ogłoszenia, zidentyfikuje wymagania i wyliczy Twój wskaźnik dopasowania ATS.
+            Wklej bezpośredni link z dowolnego portalu. Nasz serwer pobierze treść ogłoszenia, zidentyfikuje wymagania i wyliczy Twój wskaźnik dopasowania ATS. Część portali (m.in. Pracuj.pl, LinkedIn) blokuje automatyczne pobieranie — w takim wypadku skorzystaj z zakładki „Wpisz Ręcznie / Wklej Treść".
           </p>
         </form>
       )}

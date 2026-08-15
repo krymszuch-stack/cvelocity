@@ -95,8 +95,8 @@ function cleanJobHtml(html: string): { title: string; company: string; descripti
   // Remove noise elements
   $('script, style, svg, header, footer, nav, aside, noscript, [aria-label*="cookie" i]').remove();
 
-  const title = $('h1').first().text().trim() || $('title').text().split(/[-|]/)[0]?.trim() || 'Stanowisko z Ogłoszenia';
-  const company = $('[class*="company" i], [class*="employer" i]').first().text().trim() || 'Firma Rekrutująca';
+  const title = $('h1').first().text().trim() || $('title').text().split(/[-|]/)[0]?.trim() || '';
+  const company = $('[class*="company" i], [class*="employer" i]').first().text().trim() || '';
   const description = $('main, article, [role="main"], body').text().replace(/\s+/g, ' ').trim();
 
   return { title, company, description: description.slice(0, 5000) };
@@ -170,8 +170,8 @@ jobsRouter.post('/fetch-jd-url', async (req: Request<{}, {}, FetchJdUrlRequest>,
     }
 
     let fetchedHtml = '';
+    let upstreamStatus = 0;
 
-    // Direct fetch
     try {
       const response = await fetch(url, {
         headers: {
@@ -180,14 +180,35 @@ jobsRouter.post('/fetch-jd-url', async (req: Request<{}, {}, FetchJdUrlRequest>,
         },
       });
 
+      upstreamStatus = response.status;
       if (response.ok) {
         fetchedHtml = await response.text();
       }
     } catch (e) {
-      console.warn('Direct fetch failed, falling back to basic extraction:', e);
+      console.warn('Nie udało się pobrać strony oferty:', e);
     }
 
-    const cleaned = cleanJobHtml(fetchedHtml || `<html><body><h1>Oferta z ${url}</h1><p>Treść ogłoszenia pobrana z adresu ${url}</p></body></html>`);
+    // Portals such as Pracuj.pl and LinkedIn block automated fetches; report that
+    // honestly so the UI can offer manual paste instead of inventing offer content.
+    if (!fetchedHtml) {
+      const isBlocked = upstreamStatus === 403 || upstreamStatus === 401 || upstreamStatus === 429;
+      return res.status(isBlocked ? 403 : 502).json({
+        success: false,
+        is403Blocked: isBlocked,
+        error: isBlocked
+          ? 'Portal zablokował automatyczne pobieranie oferty. Skopiuj treść ogłoszenia i wklej ją ręcznie.'
+          : 'Nie udało się pobrać treści oferty z podanego adresu. Sprawdź link lub wklej treść ręcznie.',
+      });
+    }
+
+    const cleaned = cleanJobHtml(fetchedHtml);
+
+    if (!cleaned.description || cleaned.description.length < 80) {
+      return res.status(422).json({
+        success: false,
+        error: 'Pobrano stronę, ale nie udało się z niej odczytać treści ogłoszenia. Wklej treść oferty ręcznie.',
+      });
+    }
 
     res.json({
       success: true,

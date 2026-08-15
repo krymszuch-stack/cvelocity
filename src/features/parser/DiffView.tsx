@@ -18,10 +18,19 @@ import { Card } from '../../components/ui/Card';
 import { Button } from '../../components/ui/Button';
 import { Chip } from '../../components/ui/Chip';
 
+export type SectionStrategy = 'merge' | 'replace' | 'keep';
+
+export interface MergeStrategies {
+  personal: SectionStrategy;
+  skills: SectionStrategy;
+  experience: SectionStrategy;
+  education: SectionStrategy;
+}
+
 export interface DiffViewProps {
   currentVault: MasterVault;
   parsedData: ParsedCVResult;
-  onApplyMerge: (strategy: 'merge' | 'replace') => void;
+  onApplyMerge: (strategies: MergeStrategies) => void;
   onCancel: () => void;
   className?: string;
 }
@@ -33,10 +42,10 @@ export const DiffView: React.FC<DiffViewProps> = ({
   onCancel,
   className = '',
 }) => {
-  const [personalStrategy, setPersonalStrategy] = useState<'keep' | 'replace'>('replace');
-  const [skillsStrategy, setSkillsStrategy] = useState<'merge' | 'replace' | 'keep'>('merge');
-  const [expStrategy, setExpStrategy] = useState<'merge' | 'replace' | 'keep'>('merge');
-  const [eduStrategy, setEduStrategy] = useState<'merge' | 'replace' | 'keep'>('merge');
+  const [personalStrategy, setPersonalStrategy] = useState<SectionStrategy>('replace');
+  const [skillsStrategy, setSkillsStrategy] = useState<SectionStrategy>('merge');
+  const [expStrategy, setExpStrategy] = useState<SectionStrategy>('merge');
+  const [eduStrategy, setEduStrategy] = useState<SectionStrategy>('merge');
 
   // Compute skill differences
   const existingHardSkills = new Set(
@@ -286,6 +295,82 @@ export const DiffView: React.FC<DiffViewProps> = ({
         </div>
       </Card>
 
+      {/* Section 4: Education Diff */}
+      <Card tone="raised" className="space-y-4">
+        <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between border-b border-line pb-3">
+          <div className="flex items-center gap-2">
+            <GraduationCap className="h-4 w-4 text-brand-600" />
+            <h4 className="text-xs font-bold uppercase tracking-wider text-ink">
+              Wykształcenie ({parsedData.education?.length || 0} pozycji)
+            </h4>
+          </div>
+
+          <div className="flex items-center gap-1.5">
+            <button
+              type="button"
+              onClick={() => setEduStrategy('merge')}
+              className={`rounded-lg px-2.5 py-1 text-xs font-bold transition-colors ${
+                eduStrategy === 'merge'
+                  ? 'bg-brand-600 text-white'
+                  : 'border border-line bg-surface text-muted hover:text-ink'
+              }`}
+            >
+              Dołącz
+            </button>
+            <button
+              type="button"
+              onClick={() => setEduStrategy('replace')}
+              className={`rounded-lg px-2.5 py-1 text-xs font-bold transition-colors ${
+                eduStrategy === 'replace'
+                  ? 'bg-brand-600 text-white'
+                  : 'border border-line bg-surface text-muted hover:text-ink'
+              }`}
+            >
+              Zastąp
+            </button>
+            <button
+              type="button"
+              onClick={() => setEduStrategy('keep')}
+              className={`rounded-lg px-2.5 py-1 text-xs font-bold transition-colors ${
+                eduStrategy === 'keep'
+                  ? 'bg-brand-600 text-white'
+                  : 'border border-line bg-surface text-muted hover:text-ink'
+              }`}
+            >
+              Zachowaj obecne
+            </button>
+          </div>
+        </div>
+
+        {(parsedData.education || []).length === 0 ? (
+          <p className="text-xs text-muted">
+            W dokumencie nie wykryto sekcji wykształcenia. Możesz uzupełnić ją ręcznie w Master Vault.
+          </p>
+        ) : (
+          <div className="space-y-2">
+            {(parsedData.education || []).map((edu, idx) => (
+              <div
+                key={idx}
+                className="flex items-center justify-between rounded-xl border border-line bg-surface p-3 text-xs"
+              >
+                <div>
+                  <p className="font-bold text-ink">
+                    {edu.degree || 'Kierunek nieokreślony'}
+                    {edu.institution && <span className="text-brand-fg"> — {edu.institution}</span>}
+                  </p>
+                  <p className="font-mono text-[11px] text-muted">
+                    {edu.startDate || '—'} – {edu.endDate || '—'}
+                  </p>
+                </div>
+                <span className="rounded-md bg-brand-50 px-2 py-0.5 font-mono text-[10px] font-bold text-brand-fg">
+                  Sparsowane
+                </span>
+              </div>
+            ))}
+          </div>
+        )}
+      </Card>
+
       {/* Global Actions Footer */}
       <div className="flex flex-col-reverse gap-3 sm:flex-row sm:items-center sm:justify-between border-t border-line pt-4">
         <Button variant="ghost" size="md" onClick={onCancel}>
@@ -297,7 +382,14 @@ export const DiffView: React.FC<DiffViewProps> = ({
             variant="primary"
             size="md"
             icon={Check}
-            onClick={() => onApplyMerge('merge')}
+            onClick={() =>
+              onApplyMerge({
+                personal: personalStrategy,
+                skills: skillsStrategy,
+                experience: expStrategy,
+                education: eduStrategy,
+              })
+            }
           >
             Zastosuj i Scal do Master Vault
           </Button>

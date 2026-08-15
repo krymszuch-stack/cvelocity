@@ -18,6 +18,8 @@ import {
   AtsCheckResult,
   JobOffer,
 } from '../../types';
+import { ParsedJobDescription } from '../../types/api';
+import { parseJobDescriptionLocal } from '../../lib/jdParser';
 import { JDInputModes } from './JDInputModes';
 import { JobBoard } from './JobBoard';
 import { RealtimeLivePreview } from './RealtimeLivePreview';
@@ -68,6 +70,8 @@ export const JobMatcher: React.FC<JobMatcherProps> = ({
   const [tailoredResume, setTailoredResume] = useState<TailoredResume | null>(null);
   const [coverLetter, setCoverLetter] = useState<CoverLetter | null>(null);
   const [atsResult, setAtsResult] = useState<AtsCheckResult | null>(null);
+  const [isFetchingUrl, setIsFetchingUrl] = useState(false);
+  const [urlError, setUrlError] = useState<string | null>(null);
   const [isTailoring, setIsTailoring] = useState(false);
 
   const handleSearchLive = (params: typeof searchParams) => {
@@ -132,41 +136,79 @@ export const JobMatcher: React.FC<JobMatcherProps> = ({
   const handleMatchManual = (manualOffer: Partial<JobOffer>) => {
     const job: JobOffer = {
       id: manualOffer.id || `manual-${Date.now()}`,
-      title: manualOffer.title || 'Inżynier Oprogramowania',
-      company: manualOffer.company || 'Firma Rekrutująca',
-      salary: manualOffer.salary || 'Widełki do negocjacji',
-      location: manualOffer.location || 'Warszawa',
+      title: manualOffer.title || '',
+      company: manualOffer.company || '',
+      salary: manualOffer.salary || '',
+      location: manualOffer.location || '',
       description: manualOffer.description || '',
-      requirements: manualOffer.requirements || ['React', 'TypeScript'],
-      remote: manualOffer.remote ?? true,
+      requirements: manualOffer.requirements || [],
+      remote: manualOffer.remote ?? false,
       portal: 'Manual',
-      techStack: manualOffer.requirements || ['React', 'TypeScript', 'Node.js'],
+      techStack: manualOffer.requirements || [],
     };
     handleMatchJob(job);
   };
 
-  const handleMatchUrl = (url: string) => {
-    const job: JobOffer = {
-      id: `url-${Date.now()}`,
-      title: 'Stanowisko z Linku URL',
-      company: 'Firma Partnerska',
-      salary: '22 000 - 28 000 PLN netto B2B',
-      location: 'Polska / Zdalnie',
-      description: `Pobrana treść oferty z adresu: ${url}`,
-      requirements: ['TypeScript', 'Cloud', 'React'],
-      remote: true,
-      portal: 'URL Ingestion',
-      url,
-      techStack: ['TypeScript', 'Cloud Architecture', 'React'],
-    };
-    handleMatchJob(job);
+  const handleMatchUrl = async (url: string) => {
+    setUrlError(null);
+    setIsFetchingUrl(true);
+
+    try {
+      const fetchResponse = await fetch('/api/fetch-jd-url', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ url }),
+      });
+      const fetched = await fetchResponse.json();
+
+      if (!fetchResponse.ok || !fetched.success) {
+        setUrlError(fetched.error || 'Nie udało się pobrać oferty z podanego adresu URL.');
+        return;
+      }
+
+      // Structure the scraped text via the AI parser, falling back to the local heuristic.
+      let parsed: Partial<ParsedJobDescription> = {};
+      try {
+        const parseResponse = await fetch('/api/parse-jd', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ rawJdText: fetched.descriptionRaw }),
+        });
+        const parseData = await parseResponse.json();
+        parsed = parseData.success && parseData.parsedJd
+          ? parseData.parsedJd
+          : parseJobDescriptionLocal(fetched.descriptionRaw);
+      } catch {
+        parsed = parseJobDescriptionLocal(fetched.descriptionRaw);
+      }
+
+      const job: JobOffer = {
+        id: `url-${Date.now()}`,
+        title: parsed.title || fetched.title || 'Oferta z adresu URL',
+        company: parsed.company || fetched.company || '',
+        salary: parsed.salary || '',
+        location: '',
+        description: fetched.descriptionRaw,
+        requirements: parsed.requirements || [],
+        remote: false,
+        portal: 'URL',
+        url,
+        techStack: parsed.techStack || [],
+      };
+      handleMatchJob(job);
+    } catch (err) {
+      console.error('Błąd pobierania oferty z URL:', err);
+      setUrlError('Błąd połączenia podczas pobierania oferty. Spróbuj wkleić treść ogłoszenia ręcznie.');
+    } finally {
+      setIsFetchingUrl(false);
+    }
   };
 
   return (
     <div className={`space-y-6 ${className}`}>
       <PageHeader
-        title="Agregator Ofert & Symulator ATS"
-        description="Wyszukuj oferty z czołowych polskich portali IT lub wklej dowolny link. Silnik CVELOCITY weryfikuje Twoje CV przeciwko algorytmom ATS i generuje spersonalizowane dokumenty aplikacyjne bez zużywania zbędnych tokenów AI."
+        title="Dopasowanie Ofert & Symulator ATS"
+        description="Wklej link do oferty lub jej treść — silnik CVELOCITY zweryfikuje Twoje CV przeciwko algorytmom ATS i wygeneruje spersonalizowane dokumenty aplikacyjne. Lista poniżej zawiera oferty przykładowe (dane demonstracyjne), a nie wyniki wyszukiwania na żywo."
         badge="Zero-Token Slot Engine"
         actions={
           <div className="flex items-center gap-2">
@@ -188,6 +230,8 @@ export const JobMatcher: React.FC<JobMatcherProps> = ({
         onMatchManual={handleMatchManual}
         onMatchUrl={handleMatchUrl}
         isSearching={isLoading}
+        isFetchingUrl={isFetchingUrl}
+        urlError={urlError}
       />
 
       {/* Job Board with Spotlight Cards */}

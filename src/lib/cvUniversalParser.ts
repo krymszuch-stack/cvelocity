@@ -1,6 +1,17 @@
-import { MasterVault, WorkExperience, Education, Certification } from '../types';
+import { WorkExperience, Education, Certification } from '../types';
 import { sanitizeTextInput } from './securityGuardrails';
 import * as mammoth from 'mammoth';
+
+/**
+ * PDF.js is loaded on demand: importing it at module scope pulls in browser-only globals
+ * (DOMMatrix) that break Node-based tests, and keeps the large library out of the initial bundle.
+ */
+async function loadPdfJs() {
+  const pdfjsLib = await import('pdfjs-dist');
+  const workerUrl = (await import('pdfjs-dist/build/pdf.worker.min.mjs?url')).default;
+  pdfjsLib.GlobalWorkerOptions.workerSrc = workerUrl;
+  return pdfjsLib;
+}
 
 export interface ParsedCVResult {
   personalInfo: {
@@ -64,27 +75,24 @@ export async function extractTextFromAnyFile(file: File): Promise<{ text: string
 
   // 5. PDF Format
   if (fileName.endsWith('.pdf')) {
-    try {
-      if ((window as any).pdfjsLib) {
-        const arrayBuffer = await file.arrayBuffer();
-        const pdf = await (window as any).pdfjsLib.getDocument({ data: arrayBuffer }).promise;
-        let pdfText = '';
-        for (let i = 1; i <= pdf.numPages; i++) {
-          const page = await pdf.getPage(i);
-          const textContent = await page.getTextContent();
-          const pageItems = textContent.items.map((item: any) => item.str).join(' ');
-          pdfText += pageItems + '\n';
-        }
-        if (pdfText.trim().length > 20) {
-          return { text: pdfText, format: 'PDF' };
-        }
-      }
-    } catch (pdfErr) {
-      console.warn('PDF.js extraction fallback to raw text:', pdfErr);
+    const pdfjsLib = await loadPdfJs();
+    const arrayBuffer = await file.arrayBuffer();
+    const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+    let pdfText = '';
+    for (let i = 1; i <= pdf.numPages; i++) {
+      const page = await pdf.getPage(i);
+      const textContent = await page.getTextContent();
+      const pageItems = textContent.items
+        .map((item) => ('str' in item ? item.str : ''))
+        .join(' ');
+      pdfText += pageItems + '\n';
     }
-    const rawPdfText = await file.text();
-    const cleanedPdfText = rawPdfText.replace(/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F-\x9F]/g, ' ');
-    return { text: cleanedPdfText, format: 'PDF (Fallback)' };
+    if (pdfText.trim().length < 20) {
+      throw new Error(
+        'Nie udało się odczytać tekstu z tego pliku PDF. Prawdopodobnie jest to skan lub dokument zabezpieczony — wklej treść CV ręcznie.'
+      );
+    }
+    return { text: pdfText, format: 'PDF' };
   }
 
   // 6. Plain Text (.txt, .md, .text)
@@ -105,8 +113,145 @@ function stripRtfControlWords(rtf: string): string {
     .trim();
 }
 
+const SECTION_PATTERNS: Record<string, RegExp> = {
+  experience: /^\s*(doświadczenie(\s+zawodowe)?|praktyka\s+zawodowa|work\s+experience|employment(\s+history)?|professional\s+experience)\s*:?\s*$/i,
+  education: /^\s*(wykształcenie|edukacja|education|academic\s+background)\s*:?\s*$/i,
+  certifications: /^\s*(certyfikaty|certyfikacje|uprawnienia|kursy|szkolenia|certifications?|licenses?)\s*:?\s*$/i,
+  skills: /^\s*(umiejętności|kompetencje|kwalifikacje|skills|technologie)\s*:?\s*$/i,
+  softSkills: /^\s*(umiejętności\s+miękkie|kompetencje\s+miękkie|soft\s+skills)\s*:?\s*$/i,
+  summary: /^\s*(podsumowanie|o\s+mnie|o\s+sobie|profil(\s+zawodowy)?|summary|about)\s*:?\s*$/i,
+};
+
 /**
- * Structural Semantic Parser - Converts unformatted text into a structured MasterVault
+ * Splits CV text into labelled sections. Lines before any recognised heading land in `header`.
+ */
+function splitIntoSections(lines: string[]): Record<string, string[]> {
+  const sections: Record<string, string[]> = { header: [] };
+  let current = 'header';
+
+  for (const line of lines) {
+    const matched = Object.entries(SECTION_PATTERNS).find(([, pattern]) => pattern.test(line));
+    if (matched) {
+      current = matched[0];
+      if (!sections[current]) sections[current] = [];
+      continue;
+    }
+    if (!sections[current]) sections[current] = [];
+    sections[current].push(line);
+  }
+
+  return sections;
+}
+
+const DATE_RANGE = /((?:0?[1-9]|1[0-2])[./-])?((?:19|20)\d{2})\s*(?:[-–—]|do|to)\s*((?:(?:0?[1-9]|1[0-2])[./-])?(?:19|20)\d{2}|obecnie|present|nadal|teraz)/i;
+
+function normaliseDate(raw: string | undefined): string {
+  if (!raw) return '';
+  const trimmed = raw.trim();
+  if (/^(obecnie|present|nadal|teraz)$/i.test(trimmed)) return 'Obecnie';
+  return trimmed.replace(/[./]/g, '-');
+}
+
+/**
+ * Parses entries that follow the common "Employer — Role, 2020 - 2023" shape.
+ * Returns an empty array when nothing matches — it never invents an entry.
+ */
+function parseExperienceEntries(sectionLines: string[]): WorkExperience[] {
+  const entries: WorkExperience[] = [];
+
+  const ENTRY_SEPARATOR = /\s+[-–—]\s+|\s*\|\s*/;
+
+  sectionLines.forEach((line, index) => {
+    const dateMatch = line.match(DATE_RANGE);
+    // An entry header carries either a date range or an "Employer — Role" separator.
+    if (!dateMatch && !ENTRY_SEPARATOR.test(line)) return;
+
+    const withoutDates = line.replace(DATE_RANGE, '').replace(/[|(),;]+\s*$/, '').trim();
+    const parts = withoutDates.split(ENTRY_SEPARATOR).map((p) => p.trim()).filter(Boolean);
+    if (parts.length === 0) return;
+
+    const startDate = dateMatch ? normaliseDate(`${dateMatch[1] ?? ''}${dateMatch[2] ?? ''}`) : '';
+    const endDate = dateMatch ? normaliseDate(dateMatch[3]) : '';
+    const followUp = sectionLines[index + 1];
+    const isFollowUpAnEntry = followUp && (DATE_RANGE.test(followUp) || ENTRY_SEPARATOR.test(followUp));
+
+    entries.push({
+      id: `exp_parsed_${Date.now()}_${entries.length}`,
+      company: parts[0],
+      role: parts[1] ?? '',
+      location: '',
+      startDate,
+      endDate,
+      isCurrent: endDate === 'Obecnie',
+      description: followUp && !isFollowUpAnEntry ? followUp : undefined,
+      highlights: [],
+    });
+  });
+
+  return entries;
+}
+
+/**
+ * Parses education entries. Returns an empty array when the section is absent or unparseable.
+ */
+function parseEducationEntries(sectionLines: string[]): Education[] {
+  const entries: Education[] = [];
+
+  sectionLines.forEach((line) => {
+    const dateMatch = line.match(DATE_RANGE);
+    const withoutDates = line.replace(DATE_RANGE, '').replace(/[|(),;]+\s*$/, '').trim();
+    const parts = withoutDates.split(/\s+[-–—]\s+|\s*\|\s*|\s*,\s*/).map((p) => p.trim()).filter(Boolean);
+    if (parts.length === 0) return;
+
+    entries.push({
+      id: `edu_parsed_${Date.now()}_${entries.length}`,
+      institution: parts[0],
+      degree: parts[1] ?? '',
+      fieldOfStudy: parts[2] ?? '',
+      startDate: dateMatch ? normaliseDate(`${dateMatch[1] ?? ''}${dateMatch[2] ?? ''}`) : '',
+      endDate: dateMatch ? normaliseDate(dateMatch[3]) : '',
+    });
+  });
+
+  return entries;
+}
+
+/**
+ * Parses certifications. Returns an empty array when none are present in the source document.
+ */
+function parseCertificationEntries(sectionLines: string[]): Certification[] {
+  return sectionLines
+    .map((line) => line.replace(/^[-•*•]\s*/, '').trim())
+    .filter((line) => line.length > 2)
+    .map((line, index) => {
+      const yearMatch = line.match(/(19|20)\d{2}/);
+      const withoutYear = line.replace(/[(,|-]?\s*(19|20)\d{2}\s*[),|]?/, '').trim();
+      const parts = withoutYear.split(/\s+[-–—]\s+|\s*\|\s*|\s*,\s*/).map((p) => p.trim()).filter(Boolean);
+
+      return {
+        id: `cert_parsed_${Date.now()}_${index}`,
+        name: parts[0] ?? withoutYear,
+        issuer: parts[1] ?? '',
+        date: yearMatch ? yearMatch[0] : undefined,
+      };
+    });
+}
+
+/**
+ * Splits a skills section into individual entries (comma, bullet or slash separated).
+ */
+function parseSkillList(sectionLines: string[]): string[] {
+  return sectionLines
+    .flatMap((line) => line.replace(/^[-•*•]\s*/, '').split(/[,;/|]/))
+    .map((entry) => entry.trim())
+    .filter((entry) => entry.length > 1 && entry.length < 40);
+}
+
+/**
+ * Structural Semantic Parser - Converts unformatted text into a structured MasterVault.
+ *
+ * Contract: every field is derived from the source document. When a section is absent or
+ * cannot be parsed the field stays empty — this parser must never invent placeholder content.
  */
 export function parseTextToMasterVault(text: string, format: string = 'TXT'): ParsedCVResult {
   const clean = sanitizeTextInput(text);
@@ -132,7 +277,7 @@ export function parseTextToMasterVault(text: string, format: string = 'TXT'): Pa
   // 4. Extract Title
   const titleMatch = clean.match(/(?:stanowisko|tytuł|specjalność|rola):\s*([^\n]+)/i) ||
     clean.match(/\b(Senior|Lead|Junior|Mid|Specjalista|Inżynier|Developer|Manager|Koordynator|Monter|Serwisant)\b[^\n]+/i);
-  const title = titleMatch ? titleMatch[0].trim() : 'Specjalista';
+  const title = titleMatch ? titleMatch[0].trim() : '';
 
   // 5. Extract Hard Skills & Tools (Regex Keyword Matching)
   const hardSkills: string[] = [];
@@ -152,88 +297,36 @@ export function parseTextToMasterVault(text: string, format: string = 'TXT'): Pa
 
   // 6. Extract Summary
   const summaryMatch = clean.match(/(?:podsumowanie|o sobie|profil zawodowy|summary):\s*([^\n]+(?:\n[^\n]+){1,3})/i);
-  const summary = summaryMatch ? summaryMatch[1].trim() : `Doświadczony ${title} posiadający kompetencje w obszarze ${hardSkills.slice(0, 3).join(', ')}.`;
+  const sections = splitIntoSections(lines);
+  const summary = summaryMatch
+    ? summaryMatch[1].trim()
+    : (sections.summary ?? []).join(' ').trim();
 
-  // 7. Work History Parsing
-  const history: WorkExperience[] = [];
-  const expBlocks = clean.split(/(?=doświadczenie|doświadczenie zawodowe|work experience|employment)/i);
+  // 7. Section-driven extraction — absent sections stay empty rather than being invented
+  const history = parseExperienceEntries(sections.experience ?? []);
+  const education = parseEducationEntries(sections.education ?? []);
+  const certifications = parseCertificationEntries(sections.certifications ?? []);
+  const softSkills = parseSkillList(sections.softSkills ?? []);
 
-  if (expBlocks.length > 1) {
-    const expText = expBlocks[1];
-    const expLines = expText.split('\n').filter((l) => l.length > 5);
-
-    history.push({
-      id: `exp_parsed_${Date.now()}_1`,
-      company: expLines[1] || 'Firma Specjalistyczna',
-      role: title,
-      location: 'Polska',
-      startDate: '2021-01',
-      endDate: 'Obecnie',
-      isCurrent: true,
-      description: expLines.slice(2, 6).join(' '),
-      highlights: [{
-        id: `hl_1`,
-        text: expLines[2] || 'Realizacja powierzonych zadań zawodowych',
-        action: 'Realizacja',
-        target: 'zadań',
-        tool: 'Systemy IT',
-        metric: '100%',
-        keywords: []
-      }],
-    });
-  } else {
-    history.push({
-      id: `exp_parsed_${Date.now()}_1`,
-      company: 'Przedsiębiorstwo Operacyjne',
-      role: title,
-      location: 'Polska',
-      startDate: '2022-01',
-      endDate: 'Obecnie',
-      isCurrent: true,
-      description: 'Prowadzenie bieżących działań operacyjnych i technicznych.',
-      highlights: [{
-        id: `hl_2`,
-        text: 'Optymalizacja procesów i obsługa zgłoszeń.',
-        action: 'Optymalizacja',
-        target: 'procesów',
-        tool: 'Helpdesk',
-        metric: '100%',
-        keywords: []
-      }],
-    });
-  }
+  // 8. Extract Location (only when explicitly labelled)
+  const locationMatch = clean.match(/(?:lokalizacja|miejscowość|adres|location):\s*([^\n]+)/i);
+  const location = locationMatch ? locationMatch[1].trim() : '';
 
   return {
     personalInfo: {
-      fullName: fullName || 'Użytkownik CV',
+      fullName,
       title,
       email,
       phone,
-      location: 'Polska',
+      location,
       summary,
     },
-    hardSkills: Array.from(new Set(hardSkills)),
-    softSkills: ['Komunikatywność', 'Praca w Zespole', 'Rozwiązywanie Problemów', 'Zarządzanie Czasem'],
+    hardSkills: Array.from(new Set([...hardSkills, ...parseSkillList(sections.skills ?? [])])),
+    softSkills,
     toolsAndTech: Array.from(new Set(toolsAndTech)),
-    certifications: [
-      {
-        id: `cert_parsed_${Date.now()}`,
-        name: `Certyfikat Zawodowy - ${title}`,
-        issuer: 'Jednostka Certyfikująca',
-        date: '2023',
-      },
-    ],
+    certifications,
     history,
-    education: [
-      {
-        id: `edu_parsed_${Date.now()}`,
-        institution: 'Uczelnia / Szkoła Techniczna',
-        degree: 'Inżynier / Technik',
-        fieldOfStudy: title,
-        startDate: '2017',
-        endDate: '2021',
-      },
-    ],
+    education,
     rawText: clean,
     detectedFormat: format,
   };

@@ -36,19 +36,15 @@ Skopiuj plik `.env.example` do `.env` i uzupełnij klucze API:
 cp .env.example .env
 ```
 
-Zawartość pliku `.env`:
+Zawartość pliku `.env` — pełna lista zmiennych znajduje się w `.env.example`:
 ```env
-# Klucz API Google Gemini (Wymagany)
+# Klucz API Google Gemini (Wymagany — bez niego wszystkie funkcje AI zwracają błąd)
 GEMINI_API_KEY=twoj_klucz_gemini
 
-# Google OAuth (Opcjonalnie)
-VITE_GOOGLE_CLIENT_ID=twoj_google_client_id
-GOOGLE_CLIENT_SECRET=twoj_google_client_secret
-
-# Azure Entra ID / Microsoft OAuth (Opcjonalnie)
-VITE_AZURE_CLIENT_ID=twoj_azure_client_id
-VITE_AZURE_TENANT_ID=common
-AZURE_CLIENT_SECRET=twoj_azure_client_secret
+# Logowanie Google przez Firebase Authentication (Opcjonalnie)
+VITE_FIREBASE_API_KEY=twoj_firebase_api_key
+VITE_FIREBASE_AUTH_DOMAIN=twoj-projekt.firebaseapp.com
+VITE_FIREBASE_PROJECT_ID=twoj-projekt
 ```
 
 ---
@@ -75,14 +71,14 @@ AZURE_CLIENT_SECRET=twoj_azure_client_secret
 
 ## 🔑 Integracja OAuth & Logowanie
 
-W aplikacji skonfigurowano 3 równoległe ścieżki autentykacji:
+W aplikacji dostępne są 2 ścieżki autentykacji:
 
 1. **Rejestracja/Logowanie E-mail & Hasło**:
-   - Wykorzystuje natywne szyfrowanie **AES-256** (CryptoJS) dla danych użytkownika. Każdy nowy użytkownik startuje z czystą bazą (bez placeholderów).
-2. **Google OAuth 2.0**:
-   - Integracja z Google Identity Services. Token ID jest weryfikowany backendowo.
-3. **Microsoft Azure Entra ID**:
-   - Integracja z MSAL (`@azure/msal-browser` i `@azure/msal-node`).
+   - Konta przechowywane lokalnie w przeglądarce (`localStorage`), hasła hashowane PBKDF2 (CryptoJS). Każdy nowy użytkownik startuje z czystym profilem, bez danych przykładowych.
+2. **Google OAuth 2.0 (Firebase Authentication)**:
+   - Wymaga skonfigurowania zmiennych `VITE_FIREBASE_*`. Bez nich dostępne jest wyłącznie logowanie e-mail/hasło.
+
+> **Uwaga:** obecna warstwa uwierzytelniania działa w całości po stronie przeglądarki i nie zapewnia synchronizacji między urządzeniami ani weryfikacji serwerowej. Migracja na Supabase Auth (realne sesje serwerowe, baza Postgres) jest w trakcie — patrz plan przebudowy.
 
 ---
 
