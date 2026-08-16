@@ -8,12 +8,17 @@ const TOKENS_PER_BULLET = 180;
 // Estimated cost per token (Gemini API ~ $0.00015 / 1k tokens)
 const COST_PER_TOKEN = 0.00000015;
 
+/**
+ * A fresh install has saved nothing yet. These counters previously started at
+ * invented values (14 200 tokens, 28 hits), so the figures shown to users — and
+ * any pricing decision based on them — were fiction.
+ */
 export const INITIAL_TOKEN_STATS: TokenStats = {
-  totalTokensSaved: 14200,
-  estimatedCostSavedUSD: 0.00213,
-  localSlotHits: 28,
-  cacheHits: 12,
-  geminiDeltaCalls: 4,
+  totalTokensSaved: 0,
+  estimatedCostSavedUSD: 0,
+  localSlotHits: 0,
+  cacheHits: 0,
+  geminiDeltaCalls: 0,
 };
 
 /**

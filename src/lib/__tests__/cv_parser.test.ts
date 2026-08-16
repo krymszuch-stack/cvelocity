@@ -26,6 +26,27 @@ describe('CV Universal Multi-Format Parser Suite', () => {
     expect(parsed.history.length).toBeGreaterThan(0);
   });
 
+  it('nie zniekształca apostrofów w nazwiskach', () => {
+    // Poprzedni sanitizer robił escapowanie SQL (' → '') w aplikacji bez SQL,
+    // przez co O'Brien zmieniało się w O''Brien i narastało przy każdym zapisie.
+    const parsed = parseTextToMasterVault(
+      "Sean O'Brien\nEmail: sean@example.com\nStanowisko: Developer",
+      'TXT'
+    );
+
+    expect(parsed.personalInfo.fullName).toBe("Sean O'Brien");
+    expect(parsed.rawText).not.toContain("''");
+  });
+
+  it('zachowuje polskie znaki diakrytyczne', () => {
+    const parsed = parseTextToMasterVault(
+      'Łukasz Wiśniewski\nStanowisko: Główny Inżynier\nEmail: l.w@example.pl',
+      'TXT'
+    );
+
+    expect(parsed.personalInfo.fullName).toBe('Łukasz Wiśniewski');
+  });
+
   it('nie fabrykuje wykształcenia, certyfikatów ani umiejętności miękkich, gdy CV ich nie zawiera', () => {
     const cvWithoutThoseSections = `
     Anna Zielińska

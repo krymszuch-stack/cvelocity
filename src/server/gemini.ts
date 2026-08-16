@@ -1,22 +1,17 @@
-import { GoogleGenAI, Type } from "@google/genai";
+import { Type } from "@google/genai";
+import {
+  getGeminiClient,
+  getGeminiModel,
+  parseModelJson,
+  callWithRetry,
+  truncateForModel,
+  MAX_OUTPUT_TOKENS,
+} from "./geminiClient";
 import { MasterVault } from "../types";
 import { UNIVERSAL_CV_REFRAMING_SYSTEM_PROMPT } from "../data/universalCvReframingPrompt";
 import { ATS_CV_REFRAMING_SYSTEM_PROMPT } from "../data/atsCvReframingPrompt";
 
-const getGeminiClient = () => {
-  const apiKey = process.env.GEMINI_API_KEY;
-  if (!apiKey) {
-    throw new Error("GEMINI_API_KEY environment variable is not configured.");
-  }
-  return new GoogleGenAI({
-    apiKey,
-    httpOptions: {
-      headers: {
-        'User-Agent': 'aistudio-build',
-      },
-    },
-  });
-};
+
 
 /**
  * Server-side function: Parse raw resume/bio text into normalized Master Vault structure.
@@ -49,14 +44,15 @@ BARDZO WAŻNE WSKAZÓWKI PARSERA DLA TEKSTÓW Z LINKEDIN:
 
 Tekst do przeanalizowania:
 """
-${rawText}
+${truncateForModel(rawText)}
 """
 `;
 
-  const response = await ai.models.generateContent({
-    model: "gemini-3.6-flash",
+  const response = await callWithRetry(() => ai.models.generateContent({
+    model: getGeminiModel(),
     contents: prompt,
     config: {
+      maxOutputTokens: MAX_OUTPUT_TOKENS,
       responseMimeType: "application/json",
       responseSchema: {
         type: Type.OBJECT,
@@ -160,26 +156,30 @@ ${rawText}
         required: ["personalInfo", "skillsMatrix", "history", "education", "projects"],
       },
     },
-  });
+  }), "parse-cv");
 
-  const jsonStr = response.text || "{}";
+  // On malformed output return an empty vault rather than logging the payload:
+  // it is the user's CV, and server logs are the wrong place for it.
   let parsed: any = {};
   try {
-    parsed = JSON.parse(jsonStr);
-  } catch (e) {
-    console.error("Failed to parse Gemini output JSON:", jsonStr);
-    parsed = {};
+    parsed = JSON.parse(response.text || "{}");
+  } catch {
+    console.error(
+      `[gemini] Niepoprawny JSON przy parsowaniu CV, długość odpowiedzi: ${response.text?.length ?? 0}`
+    );
   }
 
-  // Assign IDs and defaults to ensure type safety
+  // Assign stable ids and coerce shapes. Missing values stay empty — filling a
+  // blank employer or degree with a plausible label writes fiction into the
+  // user's CV, which they may not notice before sending it to a recruiter.
   if (parsed.history && Array.isArray(parsed.history)) {
     parsed.history = parsed.history.map((exp: any, idx: number) => ({
       id: exp.id || `exp_parsed_${Date.now()}_${idx}`,
-      company: exp.company || 'Firma z dokumentu/LinkedIn',
-      role: exp.role || 'Specjalista',
+      company: exp.company || '',
+      role: exp.role || '',
       location: exp.location || '',
       startDate: exp.startDate || '',
-      endDate: exp.endDate || 'Obecnie',
+      endDate: exp.endDate || '',
       isCurrent: typeof exp.isCurrent === 'boolean' ? exp.isCurrent : (exp.endDate === 'Obecnie' || !exp.endDate),
       highlights: (exp.highlights || []).map((h: any, hIdx: number) => ({
         id: h.id || `h_parsed_${Date.now()}_${idx}_${hIdx}`,
@@ -196,9 +196,9 @@ ${rawText}
   if (parsed.education && Array.isArray(parsed.education)) {
     parsed.education = parsed.education.map((edu: any, idx: number) => ({
       id: edu.id || `edu_parsed_${Date.now()}_${idx}`,
-      institution: edu.institution || 'Uczelnia / Szkoła Wyższa',
-      degree: edu.degree || 'Dyplom',
-      fieldOfStudy: edu.fieldOfStudy || 'Kierunek Studiów',
+      institution: edu.institution || '',
+      degree: edu.degree || '',
+      fieldOfStudy: edu.fieldOfStudy || '',
       startDate: edu.startDate || '',
       endDate: edu.endDate || '',
       description: edu.description || '',
@@ -208,7 +208,7 @@ ${rawText}
   if (parsed.projects && Array.isArray(parsed.projects)) {
     parsed.projects = parsed.projects.map((proj: any, idx: number) => ({
       id: proj.id || `proj_parsed_${Date.now()}_${idx}`,
-      name: proj.name || 'Projekt',
+      name: proj.name || '',
       role: proj.role || '',
       description: proj.description || '',
       techStack: Array.isArray(proj.techStack) ? proj.techStack : [],
@@ -220,7 +220,7 @@ ${rawText}
   if (parsed.skillsMatrix?.certifications && Array.isArray(parsed.skillsMatrix.certifications)) {
     parsed.skillsMatrix.certifications = parsed.skillsMatrix.certifications.map((c: any, idx: number) => ({
       id: c.id || `cert_parsed_${Date.now()}_${idx}`,
-      name: c.name || 'Certyfikat',
+      name: c.name || '',
       issuer: c.issuer || '',
       date: c.date || '',
       url: c.url || '',
@@ -259,10 +259,11 @@ INSTRUKCJA (KROK 5 - REFRAMING FAZ):
 4. Zwróć obiekt JSON z polem "optimizedText" oraz "keywordsMatched".
 `;
 
-  const response = await ai.models.generateContent({
-    model: "gemini-3.6-flash",
+  const response = await callWithRetry(() => ai.models.generateContent({
+    model: getGeminiModel(),
     contents: prompt,
     config: {
+      maxOutputTokens: MAX_OUTPUT_TOKENS,
       responseMimeType: "application/json",
       responseSchema: {
         type: Type.OBJECT,
@@ -273,10 +274,9 @@ INSTRUKCJA (KROK 5 - REFRAMING FAZ):
         required: ["optimizedText", "keywordsMatched"],
       },
     },
-  });
+  }), "optimize-delta");
 
-  const jsonStr = response.text || "{}";
-  return JSON.parse(jsonStr);
+  return parseModelJson(response.text, "structured-response");
 }
 
 /**
@@ -313,14 +313,15 @@ BEZWZGLĘDNE SELEKCJONOWANIE I FILTROWANIE NOISE/BLUFU:
 
 Treść Ogłoszenia do Przeanalizowania:
 """
-${rawJdText}
+${truncateForModel(rawJdText)}
 """
 `;
 
-  const response = await ai.models.generateContent({
-    model: "gemini-3.6-flash",
+  const response = await callWithRetry(() => ai.models.generateContent({
+    model: getGeminiModel(),
     contents: prompt,
     config: {
+      maxOutputTokens: MAX_OUTPUT_TOKENS,
       responseMimeType: "application/json",
       responseSchema: {
         type: Type.OBJECT,
@@ -366,10 +367,9 @@ ${rawJdText}
         ],
       },
     },
-  });
+  }), "parse-jd");
 
-  const jsonStr = response.text || "{}";
-  return JSON.parse(jsonStr);
+  return parseModelJson(response.text, "structured-response");
 }
 
 /**
@@ -409,10 +409,11 @@ Zwróć odpowiedź WYŁĄCZNIE jako obiekt JSON z polami:
 - actionItems: Tablica 3 konkretnych kroków, które użytkownik powinien teraz wykonać w swoim CV.
 `;
 
-  const response = await ai.models.generateContent({
-    model: "gemini-3.6-flash",
+  const response = await callWithRetry(() => ai.models.generateContent({
+    model: getGeminiModel(),
     contents: prompt,
     config: {
+      maxOutputTokens: MAX_OUTPUT_TOKENS,
       responseMimeType: "application/json",
       responseSchema: {
         type: Type.OBJECT,
@@ -425,10 +426,9 @@ Zwróć odpowiedź WYŁĄCZNIE jako obiekt JSON z polami:
         required: ["explanation", "tips", "actionItems"],
       },
     },
-  });
+  }), "advisor");
 
-  const jsonStr = response.text || "{}";
-  return JSON.parse(jsonStr);
+  return parseModelJson(response.text, "structured-response");
 }
 
 /**
@@ -464,8 +464,8 @@ Dane Kandydata z CV (MasterVault):
 - Tytuł/Stanowisko: ${vault.personalInfo?.title || ''}
 - Podsumowanie: ${vault.personalInfo?.summary || ''}
 - Umiejętności: ${[...(vault.skillsMatrix?.hardSkills || []), ...(vault.skillsMatrix?.toolsAndTech || [])].join(', ')}
-- Doświadczenie zawodowe: ${JSON.stringify(vault.history || [])}
-- Projekty: ${JSON.stringify(vault.projects || [])}
+- Doświadczenie zawodowe: ${truncateForModel(JSON.stringify(vault.history || []), 20_000)}
+- Projekty: ${truncateForModel(JSON.stringify(vault.projects || []), 8_000)}
 
 Treść Ogłoszenia o Pracę (${company}):
 """
@@ -475,10 +475,11 @@ ${jobDescription || 'Standardowe ogłoszenie o pracę na stanowisku ' + role}
 Zwróć odpowiedź WYŁĄCZNIE jako ustrukturyzowany obiekt JSON.
 `;
 
-  const response = await ai.models.generateContent({
-    model: "gemini-3.6-flash",
+  const response = await callWithRetry(() => ai.models.generateContent({
+    model: getGeminiModel(),
     contents: prompt,
     config: {
+      maxOutputTokens: MAX_OUTPUT_TOKENS,
       responseMimeType: "application/json",
       responseSchema: {
         type: Type.OBJECT,
@@ -491,10 +492,9 @@ Zwróć odpowiedź WYŁĄCZNIE jako ustrukturyzowany obiekt JSON.
         required: ["hook", "proofPoints", "callToAction", "fullText"],
       },
     },
-  });
+  }), "cover-letter");
 
-  const jsonStr = response.text || "{}";
-  const parsed = JSON.parse(jsonStr);
+  const parsed = parseModelJson<any>(response.text, "cover-letter");
 
   return {
     targetJobTitle: role,

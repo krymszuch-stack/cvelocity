@@ -1,10 +1,10 @@
-name: SkillVault CI/CD Pipeline
+name: CVELOCITY CI
 
 on:
   push:
-    branches: [ main, master ]
+    branches: [main, master]
   pull_request:
-    branches: [ main, master ]
+    branches: [main, master]
 
 jobs:
   build-and-test:
@@ -12,7 +12,9 @@ jobs:
 
     strategy:
       matrix:
-        node-version: [20.x]
+        # Ta sama wersja co obraz produkcyjny (Dockerfile) i co środowisko,
+        # w którym weryfikowano przypinanie IP w safeFetch.
+        node-version: [22.x]
 
     steps:
       - name: Checkout Repository
@@ -27,10 +29,47 @@ jobs:
       - name: Install Dependencies
         run: npm ci
 
-      - name: Run Type Check (TypeScript)
+      - name: Type Check
         run: npm run lint
 
-      - name: Build SkillVault App & Server
+      - name: Unit Tests
+        run: npm test
+
+      - name: Build Client and Server
         run: npm run build
+
+      # Do tej pory CI budowało bundel serwera i nigdy nie próbowało go
+      # uruchomić. Przez to `import.meta.url` skompilowane do pustego obiektu
+      # (bundel CJS) przechodziło przez tsc, lint i wszystkie testy jednostkowe,
+      # a wywracało się dopiero przy starcie kontenera.
+      - name: Production Boot Smoke Test
         env:
           NODE_ENV: production
+          PORT: 8099
+          GEMINI_API_KEY: dummy-key-for-boot-test
+        run: |
+          npm start &
+          SERVER_PID=$!
+          for i in $(seq 1 20); do
+            if curl -sf -m 2 "http://localhost:8099/api/health" > /dev/null; then
+              break
+            fi
+            sleep 1
+          done
+
+          curl -sf -m 5 "http://localhost:8099/api/health" | tee /tmp/health.json
+          grep -q '"status":"ok"' /tmp/health.json
+
+          # Bundel serwera i jego source mapa leżą w dist/, frontend w dist/client/.
+          # Gdyby kiedyś znów trafiły do jednego katalogu, express.static wystawiłby
+          # kod serwerowy publicznie — ten test to wykryje.
+          if curl -sf -m 5 "http://localhost:8099/server.mjs.map" | grep -q "safeFetch"; then
+            echo "BŁĄD: source mapa serwera jest publicznie dostępna" >&2
+            kill $SERVER_PID
+            exit 1
+          fi
+
+          kill $SERVER_PID
+
+      - name: Build Container Image
+        run: docker build -t cvelocity-api:ci .

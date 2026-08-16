@@ -1,5 +1,5 @@
 import { WorkExperience, Education, Certification } from '../types';
-import { sanitizeTextInput } from './securityGuardrails';
+import { normalizeDocumentText } from './textNormalization';
 import * as mammoth from 'mammoth';
 
 /**
@@ -254,7 +254,7 @@ function parseSkillList(sectionLines: string[]): string[] {
  * cannot be parsed the field stays empty — this parser must never invent placeholder content.
  */
 export function parseTextToMasterVault(text: string, format: string = 'TXT'): ParsedCVResult {
-  const clean = sanitizeTextInput(text);
+  const clean = normalizeDocumentText(text);
   const lines = clean.split('\n').map((l) => l.trim()).filter((l) => l.length > 0);
 
   // 1. Extract Email

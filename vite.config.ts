@@ -11,6 +11,13 @@ export default defineConfig(() => {
         '@': path.resolve(__dirname, '.'),
       },
     },
+    build: {
+      // Frontend i bundel serwera muszą leżeć osobno. Wcześniej oba lądowały
+      // płasko w `dist/`, przez co `express.static` wystawiał publicznie
+      // `server.cjs` razem z jego source mapą.
+      outDir: 'dist/client',
+      emptyOutDir: true,
+    },
     test: {
       exclude: ['**/node_modules/**', '**/dist/**', 'semantic-work-graph/**'],
     },
