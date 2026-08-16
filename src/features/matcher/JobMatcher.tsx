@@ -18,7 +18,8 @@ import {
   AtsCheckResult,
   JobOffer,
 } from '../../types';
-import { ParsedJobDescription } from '../../types/api';
+import type { ParsedJobDescription } from '../../lib/jdParser';
+import { parseJobDescriptionResponse } from '../../lib/jdSchema';
 import { parseJobDescriptionLocal } from '../../lib/jdParser';
 import { JDInputModes } from './JDInputModes';
 import { JobBoard } from './JobBoard';
@@ -167,8 +168,11 @@ export const JobMatcher: React.FC<JobMatcherProps> = ({
         return;
       }
 
-      // Structure the scraped text via the AI parser, falling back to the local heuristic.
-      let parsed: Partial<ParsedJobDescription> = {};
+      // Structure the scraped text via the AI parser, falling back to the local
+      // heuristic. The response is validated rather than trusted: `res.json()` is
+      // `any`, so a shape mismatch would otherwise pass typecheck and leave every
+      // field undefined — throwing away a result we paid the model for.
+      let parsed: ParsedJobDescription;
       try {
         const parseResponse = await fetch('/api/parse-jd', {
           method: 'POST',
@@ -176,25 +180,25 @@ export const JobMatcher: React.FC<JobMatcherProps> = ({
           body: JSON.stringify({ rawJdText: fetched.descriptionRaw }),
         });
         const parseData = await parseResponse.json();
-        parsed = parseData.success && parseData.parsedJd
-          ? parseData.parsedJd
-          : parseJobDescriptionLocal(fetched.descriptionRaw);
+        parsed =
+          (parseData.success && parseJobDescriptionResponse(parseData.parsedJd)) ||
+          parseJobDescriptionLocal(fetched.descriptionRaw);
       } catch {
         parsed = parseJobDescriptionLocal(fetched.descriptionRaw);
       }
 
       const job: JobOffer = {
         id: `url-${Date.now()}`,
-        title: parsed.title || fetched.title || 'Oferta z adresu URL',
-        company: parsed.company || fetched.company || '',
-        salary: parsed.salary || '',
+        title: parsed.jobTitle || fetched.title || 'Oferta z adresu URL',
+        company: parsed.companyName || fetched.company || '',
+        salary: parsed.salaryRange || '',
         location: '',
         description: fetched.descriptionRaw,
-        requirements: parsed.requirements || [],
-        remote: false,
+        requirements: parsed.requiredHardSkills || [],
+        remote: parsed.workModel === 'REMOTE',
         portal: 'URL',
         url,
-        techStack: parsed.techStack || [],
+        techStack: parsed.toolsAndTech || [],
       };
       handleMatchJob(job);
     } catch (err) {

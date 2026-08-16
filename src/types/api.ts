@@ -26,17 +26,13 @@ export interface FetchJdUrlResponse {
   sourceUrl: string;
 }
 
-export interface ParsedJobDescription {
-  title: string;
-  company: string;
-  requirements: string[];
-  niceToHave: string[];
-  seniorityLevel: string;
-  techStack: string[];
-  languages: string[];
-  experienceYears?: number;
-  salary?: string;
-}
+/**
+ * The canonical shape lives in `src/lib/jdParser.ts` and is what both the Gemini
+ * response schema and the local fallback parser actually produce. A second,
+ * differently-named interface used to live here; anything typed against it read
+ * `undefined` from every field, silently discarding paid-for AI results.
+ */
+export type { ParsedJobDescription } from '../lib/jdParser';
 
 export interface DeltaOptimizeRequest {
   originalBullet: string;

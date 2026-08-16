@@ -170,18 +170,22 @@ export function parseJobDescriptionLocal(rawJdText: string, defaultTitle = 'Full
     ...rawWords,
   ])).filter((k) => !HR_AND_COMMON_STOP_WORDS.has(k));
 
+  // Every field below reflects what was actually found in the posting. Filling a
+  // blank with plausible defaults would make the ATS score measure the user's CV
+  // against requirements the employer never stated — a wrong answer presented
+  // with the same confidence as a right one.
   return {
     jobTitle,
-    companyName: 'Firma z ogłoszenia',
+    companyName: '',
     seniorityLevel,
-    requiredHardSkills: foundHard.length > 0 ? foundHard : ['TypeScript', 'React', 'Node.js'],
-    requiredSoftSkills: foundSoft.length > 0 ? foundSoft : ['Komunikatywność', 'Praca w zespole'],
-    toolsAndTech: foundTools.length > 0 ? foundTools : ['Git', 'Docker', 'Jira'],
-    languagesRequired: languages.length > 0 ? languages : ['Angielski (B2/C1)'],
+    requiredHardSkills: foundHard,
+    requiredSoftSkills: foundSoft,
+    toolsAndTech: foundTools,
+    languagesRequired: languages,
     coreResponsibilities: lines.slice(1, 6),
     keyKeywords: keywords.slice(0, 15),
-    benefits: benefits.length > 0 ? benefits : ['Prywatna Opieka Medyczna', 'Karta MultiSport', 'Budżet Szkoleniowy'],
-    perksAndPlusy: ['Elastyczny czas pracy', 'Nowoczesny sprzęt', 'Możliwość pracy zdalnej'],
+    benefits,
+    perksAndPlusy: [],
     mandatoryRequirements: mandatory,
     salaryRange: salaryRange || undefined,
     workModel,
@@ -296,7 +300,7 @@ export function analyzeJdMatchWithVault(parsedJd: ParsedJobDescription, vault: M
     missingSkills: Array.from(new Set(missingSkills)),
     recommendations,
     dealbreakerWarnings,
-    benefitsList: parsedJd.benefits || ['Prywatna Opieka Medyczna', 'Karta MultiSport', 'Budżet Szkoleniowy'],
+    benefitsList: parsedJd.benefits ?? [],
     vaultSuggestions: {
       suggestedTitle: parsedJd.jobTitle,
       addSkillsToVault: missingSkills,
