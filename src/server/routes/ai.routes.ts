@@ -1,104 +1,41 @@
 import { Router, Request, Response, NextFunction } from 'express';
 import { aiService } from '../services/ai.service';
 import { aiEndpointsLimiter } from '../middleware/rateLimiter';
-import {
-  DeltaOptimizeRequest,
-  CoverLetterRequest,
-  InterviewPrepRequest,
-} from '../../types/api';
 
 export const aiRouter = Router();
 
-// Applied per-route, not via aiRouter.use(): a path-less mount also throttles
-// every route registered on later routers in the chain.
+// Limiter doklejany per trasa, nie przez aiRouter.use(): montowanie bez ścieżki
+// dławi też wszystkie trasy zarejestrowane na późniejszych routerach.
 
 /**
- * POST /api/delta-optimize
+ * POST /api/parse-jd
+ *
+ * Jedyna trasa AI podpięta do interfejsu (JobMatcher). Pozostałe endpointy
+ * (`delta-optimize`, `cover-letter`, `interview-prep`, `parse-cv`) zostały
+ * zdjęte z powierzchni publicznej: nie miały ani jednego wywołania z UI, a
+ * każde z nich wołało Gemini na koszt właściciela projektu — bez uwierzytelnienia
+ * i bez limitu kwot. Na Cloud Run z `--allow-unauthenticated` byłyby otwartym,
+ * cudzym kosztem finansowanym proxy do modelu.
+ *
+ * Implementacje w `gemini.ts` i `ai.service.ts` zostają nietknięte, więc
+ * przywrócenie każdej z tych tras w Fazie 6 — już za `requireAuth` i licznikiem
+ * kwot — to dopisanie handlera, a nie pisanie funkcji od nowa.
  */
 aiRouter.post(
-  '/delta-optimize',
+  '/parse-jd',
   aiEndpointsLimiter,
-  async (req: Request<{}, {}, DeltaOptimizeRequest>, res: Response, next: NextFunction) => {
+  async (req: Request<{}, {}, { rawJdText?: string }>, res: Response, next: NextFunction) => {
     try {
-      const { originalBullet, targetRole, keywords = [] } = req.body;
-      if (!originalBullet || typeof originalBullet !== 'string') {
+      const { rawJdText } = req.body;
+      if (!rawJdText || typeof rawJdText !== 'string' || rawJdText.trim().length === 0) {
         return res.status(400).json({
           success: false,
-          error: 'Brak wymaganego tekstu punktora do optymalizacji.',
+          error: 'Brak treści ogłoszenia o pracę.',
         });
       }
 
-      const result = await aiService.optimizeDeltaPhrase(originalBullet, targetRole, keywords);
-      res.json({
-        success: true,
-        ...result,
-      });
-    } catch (err) {
-      next(err);
-    }
-  }
-);
-
-/**
- * POST /api/cover-letter
- */
-aiRouter.post(
-  '/cover-letter',
-  aiEndpointsLimiter,
-  async (req: Request<{}, {}, CoverLetterRequest>, res: Response, next: NextFunction) => {
-    try {
-      const { targetRole, companyName, jobDescription, vault } = req.body;
-      if (!vault || !targetRole) {
-        return res.status(400).json({
-          success: false,
-          error: 'Brak wymaganych danych MasterVault lub tytułu stanowiska.',
-        });
-      }
-
-      const result = await aiService.generateCoverLetter(
-        targetRole,
-        companyName || 'Państwa Firmie',
-        jobDescription || '',
-        vault
-      );
-
-      res.json({
-        success: true,
-        coverLetter: result,
-      });
-    } catch (err) {
-      next(err);
-    }
-  }
-);
-
-/**
- * POST /api/interview-prep
- */
-aiRouter.post(
-  '/interview-prep',
-  aiEndpointsLimiter,
-  async (req: Request<{}, {}, InterviewPrepRequest>, res: Response, next: NextFunction) => {
-    try {
-      const { targetRole, companyName, jobDescription, vault } = req.body;
-      if (!vault) {
-        return res.status(400).json({
-          success: false,
-          error: 'Brak profilu MasterVault do wygenerowania ściągi rekrutacyjnej.',
-        });
-      }
-
-      const prep = await aiService.generateInterviewPrep(
-        targetRole || 'Inżynier Oprogramowania',
-        companyName || 'Firma Partnerska',
-        jobDescription || '',
-        vault
-      );
-
-      res.json({
-        success: true,
-        data: prep,
-      });
+      const parsedJd = await aiService.parseJd(rawJdText);
+      res.json({ success: true, parsedJd });
     } catch (err) {
       next(err);
     }

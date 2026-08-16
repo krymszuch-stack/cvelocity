@@ -57,6 +57,13 @@ export interface FetchJdUrlResponse {
  */
 export type { ParsedJobDescription } from '../lib/jdParser';
 
+/*
+ * Kontrakty poniżej opisują funkcje AI, które nie są dziś wystawione jako trasy
+ * HTTP — zdjęto je z powierzchni publicznej, bo nie miały wywołań w interfejsie,
+ * a wołały model bez uwierzytelnienia i bez limitu kwot. Zostają jako opis
+ * kontraktu na Fazę 6, w której wracają razem z ekranami i kontrolą uprawnień.
+ */
+
 export interface DeltaOptimizeRequest {
   originalBullet: string;
   targetRole?: string;
@@ -66,7 +73,6 @@ export interface DeltaOptimizeRequest {
 
 export interface DeltaOptimizeResponse {
   optimizedBullet: string;
-  tokensSaved: number;
   method: 'SLOT_FILLING' | 'SEMANTIC_CACHE' | 'GEMINI_DELTA';
 }
 

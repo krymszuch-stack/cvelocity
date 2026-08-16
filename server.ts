@@ -9,7 +9,6 @@ import { existsSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import helmet from "helmet";
 import { jobsRouter } from "./src/server/routes/jobs.routes";
-import { cvRouter } from "./src/server/routes/cv.routes";
 import { aiRouter } from "./src/server/routes/ai.routes";
 import { statsRouter } from "./src/server/routes/stats.routes";
 import { errorHandler } from "./src/server/middleware/errorHandler";
@@ -80,12 +79,11 @@ async function startServer() {
     next();
   });
 
-  // CV documents can legitimately be large; this is the one route that needs it.
-  // It must be registered *before* the global parser: body-parser marks the
-  // request as read (`req._body`) and every later parser then no-ops, so when
-  // this sat below the 200kB parser the raised limit never applied and a 500kB
-  // CV was rejected with 413.
-  app.use("/api/parse-cv", express.json({ limit: "2mb" }));
+  // Ogłoszenia bywają długie, a `/api/parse-jd` dostaje ich pełną treść.
+  // Musi być zarejestrowane *przed* globalnym parserem: body-parser oznacza
+  // żądanie jako odczytane (`req._body`) i każdy kolejny parser robi wtedy
+  // no-op, więc podniesienie limitu poniżej progu 200 kB nigdy nie działało.
+  app.use("/api/parse-jd", express.json({ limit: "1mb" }));
 
   // 200kB globally. The previous 10MB limit combined with 120 req/min allowed
   // 1.2GB/min of JSON per IP. Routes that genuinely need large bodies raise it
@@ -104,7 +102,6 @@ async function startServer() {
   });
 
   app.use("/api", jobsRouter);
-  app.use("/api", cvRouter);
   app.use("/api", aiRouter);
   app.use("/api", statsRouter);
 
