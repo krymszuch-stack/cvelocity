@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from 'motion/react';
 import { MasterVault, TokenStats } from './types';
 import { createEmptyVault } from './lib/sampleVault';
 import { loadVaultFromLocalStorage, saveVaultToLocalStorage, clearVaultLocalStorage } from './lib/vaultCrypto';
-import { getActiveSessionUser, loadUserVault } from './lib/auth';
+import { getActiveProfile, loadProfileVault } from './lib/localProfile';
 import { semanticCacheInstance } from './lib/semanticCache';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { ThemeProvider } from './providers/ThemeProvider';
@@ -56,16 +56,16 @@ function MainApp() {
   const [vault, setVault] = useState<MasterVault>(() => {
     const SAMPLE_EMAIL = 'jan.kowalski@example.com';
 
-    // Authenticated user: always load their personal vault
-    const sessionUser = getActiveSessionUser();
-    if (sessionUser) {
-      const userVaultData = loadUserVault(sessionUser.id);
-      if (userVaultData && userVaultData.personalInfo.email === SAMPLE_EMAIL) {
+    // Istniejący profil lokalny: wczytaj jego vault.
+    const profile = getActiveProfile();
+    if (profile) {
+      const profileVault = loadProfileVault(profile.id);
+      if (profileVault && profileVault.personalInfo.email === SAMPLE_EMAIL) {
         clearVaultLocalStorage();
-        return createEmptyVault(sessionUser.fullName, sessionUser.email);
+        return createEmptyVault(profile.name, profile.email);
       }
-      if (userVaultData) return userVaultData;
-      return createEmptyVault(sessionUser.fullName, sessionUser.email);
+      if (profileVault) return profileVault;
+      return createEmptyVault(profile.name, profile.email);
     }
 
     // Unauthenticated: check global cache but never return sample data

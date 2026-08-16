@@ -1,60 +1,89 @@
-# Security Policy
+# Polityka bezpieczeństwa
 
-## Overview & Commitment
+## Zasada tego dokumentu
 
-Security and data privacy are foundational principles of **CVelocity**. CVelocity operates on a **Zero-Knowledge, Client-Side Encryption** model (AES-256-GCM with PBKDF2 600,000 iterations). Your raw personal data, credentials, and MasterVault facts remain encrypted at all times on the client side and are never stored in plaintext on central servers.
+**Nie ma tu żadnego twierdzenia, którego nie da się wskazać palcem w kodzie.**
 
----
+Poprzednia wersja tego pliku deklarowała model „Zero-Knowledge, Client-Side Encryption (AES-256-GCM z PBKDF2, 600 000 iteracji)" i dane „encrypted at all times". Żadne z tych zdań nie było prawdziwe dla ścieżki, która faktycznie się wykonywała. Deklarowanie ochrony, której nie ma, przy danych osobowych jest gorsze niż milczenie — użytkownik podejmuje wtedy decyzje na fałszywej przesłance.
 
-## Supported Versions
-
-We provide security updates and patches for the following project versions:
-
-| Version | Supported          | Security Notes                                            |
-| ------- | ------------------ | --------------------------------------------------------- |
-| 1.0.x   | :white_check_mark: | Current Main Release (Web Crypto API AES-256-GCM + PBKDF2) |
-| < 1.0   | :x:                | Pre-release development versions (Unsupported)           |
+Dokument opisuje stan na dziś. Sekcja „Znane ograniczenia" jest jego obowiązkową częścią i nie zniknie, gdy zrobi się niewygodna — będzie się skracać w miarę, jak kolejne pozycje faktycznie znikną z kodu.
 
 ---
 
-## Reporting a Vulnerability
+## Stan obecny: prototyp działający w przeglądarce
 
-We take all security reports seriously and appreciate the open-source community's efforts in keeping CVelocity safe.
+CVELOCITY nie ma jeszcze backendu z bazą danych ani kont użytkowników. Cała praca odbywa się lokalnie, poza wyraźnie wskazanymi wywołaniami AI.
 
-### How to Report
-If you discover a potential security vulnerability (e.g., encryption flaws, XSS vectors, or data exposure risks), **please do NOT open a public GitHub Issue**. 
+### Co jest chronione i gdzie to sprawdzić
 
-Instead, report it responsibly via email:
+| Kontrola | Gdzie w kodzie |
+|---|---|
+| **Klucz Gemini wyłącznie po stronie serwera** — nigdy nie trafia do przeglądarki ani do repozytorium | `src/server/config.ts`, `src/server/geminiClient.ts`; `.env` w `.gitignore` |
+| **Ochrona przed SSRF** przy pobieraniu ogłoszeń z URL: walidacja adresu, blokada zakresów prywatnych, loopback, link-local (w tym metadanych chmury `169.254.169.254`) i CGNAT, **przypięcie zwalidowanego IP** (bez tego walidacja DNS jest podatna na rebinding), rewalidacja każdego przekierowania, timeout 8 s, limit 2 MB | `src/server/net/ipGuard.ts`, `src/server/net/safeFetch.ts` + testy |
+| **Endpoint nie zwraca surowej treści pobranej strony** — wyłącznie wyekstrahowane pola. Degraduje ewentualny SSRF do „blind" | `src/server/routes/jobs.routes.ts` |
+| **Allowlista CORS** z `Vary: Origin` zamiast gwiazdki | `server.ts` |
+| **Nagłówki bezpieczeństwa** (helmet + jawne CSP, `X-Frame-Options: DENY`, wyłączony `x-powered-by`) | `server.ts`; dla frontendu `vercel.json` |
+| **Limity zapytań** osobne dla endpointów AI i pobierania URL-i | `src/server/middleware/rateLimiter.ts` |
+| **Błędy nie wyciekają na zewnątrz** — klient dostaje identyfikator żądania, pełny błąd zostaje w logach serwera | `src/server/middleware/errorHandler.ts` |
+| **Walidacja konfiguracji przy starcie** — brak wymaganego klucza przerywa uruchomienie, zamiast ujawniać się błędem przy pierwszym żądaniu | `src/server/config.ts` |
+| **Kontener nie działa jako root** | `Dockerfile` |
+| **Ocena ATS i parsowanie CV liczą się lokalnie** — te funkcje nie wysyłają dokumentu nigdzie | `src/lib/atsSimulator.ts`, `src/lib/cvUniversalParser.ts` |
 
-* **Security Contact:** Adrian Koziński
-* **Email:** `krymszuch00@outlook.com`
-* **Subject Line:** `[SECURITY VULNERABILITY] CVelocity - <Brief Description>`
+### Znane ograniczenia
 
-### What to Include in Your Report
-To help us triage and resolve the issue quickly, please include:
-1. A detailed description of the vulnerability and its potential impact.
-2. Step-by-step instructions or a Proof of Concept (PoC) to reproduce the issue.
-3. The affected component, file, or endpoint.
-4. Any potential mitigations or suggested fixes.
+To są rzeczy, które **nie** są chronione. Każda jest świadoma i każda ma przypisaną fazę naprawy.
+
+1. **Nie ma uwierzytelniania.** „Profil" to wpis w `localStorage` tej przeglądarki — bez hasła, bez konta, bez serwera (`src/lib/localProfile.ts`). Interfejs mówi to użytkownikowi wprost przy zakładaniu profilu. Prawdziwe logowanie wchodzi razem z Supabase Auth.
+
+2. **Dane są zapisywane czystym tekstem.** CV i profil leżą w `localStorage` bez szyfrowania. Wcześniejsza wersja zapisywała obok kopię „zaszyfrowaną" kluczem `'default_key'` zaszytym w kodzie aplikacji — przy modelu zagrożeń „XSS czyta `localStorage`" nie chroni to przed niczym, bo atakujący wykonujący skrypt na stronie odczyta ten klucz z tego samego pakietu. Usunęliśmy pozorne szyfrowanie zamiast utrzymywać wrażenie ochrony. Realne szyfrowanie w spoczynku (kopertowe, z kluczem poza bazą) przychodzi razem z przeniesieniem danych na serwer.
+
+3. **Endpointy API nie wymagają uwierzytelnienia.** Dlatego funkcje AI bez ekranu w interfejsie zostały **zdjęte** z serwera — nieużywany endpoint wołający model to otwarte proxy opłacane przez właściciela projektu. Działa wyłącznie to, co ma odpowiednik w UI. Wystawiając usługę publicznie, ogranicz liczbę instancji i ustaw budżet z alertami u dostawcy.
+
+4. **Treść CV trafia do Google Gemini** przy funkcjach AI. Dane nie są jeszcze pseudonimizowane przed wysłaniem — usunięcie danych identyfikujących na granicy modelu jest zaplanowane i nie zostało wdrożone. **Do tego czasu nie wgrywaj do aplikacji prawdziwych danych osobowych innych osób.**
+
+5. **Status subskrypcji jest zapisywalny po stronie klienta.** Trzyma go `localStorage`, więc nie stanowi kontroli dostępu — jest wyłącznie etykietą w interfejsie. Uprawnienia będą liczone w bazie danych.
+
+6. **Brak kopii zapasowych i odtwarzania.** Wyczyszczenie danych przeglądarki kasuje wszystko bezpowrotnie.
 
 ---
 
-## Our Response Process & SLAs
+## Zgłaszanie podatności
 
-When a vulnerability is reported:
+Jeśli znajdziesz podatność (np. wektor XSS, obejście walidacji adresów, wyciek danych), **nie zakładaj publicznego zgłoszenia w GitHubie**.
 
-1. **Initial Acknowledgment:** You will receive an email confirmation within **24 to 48 hours** confirming receipt of your report.
-2. **Triage & Assessment:** Our team will investigate and assess the report within **5 business days** to confirm the severity and impact.
-3. **Patch & Advisory:** If accepted, a security patch will be prepared and released within **14 calendar days** (or sooner for critical vulnerabilities).
-4. **Public Disclosure:** Once the fix is verified and deployed, a public security release advisory will be published. With your permission, we will acknowledge your contribution in our release notes.
+* **Kontakt:** Adrian Koziński
+* **E-mail:** `krymszuch00@outlook.com`
+* **Temat:** `[SECURITY] CVELOCITY — <krótki opis>`
+
+### Co warto dołączyć
+
+1. Opis podatności i jej możliwego wpływu.
+2. Kroki odtworzenia lub proof of concept.
+3. Wskazanie komponentu, pliku lub endpointu.
+4. Propozycję naprawy, jeśli ją masz.
+
+### Czego możesz się spodziewać
+
+Projekt prowadzi jedna osoba, więc terminy są realistyczne, a nie korporacyjne:
+
+1. **Potwierdzenie odbioru** — do 72 godzin.
+2. **Wstępna ocena** — do 14 dni.
+3. **Naprawa** — zależnie od wagi; przy poważnych podatnościach priorytetowo, przy pozostałych w kolejnym cyklu prac. Poinformuję Cię o terminie po ocenie.
+4. **Ujawnienie** — po wdrożeniu poprawki, z podziękowaniem dla zgłaszającego, jeśli wyrazi na to zgodę.
+
+Powyższe to deklaracja dobrej woli, nie umowa SLA.
+
+### Zasady odpowiedzialnego ujawniania
+
+* Daj czas na naprawę przed publicznym ujawnieniem.
+* Nie uzyskuj dostępu do cudzych danych, nie modyfikuj ich i nie niszcz.
+* Nie zakłócaj działania usługi.
 
 ---
 
-## Responsible Disclosure Policy
+## Wersje objęte wsparciem
 
-We kindly ask researchers to:
-* Give us reasonable time to investigate and issue a patch before publicly disclosing the vulnerability.
-* Avoid accessing, modifying, or destroying user data or privacy.
-* Act in good faith to avoid service disruption or degradation.
-
-Thank you for helping keep **CVelocity** and its users secure!
+| Wersja | Wsparcie | Uwagi |
+|---|---|---|
+| `main` | ✅ | Aktywnie rozwijana; prototyp przed pierwszym wydaniem produkcyjnym |
+| < 1.0 | ❌ | Wersje rozwojowe, bez wsparcia |

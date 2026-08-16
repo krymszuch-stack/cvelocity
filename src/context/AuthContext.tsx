@@ -1,38 +1,40 @@
 import React, { createContext, useContext, useState, useCallback, useMemo } from 'react';
 import {
-  UserAccount,
-  getActiveSessionUser,
-  loginUser as authLogin,
-  registerUser as authRegister,
-  loginWithOAuthAccount,
-  logoutUser as authLogout,
-  deleteUserAccount,
-  saveUserVault,
-  loadUserVault,
-  completeLogin,
-  enableTwoFactor as authEnableTwoFactor,
-  disableTwoFactor as authDisableTwoFactor,
-} from '../lib/auth';
-import { verifyTwoFactorToken } from '../lib/twoFactorAuth';
-import { deleteCurrentFirebaseUser } from '../lib/firebaseClient';
+  LocalProfile,
+  getActiveProfile,
+  createLocalProfile,
+  signOutLocalProfile,
+  deleteLocalProfile,
+  loadProfileVault,
+  saveProfileVault,
+} from '../lib/localProfile';
 import { MasterVault } from '../types';
 
+/**
+ * Jedyne źródło prawdy o tym, kto korzysta z aplikacji.
+ *
+ * Wcześniej były dwa: `AuthModal` zapisywał użytkownika do `useAppStore`, a
+ * `Topbar` czytał `isAuthenticated` z tego kontekstu. Efekt widoczny gołym
+ * okiem — po „zalogowaniu" pasek górny dalej pokazywał „Zaloguj się", bo stan,
+ * który ustawiał modal, nie był tym, który czytał interfejs.
+ *
+ * Metody `login`, `register`, `loginOAuth`, `completeTwoFactorLogin`,
+ * `enableTwoFactor` i `disableTwoFactor` zostały usunięte: żadna nie miała ani
+ * jednego wywołania, a wszystkie opierały się na module udającym system kont.
+ */
 interface AuthContextType {
-  user: UserAccount | null;
+  user: LocalProfile | null;
   isAuthenticated: boolean;
   userVault: MasterVault | null;
-  /** Throws Requires2FAError (see lib/auth.ts) if the account has 2FA enabled — catch it and call completeTwoFactorLogin. */
-  login: (email: string, pass: string) => MasterVault;
-  register: (email: string, pass: string, fullName: string) => MasterVault;
-  loginOAuth: (email: string, fullName: string, provider: 'google') => MasterVault;
-  /** Verifies a TOTP code for a pending 2FA login and finalizes the session. */
-  completeTwoFactorLogin: (pendingUser: UserAccount, password: string, token: string) => MasterVault;
-  enableTwoFactor: (secret: string) => void;
-  disableTwoFactor: () => void;
+  /**
+   * Zakłada profil w tej przeglądarce. Świadomie nie nazywa się `login` —
+   * nic tu nikogo nie uwierzytelnia i interfejs mówi o tym wprost.
+   */
+  signInLocally: (name: string, email?: string) => MasterVault;
   logout: () => void;
-  deleteAccount: () => Promise<void>;
-  saveUserVault: (vault: MasterVault, userSecret?: string) => void;
-  saveCurrentVault: (vault: MasterVault, userSecret?: string) => void;
+  deleteAccount: () => void;
+  saveUserVault: (vault: MasterVault) => void;
+  saveCurrentVault: (vault: MasterVault) => void;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -41,154 +43,87 @@ export const AuthProvider: React.FC<{ children: React.ReactNode; onVaultLoaded?:
   children,
   onVaultLoaded,
 }) => {
-  const [user, setUser] = useState<UserAccount | null>(() => getActiveSessionUser());
+  const [user, setUser] = useState<LocalProfile | null>(() => getActiveProfile());
   const [userVault, setUserVault] = useState<MasterVault | null>(() => {
-    const sessionUser = getActiveSessionUser();
-    if (sessionUser) {
-      return loadUserVault(sessionUser.id);
-    }
-    return null;
+    const active = getActiveProfile();
+    return active ? loadProfileVault(active.id) : null;
   });
 
-  // Note: no effect re-syncing userVault from storage whenever `user` changes here —
-  // login/register/loginOAuth/completeTwoFactorLogin/logout all already set userVault
-  // explicitly with the value they just computed. A redundant effect re-reading from
-  // localStorage on every `user` change produced a fresh object reference each time,
-  // which ping-ponged against App.tsx's vault-mirroring effect (React's "Maximum
-  // update depth exceeded"). The lazy useState initializer above already covers the
-  // "existing session on page load" case.
+  // Uwaga: celowo brak efektu przeładowującego vault przy każdej zmianie `user`.
+  // Każda ścieżka ustawia vault jawnie wartością, którą właśnie wyliczyła, a
+  // odczyt z localStorage w efekcie dawał nową referencję obiektu za każdym
+  // razem i odbijał się z efektem lustrzanym w App.tsx („Maximum update depth
+  // exceeded"). Leniwy inicjalizator wyżej pokrywa przypadek wejścia na stronę
+  // z istniejącym profilem.
 
-  const login = useCallback((email: string, pass: string): MasterVault => {
-    // authLogin throws Requires2FAError for 2FA-enabled accounts — let it propagate to the caller (AuthModal),
-    // which should catch it, prompt for a TOTP code, and call completeTwoFactorLogin().
-    const result = authLogin(email, pass);
-    setUser(result.user);
-    setUserVault(result.vault);
-    if (onVaultLoaded) {
-      onVaultLoaded(result.vault);
-    }
-    return result.vault;
-  }, [onVaultLoaded]);
-
-  const completeTwoFactorLogin = useCallback((pendingUser: UserAccount, password: string, token: string): MasterVault => {
-    if (!pendingUser.twoFactorSecret || !verifyTwoFactorToken(pendingUser.twoFactorSecret, token)) {
-      throw new Error('Nieprawidłowy kod weryfikacyjny 2FA.');
-    }
-    const result = completeLogin(pendingUser, password);
-    setUser(result.user);
-    setUserVault(result.vault);
-    if (onVaultLoaded) {
-      onVaultLoaded(result.vault);
-    }
-    return result.vault;
-  }, [onVaultLoaded]);
-
-  const enableTwoFactor = useCallback((secret: string) => {
-    if (!user) return;
-    authEnableTwoFactor(user.id, secret);
-    setUser({ ...user, twoFactorEnabled: true, twoFactorSecret: secret });
-  }, [user]);
-
-  const disableTwoFactor = useCallback(() => {
-    if (!user) return;
-    authDisableTwoFactor(user.id);
-    setUser({ ...user, twoFactorEnabled: false, twoFactorSecret: undefined });
-  }, [user]);
-
-  const register = useCallback((email: string, pass: string, fullName: string): MasterVault => {
-    const result = authRegister(email, pass, fullName);
-    setUser(result.user);
-    setUserVault(result.initialVault);
-    if (onVaultLoaded) {
-      onVaultLoaded(result.initialVault);
-    }
-    return result.initialVault;
-  }, [onVaultLoaded]);
-
-  const loginOAuth = useCallback((email: string, fullName: string, provider: 'google'): MasterVault => {
-    const result = loginWithOAuthAccount(email, fullName, provider);
-    setUser(result.user);
-    setUserVault(result.vault);
-    if (onVaultLoaded) {
-      onVaultLoaded(result.vault);
-    }
-    return result.vault;
-  }, [onVaultLoaded]);
+  const signInLocally = useCallback(
+    (name: string, email?: string): MasterVault => {
+      const { profile, vault } = createLocalProfile(name, email);
+      setUser(profile);
+      setUserVault(vault);
+      onVaultLoaded?.(vault);
+      return vault;
+    },
+    [onVaultLoaded]
+  );
 
   const logout = useCallback(() => {
-    authLogout();
+    signOutLocalProfile();
     setUser(null);
     setUserVault(null);
   }, []);
 
-  const deleteAccount = useCallback(async () => {
-    if (!user) return;
-    // 1. Delete all localStorage data for this user
-    deleteUserAccount(user.id);
-    // 2. Delete Firebase Auth account (if logged in via Google/Firebase)
-    try {
-      await deleteCurrentFirebaseUser();
-    } catch (err) {
-      // Firebase user might not exist if registered via email/password only
-      console.warn('Firebase user deletion skipped:', err);
-    }
-    // 3. Clear local React state
+  const deleteAccount = useCallback(() => {
+    deleteLocalProfile();
     setUser(null);
     setUserVault(null);
-  }, [user]);
+  }, []);
 
-  const saveUserVaultFunc = useCallback((vault: MasterVault, userSecret: string = 'default_key') => {
-    if (user) {
-      // Security Sanitization check
-      const cleanFullName = (vault.personalInfo.fullName || '').replace(/<[^>]+>/g, '').trim();
-      const cleanEmail = (vault.personalInfo.email || '').replace(/<[^>]+>/g, '').trim();
-      const cleanPhone = (vault.personalInfo.phone || '').replace(/<[^>]+>/g, '').trim();
-      const cleanLocation = (vault.personalInfo.location || '').replace(/<[^>]+>/g, '').trim();
+  const saveUserVaultFunc = useCallback(
+    (vault: MasterVault) => {
+      if (!user) return;
+
+      const stripTags = (value: string | undefined) => (value || '').replace(/<[^>]+>/g, '').trim();
+      const { personalInfo } = vault;
+
+      const cleaned = {
+        fullName: stripTags(personalInfo.fullName),
+        email: stripTags(personalInfo.email),
+        phone: stripTags(personalInfo.phone),
+        location: stripTags(personalInfo.location),
+      };
 
       const needsSanitization =
-        cleanFullName !== vault.personalInfo.fullName ||
-        cleanEmail !== vault.personalInfo.email ||
-        cleanPhone !== vault.personalInfo.phone ||
-        cleanLocation !== vault.personalInfo.location;
+        cleaned.fullName !== personalInfo.fullName ||
+        cleaned.email !== personalInfo.email ||
+        cleaned.phone !== personalInfo.phone ||
+        cleaned.location !== personalInfo.location;
 
-      // Reuse the exact same object reference when nothing actually changed — App.tsx mirrors
-      // userVault back into its own vault state, and a fresh reference every call here caused
-      // an infinite App.vault <-> AuthContext.userVault ping-pong (React's "Maximum update depth exceeded").
+      // Ta sama referencja obiektu, gdy nic się nie zmieniło — App.tsx odbija
+      // `userVault` z powrotem do własnego stanu, a nowa referencja przy każdym
+      // wywołaniu powodowała nieskończoną pętlę aktualizacji.
       const sanitizedVault: MasterVault = needsSanitization
-        ? {
-            ...vault,
-            personalInfo: {
-              ...vault.personalInfo,
-              fullName: cleanFullName,
-              email: cleanEmail,
-              phone: cleanPhone,
-              location: cleanLocation,
-            },
-          }
+        ? { ...vault, personalInfo: { ...personalInfo, ...cleaned } }
         : vault;
 
-      saveUserVault(user.id, sanitizedVault, userSecret);
+      saveProfileVault(user.id, sanitizedVault);
       setUserVault((prev) => (prev === sanitizedVault ? prev : sanitizedVault));
-    }
-  }, [user]);
+    },
+    [user]
+  );
 
   const value = useMemo(
     () => ({
       user,
       isAuthenticated: !!user,
       userVault,
-      login,
-      register,
-      loginOAuth,
-      completeTwoFactorLogin,
-      enableTwoFactor,
-      disableTwoFactor,
+      signInLocally,
       logout,
       deleteAccount,
       saveUserVault: saveUserVaultFunc,
       saveCurrentVault: saveUserVaultFunc,
     }),
-    [user, userVault, login, register, loginOAuth, completeTwoFactorLogin, enableTwoFactor, disableTwoFactor, logout, deleteAccount, saveUserVaultFunc]
+    [user, userVault, signInLocally, logout, deleteAccount, saveUserVaultFunc]
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

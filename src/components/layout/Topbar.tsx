@@ -195,10 +195,10 @@ export const Topbar: React.FC<TopbarProps> = ({
               {isAuthenticated ? (
                 <>
                   <div className="flex h-5 w-5 items-center justify-center rounded-lg bg-brand-50 text-[10px] font-bold text-brand-fg">
-                    {(user?.fullName || userEmail || 'U').slice(0, 2).toUpperCase()}
+                    {(user?.name || userEmail || 'U').slice(0, 2).toUpperCase()}
                   </div>
                   <span className="hidden sm:inline font-mono text-[11px] truncate max-w-[90px]">
-                    {user?.fullName?.split(' ')[0] || userEmail?.split('@')[0]}
+                    {user?.name?.split(' ')[0] || userEmail?.split('@')[0]}
                   </span>
                 </>
               ) : (
@@ -221,7 +221,7 @@ export const Topbar: React.FC<TopbarProps> = ({
                 className="absolute right-0 mt-2 w-56 overflow-hidden rounded-2xl border border-line bg-elevated p-1.5 shadow-floating z-50 text-xs"
               >
                 <div className="border-b border-line/60 p-2.5">
-                  <div className="font-bold text-ink truncate">{user?.fullName || 'Konto Użytkownika'}</div>
+                  <div className="font-bold text-ink truncate">{user?.name || 'Profil lokalny'}</div>
                   <div className="font-mono text-[10px] text-muted truncate">{userEmail}</div>
                   <div className="mt-1.5">
                     <span
