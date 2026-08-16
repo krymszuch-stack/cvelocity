@@ -17,7 +17,6 @@ export interface SectorCategory {
   id: string;
   name: string;
   iconName: string;
-  badgeColor: string;
   description: string;
   subRoles: ProfessionSubRole[];
 }
@@ -27,7 +26,6 @@ export const SECTOR_CATEGORIES: SectorCategory[] = [
     id: 'hvac_installations',
     name: 'Instalacje, Serwis Gazowy & HVAC',
     iconName: 'Flame',
-    badgeColor: 'bg-amber-100 text-amber-900 border-amber-300',
     description: 'Montaż, konserwacja, przeglądy okresowe oraz serwis urządzeń grzewczych, gazowych i klimatyzacji.',
     subRoles: [
       {
@@ -61,7 +59,6 @@ export const SECTOR_CATEGORIES: SectorCategory[] = [
     id: 'translation_languages',
     name: 'Języki, Przekładoznawstwo & Tłumaczenia',
     iconName: 'Languages',
-    badgeColor: 'bg-emerald-100 text-emerald-900 border-emerald-300',
     description: 'Tłumaczenia przysięgłe, symultaniczne, techniczne oraz lokalizacja oprogramowania i treści.',
     subRoles: [
       {
@@ -95,7 +92,6 @@ export const SECTOR_CATEGORIES: SectorCategory[] = [
     id: 'banking_finance',
     name: 'Bankowość, Finanse & Contact Center',
     iconName: 'Building2',
-    badgeColor: 'bg-blue-100 text-blue-900 border-blue-300',
     description: 'Procedury bankowe, wsparcie operacyjne klientów indywidualnych i firmowych, KYC/AML oraz zarządzanie zgłoszeniami SLA.',
     subRoles: [
       {
@@ -118,7 +114,6 @@ export const SECTOR_CATEGORIES: SectorCategory[] = [
     id: 'software_it',
     name: 'IT, Software Engineering & Infrastructure',
     iconName: 'Code',
-    badgeColor: 'bg-purple-100 text-purple-900 border-purple-300',
     description: 'Inżynieria oprogramowania, rozwój aplikacji React/Node, diagnostyka sieci i hardware E.12/E.13.',
     subRoles: [
       {
@@ -152,7 +147,6 @@ export const SECTOR_CATEGORIES: SectorCategory[] = [
     id: 'electrical_energy',
     name: 'Elektryka, Automatyka & Energetyka',
     iconName: 'Zap',
-    badgeColor: 'bg-yellow-100 text-yellow-900 border-yellow-300',
     description: 'Pomiary elektryczne, wytyczanie tras kablowych, prefabrykacja szaf sterowniczych i uprawnienia SEP G1.',
     subRoles: [
       {
@@ -172,7 +166,6 @@ export const SECTOR_CATEGORIES: SectorCategory[] = [
     id: 'logistics_ecom',
     name: 'Logistyka, Transport & E-Commerce',
     iconName: 'Truck',
-    badgeColor: 'bg-cyan-100 text-cyan-900 border-cyan-300',
     description: 'Zarządzanie flotą, obsługa ERP/WMS, odprawy celne oraz koordynacja wysyłek międzynarodowych.',
     subRoles: [
       {
@@ -203,7 +196,6 @@ export const SECTOR_CATEGORIES: SectorCategory[] = [
     id: 'construction_finishing',
     name: 'Budownictwo, Wykończenia & Maszyny',
     iconName: 'HardHat',
-    badgeColor: 'bg-orange-100 text-orange-900 border-orange-300',
     description: 'Prace wykończeniowe, glazurnictwo, obsługa maszyn budowlanych i nadzór inwestorski.',
     subRoles: [
       {
@@ -234,7 +226,6 @@ export const SECTOR_CATEGORIES: SectorCategory[] = [
     id: 'automotive_repair',
     name: 'Motoryzacja, Mechanika & Diagnostyka',
     iconName: 'Wrench',
-    badgeColor: 'bg-red-100 text-red-900 border-red-300',
     description: 'Diagnostyka komputerowa pojazdów, wymiana rozrządów, naprawa układów hamulcowych i elektromechanika.',
     subRoles: [
       {
@@ -265,7 +256,6 @@ export const SECTOR_CATEGORIES: SectorCategory[] = [
     id: 'production_cnc',
     name: 'Produkcja, Obróbka CNC & Spawalnictwo',
     iconName: 'Cog',
-    badgeColor: 'bg-slate-100 text-slate-900 border-slate-300',
     description: 'Programowanie obrabiarek CNC, spawanie TIG/MAG 135/141 oraz kontrola jakości wymiarowej.',
     subRoles: [
       {
@@ -296,7 +286,6 @@ export const SECTOR_CATEGORIES: SectorCategory[] = [
     id: 'medical_healthcare',
     name: 'Medycyna, Farmacja & Pielęgniarstwo',
     iconName: 'Activity',
-    badgeColor: 'bg-rose-100 text-rose-900 border-rose-300',
     description: 'Nadzór nad pacjentem, podawanie leków, zabiegi rehabilitacyjne oraz apteczne wydawanie specyfików.',
     subRoles: [
       {
@@ -327,7 +316,6 @@ export const SECTOR_CATEGORIES: SectorCategory[] = [
     id: 'sales_customer_service',
     name: 'Sprzedaż, Handel & Obsługa Klienta',
     iconName: 'ShoppingBag',
-    badgeColor: 'bg-indigo-100 text-indigo-900 border-indigo-300',
     description: 'Pozyskiwanie klientów B2B, negocjacje handlowe, merchandising oraz doradztwo w salonach.',
     subRoles: [
       {
@@ -347,7 +335,6 @@ export const SECTOR_CATEGORIES: SectorCategory[] = [
     id: 'hr_recruitment',
     name: 'HR, Rekrutacja & Kadry-Płace',
     iconName: 'Users',
-    badgeColor: 'bg-pink-100 text-pink-900 border-pink-300',
     description: 'Pozyskiwanie talentów IT/Blue-collar, rozliczanie czasów pracy, Płatnik i optymalizacja procesów HR.',
     subRoles: [
       {
@@ -387,7 +374,6 @@ export interface DomainCategory {
   id: string;
   name: string;
   iconName: string;
-  badgeColor: string;
   description: string;
   subCategories: DomainSubCategory[];
 }
@@ -395,7 +381,6 @@ export interface DomainCategory {
 export interface IndustryCategory {
   id: string;
   name: string;
-  badgeColor: string;
   rolesCount: number;
   roles: SpecializationRole[];
 }
@@ -405,7 +390,6 @@ export const DOMAIN_SPECIALIZATIONS: DomainCategory[] = SECTOR_CATEGORIES.map((s
   id: sec.id,
   name: sec.name,
   iconName: sec.iconName,
-  badgeColor: sec.badgeColor,
   description: sec.description,
   subCategories: [
     {
@@ -449,7 +433,6 @@ export const DOMAIN_SPECIALIZATIONS: DomainCategory[] = SECTOR_CATEGORIES.map((s
 export const SPECIALIZATION_CATEGORIES: IndustryCategory[] = SECTOR_CATEGORIES.map((sec) => ({
   id: sec.id,
   name: sec.name,
-  badgeColor: sec.badgeColor,
   rolesCount: sec.subRoles.length,
   roles: sec.subRoles.map((role) => ({
     ...role,

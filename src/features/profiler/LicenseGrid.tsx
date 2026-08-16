@@ -92,7 +92,7 @@ export const LicenseGrid: React.FC<LicenseGridProps> = ({
             onClick={() => setSelectedCategory(cat)}
             className={`rounded-xl px-2.5 py-1 text-xs font-semibold transition-colors ${
               selectedCategory === cat
-                ? 'bg-brand-600 text-white'
+                ? 'bg-brand-600 text-on-brand'
                 : 'border border-line bg-surface text-muted hover:text-ink'
             }`}
           >
@@ -128,7 +128,7 @@ export const LicenseGrid: React.FC<LicenseGridProps> = ({
             >
               <div
                 className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-xl transition-colors ${
-                  isSelected ? 'bg-brand-600 text-white' : 'bg-sunken text-muted'
+                  isSelected ? 'bg-brand-600 text-on-brand' : 'bg-sunken text-muted'
                 }`}
               >
                 <Icon className="h-4 w-4" />
@@ -144,7 +144,7 @@ export const LicenseGrid: React.FC<LicenseGridProps> = ({
               </div>
 
               {isSelected && (
-                <div className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-brand-600 text-white">
+                <div className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-brand-600 text-on-brand">
                   <Check className="h-3 w-3 stroke-[3]" />
                 </div>
               )}

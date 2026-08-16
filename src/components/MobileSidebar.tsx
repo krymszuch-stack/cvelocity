@@ -51,7 +51,7 @@ export const MobileSidebar: React.FC<MobileSidebarProps> = ({
             {/* Drawer Header */}
             <div className="flex h-16 shrink-0 items-center justify-between border-b border-line px-5">
               <div className="flex items-center gap-2.5">
-                <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-gradient-to-tr from-brand-600 to-violet text-white shadow-xs">
+                <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-brand-grad text-on-brand shadow-brand-glow">
                   <IconSparkles className="h-4 w-4" />
                 </div>
                 <span className="font-sans text-sm font-bold text-ink">{title}</span>

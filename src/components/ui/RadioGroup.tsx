@@ -63,7 +63,7 @@ export const RadioGroup: React.FC<RadioGroupProps> = ({
               <div
                 className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-full border transition-colors ${
                   isSelected
-                    ? 'border-brand-600 bg-brand-600 text-white'
+                    ? 'border-brand-600 bg-brand-600 text-on-brand'
                     : 'border-line bg-surface text-transparent'
                 }`}
               >

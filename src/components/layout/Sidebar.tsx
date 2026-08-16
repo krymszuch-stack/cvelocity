@@ -44,7 +44,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
 }) => {
   const navItems = [
     { id: 'home' as NavTabId, label: 'Strona Główna', icon: IconHome as any },
-    { id: 'matcher' as NavTabId, label: 'Agregator Ofert', icon: IconMatcher as any, badge: 'Live', badgeVariant: 'brand' as const },
+    { id: 'matcher' as NavTabId, label: 'Dopasowanie Ofert', icon: IconMatcher as any, badge: 'ATS', badgeVariant: 'brand' as const },
     { id: 'applications' as NavTabId, label: 'Aplikacje', icon: IconApplications as any, badge: 'CRM', badgeVariant: 'success' as const },
     { id: 'vault' as NavTabId, label: 'Master Vault', icon: IconVault as any, badge: 'Core', badgeVariant: 'brand' as const },
     { id: 'parser' as NavTabId, label: 'Wczytaj CV', icon: IconParser as any },
@@ -64,7 +64,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
         <div className="flex h-10 items-center justify-between px-1.5">
           {!isCollapsed ? (
             <div className="flex items-center gap-2.5">
-              <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-gradient-to-tr from-brand-600 to-violet text-white shadow-xs">
+              <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-brand-grad text-on-brand shadow-brand-glow">
                 <IconSparkles className="h-4 w-4" />
               </div>
               <div>
@@ -77,7 +77,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
               </div>
             </div>
           ) : (
-            <div className="mx-auto flex h-8 w-8 items-center justify-center rounded-xl bg-gradient-to-tr from-brand-600 to-violet text-white shadow-xs">
+            <div className="mx-auto flex h-8 w-8 items-center justify-center rounded-xl bg-brand-grad text-on-brand shadow-brand-glow">
               <IconSparkles className="h-4 w-4" />
             </div>
           )}

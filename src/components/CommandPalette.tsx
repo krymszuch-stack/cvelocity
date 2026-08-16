@@ -227,24 +227,24 @@ export const CommandPalette: React.FC = () => {
                         onMouseEnter={() => setSelectedIndex(idx)}
                         className={`flex w-full items-center justify-between rounded-xl px-3 py-2.5 text-left text-xs transition-colors focus-visible:outline-none ${
                           isSelected
-                            ? 'bg-brand-600 text-white shadow-xs'
+                            ? 'bg-brand-600 text-on-brand shadow-xs'
                             : 'text-ink hover:bg-elevated'
                         }`}
                       >
                         <div className="flex items-center gap-3 min-w-0">
-                          <Icon className={`h-4 w-4 shrink-0 ${isSelected ? 'text-white' : 'text-muted'}`} />
+                          <Icon className={`h-4 w-4 shrink-0 ${isSelected ? 'text-on-brand' : 'text-muted'}`} />
                           <span className="truncate font-medium">{item.label}</span>
                         </div>
 
                         <div className="flex items-center gap-2 shrink-0">
                           <span
                             className={`rounded-md px-1.5 py-px font-mono text-[10px] uppercase ${
-                              isSelected ? 'bg-white/20 text-white' : 'bg-sunken text-muted border border-line/60'
+                              isSelected ? 'bg-on-brand/20 text-on-brand' : 'bg-sunken text-muted border border-line/60'
                             }`}
                           >
                             {item.category}
                           </span>
-                          {isSelected && <CornerDownLeft className="h-3 w-3 text-white/80" />}
+                          {isSelected && <CornerDownLeft className="h-3 w-3 text-on-brand/80" />}
                         </div>
                       </button>
                     );

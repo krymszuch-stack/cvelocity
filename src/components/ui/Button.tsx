@@ -46,7 +46,7 @@ export const Button: React.FC<ButtonProps> = ({
 
   const variantStyles = {
     primary:
-      'bg-brand-600 text-white shadow-raised hover:bg-brand-700 border border-transparent disabled:opacity-50',
+      'bg-brand-grad text-on-brand shadow-raised hover:brightness-110 hover:shadow-brand-glow-lg border border-transparent disabled:opacity-50',
     secondary:
       'border border-line bg-elevated text-ink hover:border-brand-200 hover:bg-brand-50 hover:text-brand-fg disabled:opacity-50',
     ghost:
@@ -96,7 +96,7 @@ export const Button: React.FC<ButtonProps> = ({
       {/* Ripple wave span */}
       <span
         ref={rippleRef}
-        className="pointer-events-none absolute h-6 w-6 rounded-full bg-white/25"
+        className="pointer-events-none absolute h-6 w-6 rounded-full bg-on-brand/25"
         style={{ transform: 'translate(-50%, -50%) scale(0)' }}
       />
     </motion.button>

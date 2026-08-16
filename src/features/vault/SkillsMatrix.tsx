@@ -361,7 +361,7 @@ export const SkillsMatrix: React.FC<SkillsMatrixProps> = ({
               >
                 <div
                   className={`flex h-8 w-8 items-center justify-center rounded-xl transition-colors ${
-                    isChecked ? 'bg-brand-600 text-white' : 'bg-sunken text-muted'
+                    isChecked ? 'bg-brand-600 text-on-brand' : 'bg-sunken text-muted'
                   }`}
                 >
                   <Icon className="h-4 w-4" />

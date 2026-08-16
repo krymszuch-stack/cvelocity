@@ -99,7 +99,7 @@ ${education.map((e) => `${e.degree} - ${e.institution} (${e.startDate} - ${e.end
               onClick={() => setActiveTemplate(tmpl)}
               className={`rounded-xl px-3 py-1.5 text-xs font-bold capitalize transition-colors ${
                 activeTemplate === tmpl
-                  ? 'bg-brand-600 text-white shadow-xs'
+                  ? 'bg-brand-600 text-on-brand shadow-xs'
                   : 'border border-line bg-surface text-muted hover:text-ink'
               }`}
             >

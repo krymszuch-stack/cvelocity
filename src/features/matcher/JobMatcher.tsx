@@ -32,6 +32,7 @@ import { AtsSimulatorView } from '../../components/AtsSimulatorView';
 import { PageHeader } from '../../components/ui/PageHeader';
 import { Button } from '../../components/ui/Button';
 import { Modal } from '../../components/ui/Modal';
+import { showToast } from '../../store/useToastStore';
 
 export interface JobMatcherProps {
   vault: MasterVault;
@@ -267,7 +268,7 @@ export const JobMatcher: React.FC<JobMatcherProps> = ({
                 tailoredResume={tailoredResume}
                 coverLetter={coverLetter}
                 onSaveTailoredCV={() => {
-                  alert('Dopasowane dokumenty zostały pomyślnie zapisane w Twoim Pipeline Aplikacji!');
+                  showToast('Zapisano w pipeline', { message: 'Dopasowane dokumenty trafiły do Twoich aplikacji.' });
                   setIsAtsModalOpen(false);
                 }}
               />

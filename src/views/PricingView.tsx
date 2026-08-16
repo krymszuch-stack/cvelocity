@@ -15,6 +15,8 @@ import {
 } from '../components/ui/icons/ModernIcons';
 import { motion, AnimatePresence } from 'motion/react';
 import { PricingCard } from '../components/ui/PricingCard';
+import { TrustRow } from '../components/ui/TrustChip';
+import { LockCover } from '../components/ui/LockCover';
 import {
   StripeCheckoutModal,
   StripeCheckoutProduct,
@@ -23,6 +25,7 @@ import { useAuthStore } from '../store/useAuthStore';
 import { PageHeader } from '../components/ui/PageHeader';
 import { Tabs } from '../components/ui/Tabs';
 import { Button } from '../components/ui/Button';
+import { showToast } from '../store/useToastStore';
 
 type PricingSubTab = 'pricing' | 'features' | 'validation';
 
@@ -73,7 +76,7 @@ export const PricingView: React.FC = () => {
 
         {/* Big Hero KPI Banner matching prototyp-monetyzacji.html */}
         <div className="flex flex-wrap items-center gap-6 rounded-3xl border border-line bg-surface/90 p-6 sm:p-8 backdrop-blur-xl shadow-raised">
-          <div className="font-mono text-6xl sm:text-7xl font-extrabold tracking-tight bg-gradient-to-r from-brand-600 via-violet to-violet-2 bg-clip-text text-transparent">
+          <div className="text-brand-grad font-mono text-6xl sm:text-7xl font-extrabold tracking-tight">
             92%
           </div>
           <div className="max-w-md border-l border-line pl-6 text-xs sm:text-sm text-muted leading-relaxed">
@@ -135,7 +138,7 @@ export const PricingView: React.FC = () => {
               }`}
             >
               <span
-                className={`absolute top-0.5 left-0.5 h-[18px] w-[18px] rounded-full bg-white transition-transform ${
+                className={`absolute top-0.5 left-0.5 h-[18px] w-[18px] rounded-full bg-on-brand transition-transform ${
                   billingCycle === 'annual' ? 'translate-x-5' : 'translate-x-0'
                 }`}
               />
@@ -158,7 +161,8 @@ export const PricingView: React.FC = () => {
             {/* FREE PLAN */}
             <PricingCard
               title="CVELOCITY Free"
-              price="0 zł"
+              price="0"
+              currency="zł"
               period="/ na zawsze"
               description="Kompletny fundament dla każdego kandydata aktywnie poszukującego pracy."
               features={[
@@ -184,8 +188,14 @@ export const PricingView: React.FC = () => {
             {/* PRO PLAN */}
             <PricingCard
               title="CVELOCITY Pro"
-              price={billingCycle === 'monthly' ? '49 zł' : '39 zł'}
+              price={billingCycle === 'monthly' ? '49' : '39'}
+              currency="zł"
               period="/ miesiąc brutto"
+              note={
+                billingCycle === 'monthly'
+                  ? 'Faktura co miesiąc, cena brutto z VAT'
+                  : 'Rozliczenie roczne (468 zł brutto)'
+              }
               isPopular={true}
               description="Dla specjalistów i inżynierów aplikujących na wiele stanowisk jednocześnie."
               features={[
@@ -205,8 +215,10 @@ export const PricingView: React.FC = () => {
             {/* SINGLE TEMPLATE */}
             <PricingCard
               title="Szablony Jednorazowe"
-              price="19 zł"
+              price="19"
+              currency="zł"
               period="/ jednorazowo"
+              note="Płatność jednorazowa, cena brutto z VAT"
               description="Dla osób poszukujących wyłącznie unikalnego szablonu wizualnego bez abonamentu."
               features={[
                 'Dożywotni dostęp do wybranego szablonu',
@@ -223,6 +235,17 @@ export const PricingView: React.FC = () => {
               ctaLabel="Kup wybrany szablon"
               onSelect={() => handleOpenTemplateCheckout('Executive')}
             />
+          </div>
+
+          {/* Payment trust signals — shown before checkout, not after */}
+          <div className="flex flex-col items-center gap-2 pt-1">
+            <TrustRow
+              items={['VISA', 'MASTERCARD', 'BLIK', 'APPLE PAY', 'GOOGLE PAY', 'SSL 256-BIT']}
+              className="justify-center"
+            />
+            <p className="text-[11px] text-subtle">
+              Płatności obsługuje Stripe. Anulujesz w 2 kliknięciach, bez kontaktu z obsługą.
+            </p>
           </div>
 
           {/* Feature Comparison Table */}
@@ -424,11 +447,36 @@ export const PricingView: React.FC = () => {
                 </span>
               </div>
 
-              <div className="rounded-2xl border border-line bg-surface p-4 text-xs space-y-2">
-                <p className="text-muted text-[11px]">
-                  Podstawowy rejestr aplikacji jest darmowy. Pro Insights dodaje wykresy konwersji i estymację czasu do oferty.
-                </p>
-              </div>
+              <p className="text-[11px] text-muted">
+                Podstawowy rejestr aplikacji jest darmowy. Pro Insights dodaje wykresy konwersji i estymację czasu do oferty.
+              </p>
+
+              {/* Teaser: the shape of the data is visible, the values are not */}
+              <LockCover
+                intensity="data"
+                label="Wykresy konwersji dostępne w planie Pro"
+                action={
+                  <Button variant="primary" size="sm" onClick={handleOpenProCheckout}>
+                    Rozpocznij 30 dni za darmo
+                  </Button>
+                }
+              >
+                <div className="flex h-[140px] items-end gap-2 bg-surface p-3">
+                  {[38, 52, 60, 74, 88, 100].map((h, i) => (
+                    <div key={i} className="flex h-full flex-1 flex-col justify-end gap-1.5">
+                      <div
+                        className={`w-full rounded-t-md rounded-b-sm ${
+                          i >= 4 ? 'bg-brand-grad' : i >= 2 ? 'bg-brand-600' : 'bg-brand-200'
+                        }`}
+                        style={{ height: `${h}%` }}
+                      />
+                      <span className="text-center font-mono text-[9.5px] text-subtle">
+                        {['sty', 'lut', 'mar', 'kwi', 'maj', 'cze'][i]}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              </LockCover>
 
               <div className="flex items-center justify-between text-xs">
                 <span className="text-muted">Okres próbny: <b>30 dni za 0 zł</b></span>
@@ -528,7 +576,7 @@ export const PricingView: React.FC = () => {
           onClose={() => setSelectedProduct(null)}
           product={selectedProduct}
           onUnlocked={() => {
-            alert(`Pomyślnie aktywowano: ${selectedProduct.title}`);
+            showToast('Aktywowano plan', { message: selectedProduct.title });
           }}
         />
       )}

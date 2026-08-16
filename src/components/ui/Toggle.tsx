@@ -47,7 +47,7 @@ export const Toggle: React.FC<ToggleProps> = ({
           layout
           transition={{ type: 'spring', stiffness: 500, damping: 30 }}
           className={`inline-block h-4 w-4 rounded-full shadow-xs ${
-            checked ? 'translate-x-6 bg-white' : 'translate-x-1 bg-muted'
+            checked ? 'translate-x-6 bg-on-brand' : 'translate-x-1 bg-muted'
           }`}
         />
       </button>

@@ -131,6 +131,7 @@ export const TrackerTable: React.FC<TrackerTableProps> = ({
                       app.notes ? 'text-brand-fg bg-brand-50/50 border-brand-200' : ''
                     }`}
                     title={app.notes ? 'Zobacz notatki' : 'Dodaj notatkę'}
+                    aria-label={`${app.notes ? 'Zobacz notatki' : 'Dodaj notatkę'}: ${app.company}`}
                   >
                     <FileText className="h-4 w-4" />
                     {app.notes && (
@@ -144,6 +145,7 @@ export const TrackerTable: React.FC<TrackerTableProps> = ({
                     onClick={() => onEdit(app)}
                     className="flex h-8 w-8 items-center justify-center rounded-lg border border-line text-muted transition-colors hover:bg-surface hover:text-ink"
                     title="Edytuj zgłoszenie"
+                    aria-label={`Edytuj zgłoszenie: ${app.company}`}
                   >
                     <Edit2 className="h-3.5 w-3.5" />
                   </button>
@@ -154,6 +156,7 @@ export const TrackerTable: React.FC<TrackerTableProps> = ({
                     onClick={() => onDelete(app.id)}
                     className="flex h-8 w-8 items-center justify-center rounded-lg border border-line text-muted transition-colors hover:border-danger/30 hover:bg-danger-soft hover:text-danger-fg"
                     title="Usuń zgłoszenie"
+                    aria-label={`Usuń zgłoszenie: ${app.company}`}
                   >
                     <Trash2 className="h-3.5 w-3.5" />
                   </button>

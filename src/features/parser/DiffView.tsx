@@ -112,7 +112,7 @@ export const DiffView: React.FC<DiffViewProps> = ({
               onClick={() => setPersonalStrategy('replace')}
               className={`rounded-lg px-2.5 py-1 text-xs font-bold transition-colors ${
                 personalStrategy === 'replace'
-                  ? 'bg-brand-600 text-white'
+                  ? 'bg-brand-600 text-on-brand'
                   : 'border border-line bg-surface text-muted hover:text-ink'
               }`}
             >
@@ -123,7 +123,7 @@ export const DiffView: React.FC<DiffViewProps> = ({
               onClick={() => setPersonalStrategy('keep')}
               className={`rounded-lg px-2.5 py-1 text-xs font-bold transition-colors ${
                 personalStrategy === 'keep'
-                  ? 'bg-brand-600 text-white'
+                  ? 'bg-brand-600 text-on-brand'
                   : 'border border-line bg-surface text-muted hover:text-ink'
               }`}
             >
@@ -173,7 +173,7 @@ export const DiffView: React.FC<DiffViewProps> = ({
               onClick={() => setSkillsStrategy('merge')}
               className={`rounded-lg px-2.5 py-1 text-xs font-bold transition-colors ${
                 skillsStrategy === 'merge'
-                  ? 'bg-brand-600 text-white'
+                  ? 'bg-brand-600 text-on-brand'
                   : 'border border-line bg-surface text-muted hover:text-ink'
               }`}
             >
@@ -184,7 +184,7 @@ export const DiffView: React.FC<DiffViewProps> = ({
               onClick={() => setSkillsStrategy('replace')}
               className={`rounded-lg px-2.5 py-1 text-xs font-bold transition-colors ${
                 skillsStrategy === 'replace'
-                  ? 'bg-brand-600 text-white'
+                  ? 'bg-brand-600 text-on-brand'
                   : 'border border-line bg-surface text-muted hover:text-ink'
               }`}
             >
@@ -195,7 +195,7 @@ export const DiffView: React.FC<DiffViewProps> = ({
               onClick={() => setSkillsStrategy('keep')}
               className={`rounded-lg px-2.5 py-1 text-xs font-bold transition-colors ${
                 skillsStrategy === 'keep'
-                  ? 'bg-brand-600 text-white'
+                  ? 'bg-brand-600 text-on-brand'
                   : 'border border-line bg-surface text-muted hover:text-ink'
               }`}
             >
@@ -257,7 +257,7 @@ export const DiffView: React.FC<DiffViewProps> = ({
               onClick={() => setExpStrategy('merge')}
               className={`rounded-lg px-2.5 py-1 text-xs font-bold transition-colors ${
                 expStrategy === 'merge'
-                  ? 'bg-brand-600 text-white'
+                  ? 'bg-brand-600 text-on-brand'
                   : 'border border-line bg-surface text-muted hover:text-ink'
               }`}
             >
@@ -268,7 +268,7 @@ export const DiffView: React.FC<DiffViewProps> = ({
               onClick={() => setExpStrategy('replace')}
               className={`rounded-lg px-2.5 py-1 text-xs font-bold transition-colors ${
                 expStrategy === 'replace'
-                  ? 'bg-brand-600 text-white'
+                  ? 'bg-brand-600 text-on-brand'
                   : 'border border-line bg-surface text-muted hover:text-ink'
               }`}
             >
@@ -311,7 +311,7 @@ export const DiffView: React.FC<DiffViewProps> = ({
               onClick={() => setEduStrategy('merge')}
               className={`rounded-lg px-2.5 py-1 text-xs font-bold transition-colors ${
                 eduStrategy === 'merge'
-                  ? 'bg-brand-600 text-white'
+                  ? 'bg-brand-600 text-on-brand'
                   : 'border border-line bg-surface text-muted hover:text-ink'
               }`}
             >
@@ -322,7 +322,7 @@ export const DiffView: React.FC<DiffViewProps> = ({
               onClick={() => setEduStrategy('replace')}
               className={`rounded-lg px-2.5 py-1 text-xs font-bold transition-colors ${
                 eduStrategy === 'replace'
-                  ? 'bg-brand-600 text-white'
+                  ? 'bg-brand-600 text-on-brand'
                   : 'border border-line bg-surface text-muted hover:text-ink'
               }`}
             >
@@ -333,7 +333,7 @@ export const DiffView: React.FC<DiffViewProps> = ({
               onClick={() => setEduStrategy('keep')}
               className={`rounded-lg px-2.5 py-1 text-xs font-bold transition-colors ${
                 eduStrategy === 'keep'
-                  ? 'bg-brand-600 text-white'
+                  ? 'bg-brand-600 text-on-brand'
                   : 'border border-line bg-surface text-muted hover:text-ink'
               }`}
             >
