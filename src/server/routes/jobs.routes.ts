@@ -2,6 +2,7 @@ import { Router, Request, Response, NextFunction } from 'express';
 import * as cheerio from 'cheerio';
 import { JobOffer } from '../../types';
 import { JobsQueryParams, FetchJdUrlRequest, ApiResponse } from '../../types/api';
+import { safeFetchHtml, SafeFetchError, type SafeFetchResult } from '../net/safeFetch';
 
 export const jobsRouter = Router();
 
@@ -162,50 +163,44 @@ jobsRouter.get('/jobs', (req: Request<{}, {}, {}, JobsQueryParams>, res: Respons
 jobsRouter.post('/fetch-jd-url', async (req: Request<{}, {}, FetchJdUrlRequest>, res: Response, next: NextFunction) => {
   try {
     const { url } = req.body;
-    if (!url || !url.startsWith('http')) {
+    if (typeof url !== 'string' || url.length === 0 || url.length > 2048) {
       return res.status(400).json({
         success: false,
         error: 'Podaj prawidłowy adres URL ogłoszenia o pracę (http/https).',
       });
     }
 
-    let fetchedHtml = '';
-    let upstreamStatus = 0;
-
+    let fetched: SafeFetchResult;
     try {
-      const response = await fetch(url, {
-        headers: {
-          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36',
-          'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
-        },
-      });
-
-      upstreamStatus = response.status;
-      if (response.ok) {
-        fetchedHtml = await response.text();
+      fetched = await safeFetchHtml(url);
+    } catch (err) {
+      if (err instanceof SafeFetchError) {
+        // Map the failure to a status the UI can act on. Never echo the target's
+        // response body — only our own message — so this endpoint cannot be used
+        // to read arbitrary content from the network it sits in.
+        const status =
+          err.code === 'BOT_PROTECTED'
+            ? 403
+            : err.code === 'INVALID_URL' || err.code === 'BLOCKED_TARGET'
+              ? 400
+              : err.code === 'TOO_LARGE' || err.code === 'BAD_CONTENT_TYPE'
+                ? 422
+                : 502;
+        return res.status(status).json({
+          success: false,
+          requiresManualPaste: err.code === 'BOT_PROTECTED',
+          error: err.message,
+        });
       }
-    } catch (e) {
-      console.warn('Nie udało się pobrać strony oferty:', e);
+      throw err;
     }
 
-    // Portals such as Pracuj.pl and LinkedIn block automated fetches; report that
-    // honestly so the UI can offer manual paste instead of inventing offer content.
-    if (!fetchedHtml) {
-      const isBlocked = upstreamStatus === 403 || upstreamStatus === 401 || upstreamStatus === 429;
-      return res.status(isBlocked ? 403 : 502).json({
-        success: false,
-        is403Blocked: isBlocked,
-        error: isBlocked
-          ? 'Portal zablokował automatyczne pobieranie oferty. Skopiuj treść ogłoszenia i wklej ją ręcznie.'
-          : 'Nie udało się pobrać treści oferty z podanego adresu. Sprawdź link lub wklej treść ręcznie.',
-      });
-    }
-
-    const cleaned = cleanJobHtml(fetchedHtml);
+    const cleaned = cleanJobHtml(fetched.html);
 
     if (!cleaned.description || cleaned.description.length < 80) {
       return res.status(422).json({
         success: false,
+        requiresManualPaste: true,
         error: 'Pobrano stronę, ale nie udało się z niej odczytać treści ogłoszenia. Wklej treść oferty ręcznie.',
       });
     }
@@ -215,7 +210,7 @@ jobsRouter.post('/fetch-jd-url', async (req: Request<{}, {}, FetchJdUrlRequest>,
       title: cleaned.title,
       company: cleaned.company,
       descriptionRaw: cleaned.description,
-      sourceUrl: url,
+      sourceUrl: fetched.finalUrl,
     });
   } catch (err) {
     next(err);
