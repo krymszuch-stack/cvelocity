@@ -28,6 +28,8 @@ CVELOCITY nie ma jeszcze backendu z bazą danych ani kont użytkowników. Cała 
 | **Walidacja konfiguracji przy starcie** — brak wymaganego klucza przerywa uruchomienie, zamiast ujawniać się błędem przy pierwszym żądaniu | `src/server/config.ts` |
 | **Kontener nie działa jako root** | `Dockerfile` |
 | **Ocena ATS i parsowanie CV liczą się lokalnie** — te funkcje nie wysyłają dokumentu nigdzie | `src/lib/atsSimulator.ts`, `src/lib/cvUniversalParser.ts` |
+| **Pseudonimizacja na granicy modelu** — dane identyfikujące zamieniane na placeholdery przed wysłaniem, `photoUrl` usuwany całkowicie, bramka `assertNoPii` jako siatka bezpieczeństwa | `src/server/pseudonymize.ts` + testy na rzeczywistych ścieżkach |
+| **Realne rozliczanie zużycia modelu** — liczba tokenów i szacowany koszt trafiają do ustrukturyzowanego logu; **nigdy treść promptu ani odpowiedzi** | `src/server/usageLedger.ts` |
 
 ### Znane ograniczenia
 
@@ -39,7 +41,11 @@ To są rzeczy, które **nie** są chronione. Każda jest świadoma i każda ma p
 
 3. **Endpointy API nie wymagają uwierzytelnienia.** Dlatego funkcje AI bez ekranu w interfejsie zostały **zdjęte** z serwera — nieużywany endpoint wołający model to otwarte proxy opłacane przez właściciela projektu. Działa wyłącznie to, co ma odpowiednik w UI. Wystawiając usługę publicznie, ogranicz liczbę instancji i ustaw budżet z alertami u dostawcy.
 
-4. **Treść CV trafia do Google Gemini** przy funkcjach AI. Dane nie są jeszcze pseudonimizowane przed wysłaniem — usunięcie danych identyfikujących na granicy modelu jest zaplanowane i nie zostało wdrożone. **Do tego czasu nie wgrywaj do aplikacji prawdziwych danych osobowych innych osób.**
+4. **Do modelu trafia dziś wyłącznie treść ogłoszenia o pracę.** Jedyną trasą sięgającą Gemini jest `/api/parse-jd`; funkcje konsumujące profil kandydata (list motywacyjny, przeformułowanie punktorów, doradca) nie są wystawione jako endpointy, a modal doradcy nie wykonuje żadnego zapytania sieciowego. Żadne CV nie opuszcza więc przeglądarki.
+
+   Zanim te funkcje wrócą, granica modelu jest już zabezpieczona: `src/server/pseudonymize.ts` zamienia imię i nazwisko, e-mail, telefon, miasto i odnośniki na placeholdery, **`photoUrl` usuwa całkowicie** (wizerunek to art. 9 RODO), a bramka `assertNoPii` przerywa wysyłkę, gdyby jakakolwiek przyszła ścieżka ominęła pseudonimizację. Prawdziwe wartości wracają dopiero do wyniku pokazywanego użytkownikowi. Dowodzą tego testy uruchamiane na rzeczywistych ścieżkach `gemini.ts`, nie na samej funkcji pomocniczej (`src/server/__tests__/geminiBoundary.test.ts`).
+
+   **Jeden świadomy wyjątek:** parsowanie CV przez model (`parseRawCvToVault`) nie może być pseudonimizowane, bo jego zadaniem jest właśnie wydobycie imienia, e-maila i telefonu — usunięcie ich z wejścia zniszczyłoby funkcję. Ta ścieżka wymaga osobnej zgody użytkownika i dlatego nie jest dziś wystawiona.
 
 5. **Status subskrypcji jest zapisywalny po stronie klienta.** Trzyma go `localStorage`, więc nie stanowi kontroli dostępu — jest wyłącznie etykietą w interfejsie. Uprawnienia będą liczone w bazie danych.
 
