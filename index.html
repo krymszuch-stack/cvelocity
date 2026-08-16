@@ -10,6 +10,27 @@
     <link href="https://fonts.googleapis.com/css2?family=Geist+Mono:wght@300;400;500;600;700&family=Geist:wght@300;400;500;600;700;800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
   </head>
   <body class="bg-surface text-ink antialiased font-sans selection:bg-brand-200">
+    <script>
+      // Apply the saved theme before first paint. Without this the document renders
+      // with the dark default above and then snaps to light after hydration.
+      (function () {
+        try {
+          var stored = localStorage.getItem('cvelocity-theme');
+          var resolved =
+            stored === 'light' || stored === 'dark'
+              ? stored
+              : stored === 'system' || !stored
+                ? (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light')
+                : 'dark';
+          // No stored preference at all means the dark-first default wins.
+          if (!stored) resolved = 'dark';
+          document.documentElement.setAttribute('data-theme', resolved);
+          document.documentElement.classList.toggle('dark', resolved === 'dark');
+        } catch (e) {
+          /* localStorage unavailable (private mode) — keep the dark default */
+        }
+      })();
+    </script>
     <div id="root"></div>
     <script type="module" src="/src/main.tsx"></script>
   </body>

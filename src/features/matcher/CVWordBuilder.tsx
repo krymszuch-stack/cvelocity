@@ -69,6 +69,7 @@ ${vault.education.map((e) => `- ${e.degree}, ${e.fieldOfStudy} — ${e.instituti
             onClick={() => applyFormat('**', '**')}
             className="flex h-8 w-8 items-center justify-center rounded-lg text-muted hover:bg-surface hover:text-ink focus-visible:outline-none"
             title="Pogrubienie"
+            aria-label="Pogrubienie"
           >
             <Bold className="h-4 w-4" />
           </button>
@@ -77,6 +78,7 @@ ${vault.education.map((e) => `- ${e.degree}, ${e.fieldOfStudy} — ${e.instituti
             onClick={() => applyFormat('*', '*')}
             className="flex h-8 w-8 items-center justify-center rounded-lg text-muted hover:bg-surface hover:text-ink focus-visible:outline-none"
             title="Kursywa"
+            aria-label="Kursywa"
           >
             <Italic className="h-4 w-4" />
           </button>
@@ -85,6 +87,7 @@ ${vault.education.map((e) => `- ${e.degree}, ${e.fieldOfStudy} — ${e.instituti
             onClick={() => applyFormat('# ')}
             className="flex h-8 w-8 items-center justify-center rounded-lg text-muted hover:bg-surface hover:text-ink focus-visible:outline-none"
             title="Nagłówek 1"
+            aria-label="Nagłówek 1"
           >
             <Heading1 className="h-4 w-4" />
           </button>
@@ -93,6 +96,7 @@ ${vault.education.map((e) => `- ${e.degree}, ${e.fieldOfStudy} — ${e.instituti
             onClick={() => applyFormat('## ')}
             className="flex h-8 w-8 items-center justify-center rounded-lg text-muted hover:bg-surface hover:text-ink focus-visible:outline-none"
             title="Nagłówek 2"
+            aria-label="Nagłówek 2"
           >
             <Heading2 className="h-4 w-4" />
           </button>
@@ -101,6 +105,7 @@ ${vault.education.map((e) => `- ${e.degree}, ${e.fieldOfStudy} — ${e.instituti
             onClick={() => applyFormat('- ')}
             className="flex h-8 w-8 items-center justify-center rounded-lg text-muted hover:bg-surface hover:text-ink focus-visible:outline-none"
             title="Lista punktowana"
+            aria-label="Lista punktowana"
           >
             <List className="h-4 w-4" />
           </button>
@@ -109,6 +114,7 @@ ${vault.education.map((e) => `- ${e.degree}, ${e.fieldOfStudy} — ${e.instituti
             onClick={() => applyFormat('`', '`')}
             className="flex h-8 w-8 items-center justify-center rounded-lg text-muted hover:bg-surface hover:text-ink focus-visible:outline-none"
             title="Kod inline"
+            aria-label="Kod inline"
           >
             <Code className="h-4 w-4" />
           </button>
@@ -117,6 +123,7 @@ ${vault.education.map((e) => `- ${e.degree}, ${e.fieldOfStudy} — ${e.instituti
             onClick={() => applyFormat('> ')}
             className="flex h-8 w-8 items-center justify-center rounded-lg text-muted hover:bg-surface hover:text-ink focus-visible:outline-none"
             title="Cytat"
+            aria-label="Cytat"
           >
             <Quote className="h-4 w-4" />
           </button>

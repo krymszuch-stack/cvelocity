@@ -230,14 +230,14 @@ export const ApplicationTracker: React.FC = () => {
                 onClick={() => setFilterStatus(btn.id)}
                 className={`flex items-center gap-1.5 rounded-xl px-3 py-1.5 text-xs font-bold transition-all focus-visible:outline-none ${
                   filterStatus === btn.id
-                    ? 'bg-brand-600 text-white shadow-xs'
+                    ? 'bg-brand-600 text-on-brand shadow-xs'
                     : 'border border-line bg-sunken text-muted hover:border-brand-300 hover:text-ink'
                 }`}
               >
                 <span>{btn.label}</span>
                 <span
                   className={`rounded-md px-1.5 py-px font-mono text-[10px] ${
-                    filterStatus === btn.id ? 'bg-surface/30 text-white' : 'bg-surface text-muted'
+                    filterStatus === btn.id ? 'bg-surface/30 text-on-brand' : 'bg-surface text-muted'
                   }`}
                 >
                   {btn.count}

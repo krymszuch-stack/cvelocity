@@ -1,7 +1,7 @@
 // User Authentication & Crypto Storage Module for SkillVault
 import CryptoJS from 'crypto-js';
 import { MasterVault } from '../types';
-import { INITIAL_SAMPLE_VAULT, createEmptyVault } from './sampleVault';
+import { createEmptyVault } from './sampleVault';
 
 export interface UserAccount {
   id: string;

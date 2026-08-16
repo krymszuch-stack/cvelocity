@@ -283,7 +283,7 @@ export const HomeView: React.FC<HomeViewProps> = ({
             <button
               type="button"
               onClick={() => onNavigate('matcher')}
-              className="flex items-center gap-2 rounded-xl bg-brand-600 px-4 py-2.5 text-xs font-semibold text-white shadow-raised transition-all hover:bg-brand-700 hover:scale-[1.02] focus-visible:outline-none"
+              className="flex items-center gap-2 rounded-xl bg-brand-600 px-4 py-2.5 text-xs font-semibold text-on-brand shadow-raised transition-all hover:bg-brand-700 hover:scale-[1.02] focus-visible:outline-none"
             >
               <Search className="h-4 w-4" />
               <span>Dopasuj do Oferty</span>
@@ -384,7 +384,7 @@ export const HomeView: React.FC<HomeViewProps> = ({
               >
                 <div>
                   <div className="mb-4 flex items-center justify-between">
-                    <div className="flex h-11 w-11 items-center justify-center rounded-xl border border-brand-200 bg-brand-50 text-brand-600 transition-colors group-hover:bg-brand-500 group-hover:text-white">
+                    <div className="flex h-11 w-11 items-center justify-center rounded-xl border border-brand-200 bg-brand-50 text-brand-600 transition-colors group-hover:bg-brand-500 group-hover:text-on-brand">
                       <action.icon className="h-5 w-5" />
                     </div>
                     <span className="rounded-full border border-line bg-surface px-2.5 py-0.5 font-mono text-[10px] font-semibold text-muted">
@@ -626,7 +626,7 @@ export const HomeView: React.FC<HomeViewProps> = ({
                 <button
                   type="button"
                   onClick={() => setActiveTipModal(null)}
-                  className="rounded-xl bg-brand-600 px-5 py-2 text-xs font-bold text-white shadow-sm transition-colors hover:bg-brand-700"
+                  className="rounded-xl bg-brand-600 px-5 py-2 text-xs font-bold text-on-brand shadow-sm transition-colors hover:bg-brand-700"
                 >
                   Zamknij
                 </button>

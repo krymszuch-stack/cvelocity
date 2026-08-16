@@ -131,14 +131,14 @@ export const GeminiAdvisorModal: React.FC<GeminiAdvisorModalProps> = ({
                 <div
                   className={`max-w-[80%] p-4 text-xs leading-relaxed shadow-xs ${
                     m.sender === 'user'
-                      ? 'bg-brand-600 text-white rounded-2xl rounded-tr-none'
+                      ? 'bg-brand-600 text-on-brand rounded-2xl rounded-tr-none'
                       : 'bg-sunken border border-line text-ink rounded-2xl rounded-tl-none'
                   }`}
                 >
                   <p className="whitespace-pre-wrap">{m.text}</p>
                   <span
                     className={`mt-1.5 block font-mono text-[9px] ${
-                      m.sender === 'user' ? 'text-white/70 text-right' : 'text-muted'
+                      m.sender === 'user' ? 'text-on-brand/70 text-right' : 'text-muted'
                     }`}
                   >
                     {m.timestamp}

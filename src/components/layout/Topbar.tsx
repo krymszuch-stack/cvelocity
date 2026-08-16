@@ -19,6 +19,7 @@ import { TokenStats } from '../../types';
 import { NavTabId } from '../GlobalShell';
 import { useAuthStore } from '../../store/useAuthStore';
 import { useAuth } from '../../context/AuthContext';
+import { showToast } from '../../store/useToastStore';
 
 export interface TopbarProps {
   activeTab: NavTabId;
@@ -74,7 +75,10 @@ export const Topbar: React.FC<TopbarProps> = ({
   }, []);
 
   const handleOpenCustomerPortal = () => {
-    alert('Otwieranie bezpiecznego panelu klienta Stripe Customer Portal (zarządzanie subskrypcją i faktury)...');
+    showToast('Panel klienta Stripe', {
+      message: 'Zarządzanie subskrypcją i faktury będą dostępne po podłączeniu kluczy Stripe.',
+      variant: 'info',
+    });
     setIsDropdownOpen(false);
   };
 
@@ -166,7 +170,7 @@ export const Topbar: React.FC<TopbarProps> = ({
             <span
               className={`rounded-full px-2 py-0.5 font-mono text-[10px] font-bold uppercase tracking-wider ${
                 isPro
-                  ? 'bg-gradient-to-r from-brand-600 to-violet text-white shadow-xs'
+                  ? 'bg-brand-grad text-on-brand shadow-brand-glow'
                   : 'bg-sunken text-muted border border-line'
               }`}
             >

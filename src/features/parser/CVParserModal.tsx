@@ -14,7 +14,7 @@ import {
 import { motion, AnimatePresence } from 'motion/react';
 import { MasterVault } from '../../types';
 import { DropZone } from './DropZone';
-import { DiffView } from './DiffView';
+import { DiffView, MergeStrategies, SectionStrategy } from './DiffView';
 import { extractTextFromAnyFile, parseTextToMasterVault, ParsedCVResult } from '../../lib/cvUniversalParser';
 import { Card } from '../../components/ui/Card';
 import { Button } from '../../components/ui/Button';
@@ -22,8 +22,10 @@ import { Textarea } from '../../components/ui/Field';
 import { ProgressBar } from '../../components/ui/ProgressBar';
 import { Tabs } from '../../components/ui/Tabs';
 import { PageHeader } from '../../components/ui/PageHeader';
+import { PremiumBadge } from '../../components/ui/PremiumBadge';
 import { useAuthStore } from '../../store/useAuthStore';
 import { StripeCheckoutModal } from '../../components/payments/StripeCheckoutModal';
+import { showToast } from '../../store/useToastStore';
 
 export interface CVParserModalProps {
   currentVault: MasterVault;
@@ -61,7 +63,7 @@ export const CVParserModal: React.FC<CVParserModalProps> = ({
 
     if (ingestMode === 'file') {
       if (!selectedFile) {
-        alert('Proszę najpierw wybrać lub upuścić plik.');
+        showToast('Nie wybrano pliku', { message: 'Wybierz lub upuść dokument CV.', variant: 'error' });
         return;
       }
 
@@ -80,13 +82,13 @@ export const CVParserModal: React.FC<CVParserModalProps> = ({
         const extracted = await extractTextFromAnyFile(selectedFile);
         textToParse = extracted.text;
       } catch (err) {
-        alert('Błąd podczas odczytu pliku. Spróbuj wkleić tekst ręcznie.');
+        showToast('Nie udało się odczytać pliku', { message: 'Spróbuj wkleić treść CV ręcznie.', variant: 'error' });
         setIsProcessing(false);
         return;
       }
     } else {
       if (!rawText.trim() || rawText.trim().length < 30) {
-        alert('Wklejony tekst jest zbyt krótki do przeprowadzenia analizy.');
+        showToast('Za mało treści', { message: 'Wklejony tekst jest zbyt krótki do analizy.', variant: 'error' });
         return;
       }
       setIsProcessing(true);
@@ -114,37 +116,48 @@ export const CVParserModal: React.FC<CVParserModalProps> = ({
     setParsedResult(result);
   };
 
-  const handleApplyMerge = (strategy: 'merge' | 'replace') => {
+  const handleApplyMerge = (strategies: MergeStrategies) => {
     if (!parsedResult) return;
 
+    const mergeList = <T,>(incoming: T[], existing: T[], strategy: SectionStrategy): T[] => {
+      if (strategy === 'keep') return existing;
+      if (strategy === 'replace') return incoming;
+      return [...incoming, ...existing];
+    };
+
+    const mergeSkills = (incoming: string[], existing: string[], strategy: SectionStrategy): string[] => {
+      if (strategy === 'keep') return existing;
+      if (strategy === 'replace') return incoming;
+      return Array.from(new Set([...existing, ...incoming]));
+    };
+
     const payload: Partial<MasterVault> = {
-      personalInfo: {
-        ...currentVault.personalInfo,
-        ...(parsedResult.personalInfo.fullName ? { fullName: parsedResult.personalInfo.fullName } : {}),
-        ...(parsedResult.personalInfo.title ? { title: parsedResult.personalInfo.title } : {}),
-        ...(parsedResult.personalInfo.email ? { email: parsedResult.personalInfo.email } : {}),
-        ...(parsedResult.personalInfo.location ? { location: parsedResult.personalInfo.location } : {}),
-        ...(parsedResult.personalInfo.summary ? { summary: parsedResult.personalInfo.summary } : {}),
-      },
+      personalInfo:
+        strategies.personal === 'keep'
+          ? currentVault.personalInfo
+          : {
+              ...currentVault.personalInfo,
+              ...(parsedResult.personalInfo.fullName ? { fullName: parsedResult.personalInfo.fullName } : {}),
+              ...(parsedResult.personalInfo.title ? { title: parsedResult.personalInfo.title } : {}),
+              ...(parsedResult.personalInfo.email ? { email: parsedResult.personalInfo.email } : {}),
+              ...(parsedResult.personalInfo.location ? { location: parsedResult.personalInfo.location } : {}),
+              ...(parsedResult.personalInfo.summary ? { summary: parsedResult.personalInfo.summary } : {}),
+            },
       skillsMatrix: {
         ...currentVault.skillsMatrix,
-        hardSkills:
-          strategy === 'replace'
-            ? parsedResult.hardSkills
-            : Array.from(new Set([...(currentVault.skillsMatrix?.hardSkills || []), ...parsedResult.hardSkills])),
-        softSkills:
-          strategy === 'replace'
-            ? parsedResult.softSkills
-            : Array.from(new Set([...(currentVault.skillsMatrix?.softSkills || []), ...parsedResult.softSkills])),
+        hardSkills: mergeSkills(
+          parsedResult.hardSkills,
+          currentVault.skillsMatrix?.hardSkills || [],
+          strategies.skills
+        ),
+        softSkills: mergeSkills(
+          parsedResult.softSkills,
+          currentVault.skillsMatrix?.softSkills || [],
+          strategies.skills
+        ),
       },
-      history:
-        strategy === 'replace'
-          ? parsedResult.history
-          : [...(parsedResult.history || []), ...(currentVault.history || [])],
-      education:
-        strategy === 'replace'
-          ? parsedResult.education
-          : [...(parsedResult.education || []), ...(currentVault.education || [])],
+      history: mergeList(parsedResult.history || [], currentVault.history || [], strategies.experience),
+      education: mergeList(parsedResult.education || [], currentVault.education || [], strategies.education),
     };
 
     onApplyParsedVault(payload);
@@ -197,7 +210,10 @@ export const CVParserModal: React.FC<CVParserModalProps> = ({
             {ingestMode === 'file' && (
               <div className="flex items-center gap-2 text-[11px] font-mono text-muted">
                 {isPro ? (
-                  <span className="text-success-fg font-bold">Plan PRO: Nielimitowany Instant-Import</span>
+                  <>
+                    <PremiumBadge size="chip">Pro</PremiumBadge>
+                    <span className="text-success-fg font-bold">Nielimitowany Instant-Import</span>
+                  </>
                 ) : usage.importUses > 0 ? (
                   <span>Pozostało darmowych importów pliku w tym miesiącu: <b className="text-ink">{usage.importUses}</b></span>
                 ) : (
@@ -283,7 +299,7 @@ export const CVParserModal: React.FC<CVParserModalProps> = ({
             trialDays: 30,
           }}
           onUnlocked={() => {
-            alert('Odblokowano plan Pro! Możesz teraz importować pliki bez limitu.');
+            showToast('Plan Pro aktywny', { message: 'Importujesz pliki bez limitu.' });
           }}
         />
       )}

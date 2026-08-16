@@ -16,7 +16,9 @@ const STORAGE_KEY = 'cvelocity-theme';
 
 export const ThemeProvider: React.FC<{ children: React.ReactNode; defaultTheme?: Theme }> = ({
   children,
-  defaultTheme = 'system',
+  // CVELOCITY is a dark-first product: the visual reference ships dark and the brand
+  // palette is tuned for it. Light stays fully supported via the toggle.
+  defaultTheme = 'dark',
 }) => {
   const [theme, setThemeState] = useState<Theme>(() => {
     if (typeof window === 'undefined') return defaultTheme;

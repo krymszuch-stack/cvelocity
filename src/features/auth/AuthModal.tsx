@@ -18,6 +18,7 @@ import { Tabs } from '../../components/ui/Tabs';
 import { Input } from '../../components/ui/Field';
 import { Button } from '../../components/ui/Button';
 import { useAppStore } from '../../store/useAppStore';
+import { showToast } from '../../store/useToastStore';
 
 export interface AuthModalProps {
   isOpen: boolean;
@@ -89,10 +90,18 @@ export const AuthModal: React.FC<AuthModalProps> = ({
 
   const handleForgotPassword = () => {
     if (!email.trim()) {
-      alert('Podaj swój adres e-mail, aby otrzymać link resetujący hasło.');
+      showToast('Podaj adres e-mail', {
+        message: 'Wpisz e-mail, na który ma trafić link resetujący.',
+        variant: 'error',
+      });
       return;
     }
-    alert(`Link resetujący hasło został wysłany na adres: ${email}`);
+    // No mail is actually sent yet — resetting a password needs the server-side auth
+    // layer. Saying "link wysłany" here would be a lie the user acts on.
+    showToast('Reset hasła jeszcze niedostępny', {
+      message: 'Ta funkcja ruszy po przeniesieniu logowania na serwer.',
+      variant: 'info',
+    });
   };
 
   return (

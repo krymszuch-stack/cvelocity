@@ -9,6 +9,7 @@
   /* Border Radii Tokens */
   --radius-sm: 0.5rem;    /* 8px */
   --radius-md: 0.75rem;   /* 12px */
+  --radius-lg: 1rem;      /* 16px — cards/panels, matches the visual prototype */
   --radius-xl: 1rem;      /* 16px */
   --radius-2xl: 1.5rem;   /* 24px */
 
@@ -39,6 +40,7 @@
   --color-brand-900: var(--brand-900);
   --color-brand-950: var(--brand-950);
   --color-brand-fg: var(--brand-fg);
+  --color-on-brand: var(--on-brand);
   --color-violet: var(--violet);
   --color-violet-2: var(--violet-2);
 
@@ -91,9 +93,15 @@
   --brand-900: #363c7b;
   --brand-950: #202449;
   --brand-fg: #4650a8;
+  /* Foreground for text/icons sitting ON a brand-600 or --brand-grad fill.
+     Light theme: brand-600 (#5e6ad2) is dark, so white reads at ~7:1. */
+  --on-brand: #ffffff;
   --violet: #8b5cf6;
   --violet-2: #a855f7;
-  --brand-grad: linear-gradient(120deg, #5e6ad2 0%, #8b5cf6 100%);
+  /* The gradient ends on violet-600 rather than --violet (violet-500): white text over
+     violet-500 measures 4.23:1 and misses AA, while this endpoint reaches 5.8:1.
+     --violet itself stays lighter for decorative use (aurora, glows). */
+  --brand-grad: linear-gradient(120deg, #5e6ad2 0%, #7c3aed 100%);
 
   /* Semantics (Light) */
   --success: #16a34a;
@@ -147,6 +155,10 @@
   --brand-900: #dee1fb;
   --brand-950: #f0f2fd;
   --brand-fg: #b7bdf5;
+  /* In dark the brand ramp inverts: brand-600 (#8b93e8) and violet (#a78bfa) are
+     LIGHT lavenders. White on them measures ~2.8:1 and fails WCAG AA, so text on a
+     brand fill flips to near-black instead (~6.8:1 across the whole gradient). */
+  --on-brand: #101013;
   --violet: #a78bfa;
   --violet-2: #c4b5fd;
   --brand-grad: linear-gradient(120deg, #8b93e8 0%, #a78bfa 100%);
@@ -167,6 +179,36 @@
   /* Shadows */
   --shadow-raised: 0 1px 2px rgba(0, 0, 0, 0.4), 0 4px 16px rgba(0, 0, 0, 0.5);
   --shadow-floating: 0 8px 32px rgba(0, 0, 0, 0.6), 0 24px 64px rgba(0, 0, 0, 0.7);
+}
+
+/* ============================================================
+   BRAND GRADIENT UTILITIES
+   The canonical 120deg brand gradient. Use these instead of hand-writing
+   `bg-gradient-to-tr from-brand-600 to-violet`, which drifts to 45deg and
+   has to be kept in sync by hand at every call site.
+   ============================================================ */
+.bg-brand-grad {
+  background-image: var(--brand-grad);
+}
+
+/* Gradient-filled text (hero numbers, wordmarks). The drop-shadow traces the
+   glyphs themselves, since they are the only opaque geometry left. */
+.text-brand-grad {
+  background-image: var(--brand-grad);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  -webkit-text-fill-color: transparent;
+  filter: drop-shadow(0 8px 32px color-mix(in srgb, var(--violet) 38%, transparent));
+}
+
+/* Violet glow used under brand-filled surfaces (logo mark, premium badges). */
+.shadow-brand-glow {
+  box-shadow: 0 2px 12px color-mix(in srgb, var(--violet) 40%, transparent);
+}
+
+.hover\:shadow-brand-glow-lg:hover {
+  box-shadow: 0 4px 18px color-mix(in srgb, var(--violet) 45%, transparent);
 }
 
 /* ============================================================

@@ -47,7 +47,7 @@ export const Slider: React.FC<SliderProps> = ({
           onChange={(e) => onChange(Number(e.target.value))}
           className="h-2 w-full cursor-pointer appearance-none rounded-full bg-sunken accent-brand-600 focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-50"
           style={{
-            background: `linear-gradient(to right, var(--brand-600) 0%, var(--brand-600) ${percentage}%, var(--border-line) ${percentage}%, var(--border-line) 100%)`,
+            background: `linear-gradient(to right, var(--brand-600) 0%, var(--brand-600) ${percentage}%, var(--line) ${percentage}%, var(--line) 100%)`,
           }}
         />
       </div>

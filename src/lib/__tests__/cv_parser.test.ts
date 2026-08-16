@@ -25,4 +25,47 @@ describe('CV Universal Multi-Format Parser Suite', () => {
     expect(parsed.toolsAndTech).toContain('Git');
     expect(parsed.history.length).toBeGreaterThan(0);
   });
+
+  it('nie fabrykuje wykształcenia, certyfikatów ani umiejętności miękkich, gdy CV ich nie zawiera', () => {
+    const cvWithoutThoseSections = `
+    Anna Zielińska
+    Email: anna.zielinska@firma.pl
+    Doświadczenie zawodowe:
+    Acme Sp. z o.o. - Analityk danych, 2020 - 2023
+    `;
+
+    const parsed = parseTextToMasterVault(cvWithoutThoseSections, 'TXT');
+
+    expect(parsed.education).toEqual([]);
+    expect(parsed.certifications).toEqual([]);
+    expect(parsed.softSkills).toEqual([]);
+  });
+
+  it('nie wstawia zastępczego doświadczenia, gdy CV nie ma sekcji doświadczenia', () => {
+    const parsed = parseTextToMasterVault('Piotr Mazur\nEmail: piotr@example.pl', 'TXT');
+
+    expect(parsed.history).toEqual([]);
+    expect(parsed.personalInfo.title).toBe('');
+    expect(parsed.personalInfo.location).toBe('');
+  });
+
+  it('wyodrębnia realne wykształcenie i certyfikaty, gdy CV je zawiera', () => {
+    const fullCv = `
+    Marek Wolny
+    Wykształcenie:
+    Politechnika Warszawska - Inżynier - Informatyka, 2016 - 2020
+    Certyfikaty:
+    AWS Certified Solutions Architect - Amazon Web Services, 2022
+    Umiejętności miękkie:
+    Komunikacja, Praca zespołowa
+    `;
+
+    const parsed = parseTextToMasterVault(fullCv, 'TXT');
+
+    expect(parsed.education[0].institution).toBe('Politechnika Warszawska');
+    expect(parsed.education[0].startDate).toBe('2016');
+    expect(parsed.certifications[0].name).toBe('AWS Certified Solutions Architect');
+    expect(parsed.certifications[0].date).toBe('2022');
+    expect(parsed.softSkills).toEqual(['Komunikacja', 'Praca zespołowa']);
+  });
 });

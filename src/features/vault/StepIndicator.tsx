@@ -50,7 +50,7 @@ export const StepIndicator: React.FC<StepIndicatorProps> = ({
                 <div
                   className={`flex h-10 w-10 items-center justify-center rounded-2xl border text-xs font-bold transition-all duration-300 ${
                     isCompleted
-                      ? 'border-brand-600 bg-brand-600 text-white shadow-xs'
+                      ? 'border-brand-600 bg-brand-600 text-on-brand shadow-xs'
                       : isCurrent
                       ? 'border-brand-600 bg-elevated text-brand-fg ring-4 ring-brand-500/20 shadow-raised'
                       : 'border-line bg-surface text-muted group-hover:border-brand-300'

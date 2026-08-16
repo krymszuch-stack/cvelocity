@@ -7,6 +7,7 @@ import { getActiveSessionUser, loadUserVault } from './lib/auth';
 import { semanticCacheInstance } from './lib/semanticCache';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { ThemeProvider } from './providers/ThemeProvider';
+import { ToastHost } from './components/ui/ToastHost';
 import { useAppStore } from './store/useAppStore';
 import { AuthModal } from './components/AuthModal';
 import { GlobalShell, NavTabId } from './components/GlobalShell';
@@ -275,6 +276,7 @@ export default function App() {
     <ThemeProvider>
       <AuthProvider>
         <MainApp />
+        <ToastHost />
       </AuthProvider>
     </ThemeProvider>
   );

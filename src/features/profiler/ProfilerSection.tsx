@@ -120,14 +120,14 @@ export const ProfilerSection: React.FC<ProfilerSectionProps> = ({
                 whileTap={{ scale: 0.985 }}
                 className={`flex flex-col items-start rounded-2xl p-3 text-left transition-all duration-200 focus-visible:outline-none ${
                   isSelected
-                    ? 'bg-brand-600 text-white shadow-raised ring-2 ring-brand-500/20'
+                    ? 'bg-brand-600 text-on-brand shadow-raised ring-2 ring-brand-500/20'
                     : 'border border-line bg-sunken text-ink hover:border-brand-300'
                 }`}
               >
                 <span className="text-xs font-bold leading-tight">{item.label}</span>
                 <span
                   className={`mt-0.5 font-mono text-[10px] ${
-                    isSelected ? 'text-white/80' : 'text-muted'
+                    isSelected ? 'text-on-brand/80' : 'text-muted'
                   }`}
                 >
                   {item.desc}

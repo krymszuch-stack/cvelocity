@@ -73,7 +73,7 @@ export const DropZone: React.FC<DropZoneProps> = ({
       <div
         className={`flex h-16 w-16 items-center justify-center rounded-2xl mb-4 transition-transform duration-200 ${
           isDragOver
-            ? 'scale-110 bg-brand-600 text-white shadow-raised'
+            ? 'scale-110 bg-brand-600 text-on-brand shadow-raised'
             : selectedFile
             ? 'bg-brand-50 text-brand-600'
             : 'bg-surface text-subtle shadow-xs'

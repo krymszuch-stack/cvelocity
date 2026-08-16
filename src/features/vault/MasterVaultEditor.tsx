@@ -27,6 +27,7 @@ import { PreferencesSection } from './PreferencesSection';
 import { Button } from '../../components/ui/Button';
 import { Tabs } from '../../components/ui/Tabs';
 import { PageHeader } from '../../components/ui/PageHeader';
+import { showToast } from '../../store/useToastStore';
 
 export interface MasterVaultEditorProps {
   vault: MasterVault;
@@ -90,10 +91,10 @@ export const MasterVaultEditor: React.FC<MasterVaultEditorProps> = ({
           });
           showNotification('Profil MasterVault został pomyślnie zaimportowany z pliku JSON.');
         } else {
-          alert('Niepoprawny format pliku MasterVault JSON.');
+          showToast('Niepoprawny plik', { message: 'To nie jest prawidłowy plik MasterVault JSON.', variant: 'error' });
         }
       } catch (err) {
-        alert('Błąd podczas odczytu pliku JSON.');
+        showToast('Błąd odczytu', { message: 'Nie udało się odczytać pliku JSON.', variant: 'error' });
       }
     };
     reader.readAsText(file);

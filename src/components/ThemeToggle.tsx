@@ -1,50 +1,19 @@
-import React, { useEffect, useState } from 'react';
+import React from 'react';
 import { motion } from 'motion/react';
 import { IconMoon, IconSun } from './ui/icons/ModernIcons';
+import { useTheme } from '../providers/ThemeProvider';
 
 interface ThemeToggleProps {
   className?: string;
 }
 
+/**
+ * Theme state lives entirely in ThemeProvider. This button must never keep its own
+ * copy — two controllers writing the same localStorage key drift out of sync.
+ */
 export function ThemeToggle({ className = '' }: ThemeToggleProps) {
-  const [isDark, setIsDark] = useState<boolean>(() => {
-    if (typeof window === 'undefined') return true;
-    const stored = localStorage.getItem('cvelocity-theme');
-    if (stored) {
-      return stored === 'dark';
-    }
-    return window.matchMedia('(prefers-color-scheme: dark)').matches;
-  });
-
-  useEffect(() => {
-    const root = document.documentElement;
-    if (isDark) {
-      root.setAttribute('data-theme', 'dark');
-      root.classList.add('dark');
-      localStorage.setItem('cvelocity-theme', 'dark');
-    } else {
-      root.setAttribute('data-theme', 'light');
-      root.classList.remove('dark');
-      localStorage.setItem('cvelocity-theme', 'light');
-    }
-  }, [isDark]);
-
-  // Listen for system theme changes if user hasn't explicitly set preference
-  useEffect(() => {
-    const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
-    const handleChange = (e: MediaQueryListEvent) => {
-      const stored = localStorage.getItem('cvelocity-theme');
-      if (!stored) {
-        setIsDark(e.matches);
-      }
-    };
-    mediaQuery.addEventListener('change', handleChange);
-    return () => mediaQuery.removeEventListener('change', handleChange);
-  }, []);
-
-  const toggleTheme = () => {
-    setIsDark((prev) => !prev);
-  };
+  const { resolvedTheme, toggleTheme } = useTheme();
+  const isDark = resolvedTheme === 'dark';
 
   return (
     <motion.button

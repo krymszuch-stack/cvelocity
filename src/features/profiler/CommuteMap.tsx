@@ -117,7 +117,7 @@ export const CommuteMap: React.FC<CommuteMapProps> = ({
               />
 
               {/* Center point */}
-              <div className="relative z-10 flex h-6 w-6 items-center justify-center rounded-full bg-brand-600 text-white shadow-raised">
+              <div className="relative z-10 flex h-6 w-6 items-center justify-center rounded-full bg-brand-600 text-on-brand shadow-raised">
                 <MapPin className="h-3.5 w-3.5" />
               </div>
             </div>

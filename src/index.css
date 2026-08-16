@@ -153,3 +153,30 @@ button:focus-visible,
   background-size: 200% 100%;
   animation: shimmer 1.8s cubic-bezier(0.19, 1, 0.22, 1) infinite;
 }
+
+/* ============================================================
+   REDUCED MOTION
+   Honours the OS-level "reduce motion" setting. The ambient aurora and the
+   looping shimmer are the two genuinely continuous animations, so they stop
+   outright; everything else collapses to a near-instant transition rather than
+   being removed, so state changes stay perceivable.
+   ============================================================ */
+@media (prefers-reduced-motion: reduce) {
+  .aurora-blob,
+  .animate-shimmer {
+    animation: none !important;
+  }
+
+  .animate-shimmer {
+    background: var(--sunken);
+  }
+
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
