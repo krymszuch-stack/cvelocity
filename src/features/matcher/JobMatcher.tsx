@@ -187,18 +187,26 @@ export const JobMatcher: React.FC<JobMatcherProps> = ({
         parsed = parseJobDescriptionLocal(fetched.descriptionRaw);
       }
 
+      // Gdy portal udostępnia dane strukturalne (schema.org/JobPosting), mają one
+      // pierwszeństwo przed wynikiem modelu: pochodzą wprost od wystawiającego
+      // ofertę, więc tytuł, firma, widełki i tryb pracy są faktem, a nie
+      // odczytem z tekstu. Model uzupełnia wtedy tylko to, czego w nich nie ma.
+      const fromPortal = fetched.extraction?.structured === true;
+
       const job: JobOffer = {
         id: `url-${Date.now()}`,
-        title: parsed.jobTitle || fetched.title || 'Oferta z adresu URL',
-        company: parsed.companyName || fetched.company || '',
-        salary: parsed.salaryRange || '',
-        location: '',
+        title: (fromPortal && fetched.title) || parsed.jobTitle || fetched.title || 'Oferta z adresu URL',
+        company: (fromPortal && fetched.company) || parsed.companyName || fetched.company || '',
+        salary: fetched.salary || parsed.salaryRange || '',
+        location: fetched.location || '',
         description: fetched.descriptionRaw,
-        requirements: parsed.requiredHardSkills || [],
-        remote: parsed.workModel === 'REMOTE',
+        requirements: parsed.requiredHardSkills?.length
+          ? parsed.requiredHardSkills
+          : (fetched.skills ?? []),
+        remote: fetched.remote ?? parsed.workModel === 'REMOTE',
         portal: 'URL',
         url,
-        techStack: parsed.toolsAndTech || [],
+        techStack: parsed.toolsAndTech?.length ? parsed.toolsAndTech : (fetched.skills ?? []),
       };
       handleMatchJob(job);
     } catch (err) {

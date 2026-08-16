@@ -1,9 +1,9 @@
 import { Router, Request, Response, NextFunction } from 'express';
-import * as cheerio from 'cheerio';
 import { JobOffer } from '../../types';
-import { JobsQueryParams, FetchJdUrlRequest, ApiResponse } from '../../types/api';
+import { JobsQueryParams, FetchJdUrlRequest } from '../../types/api';
 import { safeFetchHtml, SafeFetchError, type SafeFetchResult } from '../net/safeFetch';
 import { urlFetchLimiter } from '../middleware/rateLimiter';
+import { extractJobPosting, MIN_USABLE_DESCRIPTION } from '../extract';
 
 export const jobsRouter = Router();
 
@@ -87,22 +87,6 @@ const MOCK_JOBS: JobOffer[] = [
     techStack: ['Kubernetes', 'Terraform', 'AWS', 'Docker'],
   },
 ];
-
-/**
- * Filter out web portal navigation noise
- */
-function cleanJobHtml(html: string): { title: string; company: string; description: string } {
-  const $ = cheerio.load(html);
-
-  // Remove noise elements
-  $('script, style, svg, header, footer, nav, aside, noscript, [aria-label*="cookie" i]').remove();
-
-  const title = $('h1').first().text().trim() || $('title').text().split(/[-|]/)[0]?.trim() || '';
-  const company = $('[class*="company" i], [class*="employer" i]').first().text().trim() || '';
-  const description = $('main, article, [role="main"], body').text().replace(/\s+/g, ' ').trim();
-
-  return { title, company, description: description.slice(0, 5000) };
-}
 
 /**
  * GET /api/jobs
@@ -196,9 +180,9 @@ jobsRouter.post('/fetch-jd-url', urlFetchLimiter, async (req: Request<{}, {}, Fe
       throw err;
     }
 
-    const cleaned = cleanJobHtml(fetched.html);
+    const { job, tier, structured } = extractJobPosting(fetched.html);
 
-    if (!cleaned.description || cleaned.description.length < 80) {
+    if (job.description.length < MIN_USABLE_DESCRIPTION) {
       return res.status(422).json({
         success: false,
         requiresManualPaste: true,
@@ -206,12 +190,23 @@ jobsRouter.post('/fetch-jd-url', urlFetchLimiter, async (req: Request<{}, {}, Fe
       });
     }
 
+    // Nadal nie zwracamy surowego ciała odpowiedzi — tylko wyekstrahowane pola.
+    // `structured: true` mówi frontendowi, że tytuł, firma i widełki pochodzą
+    // z danych strukturalnych strony, więc nie ma po co dopytywać o nie modelu.
     res.json({
       success: true,
-      title: cleaned.title,
-      company: cleaned.company,
-      descriptionRaw: cleaned.description,
+      title: job.title,
+      company: job.company,
+      descriptionRaw: job.description,
+      location: job.location,
+      remote: job.remote,
+      employmentType: job.employmentType,
+      salary: job.salary,
+      seniority: job.seniority,
+      skills: job.skills,
+      benefits: job.benefits,
       sourceUrl: fetched.finalUrl,
+      extraction: { tier, structured },
     });
   } catch (err) {
     next(err);

@@ -24,6 +24,29 @@ export interface FetchJdUrlResponse {
   company: string;
   descriptionRaw: string;
   sourceUrl: string;
+
+  /**
+   * Pola poniżej pochodzą z danych strukturalnych strony (schema.org/JobPosting)
+   * i są obecne tylko wtedy, gdy portal je udostępnia. Ich odczyt nie kosztuje
+   * ani jednego wywołania modelu.
+   */
+  location?: string;
+  remote?: boolean;
+  employmentType?: string;
+  salary?: string;
+  seniority?: string;
+  skills?: string[];
+  benefits?: string[];
+
+  /**
+   * Szczebel drabiny, który dostarczył dane. `structured: true` oznacza, że
+   * metadane pochodzą wprost od wystawiającego ofertę, więc mają pierwszeństwo
+   * przed wynikiem modelu.
+   */
+  extraction?: {
+    tier: 'json-ld' | 'open-graph' | 'main-content' | 'none';
+    structured: boolean;
+  };
 }
 
 /**
