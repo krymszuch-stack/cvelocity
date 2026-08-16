@@ -3,6 +3,7 @@ import * as cheerio from 'cheerio';
 import { JobOffer } from '../../types';
 import { JobsQueryParams, FetchJdUrlRequest, ApiResponse } from '../../types/api';
 import { safeFetchHtml, SafeFetchError, type SafeFetchResult } from '../net/safeFetch';
+import { urlFetchLimiter } from '../middleware/rateLimiter';
 
 export const jobsRouter = Router();
 
@@ -160,7 +161,7 @@ jobsRouter.get('/jobs', (req: Request<{}, {}, {}, JobsQueryParams>, res: Respons
 /**
  * POST /api/fetch-jd-url
  */
-jobsRouter.post('/fetch-jd-url', async (req: Request<{}, {}, FetchJdUrlRequest>, res: Response, next: NextFunction) => {
+jobsRouter.post('/fetch-jd-url', urlFetchLimiter, async (req: Request<{}, {}, FetchJdUrlRequest>, res: Response, next: NextFunction) => {
   try {
     const { url } = req.body;
     if (typeof url !== 'string' || url.length === 0 || url.length > 2048) {

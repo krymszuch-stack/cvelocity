@@ -9,14 +9,15 @@ import {
 
 export const aiRouter = Router();
 
-// Apply AI rate limiter to these computationally intensive endpoints
-aiRouter.use(aiEndpointsLimiter);
+// Applied per-route, not via aiRouter.use(): a path-less mount also throttles
+// every route registered on later routers in the chain.
 
 /**
  * POST /api/delta-optimize
  */
 aiRouter.post(
   '/delta-optimize',
+  aiEndpointsLimiter,
   async (req: Request<{}, {}, DeltaOptimizeRequest>, res: Response, next: NextFunction) => {
     try {
       const { originalBullet, targetRole, keywords = [] } = req.body;
@@ -43,6 +44,7 @@ aiRouter.post(
  */
 aiRouter.post(
   '/cover-letter',
+  aiEndpointsLimiter,
   async (req: Request<{}, {}, CoverLetterRequest>, res: Response, next: NextFunction) => {
     try {
       const { targetRole, companyName, jobDescription, vault } = req.body;
@@ -75,6 +77,7 @@ aiRouter.post(
  */
 aiRouter.post(
   '/interview-prep',
+  aiEndpointsLimiter,
   async (req: Request<{}, {}, InterviewPrepRequest>, res: Response, next: NextFunction) => {
     try {
       const { targetRole, companyName, jobDescription, vault } = req.body;
