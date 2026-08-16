@@ -5,9 +5,9 @@ import "dotenv/config";
 
 import express from "express";
 import path from "path";
+import { existsSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import helmet from "helmet";
-import { createServer as createViteServer } from "vite";
 import { jobsRouter } from "./src/server/routes/jobs.routes";
 import { cvRouter } from "./src/server/routes/cv.routes";
 import { aiRouter } from "./src/server/routes/ai.routes";
@@ -80,6 +80,13 @@ async function startServer() {
     next();
   });
 
+  // CV documents can legitimately be large; this is the one route that needs it.
+  // It must be registered *before* the global parser: body-parser marks the
+  // request as read (`req._body`) and every later parser then no-ops, so when
+  // this sat below the 200kB parser the raised limit never applied and a 500kB
+  // CV was rejected with 413.
+  app.use("/api/parse-cv", express.json({ limit: "2mb" }));
+
   // 200kB globally. The previous 10MB limit combined with 120 req/min allowed
   // 1.2GB/min of JSON per IP. Routes that genuinely need large bodies raise it
   // for themselves.
@@ -96,17 +103,15 @@ async function startServer() {
     });
   });
 
-  // CV documents can legitimately be large; this is the one route that needs it.
-  app.use("/api/parse-cv", express.json({ limit: "2mb" }));
-
   app.use("/api", jobsRouter);
   app.use("/api", cvRouter);
   app.use("/api", aiRouter);
   app.use("/api", statsRouter);
 
-  app.use(errorHandler);
-
   if (!isProduction) {
+    // Loaded lazily so the production bundle never pulls Vite (and with it
+    // rollup and esbuild) into the container image or the cold start.
+    const { createServer: createViteServer } = await import("vite");
     const vite = await createViteServer({
       server: { middlewareMode: true },
       appType: "spa",
@@ -114,13 +119,24 @@ async function startServer() {
     app.use(vite.middlewares);
   } else {
     // Resolve relative to this file rather than the working directory, so the
-    // server does not depend on where it was launched from.
-    const distPath = path.join(path.dirname(fileURLToPath(import.meta.url)), "dist");
-    app.use(express.static(distPath));
-    app.get("*", (_req, res) => {
-      res.sendFile(path.join(distPath, "index.html"));
-    });
+    // server does not depend on where it was launched from. The bundle lives in
+    // `dist/`, the frontend in `dist/client/` — keeping them apart is what stops
+    // `express.static` from serving the server bundle and its source map.
+    const clientPath = path.join(path.dirname(fileURLToPath(import.meta.url)), "client");
+
+    // On Cloud Run the frontend is hosted by Vercel, so the image is built API-only
+    // and this directory is absent. Serving it conditionally means one image works
+    // both ways instead of crashing on a missing path.
+    if (existsSync(path.join(clientPath, "index.html"))) {
+      app.use(express.static(clientPath));
+      app.get("*", (_req, res) => {
+        res.sendFile(path.join(clientPath, "index.html"));
+      });
+    }
   }
+
+  // Error middleware only catches what is registered before it.
+  app.use(errorHandler);
 
   app.listen(config.PORT, "0.0.0.0", () => {
     console.log(`CVELOCITY Engine Server running on http://localhost:${config.PORT}`);

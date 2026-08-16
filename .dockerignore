@@ -1,0 +1,20 @@
+# Wszystko poniżej jest albo odtwarzane w obrazie, albo nie ma prawa do niego trafić.
+# Bez tego pliku `gcloud builds submit` wysyła do chmury kilkaset MB node_modules.
+
+node_modules
+dist
+.git
+.github
+.firebase
+.vscode
+.claude
+
+# Sekrety — .env NIGDY nie wchodzi do obrazu. Konfiguracja przychodzi ze zmiennych
+# środowiskowych i Secret Managera w czasie uruchomienia usługi.
+.env
+.env.*
+!.env.example
+
+*.log
+coverage
+semantic-work-graph
