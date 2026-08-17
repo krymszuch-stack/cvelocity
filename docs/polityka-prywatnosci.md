@@ -60,8 +60,8 @@ Podstawa prawna: art. 6 ust. 1 lit. f RODO (ochrona usługi przed nadużyciami i
 
 ## 4. Czego nie robimy
 
-- **Nie stosujemy plików cookies** do śledzenia. `localStorage` służy wyłącznie przechowywaniu Twoich danych na Twoim urządzeniu.
-- **Nie ma analityki ani reklam.** Żaden skrypt firm trzecich nie jest ładowany.
+- **Nie stosujemy plików cookies** — żadnych, także własnych. Dlatego nie ma banera zgody: nie ma na co się zgadzać. `localStorage` służy wyłącznie przechowywaniu Twoich danych na Twoim urządzeniu i nie jest wysyłany na żaden serwer.
+- **Nie ma analityki ani reklam.** Żaden zasób firmy trzeciej nie jest ładowany — **łącznie z fontami**, które hostujemy u siebie (`public/fonts`). Wcześniej pobieraliśmy je z Google Fonts, co powodowało, że przeglądarka każdego odwiedzającego wysyłała swój adres IP na serwery Google, zanim ktokolwiek zdążył wyrazić na to zgodę. Zostało to usunięte.
 - **Nie sprzedajemy i nie udostępniamy danych** nikomu poza podmiotami z listy podprocesorów.
 - **Nie profilujemy Cię** i nie podejmujemy wobec Ciebie decyzji w sposób zautomatyzowany. Ocena ATS to narzędzie, którego wynik widzisz tylko Ty — nie trafia do żadnego pracodawcy.
 - **Nie przechowujemy zdjęcia z CV** poza Twoim urządzeniem. Do modelu nie trafia w żadnej postaci.

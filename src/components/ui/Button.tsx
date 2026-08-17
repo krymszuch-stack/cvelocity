@@ -13,6 +13,35 @@ export interface ButtonProps extends Omit<HTMLMotionProps<'button'>, 'children'>
   children?: React.ReactNode;
 }
 
+const variantStyles: Record<NonNullable<ButtonProps['variant']>, string> = {
+  primary:
+    'bg-brand-grad text-on-brand shadow-raised border border-transparent hover:brightness-110 hover:shadow-brand-glow-lg',
+  secondary:
+    'border border-line bg-elevated text-ink hover:border-brand-200 hover:bg-brand-50 hover:text-brand-fg',
+  ghost: 'border border-transparent text-muted hover:bg-surface hover:text-ink',
+  outline: 'border border-line text-ink hover:border-brand-200 hover:bg-surface',
+  danger: 'border border-danger/30 bg-danger-soft text-danger-fg hover:bg-danger-soft/80',
+};
+
+const sizeStyles = {
+  sm: 'py-1 text-xs gap-1.5 rounded-lg font-medium',
+  md: 'py-2 text-xs font-semibold gap-2 rounded-xl',
+  lg: 'py-2.5 text-sm font-semibold gap-2.5 rounded-xl',
+};
+
+/** Odstępy poziome zależą od tego, czy przycisk ma etykietę, czy samą ikonę. */
+const paddingStyles = {
+  sm: { withLabel: 'px-2.5', iconOnly: 'px-1' },
+  md: { withLabel: 'px-3.5', iconOnly: 'px-2' },
+  lg: { withLabel: 'px-5', iconOnly: 'px-2.5' },
+};
+
+const iconSizes = {
+  sm: 'h-3.5 w-3.5',
+  md: 'h-4 w-4',
+  lg: 'h-[18px] w-[18px]',
+};
+
 export const Button: React.FC<ButtonProps> = ({
   variant = 'primary',
   size = 'md',
@@ -26,50 +55,24 @@ export const Button: React.FC<ButtonProps> = ({
   ...props
 }) => {
   const rippleRef = useRef<HTMLSpanElement>(null);
+  const isDisabled = disabled || loading;
+  const iconOnly = !children && Boolean(Icon);
 
   const handleClick = (e: React.MouseEvent<HTMLButtonElement>) => {
-    if (disabled || loading) return;
-    const button = e.currentTarget;
+    if (isDisabled) return;
+
     const ripple = rippleRef.current;
     if (ripple) {
       ripple.classList.remove('animate-ripple');
-      const rect = button.getBoundingClientRect();
-      const x = e.clientX - rect.left;
-      const y = e.clientY - rect.top;
-      ripple.style.left = `${x}px`;
-      ripple.style.top = `${y}px`;
+      const rect = e.currentTarget.getBoundingClientRect();
+      ripple.style.left = `${e.clientX - rect.left}px`;
+      ripple.style.top = `${e.clientY - rect.top}px`;
       void ripple.offsetWidth;
       ripple.classList.add('animate-ripple');
     }
+
     onClick?.(e);
   };
-
-  const variantStyles = {
-    primary:
-      'bg-brand-grad text-on-brand shadow-raised hover:brightness-110 hover:shadow-brand-glow-lg border border-transparent disabled:opacity-50',
-    secondary:
-      'border border-line bg-elevated text-ink hover:border-brand-200 hover:bg-brand-50 hover:text-brand-fg disabled:opacity-50',
-    ghost:
-      'border border-transparent text-muted hover:bg-surface hover:text-ink disabled:opacity-50',
-    outline:
-      'border border-line text-ink hover:border-brand-200 hover:bg-surface disabled:opacity-50',
-    danger:
-      'border border-danger/30 bg-danger-soft text-danger-fg hover:bg-danger-soft/80 disabled:opacity-50',
-  };
-
-  const sizeStyles = {
-    sm: 'px-2.5 py-1 text-xs gap-1.5 rounded-lg font-medium',
-    md: 'px-3.5 py-2 text-xs font-semibold gap-2 rounded-xl',
-    lg: 'px-5 py-2.5 text-sm font-semibold gap-2.5 rounded-xl',
-  };
-
-  const iconSizes = {
-    sm: 'h-3.5 w-3.5',
-    md: 'h-4 w-4',
-    lg: 'h-[18px] w-[18px]',
-  };
-
-  const isDisabled = disabled || loading;
 
   return (
     <motion.button
@@ -77,26 +80,43 @@ export const Button: React.FC<ButtonProps> = ({
       whileTap={!isDisabled ? { scale: 0.98 } : undefined}
       transition={{ duration: 0.18, ease: [0.19, 1, 0.22, 1] }}
       disabled={isDisabled}
+      aria-busy={loading || undefined}
       onClick={handleClick}
-      className={`relative overflow-hidden inline-flex items-center justify-center transition-colors focus-visible:outline-none ${variantStyles[variant]} ${sizeStyles[size]} ${className}`}
+      className={[
+        'relative overflow-hidden inline-flex items-center justify-center transition-colors',
+        // Wyłączony przycisk ma to pokazywać także kursorem, nie samą przezroczystością.
+        'disabled:opacity-50 disabled:cursor-not-allowed',
+        variantStyles[variant],
+        sizeStyles[size],
+        iconOnly ? paddingStyles[size].iconOnly : paddingStyles[size].withLabel,
+        className,
+      ].join(' ')}
       {...props}
     >
       {loading ? (
-        <Loader2 className={`animate-spin ${iconSizes[size]}`} />
+        <Loader2 className={`animate-spin ${iconSizes[size]}`} aria-hidden="true" />
       ) : (
-        Icon && iconPosition === 'left' && <Icon className={iconSizes[size]} />
+        Icon && iconPosition === 'left' && <Icon className={iconSizes[size]} aria-hidden="true" />
       )}
 
       {children && <span>{children}</span>}
 
       {!loading && Icon && iconPosition === 'right' && (
-        <Icon className={iconSizes[size]} />
+        <Icon className={iconSizes[size]} aria-hidden="true" />
       )}
 
-      {/* Ripple wave span */}
+      {/*
+       * Ripple w kolorze tekstu przycisku, nie w `--on-brand`.
+       * `--on-brand` jest dobrany pod wypełnienie gradientem marki: biały
+       * w jasnym motywie, prawie czarny w ciemnym. Na wariantach bez wypełnienia
+       * (ghost, outline, secondary, danger) zlewał się więc z tłem i efekt był
+       * niewidoczny na czterech z pięciu wariantów. `currentColor` działa
+       * poprawnie na każdym z nich, bo zawsze kontrastuje z własnym tłem.
+       */}
       <span
         ref={rippleRef}
-        className="pointer-events-none absolute h-6 w-6 rounded-full bg-on-brand/25"
+        aria-hidden="true"
+        className="pointer-events-none absolute h-6 w-6 rounded-full bg-current opacity-20"
         style={{ transform: 'translate(-50%, -50%) scale(0)' }}
       />
     </motion.button>

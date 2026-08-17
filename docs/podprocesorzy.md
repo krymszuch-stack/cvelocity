@@ -38,6 +38,7 @@ Podmioty, które wejdą wraz z kolejnymi etapami. **Nie przetwarzają jeszcze ż
 | Podmiot | Kiedy i dlaczego |
 |---|---|
 | **Firebase (Google)** | Usunięty w całości. Był skonfigurowany w kodzie, ale **nigdy nie przetwarzał żadnych danych** — funkcja logowania przez Google nie miała ani jednego wywołania. Usunięto pliki konfiguracyjne, zależność i zmienne środowiskowe, żeby nie figurował jako podprocesor, którym nie był |
+| **Google Fonts** | Usunięty. Aplikacja ładowała fonty z `fonts.googleapis.com` i `fonts.gstatic.com`, przez co przeglądarka **każdego odwiedzającego wysyłała swój adres IP do Google** przed jakąkolwiek interakcją — to znany problem pod RODO. Fonty są teraz hostowane lokalnie (`public/fonts`), a dyrektywa CSP `font-src` została zawężona do `'self'` |
 
 ---
 

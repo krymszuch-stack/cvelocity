@@ -42,7 +42,10 @@ async function startServer() {
               // Tailwind injects styles at runtime.
               styleSrc: ["'self'", "'unsafe-inline'"],
               imgSrc: ["'self'", "data:", "blob:"],
-              fontSrc: ["'self'", "https://fonts.gstatic.com", "data:"],
+              // Fonty hostujemy u siebie (public/fonts). Zezwolenie na
+              // fonts.gstatic.com było potrzebne, dopóki ładowaliśmy je z Google —
+              // co wysyłało adres IP każdego odwiedzającego na ich serwery.
+              fontSrc: ["'self'", "data:"],
               connectSrc: ["'self'", "https://*.supabase.co", "https://api.stripe.com"],
               frameAncestors: ["'none'"],
               objectSrc: ["'none'"],
