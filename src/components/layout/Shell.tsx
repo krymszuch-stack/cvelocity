@@ -2,7 +2,6 @@ import React, { useState, useEffect } from 'react';
 import { Sidebar } from './Sidebar';
 import { Topbar } from './Topbar';
 import { MobileSidebar } from '../MobileSidebar';
-import { TokenStats } from '../../types';
 import { NavTabId } from '../GlobalShell';
 
 export interface ShellProps {
@@ -10,10 +9,8 @@ export interface ShellProps {
   activeTab: NavTabId;
   onSelectTab: (tab: NavTabId) => void;
   onOpenAdvisor: (initialQuestion?: string) => void;
-  onOpenTokenStats: () => void;
   onOpenAuthModal: () => void;
   onOpenDesignTokens?: () => void;
-  tokenStats?: TokenStats;
   isAuthenticated?: boolean;
   userEmail?: string;
   planStatus?: 'free' | 'trialing' | 'active';
@@ -24,10 +21,8 @@ export const Shell: React.FC<ShellProps> = ({
   activeTab,
   onSelectTab,
   onOpenAdvisor,
-  onOpenTokenStats,
   onOpenAuthModal,
   onOpenDesignTokens,
-  tokenStats,
   isAuthenticated = false,
   userEmail,
   planStatus = 'free',
@@ -117,10 +112,8 @@ export const Shell: React.FC<ShellProps> = ({
           activeTab={activeTab}
           onOpenMobileMenu={() => setIsMobileDrawerOpen(true)}
           onOpenAdvisor={() => onOpenAdvisor()}
-          onOpenTokenStats={onOpenTokenStats}
           onOpenAuthModal={onOpenAuthModal}
           onOpenDesignTokens={onOpenDesignTokens}
-          tokenStats={tokenStats}
           isAuthenticated={isAuthenticated}
           userEmail={userEmail}
         />

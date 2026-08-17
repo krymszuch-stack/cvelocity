@@ -1,17 +1,15 @@
 import React, { useState, useEffect, useRef, Suspense, lazy } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { MasterVault, TokenStats } from './types';
+import { MasterVault } from './types';
 import { createEmptyVault } from './lib/sampleVault';
 import { loadVaultFromLocalStorage, saveVaultToLocalStorage, clearVaultLocalStorage } from './lib/vaultCrypto';
-import { getActiveSessionUser, loadUserVault } from './lib/auth';
-import { semanticCacheInstance } from './lib/semanticCache';
+import { getActiveProfile, loadProfileVault } from './lib/localProfile';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { ThemeProvider } from './providers/ThemeProvider';
 import { ToastHost } from './components/ui/ToastHost';
 import { useAppStore } from './store/useAppStore';
 import { AuthModal } from './components/AuthModal';
 import { GlobalShell, NavTabId } from './components/GlobalShell';
-import { TokenStatsWidget } from './components/TokenStatsWidget';
 import { CommandPalette } from './components/CommandPalette';
 import { Skeleton } from './components/ui/Skeleton';
 import { HomeView } from './views/HomeView';
@@ -56,16 +54,16 @@ function MainApp() {
   const [vault, setVault] = useState<MasterVault>(() => {
     const SAMPLE_EMAIL = 'jan.kowalski@example.com';
 
-    // Authenticated user: always load their personal vault
-    const sessionUser = getActiveSessionUser();
-    if (sessionUser) {
-      const userVaultData = loadUserVault(sessionUser.id);
-      if (userVaultData && userVaultData.personalInfo.email === SAMPLE_EMAIL) {
+    // Istniejący profil lokalny: wczytaj jego vault.
+    const profile = getActiveProfile();
+    if (profile) {
+      const profileVault = loadProfileVault(profile.id);
+      if (profileVault && profileVault.personalInfo.email === SAMPLE_EMAIL) {
         clearVaultLocalStorage();
-        return createEmptyVault(sessionUser.fullName, sessionUser.email);
+        return createEmptyVault(profile.name, profile.email);
       }
-      if (userVaultData) return userVaultData;
-      return createEmptyVault(sessionUser.fullName, sessionUser.email);
+      if (profileVault) return profileVault;
+      return createEmptyVault(profile.name, profile.email);
     }
 
     // Unauthenticated: check global cache but never return sample data
@@ -86,7 +84,6 @@ function MainApp() {
     }
   }, [userVault]);
 
-  const [tokenStats, setTokenStats] = useState<TokenStats>(() => semanticCacheInstance.getStats());
 
   // Auto-save vault on changes
   useEffect(() => {
@@ -95,15 +92,6 @@ function MainApp() {
       saveUserVault(vault);
     }
   }, [vault, isAuthenticated, user, saveUserVault]);
-
-  const refreshStats = () => {
-    setTokenStats(semanticCacheInstance.getStats());
-  };
-
-  const handleResetStats = () => {
-    semanticCacheInstance.resetStats();
-    refreshStats();
-  };
 
   const handleApplyParsedVault = (parsed: Partial<MasterVault>) => {
     setVault((prev) => {
@@ -160,10 +148,8 @@ function MainApp() {
       activeTab={activeTab}
       onSelectTab={setActiveTab}
       onOpenAdvisor={handleOpenAdvisor}
-      onOpenTokenStats={() => setTokenModalOpen(true)}
       onOpenAuthModal={() => setAuthModalOpen(true)}
       onOpenDesignTokens={() => setDesignTokensOpen(true)}
-      tokenStats={tokenStats}
       isAuthenticated={isAuthenticated}
       userEmail={user?.email}
     >
@@ -179,8 +165,7 @@ function MainApp() {
           {activeTab === 'home' && (
             <HomeView
               vault={vault}
-              tokenStats={tokenStats}
-              onNavigate={setActiveTab}
+                      onNavigate={setActiveTab}
               onOpenAdvisor={handleOpenAdvisor}
             />
           )}
@@ -191,7 +176,6 @@ function MainApp() {
             {activeTab === 'matcher' && (
               <JobMatcher
                 vault={vault}
-                onUpdateStats={refreshStats}
                 onUpdateVault={setVault}
                 onOpenAdvisor={handleOpenAdvisor}
               />
@@ -248,13 +232,6 @@ function MainApp() {
         />
       </Suspense>
 
-      {/* Token Savings Modal */}
-      <TokenStatsWidget
-        isOpen={isTokenModalOpen}
-        onClose={() => setTokenModalOpen(false)}
-        stats={tokenStats}
-        onResetStats={handleResetStats}
-      />
 
       {/* Auth Modal */}
       <AuthModal

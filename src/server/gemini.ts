@@ -1,13 +1,19 @@
 import { Type } from "@google/genai";
 import {
-  getGeminiClient,
+  generateWithUsage,
   getGeminiModel,
   parseModelJson,
-  callWithRetry,
   truncateForModel,
   MAX_OUTPUT_TOKENS,
 } from "./geminiClient";
 import { MasterVault } from "../types";
+import {
+  pseudonymize,
+  rehydrate,
+  stripSensitiveFields,
+  identifyingValues,
+  assertNoPii,
+} from "./pseudonymize";
 import { UNIVERSAL_CV_REFRAMING_SYSTEM_PROMPT } from "../data/universalCvReframingPrompt";
 import { ATS_CV_REFRAMING_SYSTEM_PROMPT } from "../data/atsCvReframingPrompt";
 
@@ -17,7 +23,6 @@ import { ATS_CV_REFRAMING_SYSTEM_PROMPT } from "../data/atsCvReframingPrompt";
  * Server-side function: Parse raw resume/bio text into normalized Master Vault structure.
  */
 export async function parseRawCvToVault(rawText: string): Promise<Partial<MasterVault>> {
-  const ai = getGeminiClient();
 
   const prompt = `
 Jesteś precyzyjnym parserem dokumentów rekrutacyjnych, profili i eksportów PDF z LinkedIn oraz życiorysów CV.
@@ -48,7 +53,13 @@ ${truncateForModel(rawText)}
 """
 `;
 
-  const response = await callWithRetry(() => ai.models.generateContent({
+  // Jedyna ścieżka wyłączona spod bramki, i to świadomie: zadaniem tej funkcji
+  // jest WYDOBYĆ imię, e-mail i telefon z surowego CV, więc usunięcie ich
+  // z wejścia zniszczyłoby ją. Zamiast pseudonimizacji ta ścieżka wymaga zgody
+  // użytkownika (Faza 7) i dlatego dziś nie jest wystawiona jako trasa HTTP.
+  assertNoPii(prompt, { allowPii: true });
+
+  const response = await generateWithUsage({
     model: getGeminiModel(),
     contents: prompt,
     config: {
@@ -156,7 +167,7 @@ ${truncateForModel(rawText)}
         required: ["personalInfo", "skillsMatrix", "history", "education", "projects"],
       },
     },
-  }), "parse-cv");
+  }, "parse-cv");
 
   // On malformed output return an empty vault rather than logging the payload:
   // it is the user's CV, and server logs are the wrong place for it.
@@ -239,7 +250,9 @@ export async function optimizeDeltaPhrases(
   existingBullet: string,
   targetRole: string
 ): Promise<{ optimizedText: string; keywordsMatched: string[] }> {
-  const ai = getGeminiClient();
+  // Punktor doświadczenia potrafi zawierać nazwisko, adres albo kontakt do
+  // klienta — nic z tego nie jest potrzebne do przeformułowania zdania.
+  const { text: safeBullet, map } = pseudonymize(existingBullet);
 
   const prompt = `
 ${UNIVERSAL_CV_REFRAMING_SYSTEM_PROMPT}
@@ -250,7 +263,7 @@ ZADANIE SILNIKA REFRAMINGU FREAZY (7 KROKÓW):
 Masz istniejący punktor doświadczenia kandydata oraz listę brakujących słów kluczowych / uprawnień z oferty pracy (${targetRole}).
 
 Brakujące słowa kluczowe / uprawnienia: ${missingKeywords.join(", ")}
-Obecny punktor: "${existingBullet}"
+Obecny punktor: "${safeBullet}"
 
 INSTRUKCJA (KROK 5 - REFRAMING FAZ):
 1. Zgodnie z KROKIEM 0-5 obu systemów: Dla korporacji (Tryb A) dopasowuj precyzyjnie słowa kluczowe. Dla rzemiosła/usług (Tryb B) zachowaj prosty, bezpośredni język fachowca.
@@ -259,7 +272,7 @@ INSTRUKCJA (KROK 5 - REFRAMING FAZ):
 4. Zwróć obiekt JSON z polem "optimizedText" oraz "keywordsMatched".
 `;
 
-  const response = await callWithRetry(() => ai.models.generateContent({
+  const response = await generateWithUsage({
     model: getGeminiModel(),
     contents: prompt,
     config: {
@@ -274,16 +287,25 @@ INSTRUKCJA (KROK 5 - REFRAMING FAZ):
         required: ["optimizedText", "keywordsMatched"],
       },
     },
-  }), "optimize-delta");
+  }, "optimize-delta");
 
-  return parseModelJson(response.text, "structured-response");
+  const parsed = parseModelJson<{ optimizedText: string; keywordsMatched: string[] }>(
+    response.text,
+    "structured-response"
+  );
+
+  // Placeholdery wracają do prawdziwych wartości dopiero tutaj — użytkownik ma
+  // dostać swój punktor, a nie zdanie o "[KANDYDAT]".
+  return { ...parsed, optimizedText: rehydrate(parsed.optimizedText ?? "", map) };
 }
 
 /**
  * Server-side function: Parse Job Description text into structured requirements JSON
  */
 export async function parseJobDescriptionWithGemini(rawJdText: string): Promise<any> {
-  const ai = getGeminiClient();
+  // Ogłoszenia regularnie zawierają dane kontaktowe rekrutera. Do wyodrębnienia
+  // wymagań i obowiązków nie są potrzebne, więc nie przekraczają granicy modelu.
+  const { text: safeJdText } = pseudonymize(rawJdText);
 
   const prompt = `
 Jesteś zaawansowanym analitykiem rekrutacyjnym i systemem PRECYZYJNEJ EKSTRAKCJI TREŚCI OGŁOSZEŃ O PRACĘ.
@@ -313,11 +335,11 @@ BEZWZGLĘDNE SELEKCJONOWANIE I FILTROWANIE NOISE/BLUFU:
 
 Treść Ogłoszenia do Przeanalizowania:
 """
-${truncateForModel(rawJdText)}
+${truncateForModel(safeJdText)}
 """
 `;
 
-  const response = await callWithRetry(() => ai.models.generateContent({
+  const response = await generateWithUsage({
     model: getGeminiModel(),
     contents: prompt,
     config: {
@@ -367,7 +389,7 @@ ${truncateForModel(rawJdText)}
         ],
       },
     },
-  }), "parse-jd");
+  }, "parse-jd");
 
   return parseModelJson(response.text, "structured-response");
 }
@@ -382,7 +404,12 @@ export async function getAdvisorEducationalAdvice(
   cvContext?: string,
   jobContext?: string
 ): Promise<{ explanation: string; tips: string[]; slangAnalysis?: string; actionItems: string[] }> {
-  const ai = getGeminiClient();
+  // Doradca dostaje fragmenty CV jako kontekst — porada nie zmienia się przez to,
+  // czy kandydat nazywa się Kowalski, czy [KANDYDAT].
+  const cv = pseudonymize(cvContext ?? "");
+  const job = pseudonymize(jobContext ?? "");
+  const safeCvContext = cv.text;
+  const safeJobContext = job.text;
 
   const prompt = `
 Jesteś cierpliwym, niezwykle merytorycznym Doradcą Rekrutacyjnym i Ekspertem ds. Systemów ATS (Applicant Tracking Systems) oraz Budowy CV.
@@ -394,10 +421,10 @@ Wyjaśnij użytkownikowi w jasny, przystępny sposób:
 3. Odpowiedz precyzyjnie na pytania użytkownika i podaj konkretne, wykonalne ulepszenia (Action Items).
 
 Kontekst CV Kandydata:
-${cvContext || "Brak szczegółowego CV lub podstawowy profil kandydata."}
+${safeCvContext || "Brak szczegółowego CV lub podstawowy profil kandydata."}
 
 Kontekst Oferty Pracy:
-${jobContext || "Brak podanej oferty (ogólne zasady budowy CV)."}
+${safeJobContext || "Brak podanej oferty (ogólne zasady budowy CV)."}
 
 Pytanie Użytkownika / Temat do Wyjaśnienia:
 "${question}"
@@ -409,7 +436,7 @@ Zwróć odpowiedź WYŁĄCZNIE jako obiekt JSON z polami:
 - actionItems: Tablica 3 konkretnych kroków, które użytkownik powinien teraz wykonać w swoim CV.
 `;
 
-  const response = await callWithRetry(() => ai.models.generateContent({
+  const response = await generateWithUsage({
     model: getGeminiModel(),
     contents: prompt,
     config: {
@@ -426,7 +453,7 @@ Zwróć odpowiedź WYŁĄCZNIE jako obiekt JSON z polami:
         required: ["explanation", "tips", "actionItems"],
       },
     },
-  }), "advisor");
+  }, "advisor");
 
   return parseModelJson(response.text, "structured-response");
 }
@@ -442,10 +469,28 @@ export async function generateCoverLetterWithFlash(
   companyName: string,
   jobDescription: string
 ): Promise<{ hook: string; proofPoints: string[]; callToAction: string; fullText: string; targetJobTitle: string; companyName: string }> {
-  const ai = getGeminiClient();
 
   const company = companyName || "Państwa Firmie";
   const role = targetRole || "oferowanym stanowisku";
+
+  // Jedyna ścieżka dostająca cały profil kandydata. Zdjęcie odpada całkowicie
+  // (art. 9 RODO), reszta danych identyfikujących idzie jako placeholdery —
+  // jakość listu zależy od doświadczenia i umiejętności, nie od nazwiska.
+  const safeVault = stripSensitiveFields(vault);
+  const names = identifyingValues(vault);
+
+  const history = pseudonymize(
+    truncateForModel(JSON.stringify(safeVault.history || []), 20_000),
+    names
+  );
+  const projects = pseudonymize(
+    truncateForModel(JSON.stringify(safeVault.projects || []), 8_000),
+    names
+  );
+  const summary = pseudonymize(safeVault.personalInfo?.summary || '', names);
+
+  // Wspólna mapa, żeby rehydracja wyniku objęła placeholdery z każdej sekcji.
+  const map = new Map([...history.map, ...projects.map, ...summary.map]);
 
   const prompt = `
 Jesteś ekspertowym doradcą rekrutacyjnym. Twoim zadaniem jest stworzenie ultra-skutecznego, biznesowego LISTU MOTYWACYJNEGO w formacie ANTI-TEMPLATE dla kandydata na stanowisko "${role}" w firmie "${company}".
@@ -457,15 +502,15 @@ ZASADY ANTI-TEMPLATE:
    - hook (Haczyk): 2-3 zdania bezpośrednio nawiązujące do wyzwań i wymagań podanych w ogłoszeniu pracy oraz do profilu kandydata.
    - proofPoints: Tablica 3 ustrukturyzowanych punktów (zaczynających się od kropki "• ") zawierających mierzone osiągnięcia kandydata z jego historii pracy/projektów.
    - callToAction (CTA): Krótkie zaproszenie do rozmowy kwalifikacyjnej.
-   - fullText: Pełny tekst listu gotowy do skopiowania lub wysłania, zawierający nagłówek z danymi kandydata (${vault.personalInfo?.fullName || 'Kandydat'}).
+   - fullText: Pełny tekst listu gotowy do skopiowania lub wysłania, zawierający nagłówek z danymi kandydata ([KANDYDAT]).
 
 Dane Kandydata z CV (MasterVault):
-- Imię i Nazwisko: ${vault.personalInfo?.fullName || ''}
-- Tytuł/Stanowisko: ${vault.personalInfo?.title || ''}
-- Podsumowanie: ${vault.personalInfo?.summary || ''}
-- Umiejętności: ${[...(vault.skillsMatrix?.hardSkills || []), ...(vault.skillsMatrix?.toolsAndTech || [])].join(', ')}
-- Doświadczenie zawodowe: ${truncateForModel(JSON.stringify(vault.history || []), 20_000)}
-- Projekty: ${truncateForModel(JSON.stringify(vault.projects || []), 8_000)}
+- Imię i Nazwisko: [KANDYDAT]
+- Tytuł/Stanowisko: ${safeVault.personalInfo?.title || ''}
+- Podsumowanie: ${summary.text}
+- Umiejętności: ${[...(safeVault.skillsMatrix?.hardSkills || []), ...(safeVault.skillsMatrix?.toolsAndTech || [])].join(', ')}
+- Doświadczenie zawodowe: ${history.text}
+- Projekty: ${projects.text}
 
 Treść Ogłoszenia o Pracę (${company}):
 """
@@ -475,7 +520,7 @@ ${jobDescription || 'Standardowe ogłoszenie o pracę na stanowisku ' + role}
 Zwróć odpowiedź WYŁĄCZNIE jako ustrukturyzowany obiekt JSON.
 `;
 
-  const response = await callWithRetry(() => ai.models.generateContent({
+  const response = await generateWithUsage({
     model: getGeminiModel(),
     contents: prompt,
     config: {
@@ -492,17 +537,31 @@ Zwróć odpowiedź WYŁĄCZNIE jako ustrukturyzowany obiekt JSON.
         required: ["hook", "proofPoints", "callToAction", "fullText"],
       },
     },
-  }), "cover-letter");
+  }, "cover-letter");
 
   const parsed = parseModelJson<any>(response.text, "cover-letter");
+
+  // Rehydracja: model pisał o [KANDYDAT], użytkownik ma dostać list ze swoim
+  // nazwiskiem. Imię wracamy osobno, bo nie przechodziło przez mapę tekstową.
+  const realName = vault.personalInfo?.fullName?.trim();
+  const restore = (value: string): string => {
+    const rehydrated = rehydrate(value || '', map);
+    return realName ? rehydrated.split('[KANDYDAT]').join(realName) : rehydrated;
+  };
+
+  const hook = restore(parsed.hook);
+  const proofPoints = (Array.isArray(parsed.proofPoints) ? parsed.proofPoints : []).map(restore);
+  const callToAction = restore(parsed.callToAction);
 
   return {
     targetJobTitle: role,
     companyName: company,
-    hook: parsed.hook || '',
-    proofPoints: Array.isArray(parsed.proofPoints) ? parsed.proofPoints : [],
-    callToAction: parsed.callToAction || '',
-    fullText: parsed.fullText || `${parsed.hook}\n\n${(parsed.proofPoints || []).join('\n')}\n\n${parsed.callToAction}`,
+    hook,
+    proofPoints,
+    callToAction,
+    fullText:
+      restore(parsed.fullText) ||
+      `${hook}\n\n${proofPoints.join('\n')}\n\n${callToAction}`,
   };
 }
 

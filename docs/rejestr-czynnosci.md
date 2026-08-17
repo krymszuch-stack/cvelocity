@@ -1,0 +1,107 @@
+# Rejestr czynności przetwarzania (RoPA)
+
+> **Status: szkic do przeglądu prawnego.** Art. 30 RODO. Rejestr prowadzi administrator; przy tej skali nie jest wymagane zgłoszenie IOD, ale sam rejestr — tak.
+>
+> Dokument opisuje **stan faktyczny kodu**. Czynności planowane są wyraźnie oznaczone i nie są jeszcze wykonywane.
+
+**Administrator:** Adrian Koziński (dane rejestrowe do uzupełnienia)
+**Kontakt:** `krymszuch00@outlook.com`
+**Data sporządzenia:** do uzupełnienia przy publikacji
+
+---
+
+## Czynność 1 — Prowadzenie profilu kandydata w przeglądarce
+
+| Element | Opis |
+|---|---|
+| **Cel** | Umożliwienie użytkownikowi zapisania danych do CV i ponownego użycia ich przy kolejnej wizycie |
+| **Kategorie osób** | Osoby poszukujące pracy, korzystające z aplikacji |
+| **Kategorie danych** | Imię i nazwisko, e-mail (opcjonalnie), telefon, miejscowość, doświadczenie zawodowe, wykształcenie, umiejętności, certyfikaty, projekty, opcjonalnie zdjęcie |
+| **Podstawa prawna** | Art. 6 ust. 1 lit. b — wykonanie usługi na żądanie osoby |
+| **Odbiorcy** | Brak. Dane nie opuszczają urządzenia użytkownika |
+| **Transfer poza EOG** | Nie występuje |
+| **Termin usunięcia** | Do usunięcia przez użytkownika; brak automatycznego terminu, bo administrator nie ma dostępu do tych danych |
+| **Zabezpieczenia** | **Brak szyfrowania w spoczynku** — dane leżą w `localStorage` przeglądarki jawnym tekstem. Świadome i opisane w `SECURITY.md`. Ryzyko: dostęp do urządzenia użytkownika, XSS |
+| **Gdzie w kodzie** | `src/lib/localProfile.ts` |
+
+**Uwaga o danych szczególnej kategorii:** zdjęcie w CV to wizerunek (art. 9 RODO). Pozostaje wyłącznie na urządzeniu użytkownika i **nie jest wysyłane do modelu w żadnej postaci** (`stripSensitiveFields` w `src/server/pseudonymize.ts`). Decyzja o docelowym trybie obsługi zdjęcia — do podjęcia przed uruchomieniem kont.
+
+---
+
+## Czynność 2 — Pobranie ogłoszenia o pracę ze wskazanego adresu
+
+| Element | Opis |
+|---|---|
+| **Cel** | Odczytanie treści ogłoszenia, które użytkownik chce porównać ze swoim CV |
+| **Kategorie osób** | Użytkownicy aplikacji; pośrednio osoby wymienione w ogłoszeniu (np. kontakt do rekrutera) |
+| **Kategorie danych** | Adres URL podany przez użytkownika, treść pobranej strony, adres IP użytkownika (limitowanie zapytań) |
+| **Podstawa prawna** | Art. 6 ust. 1 lit. b — działanie na wyraźne żądanie; art. 6 ust. 1 lit. f w zakresie IP (ochrona przed nadużyciem) |
+| **Odbiorcy** | Serwis, z którego pobierana jest strona (widzi nasz adres IP i nagłówek User-Agent) |
+| **Transfer poza EOG** | Możliwy, zależnie od lokalizacji pobieranego serwisu |
+| **Termin usunięcia** | Cache wyniku wygasa po 1 godzinie. Klucz cache'u to **skrót SHA-256 adresu**, nie sam adres |
+| **Zabezpieczenia** | Walidacja adresu i blokada zasobów wewnętrznych (`ipGuard.ts`), przypięcie zwalidowanego IP przeciw DNS rebinding, limit 2 MB, timeout, rewalidacja przekierowań, egzekwowanie `robots.txt` |
+| **Gdzie w kodzie** | `src/server/net/safeFetch.ts`, `src/server/net/robots.ts`, `src/server/extract/cache.ts` |
+
+---
+
+## Czynność 3 — Analiza treści ogłoszenia przez model językowy
+
+| Element | Opis |
+|---|---|
+| **Cel** | Wyodrębnienie wymagań, obowiązków i słów kluczowych z ogłoszenia |
+| **Kategorie osób** | Pośrednio osoby, których dane pojawiają się w treści ogłoszenia |
+| **Kategorie danych** | Treść ogłoszenia **po pseudonimizacji** — e-maile, telefony, PESEL i odnośniki zastąpione symbolami |
+| **Podstawa prawna** | Art. 6 ust. 1 lit. b |
+| **Odbiorcy** | Google (Gemini API) jako podmiot przetwarzający |
+| **Transfer poza EOG** | **Tak — USA.** Podstawa do ustalenia i udokumentowania (SCC albo DPF) |
+| **Termin usunięcia** | Po stronie administratora nie przechowujemy treści zapytań. Retencja po stronie Google — wg umowy powierzenia |
+| **Zabezpieczenia** | Pseudonimizacja przed wysłaniem, bramka `assertNoPii` przerywająca wysyłkę przy wykryciu danych osobowych, klucz API wyłącznie po stronie serwera, brak treści promptów w logach |
+| **Gdzie w kodzie** | `src/server/pseudonymize.ts`, `src/server/gemini.ts`, `src/server/routes/ai.routes.ts` |
+
+---
+
+## Czynność 4 — Rejestrowanie zużycia modelu i zdarzeń technicznych
+
+| Element | Opis |
+|---|---|
+| **Cel** | Kontrola kosztów API i wykrywanie nadużyć |
+| **Kategorie osób** | Użytkownicy aplikacji |
+| **Kategorie danych** | Liczba tokenów, nazwa operacji, znacznik czasu, adres IP (limitowanie), identyfikator błędu |
+| **Podstawa prawna** | Art. 6 ust. 1 lit. f — prawnie uzasadniony interes |
+| **Odbiorcy** | Dostawca hostingu (logi) |
+| **Termin usunięcia** | Wg retencji dostawcy — do ustalenia przy wdrożeniu |
+| **Zabezpieczenia** | **Do logów nie trafia treść promptu ani odpowiedzi modelu** — wyłącznie liczby i nazwy operacji |
+| **Gdzie w kodzie** | `src/server/usageLedger.ts`, `src/server/middleware/errorHandler.ts` |
+
+---
+
+## Czynności planowane — jeszcze nie wykonywane
+
+| Czynność | Wejdzie wraz z | Uwaga |
+|---|---|---|
+| Prowadzenie kont użytkowników | Wprowadzeniem Supabase Auth | Wymaga aktualizacji polityki prywatności **przed** uruchomieniem |
+| Przechowywanie CV na serwerze | Bazą danych | Wymaga szyfrowania kopertowego i odrębnej zgody |
+| Analiza CV przez model | Uruchomieniem funkcji AI dla profilu | Pseudonimizacji **nie da się** zastosować do samego parsowania CV, bo jego zadaniem jest wydobycie danych identyfikujących — ta ścieżka wymaga odrębnej, wyraźnej zgody |
+| Obsługa płatności | Stripe | Dane płatnicze przetwarza Stripe; administrator nie otrzymuje numerów kart |
+| Wysyłka poczty transakcyjnej | Kontami użytkowników | Wybór dostawcy z EOG preferowany |
+
+---
+
+## Ocena skutków (DPIA)
+
+Przy obecnym zakresie — dane zostają na urządzeniu użytkownika, brak profilowania, brak decyzji zautomatyzowanych — pełna DPIA nie jest wymagana.
+
+**Przesłanki, które ją wymuszą:** przechowywanie CV na serwerze w skali wielu użytkowników, przetwarzanie wizerunku (art. 9), albo jakakolwiek forma automatycznej oceny kandydata mająca skutki wobec niego.
+
+**Ryzyko do odnotowania już teraz:** funkcja analizy przerw w zatrudnieniu (`gapAnalysis` w ocenie ATS) wylicza luki w historii zawodowej. Wnioskowanie z nich może pośrednio dotykać zdrowia lub macierzyństwa. Decyzja: wynik pozostaje **wyłącznie po stronie klienta i nie jest nigdzie zapisywany**.
+
+---
+
+## Do uzupełnienia przed publikacją
+
+- [ ] Dane rejestrowe administratora
+- [ ] Umowy powierzenia z podprocesorami
+- [ ] Podstawa transferu do USA
+- [ ] Retencja logów u dostawcy hostingu
+- [ ] Procedura zgłaszania naruszeń (72 h do UODO) — osobny dokument
+- [ ] Przegląd prawnika

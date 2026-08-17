@@ -7,5 +7,4 @@ export const JobMatcher: React.FC<JobMatcherProps> = (props) => {
 
 export { JobMatcher as MatcherView } from '../features/matcher/JobMatcher';
 export { JDInputModes } from '../features/matcher/JDInputModes';
-export { JobBoard } from '../features/matcher/JobBoard';
 export { JobCard } from '../features/matcher/JobCard';

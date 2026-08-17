@@ -1,4 +1,4 @@
-import { MasterVault, JobOffer, TokenStats } from './index';
+import { MasterVault, JobOffer } from './index';
 
 export interface ApiResponse<T = any> {
   success: boolean;
@@ -24,6 +24,29 @@ export interface FetchJdUrlResponse {
   company: string;
   descriptionRaw: string;
   sourceUrl: string;
+
+  /**
+   * Pola poniżej pochodzą z danych strukturalnych strony (schema.org/JobPosting)
+   * i są obecne tylko wtedy, gdy portal je udostępnia. Ich odczyt nie kosztuje
+   * ani jednego wywołania modelu.
+   */
+  location?: string;
+  remote?: boolean;
+  employmentType?: string;
+  salary?: string;
+  seniority?: string;
+  skills?: string[];
+  benefits?: string[];
+
+  /**
+   * Szczebel drabiny, który dostarczył dane. `structured: true` oznacza, że
+   * metadane pochodzą wprost od wystawiającego ofertę, więc mają pierwszeństwo
+   * przed wynikiem modelu.
+   */
+  extraction?: {
+    tier: 'json-ld' | 'open-graph' | 'main-content' | 'none';
+    structured: boolean;
+  };
 }
 
 /**
@@ -34,6 +57,13 @@ export interface FetchJdUrlResponse {
  */
 export type { ParsedJobDescription } from '../lib/jdParser';
 
+/*
+ * Kontrakty poniżej opisują funkcje AI, które nie są dziś wystawione jako trasy
+ * HTTP — zdjęto je z powierzchni publicznej, bo nie miały wywołań w interfejsie,
+ * a wołały model bez uwierzytelnienia i bez limitu kwot. Zostają jako opis
+ * kontraktu na Fazę 6, w której wracają razem z ekranami i kontrolą uprawnień.
+ */
+
 export interface DeltaOptimizeRequest {
   originalBullet: string;
   targetRole?: string;
@@ -43,7 +73,6 @@ export interface DeltaOptimizeRequest {
 
 export interface DeltaOptimizeResponse {
   optimizedBullet: string;
-  tokensSaved: number;
   method: 'SLOT_FILLING' | 'SEMANTIC_CACHE' | 'GEMINI_DELTA';
 }
 
@@ -80,10 +109,20 @@ export interface InterviewPrepResponse {
   }>;
 }
 
+/**
+ * Odpowiedź `GET /api/usage/stats` — realne zużycie odczytane z `usageMetadata`
+ * odpowiedzi modelu. Poprzedni kształt opisywał „zaoszczędzone tokeny" liczone
+ * jako stała 180 razy liczba uruchomień, więc nie mierzył niczego.
+ */
 export interface UsageStatsResponse {
-  totalTokensSaved: number;
-  estimatedCostSavedUSD: number;
-  localSlotHits: number;
-  cacheHits: number;
-  geminiDeltaCalls: number;
+  success: boolean;
+  scope: 'instance-since-start';
+  calls: number;
+  promptTokens: number;
+  outputTokens: number;
+  totalTokens: number;
+  estimatedCostUsd: number;
+  hasUnpricedCalls: boolean;
+  since: string;
+  byContext: Record<string, { calls: number; totalTokens: number; estimatedCostUsd: number }>;
 }

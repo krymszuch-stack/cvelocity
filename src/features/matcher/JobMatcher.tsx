@@ -2,7 +2,6 @@ import React, { useState } from 'react';
 import {
   Sparkles,
   Zap,
-  RotateCcw,
   CheckCircle2,
   FileCheck,
   Eye,
@@ -22,12 +21,9 @@ import type { ParsedJobDescription } from '../../lib/jdParser';
 import { parseJobDescriptionResponse } from '../../lib/jdSchema';
 import { parseJobDescriptionLocal } from '../../lib/jdParser';
 import { JDInputModes } from './JDInputModes';
-import { JobBoard } from './JobBoard';
 import { RealtimeLivePreview } from './RealtimeLivePreview';
-import { useJobs } from '../../hooks/useJobs';
 import { simulateAtsCheck } from '../../lib/atsSimulator';
 import { generateAntiTemplateCoverLetter } from '../../lib/coverLetterEngine';
-import { semanticCacheInstance } from '../../lib/semanticCache';
 import { triggerConfetti } from '../../lib/confetti';
 import { AtsSimulatorView } from '../../components/AtsSimulatorView';
 import { PageHeader } from '../../components/ui/PageHeader';
@@ -37,7 +33,6 @@ import { showToast } from '../../store/useToastStore';
 
 export interface JobMatcherProps {
   vault: MasterVault;
-  onUpdateStats: () => void;
   onUpdateVault?: (updated: MasterVault) => void;
   onOpenAdvisor?: (initialQuestion?: string) => void;
   className?: string;
@@ -45,27 +40,10 @@ export interface JobMatcherProps {
 
 export const JobMatcher: React.FC<JobMatcherProps> = ({
   vault,
-  onUpdateStats,
   onUpdateVault,
   onOpenAdvisor,
   className = '',
 }) => {
-  const [searchParams, setSearchParams] = useState({
-    keywords: 'React Developer',
-    location: 'Warszawa',
-    remoteOnly: false,
-    seniority: 'ALL',
-    portal: 'ALL',
-  });
-
-  const { jobs, isLoading, refetch } = useJobs({
-    keywords: searchParams.keywords,
-    location: searchParams.location,
-    remoteOnly: searchParams.remoteOnly,
-    portal: searchParams.portal,
-    seniority: searchParams.seniority,
-  });
-
   // ATS Matching State
   const [selectedJob, setSelectedJob] = useState<JobOffer | null>(null);
   const [isAtsModalOpen, setIsAtsModalOpen] = useState(false);
@@ -75,10 +53,6 @@ export const JobMatcher: React.FC<JobMatcherProps> = ({
   const [isFetchingUrl, setIsFetchingUrl] = useState(false);
   const [urlError, setUrlError] = useState<string | null>(null);
   const [isTailoring, setIsTailoring] = useState(false);
-
-  const handleSearchLive = (params: typeof searchParams) => {
-    setSearchParams(params);
-  };
 
   const handleMatchJob = async (job: JobOffer) => {
     setSelectedJob(job);
@@ -126,8 +100,6 @@ export const JobMatcher: React.FC<JobMatcherProps> = ({
       setCoverLetter(cl);
 
       setTailoredResume(tailored);
-      semanticCacheInstance.recordSlotFillingHit();
-      onUpdateStats();
     } catch (err) {
       console.error('Błąd dopasowywania oferty:', err);
     } finally {
@@ -187,18 +159,26 @@ export const JobMatcher: React.FC<JobMatcherProps> = ({
         parsed = parseJobDescriptionLocal(fetched.descriptionRaw);
       }
 
+      // Gdy portal udostępnia dane strukturalne (schema.org/JobPosting), mają one
+      // pierwszeństwo przed wynikiem modelu: pochodzą wprost od wystawiającego
+      // ofertę, więc tytuł, firma, widełki i tryb pracy są faktem, a nie
+      // odczytem z tekstu. Model uzupełnia wtedy tylko to, czego w nich nie ma.
+      const fromPortal = fetched.extraction?.structured === true;
+
       const job: JobOffer = {
         id: `url-${Date.now()}`,
-        title: parsed.jobTitle || fetched.title || 'Oferta z adresu URL',
-        company: parsed.companyName || fetched.company || '',
-        salary: parsed.salaryRange || '',
-        location: '',
+        title: (fromPortal && fetched.title) || parsed.jobTitle || fetched.title || 'Oferta z adresu URL',
+        company: (fromPortal && fetched.company) || parsed.companyName || fetched.company || '',
+        salary: fetched.salary || parsed.salaryRange || '',
+        location: fetched.location || '',
         description: fetched.descriptionRaw,
-        requirements: parsed.requiredHardSkills || [],
-        remote: parsed.workModel === 'REMOTE',
+        requirements: parsed.requiredHardSkills?.length
+          ? parsed.requiredHardSkills
+          : (fetched.skills ?? []),
+        remote: fetched.remote ?? parsed.workModel === 'REMOTE',
         portal: 'URL',
         url,
-        techStack: parsed.toolsAndTech || [],
+        techStack: parsed.toolsAndTech?.length ? parsed.toolsAndTech : (fetched.skills ?? []),
       };
       handleMatchJob(job);
     } catch (err) {
@@ -213,47 +193,18 @@ export const JobMatcher: React.FC<JobMatcherProps> = ({
     <div className={`space-y-6 ${className}`}>
       <PageHeader
         title="Dopasowanie Ofert & Symulator ATS"
-        description="Wklej link do oferty lub jej treść — silnik CVELOCITY zweryfikuje Twoje CV przeciwko algorytmom ATS i wygeneruje spersonalizowane dokumenty aplikacyjne. Lista poniżej zawiera oferty przykładowe (dane demonstracyjne), a nie wyniki wyszukiwania na żywo."
+        description="Wklej link do oferty lub jej treść — silnik CVELOCITY zweryfikuje Twoje CV przeciwko algorytmom ATS i wygeneruje spersonalizowane dokumenty aplikacyjne."
         badge="Zero-Token Slot Engine"
-        actions={
-          <div className="flex items-center gap-2">
-            <Button
-              variant="outline"
-              size="sm"
-              icon={RotateCcw}
-              onClick={() => refetch()}
-            >
-              Odśwież Oferty
-            </Button>
-          </div>
-        }
       />
 
       {/* Input Modes (Live / URL / Manual) */}
       <JDInputModes
-        onSearchLive={handleSearchLive}
         onMatchManual={handleMatchManual}
         onMatchUrl={handleMatchUrl}
-        isSearching={isLoading}
         isFetchingUrl={isFetchingUrl}
         urlError={urlError}
       />
 
-      {/* Job Board with Spotlight Cards */}
-      <JobBoard
-        jobs={jobs}
-        isLoading={isLoading}
-        onMatchJob={handleMatchJob}
-        onResetFilters={() =>
-          setSearchParams({
-            keywords: '',
-            location: '',
-            remoteOnly: false,
-            seniority: 'ALL',
-            portal: 'ALL',
-          })
-        }
-      />
 
       {/* ATS Simulator & Tailored Resume Modal */}
       {selectedJob && (

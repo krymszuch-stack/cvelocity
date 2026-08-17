@@ -2,6 +2,13 @@ import http from 'node:http';
 import https from 'node:https';
 import dns from 'node:dns/promises';
 import { isBlockedAddress, isBlockedHostname } from './ipGuard';
+import {
+  parseRobotsTxt,
+  isPathAllowed,
+  getCachedRules,
+  cacheRules,
+  permissiveRules,
+} from './robots';
 
 export class SafeFetchError extends Error {
   constructor(
@@ -14,7 +21,8 @@ export class SafeFetchError extends Error {
       | 'TOO_LARGE'
       | 'BAD_CONTENT_TYPE'
       | 'UPSTREAM_ERROR'
-      | 'BOT_PROTECTED',
+      | 'BOT_PROTECTED'
+      | 'ROBOTS_DISALLOWED',
     readonly status?: number
   ) {
     super(message);
@@ -26,6 +34,18 @@ const MAX_REDIRECTS = 3;
 const TIMEOUT_MS = 8_000;
 const MAX_BYTES = 2 * 1024 * 1024; // 2 MB
 const ALLOWED_PORTS = new Set(['', '80', '443']);
+
+/**
+ * Przedstawiamy się własną nazwą z adresem kontaktowym.
+ *
+ * Wcześniej nagłówek udawał Chrome. Podszywanie się pod przeglądarkę jest nie do
+ * pogodzenia z deklaracją respektowania `robots.txt` — serwis nie ma wtedy jak
+ * zastosować wobec nas swoich reguł, nawet gdyby chciał nas przepuścić.
+ */
+// Wyłącznie ASCII: nagłówki HTTP są latin1, a polski znak diakrytyczny kończy
+// się błędem ERR_INVALID_CHAR i wywraca każde pobranie.
+const USER_AGENT = 'CVELOCITY/1.0 (+https://cvelocity.pl/bot; user-requested job ad parser)';
+const ROBOTS_TIMEOUT_MS = 4_000;
 
 const ALLOWED_CONTENT_TYPES = [
   'text/html',
@@ -109,15 +129,21 @@ async function resolveAllowedAddresses(
 }
 
 /** Recognises a bot-protection challenge so we can stop instead of working around it. */
-function detectBotProtection(status: number, headers: http.IncomingHttpHeaders): boolean {
-  if (status !== 403 && status !== 503) return false;
-  const server = String(headers['server'] ?? '').toLowerCase();
-  return (
-    server.includes('cloudflare') ||
-    headers['cf-mitigated'] !== undefined ||
-    headers['x-datadome'] !== undefined ||
-    String(headers['set-cookie'] ?? '').includes('__cf')
-  );
+/**
+ * Rozpoznaje odmowę automatycznego pobrania.
+ *
+ * Wcześniej wymagane były nagłówki konkretnych dostawców (Cloudflare, DataDome).
+ * Zweryfikowane na żywym ruchu: nofluffjobs.com odrzuca nas czystym `403` bez
+ * jakiegokolwiek nagłówka rozpoznawczego — sama odpowiedź to `content-type:
+ * text/plain` i nic więcej. Przy poprzedniej wersji użytkownik dostawał „błąd
+ * serwera 502" zamiast jedynej użytecznej podpowiedzi: wklej treść ręcznie.
+ *
+ * Dlatego każde 403/451/503 traktujemy jako odmowę. Z punktu widzenia
+ * użytkownika następny krok jest identyczny niezależnie od tego, kto i czym
+ * nas zatrzymał — a my i tak niczego nie obchodzimy.
+ */
+function detectBotProtection(status: number, _headers: http.IncomingHttpHeaders): boolean {
+  return status === 403 || status === 451 || status === 503;
 }
 
 function charsetFromContentType(contentType: string): string | null {
@@ -147,7 +173,8 @@ interface SingleRequestResult {
  */
 function requestOnce(
   url: URL,
-  pinned: { address: string; family: number }
+  pinned: { address: string; family: number },
+  timeoutMs: number = TIMEOUT_MS
 ): Promise<SingleRequestResult> {
   return new Promise((resolve, reject) => {
     const transport = url.protocol === 'https:' ? https : http;
@@ -171,8 +198,7 @@ function requestOnce(
           }
         }) as never,
         headers: {
-          'User-Agent':
-            'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36',
+          'User-Agent': USER_AGENT,
           Accept: 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
           'Accept-Language': 'pl-PL,pl;q=0.9,en;q=0.8',
           'Accept-Encoding': 'identity',
@@ -246,7 +272,7 @@ function requestOnce(
       }
     );
 
-    req.setTimeout(TIMEOUT_MS, () => {
+    req.setTimeout(timeoutMs, () => {
       req.destroy();
       reject(new SafeFetchError('Przekroczono czas oczekiwania na odpowiedź.', 'TIMEOUT'));
     });
@@ -261,14 +287,50 @@ function requestOnce(
 }
 
 /**
+ * Sprawdza `robots.txt` hosta przed pobraniem właściwej strony.
+ *
+ * Brak pliku (404) i błąd serwera traktujemy jako brak zakazu: awaria po drugiej
+ * stronie nie może blokować użytkownika, który sam podał link do swojej oferty.
+ * Zakaz musi być wyrażony wprost, żeby nas zatrzymał.
+ */
+async function assertRobotsAllows(url: URL): Promise<void> {
+  const origin = url.origin;
+  let rules = getCachedRules(origin);
+
+  if (!rules) {
+    try {
+      const robotsUrl = new URL('/robots.txt', origin).toString();
+      const addresses = await resolveAllowedAddresses(new URL(robotsUrl).hostname);
+      const result = await requestOnce(new URL(robotsUrl), addresses[0], ROBOTS_TIMEOUT_MS);
+      rules = result.body ? parseRobotsTxt(result.body.toString('utf-8')) : permissiveRules();
+    } catch {
+      rules = permissiveRules();
+    }
+    cacheRules(origin, rules);
+  }
+
+  if (!isPathAllowed(rules, `${url.pathname}${url.search}`, USER_AGENT)) {
+    throw new SafeFetchError(
+      'Właściciel serwisu nie zezwala na automatyczne pobieranie tej strony. Wklej treść ogłoszenia ręcznie.',
+      'ROBOTS_DISALLOWED'
+    );
+  }
+}
+
+/**
  * Fetches HTML from a user-supplied URL with SSRF protections.
  *
  * Callers must not return the returned `html` to the client verbatim — extract the
  * fields you need and return only those. That way even a bypass of the checks here
  * yields no readable data to an attacker.
  */
-export async function safeFetchHtml(rawUrl: string): Promise<SafeFetchResult> {
+export async function safeFetchHtml(
+  rawUrl: string,
+  options: { skipRobots?: boolean } = {}
+): Promise<SafeFetchResult> {
   let currentUrl = parseAndValidateUrl(rawUrl);
+
+  if (!options.skipRobots) await assertRobotsAllows(currentUrl);
 
   for (let hop = 0; hop <= MAX_REDIRECTS; hop++) {
     const addresses = await resolveAllowedAddresses(currentUrl.hostname);
@@ -279,6 +341,9 @@ export async function safeFetchHtml(rawUrl: string): Promise<SafeFetchResult> {
       // redirect to a private one, and only per-hop checking catches that.
       const next = new URL(result.redirectTo, currentUrl);
       currentUrl = parseAndValidateUrl(next.toString());
+      // Przekierowanie może prowadzić na ścieżkę objętą zakazem — albo w ogóle
+      // na inny host, z własnym robots.txt.
+      if (!options.skipRobots) await assertRobotsAllows(currentUrl);
       continue;
     }
 

@@ -1,6 +1,5 @@
 import React from 'react';
 import { Shell, ShellProps } from './layout/Shell';
-import { TokenStats } from '../types';
 
 export type NavTabId =
   | 'home'

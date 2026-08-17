@@ -1,44 +1,38 @@
 import React, { useState } from 'react';
 import {
-  Search,
   Globe,
   FileCode,
   Sparkles,
-  RotateCcw,
   Building2,
-  MapPin,
-  Sliders,
-  Radio,
-  ExternalLink,
   AlertCircle,
+  FlaskConical,
 } from 'lucide-react';
 import { JobOffer } from '../../types';
 import { Card } from '../../components/ui/Card';
 import { Button } from '../../components/ui/Button';
-import { Input, Textarea, Select } from '../../components/ui/Field';
-import { Toggle } from '../../components/ui/Toggle';
+import { Input, Textarea } from '../../components/ui/Field';
 import { Tabs } from '../../components/ui/Tabs';
 
-export type InputMode = 'live' | 'url' | 'manual';
+export type InputMode = 'url' | 'manual';
 
 export interface JDInputModesProps {
-  onSearchLive: (params: {
-    keywords: string;
-    location: string;
-    remoteOnly: boolean;
-    seniority: string;
-    portal: string;
-  }) => void;
   onMatchManual: (offer: Partial<JobOffer>) => void;
   onMatchUrl: (url: string) => void;
-  isSearching?: boolean;
   isFetchingUrl?: boolean;
   urlError?: string | null;
   className?: string;
 }
 
-const SAMPLE_MANUAL_JD = `Stanowisko: Senior Full-Stack React / Node.js Developer
-Firma: TechScale Dynamics
+/**
+ * Ogłoszenie do wypróbowania narzędzia bez szukania własnego.
+ *
+ * Jawnie oznaczone jako przykład — również w samej treści, żeby nikt nie wziął
+ * go za prawdziwą ofertę po skopiowaniu gdzie indziej.
+ */
+const SAMPLE_MANUAL_JD = `[PRZYKŁAD — fikcyjne ogłoszenie do przetestowania narzędzia]
+
+Stanowisko: Senior Full-Stack React / Node.js Developer
+Firma: TechScale Dynamics (firma przykładowa)
 Lokalizacja: Warszawa / Zdalnie
 Widełki: 24 000 - 30 000 PLN netto B2B
 
@@ -52,54 +46,22 @@ Wymagania kluczowe:
 - Znajomość wzorców projektowych i pisania testów jednostkowych (Vitest / Jest)`;
 
 export const JDInputModes: React.FC<JDInputModesProps> = ({
-  onSearchLive,
   onMatchManual,
   onMatchUrl,
-  isSearching = false,
   isFetchingUrl = false,
   urlError = null,
   className = '',
 }) => {
-  const [activeMode, setActiveMode] = useState<InputMode>('live');
-
-  // Mode 1: Live Filter States
-  const [keywords, setKeywords] = useState('React Developer');
-  const [location, setLocation] = useState('Warszawa');
-  const [remoteOnly, setRemoteOnly] = useState(false);
-  const [seniority, setSeniority] = useState('ALL');
-  const [portal, setPortal] = useState('ALL');
-
-  // Mode 2: URL State
+  const [activeMode, setActiveMode] = useState<InputMode>('url');
   const [jobUrl, setJobUrl] = useState('');
-
-  // Mode 3: Manual State
   const [manualTitle, setManualTitle] = useState('');
   const [manualCompany, setManualCompany] = useState('');
   const [manualText, setManualText] = useState('');
 
   const modeTabs = [
-    { id: 'live' as InputMode, label: 'Oferty przykładowe (demo)', icon: Radio },
     { id: 'url' as InputMode, label: 'Wklej Link do Oferty', icon: Globe },
     { id: 'manual' as InputMode, label: 'Wpisz Ręcznie / Wklej Treść', icon: FileCode },
   ];
-
-  const handleSearchClick = () => {
-    onSearchLive({
-      keywords,
-      location,
-      remoteOnly,
-      seniority,
-      portal,
-    });
-  };
-
-  const handleResetFilters = () => {
-    setKeywords('');
-    setLocation('');
-    setRemoteOnly(false);
-    setSeniority('ALL');
-    setPortal('ALL');
-  };
 
   const handleUrlSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -107,123 +69,39 @@ export const JDInputModes: React.FC<JDInputModesProps> = ({
     onMatchUrl(jobUrl.trim());
   };
 
+  /**
+   * Przekazuje wyłącznie to, co użytkownik faktycznie podał.
+   *
+   * Poprzednia wersja dorabiała tu wartości domyślne: `requirements`
+   * `['React','TypeScript','Node.js']`, `salary` „22 000 - 28 000 PLN netto B2B",
+   * `location` „Warszawa / Zdalnie" i `remote: true`, a brakujący tytuł i firmę
+   * zastępowała literałami „Stanowisko Docelowe" i „Firma Rekrutująca". Trafiało
+   * to dalej jako `requirements` i `techStack`, więc po wklejeniu ogłoszenia dla
+   * hydraulika aplikacja pokazywała stack React/TypeScript/Node.js i widełki
+   * z sufitu. Puste pole jest uczciwe; wymyślona wartość nie.
+   */
   const handleManualSubmit = () => {
     if (!manualText.trim()) return;
     onMatchManual({
       id: `manual-${Date.now()}`,
-      title: manualTitle.trim() || 'Stanowisko Docelowe',
-      company: manualCompany.trim() || 'Firma Rekrutująca',
+      title: manualTitle.trim(),
+      company: manualCompany.trim(),
       description: manualText.trim(),
-      requirements: ['React', 'TypeScript', 'Node.js'],
-      salary: '22 000 - 28 000 PLN netto B2B',
-      location: 'Warszawa / Zdalnie',
-      remote: true,
       portal: 'Ręczne',
     });
   };
 
   return (
     <Card tone="raised" className={`space-y-5 ${className}`}>
-      {/* Mode Selector Tabs */}
       <div className="flex justify-center border-b border-line pb-4">
         <Tabs<InputMode>
           items={modeTabs}
           active={activeMode}
           onChange={setActiveMode}
-          className="max-w-2xl"
+          className="max-w-xl"
         />
       </div>
 
-      {/* Mode 1: Demo offer filters */}
-      {activeMode === 'live' && (
-        <div className="space-y-4">
-          <div className="flex items-start gap-2 rounded-xl bg-warning-soft p-3 text-xs text-warning-fg">
-            <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />
-            <span>
-              Ta zakładka filtruje wbudowany zestaw ofert demonstracyjnych — nie jest to wyszukiwanie na żywo w portalach pracy. Aby dopasować CV do prawdziwej oferty, użyj zakładki z linkiem lub wklej jej treść.
-            </span>
-          </div>
-
-          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
-            <Input
-              label="Stanowisko / Słowa Kluczowe"
-              icon={Search}
-              value={keywords}
-              onChange={(e) => setKeywords(e.target.value)}
-              placeholder="np. Frontend, Python, DevOps"
-              onKeyDown={(e) => e.key === 'Enter' && handleSearchClick()}
-            />
-
-            <Input
-              label="Lokalizacja"
-              icon={MapPin}
-              value={location}
-              onChange={(e) => setLocation(e.target.value)}
-              placeholder="np. Warszawa, Kraków, Zdalnie"
-              onKeyDown={(e) => e.key === 'Enter' && handleSearchClick()}
-            />
-
-            <Select
-              label="Poziom Doświadczenia"
-              value={seniority}
-              onChange={(e) => setSeniority(e.target.value)}
-              options={[
-                { value: 'ALL', label: 'Wszystkie poziomy' },
-                { value: 'JUNIOR', label: 'Junior (0-2 lata)' },
-                { value: 'MID', label: 'Mid Specialist (2-5 lat)' },
-                { value: 'SENIOR', label: 'Senior (5+ lat)' },
-                { value: 'LEAD', label: 'Lead / Manager' },
-              ]}
-            />
-
-            <Select
-              label="Portal Źródłowy"
-              value={portal}
-              onChange={(e) => setPortal(e.target.value)}
-              options={[
-                { value: 'ALL', label: 'Wszystkie portale' },
-                { value: 'JustJoinIT', label: 'JustJoin.it' },
-                { value: 'NoFluffJobs', label: 'NoFluffJobs' },
-                { value: 'Pracuj.pl', label: 'Pracuj.pl' },
-                { value: 'LinkedIn', label: 'LinkedIn Jobs' },
-              ]}
-            />
-          </div>
-
-          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between border-t border-line/60 pt-3.5">
-            <Toggle
-              checked={remoteOnly}
-              onChange={setRemoteOnly}
-              label="Tylko praca w 100% zdalna"
-            />
-
-            <div className="flex items-center gap-2">
-              <Button
-                type="button"
-                variant="ghost"
-                size="sm"
-                icon={RotateCcw}
-                onClick={handleResetFilters}
-              >
-                Wyczyść
-              </Button>
-
-              <Button
-                type="button"
-                variant="primary"
-                size="md"
-                icon={Search}
-                loading={isSearching}
-                onClick={handleSearchClick}
-              >
-                Szukaj Ofert
-              </Button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Mode 2: URL Ingestion */}
       {activeMode === 'url' && (
         <form onSubmit={handleUrlSubmit} className="space-y-4">
           <div className="flex flex-col gap-2 sm:flex-row sm:items-end">
@@ -233,7 +111,7 @@ export const JDInputModes: React.FC<JDInputModesProps> = ({
               type="url"
               value={jobUrl}
               onChange={(e) => setJobUrl(e.target.value)}
-              placeholder="https://justjoin.it/offers/... lub https://nofluffjobs.com/job/..."
+              placeholder="https://justjoin.it/job-offer/..."
               containerClassName="flex-1"
               required
             />
@@ -258,24 +136,26 @@ export const JDInputModes: React.FC<JDInputModesProps> = ({
           )}
 
           <p className="text-xs text-muted">
-            Wklej bezpośredni link z dowolnego portalu. Nasz serwer pobierze treść ogłoszenia, zidentyfikuje wymagania i wyliczy Twój wskaźnik dopasowania ATS. Część portali (m.in. Pracuj.pl, LinkedIn) blokuje automatyczne pobieranie — w takim wypadku skorzystaj z zakładki „Wpisz Ręcznie / Wklej Treść".
+            Serwer pobierze treść ogłoszenia, odczyta wymagania i wyliczy Twój wskaźnik dopasowania
+            ATS. Część portali — m.in. Pracuj.pl, NoFluffJobs, LinkedIn i theprotocol.it — blokuje
+            automatyczne pobieranie albo zastrzega je w <code className="font-mono">robots.txt</code>.
+            Nie obchodzimy tych zabezpieczeń; w takim wypadku skopiuj treść i użyj zakładki obok.
           </p>
         </form>
       )}
 
-      {/* Mode 3: Manual Text Input */}
       {activeMode === 'manual' && (
         <div className="space-y-4">
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
             <Input
-              label="Nazwa Stanowiska"
+              label="Nazwa Stanowiska (opcjonalnie)"
               value={manualTitle}
               onChange={(e) => setManualTitle(e.target.value)}
               placeholder="np. Senior Frontend Architect"
             />
 
             <Input
-              label="Firma Rekrutująca"
+              label="Firma Rekrutująca (opcjonalnie)"
               icon={Building2}
               value={manualCompany}
               onChange={(e) => setManualCompany(e.target.value)}
@@ -292,14 +172,15 @@ export const JDInputModes: React.FC<JDInputModesProps> = ({
             className="font-mono text-xs"
           />
 
-          <div className="flex items-center justify-between border-t border-line/60 pt-3.5">
+          <div className="flex flex-col gap-3 border-t border-line/60 pt-3.5 sm:flex-row sm:items-center sm:justify-between">
             <Button
               type="button"
               variant="outline"
               size="sm"
+              icon={FlaskConical}
               onClick={() => setManualText(SAMPLE_MANUAL_JD)}
             >
-              Wypełnij przykładową ofertą
+              Wypróbuj na przykładzie
             </Button>
 
             <Button
@@ -308,6 +189,7 @@ export const JDInputModes: React.FC<JDInputModesProps> = ({
               size="md"
               icon={Sparkles}
               onClick={handleManualSubmit}
+              disabled={!manualText.trim()}
             >
               Dopasuj CV do Treści
             </Button>

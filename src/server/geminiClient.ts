@@ -1,5 +1,6 @@
 import { GoogleGenAI } from '@google/genai';
 import { loadConfig } from './config';
+import { recordUsage } from './usageLedger';
 
 let client: GoogleGenAI | null = null;
 
@@ -90,4 +91,53 @@ export async function callWithRetry<T>(operation: () => Promise<T>, context: str
   }
 
   throw lastError;
+}
+
+/** Fragment odpowiedzi SDK, na którym nam zależy. */
+type ModelResponse = {
+  text?: string;
+  usageMetadata?: {
+    promptTokenCount?: number;
+    candidatesTokenCount?: number;
+    totalTokenCount?: number;
+  };
+};
+
+/**
+ * Jedno wejście do modelu dla całego serwera.
+ *
+ * Łączy trzy rzeczy, które wcześniej były powielone przy każdym z pięciu
+ * wywołań albo nie istniały w ogóle: pobranie współdzielonego klienta,
+ * ponowienia z timeoutem oraz **odczyt zużycia tokenów**. To ostatnie nie było
+ * robione nigdzie, przez co koszt jednego użytkownika pozostawał nieznany.
+ */
+export async function generateWithUsage(
+  params: Record<string, unknown>,
+  context: string
+): Promise<ModelResponse> {
+  const ai = getGeminiClient();
+  const model = (params.model as string) ?? getGeminiModel();
+
+  const response = (await callWithRetry(
+    () => ai.models.generateContent({ model, ...params } as never),
+    context
+  )) as ModelResponse;
+
+  // Brak `usageMetadata` nie może wywrócić żądania — użytkownik dostał wynik,
+  // a niepełna telemetria to problem operatora, nie jego.
+  const usage = response?.usageMetadata;
+  if (usage) {
+    recordUsage({
+      context,
+      model,
+      promptTokens: usage.promptTokenCount ?? 0,
+      outputTokens:
+        usage.candidatesTokenCount ??
+        Math.max(0, (usage.totalTokenCount ?? 0) - (usage.promptTokenCount ?? 0)),
+    });
+  } else {
+    console.warn(`[gemini] Odpowiedź bez usageMetadata (${context}) — zużycie nieodnotowane.`);
+  }
+
+  return response;
 }

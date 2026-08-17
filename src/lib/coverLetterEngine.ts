@@ -97,32 +97,15 @@ export function generateAntiTemplateCoverLetter(
   };
 }
 
-/**
- * Generates an Anti-Template Cover Letter using the fast Gemini Flash model (/api/generate-cover-letter).
+/*
+ * Była tu funkcja `generateCoverLetterWithAI`, wołająca `/api/generate-cover-letter`.
+ * Serwer nigdy nie wystawiał takiej ścieżki — jego trasa nazywała się
+ * `/api/cover-letter` — więc każde wywołanie kończyło się 404 (zweryfikowane na
+ * uruchomionym serwerze). Sama funkcja i tak nie miała ani jednego wywołania
+ * w interfejsie, więc nikt tego nie zauważył.
+ *
+ * Generowanie listu wraca w Fazie 6 razem z ekranem, który go używa, i kontrolą
+ * uprawnień. Implementacja po stronie serwera (`generateCoverLetterWithFlash`
+ * w `src/server/gemini.ts`) jest gotowa i nietknięta.
  */
-export async function generateCoverLetterWithAI(
-  targetRole: string,
-  companyName: string,
-  jobDescription: string,
-  vault: MasterVault
-): Promise<CoverLetter> {
-  const response = await fetch('/api/generate-cover-letter', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      vault,
-      targetRole,
-      companyName,
-      jobDescription,
-    }),
-  });
-
-  if (!response.ok) {
-    const errorData = await response.json().catch(() => ({}));
-    throw new Error(errorData.error || 'Nie udało się wygenerować listu przez Gemini Flash.');
-  }
-
-  const data = await response.json();
-  return data.coverLetter;
-}
 
