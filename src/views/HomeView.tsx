@@ -20,7 +20,7 @@ import {
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { Card } from '../components/ui/Card';
-import { MasterVault, TokenStats } from '../types';
+import { MasterVault } from '../types';
 import { NavTabId } from '../components/GlobalShell';
 
 interface CareerTip {
@@ -148,14 +148,12 @@ const CAREER_TIPS: CareerTip[] = [
 
 interface HomeViewProps {
   vault: MasterVault;
-  tokenStats: TokenStats;
   onNavigate: (tab: NavTabId) => void;
   onOpenAdvisor: (question?: string) => void;
 }
 
 export const HomeView: React.FC<HomeViewProps> = ({
   vault,
-  tokenStats,
   onNavigate,
   onOpenAdvisor,
 }) => {
@@ -197,6 +195,8 @@ export const HomeView: React.FC<HomeViewProps> = ({
   const historyCount = vault.history.length;
   const hardSkillsCount = vault.skillsMatrix.hardSkills.length;
   const certsCount = vault.skillsMatrix.certifications?.length || 0;
+  const projectsCount = vault.projects?.length || 0;
+  const educationCount = vault.education?.length || 0;
   const hasFullName = Boolean(vault.personalInfo.fullName);
 
   const quickActions = [
@@ -330,28 +330,28 @@ export const HomeView: React.FC<HomeViewProps> = ({
 
         <Card variant="elevated" className="p-4">
           <div className="flex items-center justify-between">
-            <span className="text-xs font-medium text-muted">Zaoszczędzone Tokeny</span>
-            <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-success-soft text-success-fg">
+            <span className="text-xs font-medium text-muted">Projekty</span>
+            <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-brand-50 text-brand-600">
               <Zap className="h-3.5 w-3.5" />
             </div>
           </div>
-          <div className="mt-2 font-mono text-2xl font-bold text-success-fg">
-            {tokenStats.totalTokensSaved.toLocaleString()}
-          </div>
-          <p className="mt-0.5 text-[11px] text-subtle">Silnik 0-Token Slot Filling</p>
+          <div className="mt-2 font-mono text-2xl font-bold text-ink">{projectsCount}</div>
+          <p className="mt-0.5 text-[11px] text-subtle">
+            {projectsCount === 0 ? 'Brak wpisów w Vault' : 'Opisane w profilu'}
+          </p>
         </Card>
 
         <Card variant="elevated" className="p-4">
           <div className="flex items-center justify-between">
-            <span className="text-xs font-medium text-muted">Oszczędność $</span>
-            <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-warning-soft text-warning-fg">
+            <span className="text-xs font-medium text-muted">Wykształcenie</span>
+            <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-brand-50 text-brand-600">
               <TrendingUp className="h-3.5 w-3.5" />
             </div>
           </div>
-          <div className="mt-2 font-mono text-2xl font-bold text-warning-fg">
-            ${tokenStats.estimatedCostSavedUSD.toFixed(4)}
-          </div>
-          <p className="mt-0.5 text-[11px] text-subtle">Zredukowane zapytania API</p>
+          <div className="mt-2 font-mono text-2xl font-bold text-ink">{educationCount}</div>
+          <p className="mt-0.5 text-[11px] text-subtle">
+            {educationCount === 0 ? 'Brak wpisów w Vault' : 'Wpisy w profilu'}
+          </p>
         </Card>
       </div>
 

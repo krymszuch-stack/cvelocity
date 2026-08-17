@@ -1,4 +1,4 @@
-import { MasterVault, JobOffer, TokenStats } from './index';
+import { MasterVault, JobOffer } from './index';
 
 export interface ApiResponse<T = any> {
   success: boolean;
@@ -109,10 +109,20 @@ export interface InterviewPrepResponse {
   }>;
 }
 
+/**
+ * Odpowiedź `GET /api/usage/stats` — realne zużycie odczytane z `usageMetadata`
+ * odpowiedzi modelu. Poprzedni kształt opisywał „zaoszczędzone tokeny" liczone
+ * jako stała 180 razy liczba uruchomień, więc nie mierzył niczego.
+ */
 export interface UsageStatsResponse {
-  totalTokensSaved: number;
-  estimatedCostSavedUSD: number;
-  localSlotHits: number;
-  cacheHits: number;
-  geminiDeltaCalls: number;
+  success: boolean;
+  scope: 'instance-since-start';
+  calls: number;
+  promptTokens: number;
+  outputTokens: number;
+  totalTokens: number;
+  estimatedCostUsd: number;
+  hasUnpricedCalls: boolean;
+  since: string;
+  byContext: Record<string, { calls: number; totalTokens: number; estimatedCostUsd: number }>;
 }

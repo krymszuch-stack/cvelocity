@@ -105,6 +105,14 @@ async function startServer() {
   app.use("/api", aiRouter);
   app.use("/api", statsRouter);
 
+  // Nieznana ścieżka pod /api kończy się czystym 404 w JSON-ie. Bez tego łapie ją
+  // fallback SPA poniżej i odsyła index.html ze statusem 200 — klient wywołujący
+  // usunięty albo przekręcony endpoint dostawał wtedy stronę HTML, a `res.json()`
+  // wywracał się na parsowaniu zamiast pokazać, że trasy po prostu nie ma.
+  app.use("/api", (_req, res) => {
+    res.status(404).json({ success: false, error: "Nie znaleziono takiego zasobu API." });
+  });
+
   if (!isProduction) {
     // Loaded lazily so the production bundle never pulls Vite (and with it
     // rollup and esbuild) into the container image or the cold start.

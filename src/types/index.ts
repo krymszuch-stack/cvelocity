@@ -128,14 +128,6 @@ export interface CachedPhrase {
   lastUsed: string;
 }
 
-export interface TokenStats {
-  totalTokensSaved: number;
-  estimatedCostSavedUSD: number;
-  localSlotHits: number;
-  cacheHits: number;
-  geminiDeltaCalls: number;
-}
-
 export interface LemmatizedMatch {
   keywordFromJD: string;
   matchedInCv: string;

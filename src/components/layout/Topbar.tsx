@@ -15,7 +15,6 @@ import {
 import { motion, AnimatePresence } from 'motion/react';
 import { ThemeToggle } from '../ThemeToggle';
 import { AdvisorButton } from '../ui/AdvisorButton';
-import { TokenStats } from '../../types';
 import { NavTabId } from '../GlobalShell';
 import { useAuthStore } from '../../store/useAuthStore';
 import { useAuth } from '../../context/AuthContext';
@@ -25,10 +24,8 @@ export interface TopbarProps {
   activeTab: NavTabId;
   onOpenMobileMenu: () => void;
   onOpenAdvisor: () => void;
-  onOpenTokenStats: () => void;
   onOpenAuthModal: () => void;
   onOpenDesignTokens?: () => void;
-  tokenStats?: TokenStats;
   isAuthenticated?: boolean;
   userEmail?: string;
   className?: string;
@@ -48,10 +45,8 @@ export const Topbar: React.FC<TopbarProps> = ({
   activeTab,
   onOpenMobileMenu,
   onOpenAdvisor,
-  onOpenTokenStats,
   onOpenAuthModal,
   onOpenDesignTokens,
-  tokenStats,
   isAuthenticated = false,
   userEmail,
   className = '',
@@ -122,25 +117,6 @@ export const Topbar: React.FC<TopbarProps> = ({
           </span>
         </button>
 
-        {/* Token Savings Mini Card */}
-        {tokenStats && (
-          <motion.button
-            type="button"
-            onClick={onOpenTokenStats}
-            whileHover={{ scale: 1.02 }}
-            whileTap={{ scale: 0.98 }}
-            transition={{ duration: 0.18, ease: [0.19, 1, 0.22, 1] }}
-            className="flex items-center gap-1.5 rounded-xl border border-line bg-elevated px-2.5 py-1.5 text-xs font-semibold text-ink shadow-xs hover:border-brand-500/30 hover:bg-brand-500/5"
-            aria-label="Statystyki optymalizacji tokenów"
-            title="Kliknij, aby otworzyć statystyki tokenów"
-          >
-            <Zap className="h-3.5 w-3.5 text-brand-600" />
-            <span className="hidden md:inline text-muted text-[11px]">Tokeny:</span>
-            <span className="font-mono font-bold text-success-fg">
-              {tokenStats.totalTokensSaved.toLocaleString()}
-            </span>
-          </motion.button>
-        )}
 
         {/* Advisor Button with Ping Indicator */}
         <AdvisorButton onClick={onOpenAdvisor} />
