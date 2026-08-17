@@ -70,6 +70,28 @@ describe('CV Universal Multi-Format Parser Suite', () => {
     expect(parsed.personalInfo.location).toBe('');
   });
 
+  it('czyta sekcję, gdy nagłówek i treść stoją w tej samej linii', () => {
+    // Bardzo częsty zapis w prawdziwych CV. Wzorce sekcji były zakotwiczone na
+    // końcu linii zaraz po dwukropku, więc „Umiejętności: Python, Django"
+    // nie pasowało do niczego i cała zawartość przepadała.
+    const inline = parseTextToMasterVault(
+      'Ewa Nowak\nUmiejętności: Python, Django, Kubernetes, Terraform\nUmiejętności miękkie: Komunikacja, Praca zespołowa',
+      'TXT'
+    );
+
+    expect(inline.hardSkills).toContain('Django');
+    expect(inline.hardSkills).toContain('Kubernetes');
+    expect(inline.hardSkills).toContain('Terraform');
+    expect(inline.softSkills).toEqual(['Komunikacja', 'Praca zespołowa']);
+  });
+
+  it('daje ten sam wynik niezależnie od tego, czy nagłówek jest w osobnej linii', () => {
+    const inline = parseTextToMasterVault('Ewa Nowak\nUmiejętności: Python, Django', 'TXT');
+    const separate = parseTextToMasterVault('Ewa Nowak\nUmiejętności:\nPython, Django', 'TXT');
+
+    expect(inline.hardSkills.sort()).toEqual(separate.hardSkills.sort());
+  });
+
   it('wyodrębnia realne wykształcenie i certyfikaty, gdy CV je zawiera', () => {
     const fullCv = `
     Marek Wolny
