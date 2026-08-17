@@ -25,6 +25,8 @@ import {
 import { motion, AnimatePresence } from 'motion/react';
 import { Card } from '../components/ui/Card';
 import { TrustRow } from '../components/ui/TrustChip';
+import { QuickAtsCheck } from '../features/quickcheck/QuickAtsCheck';
+import { showToast } from '../store/useToastStore';
 import { MasterVault } from '../types';
 import { NavTabId } from '../components/GlobalShell';
 
@@ -155,6 +157,8 @@ interface HomeViewProps {
   vault: MasterVault;
   onNavigate: (tab: NavTabId) => void;
   onOpenAdvisor: (question?: string) => void;
+  /** Zapisuje profil odczytany z CV w szybkim sprawdzeniu. */
+  onAdoptVault: (vault: MasterVault) => void;
 }
 
 /**
@@ -189,6 +193,7 @@ export const HomeView: React.FC<HomeViewProps> = ({
   vault,
   onNavigate,
   onOpenAdvisor,
+  onAdoptVault,
 }) => {
   const [selectedCategory, setSelectedCategory] = useState<string>('Wszystkie');
   const [favorites, setFavorites] = useState<string[]>(() => {
@@ -291,6 +296,21 @@ export const HomeView: React.FC<HomeViewProps> = ({
 
   return (
     <div className="space-y-8 pb-12">
+      {/* 0. Klin wejściowy — wynik ATS bez zakładania konta */}
+      <QuickAtsCheck
+        onSaveProfile={(parsedVault) => {
+          onAdoptVault(parsedVault);
+          showToast('Profil zapisany', {
+            message: 'Dane z CV trafiły do profilu w tej przeglądarce.',
+            variant: 'success',
+          });
+        }}
+        onOpenEditor={(parsedVault) => {
+          onAdoptVault(parsedVault);
+          onNavigate('vault');
+        }}
+      />
+
       {/* 1. Hero Banner */}
       <motion.div
         initial={{ opacity: 0, y: 15 }}

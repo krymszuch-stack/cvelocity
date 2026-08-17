@@ -113,13 +113,24 @@ function stripRtfControlWords(rtf: string): string {
     .trim();
 }
 
+/**
+ * Nagłówki sekcji CV.
+ *
+ * Grupa przechwytująca na końcu zbiera treść stojącą **w tej samej linii** co
+ * nagłówek. Poprzednia wersja była zakotwiczona na `\s*:?\s*$`, czyli wymagała,
+ * żeby linia kończyła się zaraz po dwukropku — przez co bardzo częsty w CV zapis
+ * „Umiejętności: Python, Django, Kubernetes" **nie pasował do żadnego wzorca**.
+ * Sekcja zostawała pusta, a jedynym źródłem umiejętności była zaszyta niżej
+ * lista kilkunastu słów kluczowych. Efekt: CV z Django dostawało informację,
+ * że brakuje mu Django.
+ */
 const SECTION_PATTERNS: Record<string, RegExp> = {
-  experience: /^\s*(doświadczenie(\s+zawodowe)?|praktyka\s+zawodowa|work\s+experience|employment(\s+history)?|professional\s+experience)\s*:?\s*$/i,
-  education: /^\s*(wykształcenie|edukacja|education|academic\s+background)\s*:?\s*$/i,
-  certifications: /^\s*(certyfikaty|certyfikacje|uprawnienia|kursy|szkolenia|certifications?|licenses?)\s*:?\s*$/i,
-  skills: /^\s*(umiejętności|kompetencje|kwalifikacje|skills|technologie)\s*:?\s*$/i,
-  softSkills: /^\s*(umiejętności\s+miękkie|kompetencje\s+miękkie|soft\s+skills)\s*:?\s*$/i,
-  summary: /^\s*(podsumowanie|o\s+mnie|o\s+sobie|profil(\s+zawodowy)?|summary|about)\s*:?\s*$/i,
+  experience: /^\s*(?:doświadczenie(?:\s+zawodowe)?|praktyka\s+zawodowa|work\s+experience|employment(?:\s+history)?|professional\s+experience)\s*(?::\s*(.*))?$/i,
+  education: /^\s*(?:wykształcenie|edukacja|education|academic\s+background)\s*(?::\s*(.*))?$/i,
+  certifications: /^\s*(?:certyfikaty|certyfikacje|uprawnienia|kursy|szkolenia|certifications?|licenses?)\s*(?::\s*(.*))?$/i,
+  skills: /^\s*(?:umiejętności|kompetencje|kwalifikacje|skills|technologie)\s*(?::\s*(.*))?$/i,
+  softSkills: /^\s*(?:umiejętności\s+miękkie|kompetencje\s+miękkie|soft\s+skills)\s*(?::\s*(.*))?$/i,
+  summary: /^\s*(?:podsumowanie|o\s+mnie|o\s+sobie|profil(?:\s+zawodowy)?|summary|about)\s*(?::\s*(.*))?$/i,
 };
 
 /**
@@ -130,12 +141,26 @@ function splitIntoSections(lines: string[]): Record<string, string[]> {
   let current = 'header';
 
   for (const line of lines) {
-    const matched = Object.entries(SECTION_PATTERNS).find(([, pattern]) => pattern.test(line));
-    if (matched) {
-      current = matched[0];
+    let matchedSection: string | null = null;
+    let inlineContent = '';
+
+    for (const [name, pattern] of Object.entries(SECTION_PATTERNS)) {
+      const match = pattern.exec(line);
+      if (match) {
+        matchedSection = name;
+        inlineContent = (match[1] ?? '').trim();
+        break;
+      }
+    }
+
+    if (matchedSection) {
+      current = matchedSection;
       if (!sections[current]) sections[current] = [];
+      // Treść stojąca po dwukropku w linii nagłówka należy do sekcji, a nie do kosza.
+      if (inlineContent) sections[current].push(inlineContent);
       continue;
     }
+
     if (!sections[current]) sections[current] = [];
     sections[current].push(line);
   }

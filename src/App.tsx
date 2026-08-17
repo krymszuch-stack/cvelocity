@@ -165,8 +165,9 @@ function MainApp() {
           {activeTab === 'home' && (
             <HomeView
               vault={vault}
-                      onNavigate={setActiveTab}
+              onNavigate={setActiveTab}
               onOpenAdvisor={handleOpenAdvisor}
+              onAdoptVault={setVault}
             />
           )}
 
