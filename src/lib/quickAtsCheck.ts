@@ -2,6 +2,12 @@ import { MasterVault, TailoredResume, AtsCheckResult } from '../types';
 import { parseTextToMasterVault, type ParsedCVResult } from './cvUniversalParser';
 import { createEmptyVault } from './sampleVault';
 import { simulateAtsCheck } from './atsSimulator';
+import { auditKnockouts, type KnockoutReport } from './knockouts';
+import {
+  bestSubRoleMatch,
+  suggestedProfileForSector,
+  type SubRoleMatch,
+} from './specializationIndex';
 
 /**
  * Szybkie sprawdzenie CV pod kątem oferty — bez konta, bez serwera.
@@ -22,6 +28,21 @@ export interface QuickCheckResult {
   parsed: ParsedCVResult;
   /** Braki wypisane wprost — to jest ta wartość, którą użytkownik pokazuje dalej. */
   missingSkills: string[];
+  /**
+   * Wymagania formalne ogłoszenia zestawione z profilem.
+   *
+   * Dla zawodów technicznych i fizycznych to jest **ważniejsze niż wynik
+   * procentowy**: aplikacja montera nie odpada na gęstości słów kluczowych,
+   * tylko na braku SEP-u, UDT albo orzeczenia sanepidu. Sam wynik ATS tego nie
+   * pokazywał, bo mierzy co innego.
+   */
+  knockouts: KnockoutReport;
+  /**
+   * Rozpoznana specjalizacja albo `null`, gdy nic nie trafiło wystarczająco
+   * pewnie. Służy do podpowiedzi słownictwa branżowego — nigdy nie zmienia
+   * niczego w profilu sama z siebie.
+   */
+  detectedSubRole: SubRoleMatch | null;
 }
 
 /**
@@ -165,12 +186,32 @@ export function runQuickAtsCheck(
 
   const parsed = parseTextToMasterVault(cv, options.format || 'TXT');
   const vault = vaultFromParsedCv(parsed);
-  const ats = simulateAtsCheck(tailoredFromVault(vault, options.jobTitle || ''), vault, jd);
+
+  // Branża rozpoznana z ogłoszenia ustala, w jakiej kolejności pokazać
+  // zalecenia. Monter nie potrzebuje jako pierwszej porady o gęstości tytułu
+  // stanowiska — potrzebuje wiedzieć, że jego CV nie przejdzie przez parser
+  // i że brakuje w nim uprawnień.
+  const detectedSubRole = bestSubRoleMatch(`${options.jobTitle || ''} ${jd}`);
+  const profile = detectedSubRole
+    ? suggestedProfileForSector(detectedSubRole.sector.id)
+    : undefined;
+
+  const ats = simulateAtsCheck(
+    tailoredFromVault(vault, options.jobTitle || ''),
+    vault,
+    jd,
+    profile
+  );
 
   return {
     ats,
     vault,
     parsed,
     missingSkills: meaningfulMissingSkills(ats.missingHardSkills, ats.missingSoftSkills),
+    // Audyt liczy się lokalnie, na dopasowaniu tekstowym, i nie kosztuje ani
+    // jednego tokenu. Dlatego może stać w części darmowej bez limitu — a przy
+    // zawodach fizycznych to właśnie on niesie wartość.
+    knockouts: auditKnockouts(jd, vault),
+    detectedSubRole,
   };
 }

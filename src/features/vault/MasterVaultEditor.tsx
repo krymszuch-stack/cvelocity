@@ -22,6 +22,7 @@ import { StepIndicator, StepItem } from './StepIndicator';
 import { PersonalSection } from './PersonalSection';
 import { ExperienceSection } from './ExperienceSection';
 import { SkillsMatrix } from './SkillsMatrix';
+import { SpecializationPicker } from './SpecializationPicker';
 import { EducationSection } from './EducationSection';
 import { PreferencesSection } from './PreferencesSection';
 import { Button } from '../../components/ui/Button';
@@ -215,6 +216,14 @@ export const MasterVaultEditor: React.FC<MasterVaultEditorProps> = ({
               )}
 
               {activeStep === 2 && (
+                <SpecializationPicker
+                  skillsMatrix={vault.skillsMatrix}
+                  onUpdateSkillsMatrix={(updated) => onChange({ ...vault, skillsMatrix: updated })}
+                  className="mb-4"
+                />
+              )}
+
+              {activeStep === 2 && (
                 <SkillsMatrix
                   skillsMatrix={vault.skillsMatrix}
                   languages={vault.profiler?.languages || []}
@@ -295,6 +304,11 @@ export const MasterVaultEditor: React.FC<MasterVaultEditorProps> = ({
             history={vault.history || []}
             onChange={(updated) => onChange({ ...vault, history: updated })}
             onOpenAdvisor={onOpenAdvisor}
+          />
+
+          <SpecializationPicker
+            skillsMatrix={vault.skillsMatrix}
+            onUpdateSkillsMatrix={(updated) => onChange({ ...vault, skillsMatrix: updated })}
           />
 
           <SkillsMatrix

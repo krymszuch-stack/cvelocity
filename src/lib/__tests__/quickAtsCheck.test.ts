@@ -140,3 +140,70 @@ describe('Szybkie sprawdzenie CV pod ofertę', () => {
     expect(vault.skillsMatrix.certifications).toEqual([]);
   });
 });
+
+describe('Checklista wymagań formalnych', () => {
+  const CV_MONTER = `Jan Kowalski
+jan.kowalski@example.pl
++48 600 100 200
+Kraków
+
+Doświadczenie zawodowe
+Serwis Gazowy Gromgaz, Monter instalacji gazowych, 01.2019 - Obecnie
+Przeglądy okresowe kotłów gazowych, próby szczelności instalacji,
+wymiana wymienników ciepła, obsługa analizatora spalin.
+
+Umiejętności
+Diagnostyka pieców gazowych, lutowanie, obsługa manometru.`;
+
+  const JD_MONTER = `Poszukujemy serwisanta kotłów gazowych do obsługi klientów indywidualnych.
+Wymagane uprawnienia SEP G3 oraz aktualny certyfikat F-Gaz.
+Konieczne prawo jazdy kat. B. Praca w systemie zmianowym.
+Mile widziane doświadczenie z markami Junkers i Vaillant.`;
+
+  it('wypisuje uprawnienia, których stary audyt nie widział', () => {
+    const result = runQuickAtsCheck(CV_MONTER, JD_MONTER);
+    const ids = result.knockouts.blocking.map((finding) => finding.ruleId);
+
+    // Dokładnie te trzy odsiewają montera, zanim ktokolwiek przeczyta jego CV.
+    expect(ids).toContain('sep_g3');
+    expect(ids).toContain('fgas');
+    expect(ids).toContain('shift_work');
+  });
+
+  it('rozpoznaje specjalizację z treści ogłoszenia', () => {
+    const result = runQuickAtsCheck(CV_MONTER, JD_MONTER);
+
+    expect(result.detectedSubRole?.subRole.id).toBe('gas_heating_technician');
+  });
+
+  it('nie zgłasza wymagań technicznych przy ogłoszeniu biurowym', () => {
+    const jdBiuro = `Specjalista ds. obsługi klienta. Wymagana komunikatywność,
+      obsługa pakietu MS Office oraz doświadczenie w pracy z klientem.
+      Oferujemy stabilne zatrudnienie i pracę w miłym zespole.`;
+
+    const result = runQuickAtsCheck(CV_MONTER, jdBiuro);
+    const ids = result.knockouts.findings.map((finding) => finding.ruleId);
+
+    expect(ids).not.toContain('sep_g3');
+    expect(ids).not.toContain('udt_forklift');
+  });
+
+  it('nie wykonuje żadnego żądania sieciowego', () => {
+    // To jest obietnica z README i jedyny powód, dla którego ten ekran można
+    // reklamować bez zbierania czyichkolwiek danych: CV nie opuszcza urządzenia.
+    const originalFetch = globalThis.fetch;
+    const calls: unknown[] = [];
+    globalThis.fetch = ((...args: unknown[]) => {
+      calls.push(args);
+      throw new Error('Ścieżka darmowa nie może wołać sieci.');
+    }) as typeof fetch;
+
+    try {
+      runQuickAtsCheck(CV_MONTER, JD_MONTER);
+    } finally {
+      globalThis.fetch = originalFetch;
+    }
+
+    expect(calls).toHaveLength(0);
+  });
+});

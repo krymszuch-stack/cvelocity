@@ -5,6 +5,7 @@ import {
   FileText,
   Briefcase,
   AlertCircle,
+  CheckCircle2,
   ArrowRight,
   MonitorSmartphone,
   RotateCcw,
@@ -261,6 +262,93 @@ export const QuickAtsCheck: React.FC<QuickAtsCheckProps> = ({
               )}
             </div>
           </div>
+
+          {/*
+            Checklista wymagań formalnych.
+            Dla zawodów technicznych i fizycznych to jest ważniejsze niż wynik
+            procentowy: aplikacja montera nie odpada na gęstości słów
+            kluczowych, tylko na braku SEP-u, UDT albo orzeczenia sanepidu.
+            Liczy się lokalnie, więc jest darmowa bez limitu.
+          */}
+          {result.knockouts.requirementCount > 0 && (
+            <div className="space-y-2.5 border-t border-line/60 pt-4">
+              <div className="flex flex-wrap items-baseline justify-between gap-2">
+                <p className="text-xs font-semibold text-ink">
+                  Wymagania formalne tej oferty
+                </p>
+                <span className="font-mono text-[10px] text-subtle">
+                  spełniasz {result.knockouts.satisfiedCount} z {result.knockouts.requirementCount}
+                </span>
+              </div>
+
+              <ul className="space-y-1.5">
+                {result.knockouts.findings.map((finding) => {
+                  const isBlocking = !finding.satisfied && finding.severity === 'knockout';
+
+                  return (
+                    <li
+                      key={finding.ruleId}
+                      className={`flex items-start gap-2.5 rounded-xl border p-2.5 text-xs ${
+                        finding.satisfied
+                          ? 'border-success/30 bg-success-soft text-success-fg'
+                          : isBlocking
+                            ? 'border-danger/30 bg-danger-soft text-danger-fg'
+                            : 'border-line bg-sunken text-muted'
+                      }`}
+                    >
+                      {finding.satisfied ? (
+                        <CheckCircle2 className="mt-0.5 h-3.5 w-3.5 shrink-0" aria-hidden="true" />
+                      ) : (
+                        <AlertCircle className="mt-0.5 h-3.5 w-3.5 shrink-0" aria-hidden="true" />
+                      )}
+
+                      <div className="min-w-0 flex-1 space-y-0.5">
+                        <p className="font-semibold leading-tight">
+                          {finding.label}
+                          {!finding.satisfied && !isBlocking && (
+                            <span className="ml-1.5 font-normal text-subtle">(mile widziane)</span>
+                          )}
+                        </p>
+                        {/*
+                          Podpowiedź tylko przy brakach. Przy spełnionym
+                          wymaganiu byłaby szumem — użytkownik nie ma co z nią
+                          zrobić.
+                        */}
+                        {!finding.satisfied && finding.hint && (
+                          <p className="text-[11px] font-normal leading-snug opacity-90">
+                            {finding.hint}
+                          </p>
+                        )}
+                      </div>
+                    </li>
+                  );
+                })}
+              </ul>
+
+              {result.knockouts.blocking.length > 0 && (
+                <p className="text-[11px] leading-snug text-subtle">
+                  Czerwone pozycje to warunki, po których rekruter odsiewa aplikacje przed
+                  przeczytaniem CV. Jeśli je masz, a nie ma ich w dokumencie — dopisz je,
+                  zanim wyślesz.
+                </p>
+              )}
+            </div>
+          )}
+
+          {/*
+            Rozpoznana branża służy wyłącznie do podpowiedzi słownictwa.
+            Nic nie jest wpisywane do profilu automatycznie — ten projekt raz
+            już usunął fabrykowane dane i nie wraca do nich tylnymi drzwiami.
+          */}
+          {result.detectedSubRole && (
+            <div className="flex flex-wrap items-center gap-2 border-t border-line/60 pt-4 text-[11px] text-subtle">
+              <span>Rozpoznana specjalizacja:</span>
+              <span className="rounded-lg border border-line bg-sunken px-2 py-0.5 font-mono text-[10px] font-semibold text-ink">
+                {result.detectedSubRole.subRole.title}
+              </span>
+              <span>— w edytorze podpowiemy słownictwo używane w tej branży.</span>
+            </div>
+          )}
 
           <div className="flex flex-col gap-2 border-t border-line/60 pt-4 sm:flex-row sm:items-center sm:justify-between">
             <p className="text-[11px] text-subtle">

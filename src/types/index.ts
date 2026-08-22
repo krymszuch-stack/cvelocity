@@ -140,6 +140,12 @@ export interface AtsCheckResult {
   keywordCoverageScore: number;
   structureScore: number;
   formattingScore: number;
+
+  /**
+   * Profil, pod który ułożono zalecenia. Wpływa na ich kolejność, nie na wynik:
+   * ta sama treść CV nie może dostawać różnych ocen zależnie od checkboxa.
+   */
+  appliedProfile: FlagCategory;
   
   // Layer 1: Structure & Layout Diagnostics
   layer1Structure: {
