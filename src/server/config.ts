@@ -15,6 +15,28 @@ const configSchema = z.object({
   GEMINI_MODEL: z.string().min(1).default('gemini-2.5-flash-lite'),
 
   /**
+   * `local`  — bez bazy i bez kont; dane zostają w przeglądarce. Tryb pracy nad
+   *            frontendem i dotychczasowe zachowanie aplikacji.
+   * `cloud`  — konta, trwałe dane i limity liczone po stronie serwera.
+   *
+   * Wybór jest jawny, bo pomyłka w każdą stronę jest kosztowna: `cloud` bez
+   * kluczy Supabase to serwer, który wstaje i odrzuca każde żądanie
+   * uwierzytelnione; `local` na produkcji to trasy płatności, które przyjmują
+   * żądania i nie mają gdzie zapisać wyniku.
+   */
+  BACKEND_MODE: z.enum(['local', 'cloud']).default('local'),
+
+  SUPABASE_URL: z.string().url().optional(),
+  /** ⚠️ Omija całe RLS. Nigdy z prefiksem VITE_, nigdy w repozytorium. */
+  SUPABASE_SERVICE_ROLE_KEY: z.string().min(1).optional(),
+
+  STRIPE_SECRET_KEY: z.string().min(1).optional(),
+  STRIPE_WEBHOOK_SECRET: z.string().min(1).optional(),
+
+  /** Adres publiczny aplikacji — potrzebny do zbudowania adresów powrotu ze Stripe'a. */
+  APP_URL: z.string().url().default('http://localhost:3000'),
+
+  /**
    * Comma-separated list of origins allowed to call the API.
    * Empty in development means "same origin only", which is what the Vite dev
    * server needs — it is never a wildcard.
@@ -33,7 +55,13 @@ const configSchema = z.object({
     .transform((value) => value === 'true'),
 });
 
-export type ServerConfig = z.infer<typeof configSchema> & { allowedOrigins: string[] };
+export type ServerConfig = z.infer<typeof configSchema> & {
+  allowedOrigins: string[];
+  /** `true`, gdy da się rozmawiać z bazą — czyli gdy trasy kont mają sens. */
+  backendEnabled: boolean;
+  /** `true`, gdy komplet kluczy Stripe'a jest na miejscu. */
+  paymentsEnabled: boolean;
+};
 
 let cached: ServerConfig | null = null;
 
@@ -52,11 +80,45 @@ export function loadConfig(): ServerConfig {
     );
   }
 
+  const data = parsed.data;
+
+  // Walidacja warunkowa: w trybie `cloud` klucze Supabase przestają być
+  // opcjonalne. Zatrzymanie procesu tutaj jest tą samą decyzją co przy
+  // GEMINI_API_KEY — brak konfiguracji ma być widoczny dla operatora przy
+  // starcie, a nie ujawniać się użytkownikowi błędem przy pierwszym logowaniu.
+  if (data.BACKEND_MODE === 'cloud') {
+    const missing = [
+      !data.SUPABASE_URL && 'SUPABASE_URL',
+      !data.SUPABASE_SERVICE_ROLE_KEY && 'SUPABASE_SERVICE_ROLE_KEY',
+    ].filter(Boolean);
+
+    if (missing.length > 0) {
+      throw new Error(
+        `BACKEND_MODE=cloud wymaga zmiennych: ${missing.join(', ')}.\n` +
+          'Ustaw je albo wróć na BACKEND_MODE=local (dane zostają wtedy w przeglądarce).'
+      );
+    }
+  }
+
+  const paymentsEnabled = Boolean(data.STRIPE_SECRET_KEY && data.STRIPE_WEBHOOK_SECRET);
+
+  // Sam klucz sekretny bez sekretu webhooka to konfiguracja, w której da się
+  // przyjąć płatność i nie da się jej potwierdzić — użytkownik płaci i nie
+  // dostaje dostępu. Lepiej powiedzieć to głośno przy starcie.
+  if (data.STRIPE_SECRET_KEY && !data.STRIPE_WEBHOOK_SECRET) {
+    console.warn(
+      '[konfiguracja] STRIPE_SECRET_KEY jest ustawiony bez STRIPE_WEBHOOK_SECRET. ' +
+        'Płatności pozostają wyłączone: bez weryfikacji podpisu webhooka nie ma jak potwierdzić opłacenia.'
+    );
+  }
+
   cached = {
-    ...parsed.data,
-    allowedOrigins: parsed.data.ALLOWED_ORIGINS.split(',')
+    ...data,
+    allowedOrigins: data.ALLOWED_ORIGINS.split(',')
       .map((origin) => origin.trim())
       .filter(Boolean),
+    backendEnabled: data.BACKEND_MODE === 'cloud',
+    paymentsEnabled: data.BACKEND_MODE === 'cloud' && paymentsEnabled,
   };
 
   return cached;

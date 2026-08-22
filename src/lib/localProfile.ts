@@ -1,5 +1,14 @@
 import { MasterVault } from '../types';
 import { createEmptyVault } from './sampleVault';
+import {
+  StorageKeys,
+  readJson,
+  readRaw,
+  removeRaw,
+  vaultKeyFor,
+  wipeAppStorage,
+  writeJson,
+} from './storage';
 
 /**
  * Profil lokalny — jawny stan przejściowy, zanim wejdzie Supabase Auth.
@@ -24,53 +33,29 @@ export interface LocalProfile {
   createdAt: string;
 }
 
-const PROFILE_KEY = 'cvelocity_local_profile_v1';
-
 /**
- * Zachowane z poprzedniej wersji, żeby nie porzucić danych osób, które już
- * coś w aplikacji zapisały.
- */
-const vaultKey = (profileId: string) => `skillvault_vault_active_${profileId}`;
-
-/**
- * Prefiksy czyszczone przy usuwaniu profilu.
+ * Vault osoby, która nie założyła jeszcze profilu.
  *
- * Aplikacja używa obu konwencji zapisu — `cvelocity-auth-state` z myślnikiem
- * obok `cvelocity_local_profile_v1` z podkreśleniem — więc lista musi objąć
- * jedno i drugie. Wariant z samym podkreśleniem zostawiał za sobą stan
- * subskrypcji, co wyłapał test regresyjny.
+ * Klin ATS (`QuickAtsCheck`) działa bez rejestracji i musi mieć gdzie zapisać
+ * wynik, zanim ktokolwiek poda imię. Stały identyfikator zamiast osobnego
+ * klucza globalnego oznacza jedną ścieżkę zapisu zamiast dwóch — wcześniej były
+ * dwie i `App.tsx` pisał w obie naraz przy każdej zmianie.
  */
-const OWNED_KEY_PREFIXES = ['cvelocity', 'skillvault'];
-
-/**
- * Klucze, które przeżywają usunięcie profilu: to ustawienie interfejsu, nie
- * dane osobowe, a przywitanie użytkownika nagłym jasnym motywem wygląda jak
- * awaria.
- */
-const PRESERVED_KEYS = new Set(['cvelocity-theme']);
-
-function isBrowser(): boolean {
-  return typeof localStorage !== 'undefined';
-}
+export const ANONYMOUS_PROFILE_ID = 'anonymous';
 
 export function getActiveProfile(): LocalProfile | null {
-  if (!isBrowser()) return null;
-  const raw = localStorage.getItem(PROFILE_KEY);
-  if (!raw) return null;
-
-  try {
-    const parsed = JSON.parse(raw) as LocalProfile;
-    return parsed && typeof parsed.id === 'string' && parsed.id ? parsed : null;
-  } catch {
-    return null;
-  }
+  const parsed = readJson<LocalProfile | null>(StorageKeys.profile, null);
+  return parsed && typeof parsed.id === 'string' && parsed.id ? parsed : null;
 }
 
 /**
  * Zakłada profil w tej przeglądarce. Nie ma tu weryfikacji, bo nie ma czego
  * weryfikować — i właśnie dlatego funkcja nie nazywa się `login`.
  */
-export function createLocalProfile(name: string, email?: string): { profile: LocalProfile; vault: MasterVault } {
+export function createLocalProfile(
+  name: string,
+  email?: string
+): { profile: LocalProfile; vault: MasterVault } {
   const trimmedName = name.trim();
   const trimmedEmail = email?.trim();
 
@@ -81,21 +66,30 @@ export function createLocalProfile(name: string, email?: string): { profile: Loc
     createdAt: new Date().toISOString(),
   };
 
-  if (isBrowser()) localStorage.setItem(PROFILE_KEY, JSON.stringify(profile));
+  writeJson(StorageKeys.profile, profile);
+
+  // Praca wykonana przed założeniem profilu nie może przepaść w momencie, w
+  // którym użytkownik poda imię — to jest dokładnie ta chwila, w której klin
+  // ATS ma go przekonać, że warto zostać.
+  const carriedOver = loadProfileVault(ANONYMOUS_PROFILE_ID);
+  if (carriedOver) {
+    saveProfileVault(profile.id, carriedOver);
+    removeRaw(vaultKeyFor(ANONYMOUS_PROFILE_ID));
+    return { profile, vault: carriedOver };
+  }
 
   const existing = loadProfileVault(profile.id);
-  return { profile, vault: existing ?? createEmptyVault() };
+  return { profile, vault: existing ?? createEmptyVault(trimmedName, trimmedEmail) };
 }
 
 /** Kończy korzystanie z profilu, ale zostawia zapisane dane na urządzeniu. */
 export function signOutLocalProfile(): void {
-  if (isBrowser()) localStorage.removeItem(PROFILE_KEY);
+  removeRaw(StorageKeys.profile);
 }
 
 export function loadProfileVault(profileId: string): MasterVault | null {
-  if (!isBrowser()) return null;
-  const raw = localStorage.getItem(vaultKey(profileId));
-  if (!raw) return null;
+  const raw = readRaw(vaultKeyFor(profileId));
+  if (raw === null) return null;
 
   try {
     return JSON.parse(raw) as MasterVault;
@@ -112,30 +106,20 @@ export function loadProfileVault(profileId: string): MasterVault | null {
  * stronie, odczyta ten klucz z tego samego bundla. Dwie kopie tych samych
  * danych to była wtedy sama wada, bez żadnej korzyści.
  *
- * Realna ochrona to szyfrowanie kopertowe po stronie serwera (Faza 3).
+ * Realna ochrona to konto z danymi po stronie serwera — `BACKEND_MODE=cloud`.
  */
 export function saveProfileVault(profileId: string, vault: MasterVault): void {
-  if (!isBrowser()) return;
-  localStorage.setItem(vaultKey(profileId), JSON.stringify(vault));
+  writeJson(vaultKeyFor(profileId), vault);
 }
 
 /**
  * Usuwa profil wraz ze wszystkimi danymi aplikacji z tej przeglądarki.
  *
- * Iteracja po prefiksach, nie zakodowana lista kluczy. Poprzednia wersja
- * wyliczała klucze do usunięcia ręcznie i przez to zostawiała za sobą m.in.
- * stan subskrypcji — a „usuń moje dane", które czegoś nie usuwa, jest gorsze
- * niż brak takiej funkcji.
+ * Sprzątanie jest w `storage.ts`, bo tam jest rejestr tego, co aplikacja
+ * w ogóle zapisuje. Poprzednia wersja wyliczała klucze ręcznie w tym miejscu
+ * i przez to zostawiała za sobą m.in. stan subskrypcji — a „usuń moje dane",
+ * które czegoś nie usuwa, jest gorsze niż brak takiej funkcji.
  */
 export function deleteLocalProfile(): void {
-  if (!isBrowser()) return;
-
-  const doomed: string[] = [];
-  for (let i = 0; i < localStorage.length; i++) {
-    const key = localStorage.key(i);
-    if (!key || PRESERVED_KEYS.has(key)) continue;
-    if (OWNED_KEY_PREFIXES.some((prefix) => key.startsWith(prefix))) doomed.push(key);
-  }
-
-  for (const key of doomed) localStorage.removeItem(key);
+  wipeAppStorage();
 }

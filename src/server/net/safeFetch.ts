@@ -190,7 +190,17 @@ function requestOnce(
         // still carry the original hostname, so virtual hosting and TLS still work.
         // Node calls this with `{all: true}` and then expects an array, but the
         // single-address form is still used elsewhere — handle both shapes.
-        lookup: ((hostname: string, options: { all?: boolean }, callback: Function) => {
+        lookup: ((
+          hostname: string,
+          options: { all?: boolean },
+          // Obie postacie wywołania zwrotnego, bo obsługujemy oba kształty
+          // odpowiedzi — `Function` przyjmowało tu dowolną wartość wywoływalną.
+          callback: (
+            err: NodeJS.ErrnoException | null,
+            address: string | Array<{ address: string; family: number }>,
+            family?: number
+          ) => void
+        ) => {
           if (options?.all) {
             callback(null, [{ address: pinned.address, family: pinned.family }]);
           } else {

@@ -24,7 +24,7 @@ export const aiRouter = Router();
 aiRouter.post(
   '/parse-jd',
   aiEndpointsLimiter,
-  async (req: Request<{}, {}, { rawJdText?: string }>, res: Response, next: NextFunction) => {
+  async (req: Request<unknown, unknown, { rawJdText?: string }>, res: Response, next: NextFunction) => {
     try {
       const { rawJdText } = req.body;
       if (!rawJdText || typeof rawJdText !== 'string' || rawJdText.trim().length === 0) {

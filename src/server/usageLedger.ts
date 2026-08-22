@@ -11,9 +11,15 @@
  *    automatycznie i da się po niej filtrować bez stawiania czegokolwiek;
  *  - **agregacja w pamięci** — żeby endpoint statystyk zwracał realne liczby.
  *
- * Agregacja ginie przy restarcie instancji i to jest w porządku na tym etapie:
- * trwałym źródłem prawdy są linie w logach. Gdy wejdzie Supabase, `recordUsage`
- * zacznie dodatkowo pisać do `ai_usage_events` — sygnatura się nie zmieni.
+ * Agregacja ginie przy restarcie instancji — na Cloud Run ze skalowaniem do zera
+ * dzieje się to często. Dlatego zapis idzie także do tabeli `ai_usage_events`,
+ * gdy backend jest skonfigurowany; wtedy dopiero da się odpowiedzieć na pytanie
+ * „ile kosztuje mnie ten konkretny użytkownik".
+ *
+ * Zapis do bazy jest świadomie **nieblokujący i niekrytyczny**: rozliczenie
+ * zużycia nie może wywrócić żądania, które model już obsłużył. Utrata jednego
+ * wiersza statystyk jest do przeżycia, utrata odpowiedzi opłaconej wywołaniem
+ * modelu nie.
  */
 
 export interface UsageEvent {
@@ -22,6 +28,8 @@ export interface UsageEvent {
   model: string;
   promptTokens: number;
   outputTokens: number;
+  /** Właściciel wywołania, gdy jest znany. Brak = ruch nieuwierzytelniony. */
+  userId?: string;
 }
 
 /**
@@ -110,6 +118,43 @@ export function recordUsage(event: UsageEvent): void {
       at: new Date().toISOString(),
     })
   );
+
+  void persistUsage(event, promptTokens, outputTokens, cost);
+}
+
+/**
+ * Dopisuje wiersz do `ai_usage_events`.
+ *
+ * Importy są dynamiczne, żeby moduł rozliczeń nie wciągał klienta bazy w trybie
+ * `BACKEND_MODE=local`, w którym żadnej bazy nie ma. Wszystkie błędy kończą się
+ * ostrzeżeniem w logu i niczym więcej — patrz komentarz na górze pliku.
+ */
+async function persistUsage(
+  event: UsageEvent,
+  promptTokens: number,
+  outputTokens: number,
+  cost: number | null
+): Promise<void> {
+  try {
+    const { loadConfig } = await import('./config');
+    if (!loadConfig().backendEnabled) return;
+
+    const { getSupabase } = await import('./supabase');
+    const { error } = await getSupabase().from('ai_usage_events').insert({
+      user_id: event.userId ?? null,
+      context: event.context,
+      model: event.model,
+      prompt_tokens: promptTokens,
+      output_tokens: outputTokens,
+      estimated_cost_usd: cost,
+    });
+
+    if (error) {
+      console.warn('[usage] Nie udało się zapisać zużycia do bazy:', error.message);
+    }
+  } catch (err) {
+    console.warn('[usage] Nie udało się zapisać zużycia do bazy:', err);
+  }
 }
 
 export function getUsageTotals(): UsageTotals {

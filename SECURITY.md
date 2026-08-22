@@ -12,7 +12,9 @@ Dokument opisuje stan na dziś. Sekcja „Znane ograniczenia" jest jego obowiąz
 
 ## Stan obecny: prototyp działający w przeglądarce
 
-CVELOCITY nie ma jeszcze backendu z bazą danych ani kont użytkowników. Cała praca odbywa się lokalnie, poza wyraźnie wskazanymi wywołaniami AI.
+CVELOCITY pracuje domyślnie w trybie `BACKEND_MODE=local`: bez kont i bez bazy, cała praca odbywa się lokalnie, poza wyraźnie wskazanymi wywołaniami AI.
+
+Warstwa serwerowa dla kont, trwałych danych i płatności (`BACKEND_MODE=cloud`) jest **zbudowana i pokryta testami granicznymi w CI, ale nie jest jeszcze podpięta do interfejsu**. Znaczy to dokładnie tyle: trasy `/api/me`, `/api/vault`, `/api/applications` i `/api/billing/*` odrzucają żądania bez ważnego tokenu, a `supabase/migrations/0001_init.sql` zakłada polityki RLS — natomiast żaden ekran aplikacji jeszcze z nich nie korzysta. Do czasu podpięcia obowiązują ograniczenia opisane niżej.
 
 ### Co jest chronione i gdzie to sprawdzić
 
@@ -29,15 +31,22 @@ CVELOCITY nie ma jeszcze backendu z bazą danych ani kont użytkowników. Cała 
 | **Kontener nie działa jako root** | `Dockerfile` |
 | **Ocena ATS i parsowanie CV liczą się lokalnie** — te funkcje nie wysyłają dokumentu nigdzie | `src/lib/atsSimulator.ts`, `src/lib/cvUniversalParser.ts` |
 | **Pseudonimizacja na granicy modelu** — dane identyfikujące zamieniane na placeholdery przed wysłaniem, `photoUrl` usuwany całkowicie, bramka `assertNoPii` jako siatka bezpieczeństwa | `src/server/pseudonymize.ts` + testy na rzeczywistych ścieżkach |
-| **Realne rozliczanie zużycia modelu** — liczba tokenów i szacowany koszt trafiają do ustrukturyzowanego logu; **nigdy treść promptu ani odpowiedzi** | `src/server/usageLedger.ts` |
+| **Realne rozliczanie zużycia modelu** — liczba tokenów i szacowany koszt trafiają do ustrukturyzowanego logu i do `ai_usage_events`; **nigdy treść promptu ani odpowiedzi** | `src/server/usageLedger.ts` |
+| **Weryfikacja tokenu u dostawcy, nie samo dekodowanie JWT** — token jest sprawdzany przez `auth.getUser()`, więc podpis musi się zgadzać. Samo odczytanie ładunku przyjęłoby dowolny token wymyślony przez klienta | `src/server/middleware/requireAuth.ts` |
+| **Identyfikator użytkownika wyłącznie z podpisanego tokenu** — nigdy z ciała żądania ani z parametru ścieżki. Klient `service_role` omija RLS, więc `user_id` wzięty od klienta byłby zaproszeniem do odczytu cudzych danych | wszystkie trasy w `src/server/routes/` |
+| **RLS na każdej tabeli**; `subscriptions`, `plans`, `usage_counters` i `ai_usage_events` są dla użytkownika **tylko do odczytu** — status subskrypcji zmienia wyłącznie webhook Stripe'a | `supabase/migrations/0001_init.sql` |
+| **Limit sprawdzany i pobierany w jednej transakcji SQL** — dwie równolegle otwarte karty nie mogą obie zużyć ostatniego kredytu | funkcja `consume_quota` w migracji, `src/server/quota.ts` |
+| **Weryfikacja podpisu webhooka na surowym ciele żądania** + odrzucanie duplikatów po `stripe_event_id` (Stripe dostarcza zdarzenia co najmniej raz) | `src/server/routes/stripe.routes.ts`, `server.ts` |
+| **Walidacja ciał żądań schematami `zod`** wspólnymi dla klienta i serwera | `src/types/contracts.ts`, `src/server/middleware/validate.ts` |
+| **CI pilnuje granicy uwierzytelnienia i sekretów** — trasy kont bez tokenu muszą zwrócić 401, a `dist/client/` nie może zawierać `service_role` ani kluczy Stripe'a | `.github/workflows/ci.yml` |
 
 ### Znane ograniczenia
 
 To są rzeczy, które **nie** są chronione. Każda jest świadoma i każda ma przypisaną fazę naprawy.
 
-1. **Nie ma uwierzytelniania.** „Profil" to wpis w `localStorage` tej przeglądarki — bez hasła, bez konta, bez serwera (`src/lib/localProfile.ts`). Interfejs mówi to użytkownikowi wprost przy zakładaniu profilu. Prawdziwe logowanie wchodzi razem z Supabase Auth.
+1. **Interfejs nie ma jeszcze logowania.** „Profil" to wpis w `localStorage` tej przeglądarki — bez hasła, bez konta (`src/lib/localProfile.ts`). Interfejs mówi to użytkownikowi wprost przy zakładaniu profilu. Serwerowa strona uwierzytelniania istnieje (`requireAuth`, migracje, polityki RLS), brakuje ekranów rejestracji i logowania przez Supabase Auth oraz przepięcia zapisu danych na API.
 
-2. **Dane są zapisywane czystym tekstem.** CV i profil leżą w `localStorage` bez szyfrowania. Wcześniejsza wersja zapisywała obok kopię „zaszyfrowaną" kluczem `'default_key'` zaszytym w kodzie aplikacji — przy modelu zagrożeń „XSS czyta `localStorage`" nie chroni to przed niczym, bo atakujący wykonujący skrypt na stronie odczyta ten klucz z tego samego pakietu. Usunęliśmy pozorne szyfrowanie zamiast utrzymywać wrażenie ochrony. Realne szyfrowanie w spoczynku (kopertowe, z kluczem poza bazą) przychodzi razem z przeniesieniem danych na serwer.
+2. **Dane są zapisywane czystym tekstem.** CV i profil leżą w `localStorage` bez szyfrowania. Wcześniejsza wersja zapisywała obok kopię „zaszyfrowaną" kluczem `'default_key'` zaszytym w kodzie aplikacji — przy modelu zagrożeń „XSS czyta `localStorage`" nie chroni to przed niczym, bo atakujący wykonujący skrypt na stronie odczyta ten klucz z tego samego pakietu. Usunęliśmy pozorne szyfrowanie zamiast utrzymywać wrażenie ochrony; od tej wersji nie ma już w kodzie także funkcji WebCrypto, które tę ochronę pozorowały, nie mając ani jednego wywołania. Realne szyfrowanie w spoczynku (kopertowe, z kluczem poza bazą) przychodzi razem z przeniesieniem danych na serwer.
 
 3. **Endpointy API nie wymagają uwierzytelnienia.** Dlatego funkcje AI bez ekranu w interfejsie zostały **zdjęte** z serwera — nieużywany endpoint wołający model to otwarte proxy opłacane przez właściciela projektu. Działa wyłącznie to, co ma odpowiednik w UI. Wystawiając usługę publicznie, ogranicz liczbę instancji i ustaw budżet z alertami u dostawcy.
 
@@ -47,9 +56,13 @@ To są rzeczy, które **nie** są chronione. Każda jest świadoma i każda ma p
 
    **Jeden świadomy wyjątek:** parsowanie CV przez model (`parseRawCvToVault`) nie może być pseudonimizowane, bo jego zadaniem jest właśnie wydobycie imienia, e-maila i telefonu — usunięcie ich z wejścia zniszczyłoby funkcję. Ta ścieżka wymaga osobnej zgody użytkownika i dlatego nie jest dziś wystawiona.
 
-5. **Status subskrypcji jest zapisywalny po stronie klienta.** Trzyma go `localStorage`, więc nie stanowi kontroli dostępu — jest wyłącznie etykietą w interfejsie. Uprawnienia będą liczone w bazie danych.
+5. **Status subskrypcji jest w interfejsie nadal zapisywalny po stronie klienta.** Trzyma go `localStorage` (`src/store/useEntitlements.ts`), więc nie stanowi kontroli dostępu — jest etykietą i licznikiem, który ma reagować natychmiast, bez czekania na sieć. Sklep mówi to o sobie wprost w komentarzu na górze pliku.
 
-6. **Brak kopii zapasowych i odtwarzania.** Wyczyszczenie danych przeglądarki kasuje wszystko bezpowrotnie.
+   Serwerowa strona tego już nie przyjmuje: `subscriptions` nie ma polityki zapisu dla użytkownika, a limit pobiera funkcja `consume_quota` w bazie. Ograniczenie zniknie z tej listy w chwili, w której trasy AI zaczną wymagać `requireAuth` — dziś jeszcze go nie wymagają (patrz pkt 3).
+
+6. **Przycisk odblokowania demo istniał w buildzie produkcyjnym.** `StripeCheckoutModal` pokazywał „Symuluj natychmiastowe odblokowanie", które nadawało status Pro bez płatności, każdemu, kto wszedł na cennik bez skonfigurowanego klucza Stripe'a. Naprawione: przycisk jest za `import.meta.env.DEV`, więc znika z pakietu produkcyjnego. Odnotowane tutaj, bo dotyczyło wydanego kodu.
+
+7. **Brak kopii zapasowych i odtwarzania.** Wyczyszczenie danych przeglądarki kasuje wszystko bezpowrotnie. Po przejściu na konta źródłem kopii jest Supabase — plan Free ich **nie ma**, więc od pierwszego płacącego klienta plan Pro przestaje być opcjonalny (art. 32 RODO).
 
 ---
 

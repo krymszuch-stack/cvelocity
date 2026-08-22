@@ -1,16 +1,19 @@
 import { useState, useEffect, useCallback } from 'react';
 import { NavTabId } from '../components/GlobalShell';
+import { StorageKeys, readRaw, writeRaw } from '../lib/storage';
 
-const SIDEBAR_STORAGE_KEY = 'cvelocity_sidebar_collapsed';
-const USER_STORAGE_KEY = 'cvelocity_user_session';
-
-export interface UserSession {
-  id: string;
-  email: string;
-  name: string;
-  photoURL?: string;
-}
-
+/**
+ * Stan interfejsu: co jest otwarte i która zakładka jest aktywna.
+ *
+ * Świadomie **nie ma tu nic o użytkowniku**. Był tu wcześniej `UserSession`
+ * zapisywany do `localStorage` — trzecie źródło prawdy o tożsamości, obok
+ * `AuthContext` i sklepu z uprawnieniami. Nic go nie czytało, ale samo jego
+ * istnienie już raz doprowadziło do rozjazdu opisanego w `AuthContext.tsx`:
+ * modal logowania zapisywał użytkownika w jednym miejscu, a pasek górny czytał
+ * go z innego i dalej pokazywał „Zaloguj się".
+ *
+ * Kto korzysta z aplikacji, wie wyłącznie `src/context/AuthContext.tsx`.
+ */
 interface AppStoreState {
   activeTab: NavTabId;
   sidebarCollapsed: boolean;
@@ -19,32 +22,21 @@ interface AppStoreState {
   isAuthModalOpen: boolean;
   isDesignTokensOpen: boolean;
   advisorInitialQuestion?: string;
-  user: UserSession | null;
 }
-
-const initialUser: UserSession | null = (() => {
-  if (typeof window === 'undefined') return null;
-  try {
-    const saved = localStorage.getItem(USER_STORAGE_KEY);
-    return saved ? JSON.parse(saved) : null;
-  } catch {
-    return null;
-  }
-})();
 
 // In-memory global state subscribers for zero-dependency store
 let globalState: AppStoreState = {
   activeTab: 'home',
-  sidebarCollapsed: typeof window !== 'undefined'
-    ? localStorage.getItem(SIDEBAR_STORAGE_KEY) === 'true' ||
-      (window.innerWidth >= 1024 && window.innerWidth < 1280)
-    : false,
+  sidebarCollapsed:
+    typeof window !== 'undefined'
+      ? readRaw(StorageKeys.sidebarCollapsed) === 'true' ||
+        (window.innerWidth >= 1024 && window.innerWidth < 1280)
+      : false,
   isAdvisorOpen: false,
   isTokenModalOpen: false,
   isAuthModalOpen: false,
   isDesignTokensOpen: false,
   advisorInitialQuestion: undefined,
-  user: initialUser,
 };
 
 const listeners = new Set<() => void>();
@@ -53,16 +45,8 @@ function setStoreState(updater: Partial<AppStoreState> | ((prev: AppStoreState) 
   const nextPartial = typeof updater === 'function' ? updater(globalState) : updater;
   globalState = { ...globalState, ...nextPartial };
 
-  if (nextPartial.sidebarCollapsed !== undefined && typeof window !== 'undefined') {
-    localStorage.setItem(SIDEBAR_STORAGE_KEY, String(globalState.sidebarCollapsed));
-  }
-
-  if (nextPartial.user !== undefined && typeof window !== 'undefined') {
-    if (nextPartial.user) {
-      localStorage.setItem(USER_STORAGE_KEY, JSON.stringify(nextPartial.user));
-    } else {
-      localStorage.removeItem(USER_STORAGE_KEY);
-    }
+  if (nextPartial.sidebarCollapsed !== undefined) {
+    writeRaw(StorageKeys.sidebarCollapsed, String(globalState.sidebarCollapsed));
   }
 
   listeners.forEach((listener) => listener());
@@ -107,10 +91,6 @@ export function useAppStore() {
     setStoreState({ isDesignTokensOpen });
   }, []);
 
-  const setUser = useCallback((user: UserSession | null) => {
-    setStoreState({ user });
-  }, []);
-
   return {
     ...state,
     setActiveTab,
@@ -120,6 +100,5 @@ export function useAppStore() {
     setTokenModalOpen,
     setAuthModalOpen,
     setDesignTokensOpen,
-    setUser,
   };
 }

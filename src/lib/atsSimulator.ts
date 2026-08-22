@@ -220,7 +220,7 @@ export function extractDynamicJdPhrases(jdText: string): {
     if (words.every((w) => HR_AND_COMMON_STOP_WORDS.has(w))) continue;
 
     // Strip leading and trailing HR stop words from multi-word phrases
-    let cleanWords = [...words];
+    const cleanWords = [...words];
     while (cleanWords.length > 0 && HR_AND_COMMON_STOP_WORDS.has(cleanWords[0])) {
       cleanWords.shift();
     }

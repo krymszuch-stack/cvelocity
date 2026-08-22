@@ -21,7 +21,7 @@ import {
   StripeCheckoutModal,
   StripeCheckoutProduct,
 } from '../components/payments/StripeCheckoutModal';
-import { useAuthStore } from '../store/useAuthStore';
+import { useEntitlements } from '../store/useEntitlements';
 import { PageHeader } from '../components/ui/PageHeader';
 import { Tabs } from '../components/ui/Tabs';
 import { Button } from '../components/ui/Button';
@@ -30,12 +30,11 @@ import { showToast } from '../store/useToastStore';
 type PricingSubTab = 'pricing' | 'features' | 'validation';
 
 export const PricingView: React.FC = () => {
-  const { subscription, usage, consumeAi, consumeImport, setSubscription } = useAuthStore();
+  const { usage, isPro } = useEntitlements();
   const [activeSubTab, setActiveSubTab] = useState<PricingSubTab>('pricing');
   const [billingCycle, setBillingCycle] = useState<'monthly' | 'annual'>('monthly');
   const [selectedProduct, setSelectedProduct] = useState<StripeCheckoutProduct | null>(null);
 
-  const isPro = subscription.status === 'active' || subscription.status === 'trialing';
 
   const subTabs = [
     { id: 'pricing' as PricingSubTab, label: 'Cennik & Plany', icon: IconZap as any },

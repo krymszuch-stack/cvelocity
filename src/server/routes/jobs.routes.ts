@@ -30,7 +30,7 @@ export const jobsRouter = Router();
 jobsRouter.post(
   '/fetch-jd-url',
   urlFetchLimiter,
-  async (req: Request<{}, {}, FetchJdUrlRequest>, res: Response, next: NextFunction) => {
+  async (req: Request<unknown, unknown, FetchJdUrlRequest>, res: Response, next: NextFunction) => {
     try {
       const { url } = req.body;
       if (typeof url !== 'string' || url.length === 0 || url.length > 2048) {

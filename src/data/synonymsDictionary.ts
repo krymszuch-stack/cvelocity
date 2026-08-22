@@ -432,7 +432,7 @@ export function normalizeSlangInText(rawText: string): {
   const replacements: Array<{ slang: string; formalTerm: string; reason: string; category: string }> = [];
 
   for (const entry of INDUSTRY_SLANG_DICTIONARY) {
-    const escapedSlang = entry.slang.replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&');
+    const escapedSlang = entry.slang.replace(/[-/\\^$*+?.()|[\]{}]/g, '\\$&');
     const regex = new RegExp(`\\b${escapedSlang}\\b`, 'gi');
     if (regex.test(currentText)) {
       currentText = currentText.replace(regex, entry.formalTerm);

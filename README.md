@@ -4,7 +4,7 @@ Narzędzie do sprawdzania, czy Twoje CV przejdzie przez polski system ATS — i 
 
 **Ocena ATS liczy się w przeglądarce.** Twoje CV nie jest nigdzie wysyłane: ani na nasz serwer, ani do modelu językowego. Do AI trafia wyłącznie treść ogłoszenia, które sam wskażesz, i to po usunięciu z niej danych kontaktowych.
 
-> **Status: prototyp przed pierwszym wydaniem produkcyjnym.** Nie ma jeszcze kont użytkowników ani bazy danych — profil zapisuje się w przeglądarce. Pełna, uczciwa lista tego, co **nie** jest zabezpieczone, znajduje się w [`SECURITY.md`](./SECURITY.md).
+> **Status: prototyp przed pierwszym wydaniem produkcyjnym.** Domyślnie profil zapisuje się w przeglądarce (`BACKEND_MODE=local`). Warstwa kont, trwałych danych i płatności (`BACKEND_MODE=cloud`) jest zbudowana po stronie serwera, ale nie jest jeszcze podpięta do interfejsu. Pełna, uczciwa lista tego, co **nie** jest zabezpieczone, znajduje się w [`SECURITY.md`](./SECURITY.md).
 
 ---
 
@@ -30,6 +30,8 @@ Narzędzie do sprawdzania, czy Twoje CV przejdzie przez polski system ATS — i 
 | **Co idzie do AI** | Wyłącznie treść ogłoszenia, po zamianie e-maili, telefonów i odnośników na symbole |
 
 Szczegóły: [polityka prywatności](./docs/polityka-prywatnosci.md) · [lista podprocesorów](./docs/podprocesorzy.md) · [rejestr czynności (RoPA)](./docs/rejestr-czynnosci.md)
+
+Instrukcja wdrożenia backendu: [`docs/BACKEND-ROADMAP.md`](./docs/BACKEND-ROADMAP.md)
 
 ---
 
@@ -60,12 +62,29 @@ Serwer nie wystartuje bez `GEMINI_API_KEY` — to celowe. Wcześniej brak klucza
 ## Architektura
 
 ```
-Przeglądarka (React 19 + Vite)          Serwer (Express na Node 22)
-├─ ocena ATS            ← lokalnie      ├─ /api/fetch-jd-url  → pobranie ogłoszenia
-├─ parsowanie CV        ← lokalnie      ├─ /api/parse-jd      → analiza przez Gemini
-├─ edytor i eksport     ← lokalnie      └─ /api/usage/stats   → zużycie tokenów
-└─ profil w localStorage
+Przeglądarka (React 19 + Vite)       Serwer (Express na Node 22)
+├─ ocena ATS         ← lokalnie      ├─ /api/fetch-jd-url   → pobranie ogłoszenia
+├─ parsowanie CV     ← lokalnie      ├─ /api/parse-jd       → analiza przez Gemini
+├─ edytor i eksport  ← lokalnie      ├─ /api/usage/stats    → zużycie tokenów
+└─ profil            ← localStorage  │
+                       lub konto     │  poniżej tylko przy BACKEND_MODE=cloud
+                                     ├─ /api/me             → profil i uprawnienia
+                                     ├─ /api/vault          → CV zapisane na koncie
+                                     ├─ /api/applications   → historia aplikacji
+                                     ├─ /api/billing/*      → sesje Stripe
+                                     └─ /api/stripe-webhook → potwierdzenie płatności
 ```
+
+Frontend i API są serwowane **z jednego kontenera**. Jeden adres oznacza brak ruchu
+cross-origin, brak CORS do skonfigurowania i brak osobnego rachunku za hosting
+frontendu. `server.ts` serwuje `dist/client/` warunkowo, więc ten sam obraz
+zbudowany bez frontendu działa dalej jako samo API.
+
+**Kto podejmuje decyzje o uprawnieniach:** wyłącznie serwer. Licznik limitów
+w przeglądarce (`src/store/useEntitlements.ts`) jest podpowiedzią dla interfejsu
+i leży w `localStorage`, więc da się go przestawić z konsoli. Nic z tego nie
+wynika — realny limit pobiera funkcja `consume_quota` w bazie, a status
+subskrypcji zmienia wyłącznie webhook Stripe'a.
 
 **Klucz Gemini żyje wyłącznie po stronie serwera** i nigdy nie trafia do pakietu przeglądarki.
 
@@ -92,9 +111,14 @@ Pełna lista zmiennych w [`.env.example`](./.env.example). Minimum do uruchomien
 GEMINI_API_KEY=...              # wymagany
 GEMINI_MODEL=gemini-2.5-flash-lite
 PORT=3000
+BACKEND_MODE=local              # cloud = konta, baza i limity po stronie serwera
 ALLOWED_ORIGINS=                # puste = tylko to samo pochodzenie, nigdy gwiazdka
-TRUST_PROXY=false               # true WYŁĄCZNIE za reverse proxy
+TRUST_PROXY=false               # true WYŁĄCZNIE za reverse proxy (na Cloud Run: true)
 ```
+
+W trybie `cloud` dochodzą `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY` oraz
+klucze Stripe'a. Serwer nie wystartuje bez nich — tak samo jak bez klucza
+Gemini.
 
 ⚠️ Subskrypcja „Google AI Pro" **nie obejmuje** Gemini API — potrzebny jest osobny projekt Google Cloud z płatnym rozliczaniem. Darmowy tier API wykorzystuje przesłane dane do trenowania modeli, co przy CV dyskwalifikuje go dla produktu komercyjnego. Instrukcja krok po kroku: [`docs/SETUP.md`](./docs/SETUP.md).
 
@@ -102,9 +126,17 @@ TRUST_PROXY=false               # true WYŁĄCZNIE za reverse proxy
 
 ## Wdrożenie
 
-Frontend to statyczny build (Vercel lub dowolny CDN), backend to kontener (`Dockerfile`, przeznaczony na Google Cloud Run). Łączy je `VITE_API_URL` po stronie frontendu i `ALLOWED_ORIGINS` po stronie serwera.
+Jeden obraz kontenera (`Dockerfile`) na Google Cloud Run — serwuje frontend i API
+pod jednym adresem. Komplet komend, sekretów i weryfikacji:
+[`docs/BACKEND-ROADMAP.md`](./docs/BACKEND-ROADMAP.md).
 
-⚠️ Endpointy nie wymagają jeszcze uwierzytelnienia. Wystawiając usługę publicznie, ogranicz liczbę instancji i ustaw budżet z alertami u dostawcy — inaczej wywołania modelu opłaca Twoja karta.
+Koszt przy skalowaniu do zera i Supabase Free: **0 zł do pierwszego płacącego
+klienta**. Od pierwszej płatności Supabase Pro przestaje być opcjonalne — plan
+Free nie ma kopii zapasowych, a te wymaga art. 32 RODO.
+
+⚠️ Trasy AI nie wymagają jeszcze uwierzytelnienia (patrz `SECURITY.md`).
+Wystawiając usługę publicznie, ogranicz liczbę instancji (`--max-instances`)
+i ustaw budżet z alertami — inaczej wywołania modelu opłaca Twoja karta.
 
 ---
 
@@ -113,6 +145,11 @@ Frontend to statyczny build (Vercel lub dowolny CDN), backend to kontener (`Dock
 `npm test` uruchamia zestaw pokrywający m.in. tablicę złośliwych adresów URL (metadane chmury, adresy w zapisie ósemkowym, IPv4-mapped IPv6), parser `robots.txt`, pseudonimizację na granicy modelu i kontrakt danych ogłoszenia.
 
 CI sprawdza typy, testy, build, **uruchamia zbudowany serwer i odpytuje `/api/health`** oraz buduje obraz kontenera. Ten przedostatni krok istnieje dlatego, że raz już się zdarzyło, że aplikacja kompilowała się czysto i nie startowała.
+
+Dwa kroki pilnują granic, których nie widać w testach jednostkowych:
+
+- **granica uwierzytelnienia** — serwer podnoszony z `BACKEND_MODE=cloud`, a `/api/me`, `/api/vault` i `/api/applications` bez tokenu muszą zwrócić `401`. Gdyby `requireAuth` kiedykolwiek przepuścił żądanie bez nagłówka `Authorization`, te trasy wystawiłyby cudze dane;
+- **sekrety poza pakietem** — `grep` po `dist/client/` za `service_role` i kluczami Stripe'a. Klucz `service_role` omija całe RLS, więc w pakiecie przeglądarki oznaczałby pełny dostęp do bazy dla każdego odwiedzającego.
 
 ---
 

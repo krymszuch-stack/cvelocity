@@ -2,25 +2,29 @@ import React, { useState, useEffect, useRef, Suspense, lazy } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { MasterVault } from './types';
 import { createEmptyVault } from './lib/sampleVault';
-import { loadVaultFromLocalStorage, saveVaultToLocalStorage, clearVaultLocalStorage } from './lib/vaultCrypto';
-import { getActiveProfile, loadProfileVault } from './lib/localProfile';
+import {
+  ANONYMOUS_PROFILE_ID,
+  getActiveProfile,
+  loadProfileVault,
+  saveProfileVault,
+} from './lib/localProfile';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { ThemeProvider } from './providers/ThemeProvider';
 import { ToastHost } from './components/ui/ToastHost';
 import { useAppStore } from './store/useAppStore';
-import { AuthModal } from './components/AuthModal';
+import { AuthModal } from './features/auth/AuthModal';
 import { GlobalShell, NavTabId } from './components/GlobalShell';
 import { CommandPalette } from './components/CommandPalette';
 import { Skeleton } from './components/ui/Skeleton';
 import { HomeView } from './views/HomeView';
 
 // Lazy-loaded heavy views for fast initial bundle & LCP
-const JobMatcher = lazy(() => import('./components/JobMatcher').then((m) => ({ default: m.JobMatcher })));
-const MasterVaultEditor = lazy(() => import('./components/MasterVaultEditor').then((m) => ({ default: m.MasterVaultEditor })));
-const ProfilerSection = lazy(() => import('./components/ProfilerSection').then((m) => ({ default: m.ProfilerSection })));
-const CVParserModal = lazy(() => import('./components/CVParserModal').then((m) => ({ default: m.CVParserModal })));
-const GeminiAdvisorModal = lazy(() => import('./components/GeminiAdvisorModal').then((m) => ({ default: m.GeminiAdvisorModal })));
-const ApplicationTracker = lazy(() => import('./views/ApplicationTracker').then((m) => ({ default: m.ApplicationTracker })));
+const JobMatcher = lazy(() => import('./features/matcher/JobMatcher').then((m) => ({ default: m.JobMatcher })));
+const MasterVaultEditor = lazy(() => import('./features/vault/MasterVaultEditor').then((m) => ({ default: m.MasterVaultEditor })));
+const ProfilerSection = lazy(() => import('./features/profiler/ProfilerSection').then((m) => ({ default: m.ProfilerSection })));
+const CVParserModal = lazy(() => import('./features/parser/CVParserModal').then((m) => ({ default: m.CVParserModal })));
+const GeminiAdvisorModal = lazy(() => import('./features/advisor/GeminiAdvisorModal').then((m) => ({ default: m.GeminiAdvisorModal })));
+const ApplicationTracker = lazy(() => import('./features/tracker/ApplicationTracker').then((m) => ({ default: m.ApplicationTracker })));
 const PricingView = lazy(() => import('./views/PricingView').then((m) => ({ default: m.PricingView })));
 const DesignTokensShowcaseModal = lazy(() => import('./components/DesignTokensShowcaseModal').then((m) => ({ default: m.DesignTokensShowcaseModal })));
 
@@ -52,29 +56,18 @@ function MainApp() {
   const { userVault, saveUserVault, user, isAuthenticated } = useAuth();
 
   const [vault, setVault] = useState<MasterVault>(() => {
+    // Ślad po danych demonstracyjnych, które kiedyś wgrywały się same. Wpis
+    // z tym adresem nie jest niczyim CV, więc jest odrzucany zamiast wczytany.
     const SAMPLE_EMAIL = 'jan.kowalski@example.com';
 
-    // Istniejący profil lokalny: wczytaj jego vault.
     const profile = getActiveProfile();
-    if (profile) {
-      const profileVault = loadProfileVault(profile.id);
-      if (profileVault && profileVault.personalInfo.email === SAMPLE_EMAIL) {
-        clearVaultLocalStorage();
-        return createEmptyVault(profile.name, profile.email);
-      }
-      if (profileVault) return profileVault;
-      return createEmptyVault(profile.name, profile.email);
+    const storedVault = loadProfileVault(profile?.id ?? ANONYMOUS_PROFILE_ID);
+
+    if (storedVault && storedVault.personalInfo.email !== SAMPLE_EMAIL) {
+      return storedVault;
     }
 
-    // Unauthenticated: check global cache but never return sample data
-    const loaded = loadVaultFromLocalStorage();
-    if (loaded && loaded.personalInfo.email !== SAMPLE_EMAIL) {
-      return loaded;
-    }
-    if (loaded && loaded.personalInfo.email === SAMPLE_EMAIL) {
-      clearVaultLocalStorage();
-    }
-    return createEmptyVault();
+    return createEmptyVault(profile?.name, profile?.email);
   });
 
   // Sync user vault when authenticated user changes
@@ -85,11 +78,14 @@ function MainApp() {
   }, [userVault]);
 
 
-  // Auto-save vault on changes
+  // Jeden zapis, pod jednym kluczem. Wcześniej każda zmiana trafiała naraz do
+  // klucza globalnego i do klucza profilu, więc te same dane leżały w schowku
+  // w dwóch kopiach, które potrafiły się rozjechać.
   useEffect(() => {
-    saveVaultToLocalStorage(vault);
     if (isAuthenticated && user) {
       saveUserVault(vault);
+    } else {
+      saveProfileVault(ANONYMOUS_PROFILE_ID, vault);
     }
   }, [vault, isAuthenticated, user, saveUserVault]);
 

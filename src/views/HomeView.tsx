@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { StorageKeys, readJson, writeJson } from '../lib/storage';
 import {
   FileText,
   Search,
@@ -197,21 +198,12 @@ export const HomeView: React.FC<HomeViewProps> = ({
 }) => {
   const [selectedCategory, setSelectedCategory] = useState<string>('Wszystkie');
   const [favorites, setFavorites] = useState<string[]>(() => {
-    try {
-      const saved = localStorage.getItem('cvelocity-favorite-tips');
-      return saved ? JSON.parse(saved) : [];
-    } catch {
-      return [];
-    }
+    return readJson<string[]>(StorageKeys.favoriteTips, []);
   });
   const [activeTipModal, setActiveTipModal] = useState<CareerTip | null>(null);
 
   useEffect(() => {
-    try {
-      localStorage.setItem('cvelocity-favorite-tips', JSON.stringify(favorites));
-    } catch (e) {
-      console.error(e);
-    }
+    writeJson(StorageKeys.favoriteTips, favorites);
   }, [favorites]);
 
   const toggleFavorite = (e: React.MouseEvent, id: string) => {

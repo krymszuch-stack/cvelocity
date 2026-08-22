@@ -1,4 +1,5 @@
 import React, { createContext, useContext, useEffect, useState, useMemo } from 'react';
+import { StorageKeys, readRaw, writeRaw } from '../lib/storage';
 
 export type Theme = 'light' | 'dark' | 'system';
 export type ResolvedTheme = 'light' | 'dark';
@@ -12,7 +13,7 @@ interface ThemeContextType {
 
 const ThemeContext = createContext<ThemeContextType | undefined>(undefined);
 
-const STORAGE_KEY = 'cvelocity-theme';
+
 
 export const ThemeProvider: React.FC<{ children: React.ReactNode; defaultTheme?: Theme }> = ({
   children,
@@ -22,7 +23,7 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode; defaultTheme?:
 }) => {
   const [theme, setThemeState] = useState<Theme>(() => {
     if (typeof window === 'undefined') return defaultTheme;
-    const stored = localStorage.getItem(STORAGE_KEY) as Theme | null;
+    const stored = readRaw(StorageKeys.theme) as Theme | null;
     return stored || defaultTheme;
   });
 
@@ -62,7 +63,7 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode; defaultTheme?:
 
   const setTheme = (newTheme: Theme) => {
     setThemeState(newTheme);
-    localStorage.setItem(STORAGE_KEY, newTheme);
+    writeRaw(StorageKeys.theme, newTheme);
   };
 
   const toggleTheme = () => {

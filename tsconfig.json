@@ -10,6 +10,19 @@
       "DOM.Iterable"
     ],
     "skipLibCheck": true,
+
+    // Kod przechodzi `strict` bez jednego błędu, więc włączenie kosztuje zero,
+    // a od teraz pilnuje, żeby tak zostało. Bez tego `null` i `undefined` są
+    // przypisywalne wszędzie, a to jest ta klasa błędów, która ujawnia się
+    // dopiero u użytkownika.
+    "strict": true,
+
+    // `noUnusedLocals` NIE jest jeszcze włączone: zgłasza 119 nieużywanych
+    // importów, głównie ikon i symboli Reacta. To jest realny martwy kod
+    // trafiający do pakietu przeglądarki, ale posprzątanie go w tej samej
+    // zmianie co warstwa backendu utopiłoby jedno w drugim. Do zrobienia
+    // osobno.
+
     "moduleResolution": "bundler",
     "isolatedModules": true,
     "moduleDetection": "force",
