@@ -12,33 +12,33 @@ import {
   Network,
   Truck,
   Check,
+  Wind,
 } from 'lucide-react';
 import { motion } from 'motion/react';
 import { Card } from '../../components/ui/Card';
 import { Button } from '../../components/ui/Button';
+import { ALL_LICENSES, LICENSE_CATEGORIES } from '../../data/licenses';
 
-export interface LicenseItem {
-  id: string;
-  label: string;
-  category: 'Kierowca' | 'Techniczne' | 'Sanitarne' | 'IT / Zarządzanie';
-  icon: React.ElementType;
-}
-
-const ALL_LICENSES: LicenseItem[] = [
-  { id: 'b_license', label: 'Prawo Jazdy Kat. B', category: 'Kierowca', icon: Car },
-  { id: 'a_license', label: 'Prawo Jazdy Kat. A (Motocykl)', category: 'Kierowca', icon: Car },
-  { id: 'c_license', label: 'Prawo Jazdy Kat. C / C+E', category: 'Kierowca', icon: Truck },
-  { id: 'd_license', label: 'Prawo Jazdy Kat. D (Autobusy)', category: 'Kierowca', icon: Truck },
-  { id: 'udt_forklift', label: 'Uprawnienia UDT (Wózki Widłowe)', category: 'Techniczne', icon: HardHat },
-  { id: 'udt_crane', label: 'Uprawnienia UDT (Suwnice / Dźwigi)', category: 'Techniczne', icon: HardHat },
-  { id: 'sep_1kv', label: 'Uprawnienia SEP (Grupa 1 do 1kV)', category: 'Techniczne', icon: Zap },
-  { id: 'welding_tig_mig', label: 'Certyfikat Spawalniczy TIG/MAG', category: 'Techniczne', icon: Flame },
-  { id: 'sanepid', label: 'Orzeczenie Sanepid', category: 'Sanitarne', icon: ShieldCheck },
-  { id: 'haccp', label: 'Certyfikat HACCP / GMP', category: 'Sanitarne', icon: ShieldCheck },
-  { id: 'cloud_cert', label: 'Certyfikat AWS / GCP / Azure', category: 'IT / Zarządzanie', icon: Award },
-  { id: 'scrum_master', label: 'Scrum Master (PSM I / CSM)', category: 'IT / Zarządzanie', icon: Sparkles },
-  { id: 'cisco_ccna', label: 'Certyfikat Cisco CCNA', category: 'IT / Zarządzanie', icon: Network },
-];
+/**
+ * Ikony rozwiązywane po nazwie z katalogu (`src/data/licenses.ts`).
+ *
+ * Sam katalog jest modułem danych i nie wciąga `lucide-react` — dzięki temu
+ * silnik knock-outów może z niego korzystać po stronie logiki, bez zależności
+ * od warstwy widoku.
+ */
+const LICENSE_ICONS: Record<string, React.ElementType> = {
+  Car,
+  Truck,
+  HardHat,
+  Zap,
+  Flame,
+  ShieldCheck,
+  Award,
+  Sparkles,
+  Network,
+  Wind,
+  Sliders,
+};
 
 export interface LicenseGridProps {
   selectedLicenses: string[];
@@ -54,7 +54,7 @@ export const LicenseGrid: React.FC<LicenseGridProps> = ({
   const [isDense, setIsDense] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState<string>('Wszystkie');
 
-  const categories = ['Wszystkie', 'Kierowca', 'Techniczne', 'Sanitarne', 'IT / Zarządzanie'];
+  const categories = ['Wszystkie', ...LICENSE_CATEGORIES];
 
   const filteredLicenses = selectedCategory === 'Wszystkie'
     ? ALL_LICENSES
@@ -111,7 +111,7 @@ export const LicenseGrid: React.FC<LicenseGridProps> = ({
       >
         {filteredLicenses.map((lic) => {
           const isSelected = selectedLicenses.includes(lic.id);
-          const Icon = lic.icon;
+          const Icon = LICENSE_ICONS[lic.iconName] ?? ShieldCheck;
 
           return (
             <motion.button

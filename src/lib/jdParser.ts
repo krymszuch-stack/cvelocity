@@ -1,5 +1,6 @@
 import { MasterVault } from '../types';
 import { HR_AND_COMMON_STOP_WORDS, extractDynamicJdPhrases } from './atsSimulator';
+import { auditKnockouts } from './knockouts';
 
 export interface ParsedJobDescription {
   jobTitle: string;
@@ -20,6 +21,14 @@ export interface ParsedJobDescription {
   recruitmentMode?: 'ATS_CORPORATE' | 'CRAFT_LOCAL' | 'HYBRID';
   recruitmentModeReason?: string;
   sourceUrl?: string;
+}
+
+/** Mapuje regułę knock-outu na kategorię używaną przez interfejs. */
+function knockoutTypeFor(ruleId: string): DealbreakerWarning['type'] {
+  if (ruleId.startsWith('license_')) return 'LICENSE';
+  if (ruleId === 'language_advanced') return 'LANGUAGE';
+  if (ruleId === 'shift_work' || ruleId === 'own_transport') return 'LOCATION';
+  return 'CERTIFICATE';
 }
 
 export interface DealbreakerWarning {
@@ -195,8 +204,22 @@ export function parseJobDescriptionLocal(rawJdText: string, defaultTitle = 'Full
 /**
  * Compare Parsed Job Description against user's Master Vault
  */
-export function analyzeJdMatchWithVault(parsedJd: ParsedJobDescription, vault: MasterVault): JDVaultMatchAnalysis {
+export function analyzeJdMatchWithVault(
+  parsedJd: ParsedJobDescription,
+  vault: MasterVault,
+  /**
+   * Surowa treść ogłoszenia, jeśli wywołujący ją ma.
+   *
+   * Wykrywanie wymagań formalnych działa na niej wyraźnie lepiej niż na
+   * strukturze po parsowaniu: „praca w systemie zmianowym" albo „nie wymagamy
+   * prawa jazdy" to zdania, które przepadają, gdy zostaną z nich same
+   * wyekstrahowane umiejętności. Bez tego argumentu spadamy na zserializowaną
+   * strukturę — gorzej, ale nadal działa.
+   */
+  rawJdText?: string
+): JDVaultMatchAnalysis {
   const vaultTextFull = JSON.stringify(vault).toLowerCase();
+  const jdSourceText = rawJdText?.trim() || JSON.stringify(parsedJd);
   const vaultSkillsLower = new Set([
     ...vault.skillsMatrix.hardSkills.map((s) => s.toLowerCase()),
     ...vault.skillsMatrix.toolsAndTech.map((s) => s.toLowerCase()),
@@ -220,47 +243,36 @@ export function analyzeJdMatchWithVault(parsedJd: ParsedJobDescription, vault: M
     }
   });
 
-  // Dealbreaker audit
-  const dealbreakerWarnings: DealbreakerWarning[] = [];
-  const mandatoryReqs = parsedJd.mandatoryRequirements || [];
+  // Audyt kryteriów zerojedynkowych.
+  //
+  // Tu stały wcześniej dwa zaszyte warunki: prawo jazdy kat. B i angielski C1.
+  // Dla montera, spawacza, magazyniera czy sprzątaczki oba są nietrafione —
+  // ich aplikacje odpadają na SEP-ie, UDT, F-Gazie, orzeczeniu sanepidu albo
+  // dyspozycyjności zmianowej, czyli na rzeczach, których tamten audyt nie
+  // widział w ogóle. Reguły mieszkają teraz w `src/lib/knockouts.ts`.
+  //
+  // Druga, cichsza naprawa: tamta wersja szukała uprawnień przez
+  // `JSON.stringify(vault)`, więc zaznaczenie „UDT wózki" w profilu nie miało
+  // szans dopasować się do wymagania „uprawnienia na wózki widłowe".
+  // Silnik porównuje teraz identyfikatory z `profiler.licenses` wprost.
+  const knockoutReport = auditKnockouts(jdSourceText, vault);
 
-  // Check 1: Driver's license / Prawo jazdy
-  const requiresLicense = mandatoryReqs.some(m => /prawo jazdy|kat\.?\s*b|driver/i.test(m)) ||
-                           /prawo jazdy|kat\.?\s*b/i.test(JSON.stringify(parsedJd));
-  if (requiresLicense) {
-    const hasLicenseInVault = /prawo jazdy|kat\.?\s*b|driver'?s license/i.test(vaultTextFull);
-    dealbreakerWarnings.push({
-      id: 'license_b',
-      requirement: 'Prawo Jazdy Kat. B',
-      type: 'LICENSE',
-      message: hasLicenseInVault
-        ? 'Wymagane Prawo Jazdy Kat. B (Wykryto w Twoim Master Vault)'
-        : 'Oferta wymaga Prawa Jazdy Kat. B! W Twoim profilu nie znaleziono tej informacji.',
-      missingInVault: !hasLicenseInVault,
-      canQuickAdd: !hasLicenseInVault,
-      quickAddValue: 'Prawo Jazdy Kat. B',
-    });
-  }
+  const dealbreakerWarnings: DealbreakerWarning[] = knockoutReport.findings.map((finding) => ({
+    id: finding.ruleId,
+    requirement: finding.label,
+    type: knockoutTypeFor(finding.ruleId),
+    message: finding.satisfied
+      ? `Wymagane: ${finding.label} (potwierdzone w Twoim profilu)`
+      : finding.severity === 'knockout'
+        ? `Oferta wymaga: ${finding.label}. Nie znaleziono tego w Twoim profilu.`
+        : `Mile widziane: ${finding.label}. Warto dopisać, jeśli to posiadasz.`,
+    missingInVault: !finding.satisfied,
+    canQuickAdd: !finding.satisfied,
+    quickAddValue: finding.label,
+  }));
 
-  // Check 2: English C1 / Language requirements
-  const requiresEnglishC1 = mandatoryReqs.some(m => /c1|c2|fluent/i.test(m)) ||
-                            parsedJd.languagesRequired.some(l => /c1|c2|biegły/i.test(l));
-  if (requiresEnglishC1) {
-    const hasC1InVault = /angielski\s*(?:c1|c2|biegły)|english\s*(?:c1|c2|fluent)/i.test(vaultTextFull);
-    if (!hasC1InVault) {
-      dealbreakerWarnings.push({
-        id: 'english_c1',
-        requirement: 'Język Angielski min. C1',
-        type: 'LANGUAGE',
-        message: 'Ogłoszenie wymaga biegłego języka angielskiego (min. C1). Upewnij się, że masz to zaznaczone w Vault.',
-        missingInVault: true,
-        canQuickAdd: true,
-        quickAddValue: 'Angielski (Biegły C1)',
-      });
-    }
-  }
-
-  // Check 3: Missing key hard skills
+  // Brakujące umiejętności kluczowe zostają — to jest osobna kategoria niż
+  // uprawnienia formalne i dotyczy każdej branży tak samo.
   parsedJd.requiredHardSkills.slice(0, 3).forEach((skill, idx) => {
     if (!vaultSkillsLower.has(skill.toLowerCase()) && !vaultTextFull.includes(skill.toLowerCase())) {
       dealbreakerWarnings.push({
@@ -280,8 +292,16 @@ export function analyzeJdMatchWithVault(parsedJd: ParsedJobDescription, vault: M
   const overallMatchPercentage = Math.min(100, Math.round(matchRatio * 100));
 
   const recommendations: string[] = [];
-  if (dealbreakerWarnings.some(d => d.missingInVault)) {
-    recommendations.push('Wykryto potencjalne krytyczne luki w wymaganiach (np. prawo jazdy, C1, kluczowy skill). Uzupełnij je przed złożeniem aplikacji.');
+  if (knockoutReport.blocking.length > 0) {
+    // Wymieniamy je z nazwy. „Wykryto potencjalne krytyczne luki" nie mówi
+    // użytkownikowi, co ma zrobić — a to jest jedyny powód, dla którego czyta
+    // ten ekran.
+    const names = knockoutReport.blocking.map((finding) => finding.label).join(', ');
+    recommendations.push(`Oferta stawia twarde wymagania, których nie widać w Twoim profilu: ${names}.`);
+  }
+  if (knockoutReport.optional.length > 0) {
+    const names = knockoutReport.optional.map((finding) => finding.label).join(', ');
+    recommendations.push(`Mile widziane, warto dopisać jeśli posiadasz: ${names}.`);
   }
   if (missingSkills.length > 0) {
     recommendations.push(`Dodaj brakujące słowa kluczowe do sekcji Skills: ${missingSkills.slice(0, 4).join(', ')}.`);

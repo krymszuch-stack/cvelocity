@@ -1,4 +1,35 @@
-import { AtsCheckResult, MasterVault, TailoredResume, LemmatizedMatch } from '../types';
+import { AtsCheckResult, FlagCategory, MasterVault, TailoredResume, LemmatizedMatch } from '../types';
+
+/**
+ * Zalecenia posortowane pod profil kandydata.
+ *
+ * `FlagCategory` był zadeklarowany w typach i zapisywany w profilu, ale żaden
+ * scoring go nie odczytywał — istniał, nie znacząc nic. Tu zaczyna znaczyć:
+ * przy pracy fizycznej rekrutacja jest wolumenowa i odsiewa mechanicznie, więc
+ * czytelność dokumentu dla parsera i wymagania formalne decydują wcześniej niż
+ * gęstość słów kluczowych. Przy pracy biurowej kolejność zostaje dotychczasowa.
+ *
+ * Świadomie zmieniamy **kolejność, nie wynik**. Ta sama treść CV nie może
+ * dostawać różnych ocen zależnie od checkboxa w profilu — to byłoby mierzenie
+ * czegoś innego niż deklaruje nazwa „wynik ATS".
+ */
+const PHYSICAL_PRIORITY = ['Struktura PDF', 'Sekcje', 'Format dat', 'Słowa twarde'];
+
+function prioritizeForProfile(recommendations: string[], profile: FlagCategory): string[] {
+  if (profile !== 'PHYSICAL') return recommendations;
+
+  const rank = (text: string): number => {
+    const index = PHYSICAL_PRIORITY.findIndex((prefix) => text.startsWith(prefix));
+    return index === -1 ? PHYSICAL_PRIORITY.length : index;
+  };
+
+  // Stabilne sortowanie: pozycje o tym samym priorytecie zachowują kolejność,
+  // w której zostały wygenerowane.
+  return recommendations
+    .map((text, index) => ({ text, index, rank: rank(text) }))
+    .sort((a, b) => a.rank - b.rank || a.index - b.index)
+    .map((entry) => entry.text);
+}
 
 /**
  * Polish Stemming & Lemmatization helper.
@@ -266,8 +297,15 @@ export function extractDynamicJdPhrases(jdText: string): {
 export function simulateAtsCheck(
   resume: TailoredResume,
   vault: MasterVault,
-  jobDescription: string
+  jobDescription: string,
+  /**
+   * Profil kandydata. Domyślnie odczytywany z `vault.profiler.flags` — pierwszy
+   * zaznaczony wygrywa, a przy braku zaznaczenia zostaje dotychczasowe
+   * zachowanie (`OFFICE_IT`), więc istniejące wyniki się nie zmieniają.
+   */
+  profile?: FlagCategory
 ): AtsCheckResult {
+  const appliedProfile: FlagCategory = profile ?? vault.profiler?.flags?.[0] ?? 'OFFICE_IT';
   const dynamicJd = extractDynamicJdPhrases(jobDescription);
 
   // Aggregate full CV text with structural metadata
@@ -509,11 +547,14 @@ export function simulateAtsCheck(
     recommendations.push('Struktura PDF: Zastąp elementy graficzne (paski postępu, ikonki) opisem tekstowym, aby nie gubić danych w parserze OCR.');
   }
 
+  const orderedRecommendations = prioritizeForProfile(recommendations, appliedProfile);
+
   return {
     overallScore,
     keywordCoverageScore,
     structureScore,
     formattingScore,
+    appliedProfile,
     layer1Structure: {
       layoutScore,
       headerNormalizationScore,
@@ -541,7 +582,7 @@ export function simulateAtsCheck(
     ocrWarnings,
     badDateFormats,
     gapAnalysis,
-    recommendations,
+    recommendations: orderedRecommendations,
   };
 }
 
