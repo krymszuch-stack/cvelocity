@@ -17,6 +17,24 @@ export interface SeedProfessionItem {
   confidence: number;
 }
 
+/**
+ * Klasyfikacja narzędzia jako urządzenia (`device`) albo narzędzia (`tool`).
+ *
+ * Jedno źródło prawdy: wcześniej ten sam warunek był powielony w dwóch miejscach
+ * z różnymi listami słów kluczowych (blok narzędzi znał `drukarka|serwer`, blok
+ * marek już nie). Rozjazd generował identyfikatory `tool:...` dla bytów zapisanych
+ * jako `device:...`, czyli relacje wskazujące na nieistniejące węzły grafu.
+ */
+const DEVICE_KEYWORDS = /kocioł|piec|analizator|podnośnik|koparka|spawarka|drukarka|serwer/i;
+
+export function classifySeedTool(toolName: string): 'device' | 'tool' {
+  return DEVICE_KEYWORDS.test(toolName) ? 'device' : 'tool';
+}
+
+export function buildSeedToolId(toolName: string): string {
+  return `${classifySeedTool(toolName)}:${toolName.toLowerCase().replace(/[^a-z0-9]/g, '-')}`;
+}
+
 export class SeedImporter {
   constructor(private repo: SqliteGraphRepository) {}
 
@@ -122,9 +140,8 @@ export class SeedImporter {
 
       // 4. Tools / Devices
       for (const toolName of p.tools || []) {
-        const isDevice = /kocioł|piec|analizator|podnośnik|koparka|spawarka|drukarka|serwer/i.test(toolName);
-        const type = isDevice ? 'device' : 'tool';
-        const toolId = `${type}:${toolName.toLowerCase().replace(/[^a-z0-9]/g, '-')}`;
+        const type = classifySeedTool(toolName);
+        const toolId = buildSeedToolId(toolName);
 
         const toolEntity: Entity = {
           id: toolId,
@@ -180,8 +197,7 @@ export class SeedImporter {
         entitiesCount++;
 
         for (const toolName of (p.tools || []).slice(0, 2)) {
-          const type = /kocioł|piec|analizator|podnośnik|koparka|spawarka/i.test(toolName) ? 'device' : 'tool';
-          const toolId = `${type}:${toolName.toLowerCase().replace(/[^a-z0-9]/g, '-')}`;
+          const toolId = buildSeedToolId(toolName);
           const brandRel: Relation = {
             id: `rel_${brandEntity.id}_manufactures_${toolId}`,
             fromEntityId: brandEntity.id,
