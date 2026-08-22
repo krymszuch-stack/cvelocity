@@ -32,3 +32,15 @@ yarn-error.log*
 *.njsproj
 *.sln
 *.swp
+
+# Bazy SQLite narzędzia semantic-work-graph. Plik binarny odtwarzany przez
+# `npm run seed:import` — trzymanie go w historii puchnie repozytorium i przy
+# każdej zmianie daje konflikt, którego nie da się rozwiązać.
+*.db
+*.db-journal
+
+# Jeden menedżer pakietów. CI, Dockerfile i README używają npm; drugi lockfile
+# obok oznacza dwa różne drzewa zależności zależnie od tego, kto co uruchomił.
+bun.lock
+yarn.lock
+pnpm-lock.yaml

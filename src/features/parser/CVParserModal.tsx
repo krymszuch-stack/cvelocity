@@ -23,7 +23,7 @@ import { ProgressBar } from '../../components/ui/ProgressBar';
 import { Tabs } from '../../components/ui/Tabs';
 import { PageHeader } from '../../components/ui/PageHeader';
 import { PremiumBadge } from '../../components/ui/PremiumBadge';
-import { useAuthStore } from '../../store/useAuthStore';
+import { useEntitlements } from '../../store/useEntitlements';
 import { StripeCheckoutModal } from '../../components/payments/StripeCheckoutModal';
 import { showToast } from '../../store/useToastStore';
 
@@ -50,8 +50,7 @@ export const CVParserModal: React.FC<CVParserModalProps> = ({
   const [successToast, setSuccessToast] = useState(false);
   const [isCheckoutOpen, setIsCheckoutOpen] = useState(false);
 
-  const { subscription, usage, consumeImport } = useAuthStore();
-  const isPro = subscription.status === 'active' || subscription.status === 'trialing';
+  const { usage, isPro, consumeImport } = useEntitlements();
 
   const ingestTabs = [
     { id: 'file' as IngestMode, label: 'Plik z dysku (PDF/DOCX)', icon: UploadCloud },

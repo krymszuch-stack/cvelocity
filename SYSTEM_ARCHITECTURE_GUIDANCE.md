@@ -1,5 +1,5 @@
 # ═══════════════════════════════════════════════════════════════════
-# SKILLVAULT: ARCHITEKTURA WERSJONOWANIA & EXPORT ENGINE (6 FILARÓW)
+# CVELOCITY: ARCHITEKTURA WERSJONOWANIA & EXPORT ENGINE (6 FILARÓW)
 # ═══════════════════════════════════════════════════════════════════
 
 ## 1. EDYCJA POPRZEZ "WARSTWY" (LAYERED EDITING)
@@ -44,8 +44,14 @@
 * **Cel:** Automatyczne usuwanie tymczasowych migawek i historii zgłoszeń z serwera po 60 dniach.
 * **Architektura:**
   - Prawda Źródłowa MasterVault pozostaje u użytkownika (Local-First w przeglądarce/na urządzeniu).
-  - Pliki i kopie na serwerze otrzymują atrybut `expireAt = now + 60 days`.
-  - Natywna polityka Firestore TTL Policy (Cloud Firestore / Firebase) usuwa przestarzałe wpisy automatycznie co do sekundy po 60 dniach bezkosztowo.
-  - Aktywność użytkownika (nowa aplikacja / zalogowanie) resetuje timer `expireAt` na kolejne 60 dni.
-* **Zaleta RODO/Bezpieczeństwa:** Pełna zgodność z RODO Art. 5 (Minimalizacja przechowywania) i zerowy dług wycieku danych po 60 dniach.
-
+  - Migawki i kopie na serwerze otrzymują kolumnę `expires_at = now() + interval '60 days'`.
+  - Kasowanie realizuje zadanie `pg_cron` w Postgresie Supabase, uruchamiane raz na dobę:
+    `delete from snapshots where expires_at < now()`.
+  - Aktywność użytkownika (nowa aplikacja / zalogowanie) przesuwa `expires_at` o kolejne 60 dni.
+* **Uwaga o wcześniejszej wersji tego zapisu:** planowano tu natywną politykę TTL
+  Cloud Firestore. Projekt korzysta z Supabase (Postgres), nie z Firestore —
+  patrz [`docs/SETUP.md`](./docs/SETUP.md) §2 i [`docs/BACKEND-ROADMAP.md`](./docs/BACKEND-ROADMAP.md).
+  Utrzymywanie w dokumentacji architektury opartej na usłudze, której nie używamy,
+  kończy się planowaniem pracy, której nie da się wykonać.
+* **Zaleta RODO/Bezpieczeństwa:** Zgodność z RODO Art. 5 (ograniczenie przechowywania)
+  i zerowy dług wycieku danych po 60 dniach.

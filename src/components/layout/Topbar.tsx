@@ -16,7 +16,7 @@ import { motion, AnimatePresence } from 'motion/react';
 import { ThemeToggle } from '../ThemeToggle';
 import { AdvisorButton } from '../ui/AdvisorButton';
 import { NavTabId } from '../GlobalShell';
-import { useAuthStore } from '../../store/useAuthStore';
+import { useEntitlements } from '../../store/useEntitlements';
 import { useAuth } from '../../context/AuthContext';
 import { showToast } from '../../store/useToastStore';
 
@@ -51,12 +51,12 @@ export const Topbar: React.FC<TopbarProps> = ({
   userEmail,
   className = '',
 }) => {
-  const { subscription } = useAuthStore();
+  const { isPro } = useEntitlements();
   const { logout, user } = useAuth();
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
-  const isPro = subscription.status === 'active' || subscription.status === 'trialing';
+
 
   // Close dropdown on outside click
   useEffect(() => {

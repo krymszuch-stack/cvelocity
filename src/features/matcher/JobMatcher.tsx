@@ -17,6 +17,8 @@ import {
   AtsCheckResult,
   JobOffer,
 } from '../../types';
+import type { FetchJdUrlResponse } from '../../types/api';
+import { ApiError, api } from '../../lib/apiClient';
 import type { ParsedJobDescription } from '../../lib/jdParser';
 import { parseJobDescriptionResponse } from '../../lib/jdSchema';
 import { parseJobDescriptionLocal } from '../../lib/jdParser';
@@ -25,7 +27,7 @@ import { RealtimeLivePreview } from './RealtimeLivePreview';
 import { simulateAtsCheck } from '../../lib/atsSimulator';
 import { generateAntiTemplateCoverLetter } from '../../lib/coverLetterEngine';
 import { triggerConfetti } from '../../lib/confetti';
-import { AtsSimulatorView } from '../../components/AtsSimulatorView';
+import { AtsSimulatorView } from './AtsSimulatorView';
 import { PageHeader } from '../../components/ui/PageHeader';
 import { Button } from '../../components/ui/Button';
 import { Modal } from '../../components/ui/Modal';
@@ -128,15 +130,15 @@ export const JobMatcher: React.FC<JobMatcherProps> = ({
     setIsFetchingUrl(true);
 
     try {
-      const fetchResponse = await fetch('/api/fetch-jd-url', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ url }),
-      });
-      const fetched = await fetchResponse.json();
-
-      if (!fetchResponse.ok || !fetched.success) {
-        setUrlError(fetched.error || 'Nie udało się pobrać oferty z podanego adresu URL.');
+      let fetched: FetchJdUrlResponse & { success: true };
+      try {
+        fetched = await api.post<FetchJdUrlResponse & { success: true }>('/api/fetch-jd-url', { url });
+      } catch (err) {
+        setUrlError(
+          err instanceof ApiError
+            ? err.message
+            : 'Nie udało się pobrać oferty z podanego adresu URL.'
+        );
         return;
       }
 
@@ -146,16 +148,16 @@ export const JobMatcher: React.FC<JobMatcherProps> = ({
       // field undefined — throwing away a result we paid the model for.
       let parsed: ParsedJobDescription;
       try {
-        const parseResponse = await fetch('/api/parse-jd', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ rawJdText: fetched.descriptionRaw }),
+        const parseData = await api.post<{ parsedJd: unknown }>('/api/parse-jd', {
+          rawJdText: fetched.descriptionRaw,
         });
-        const parseData = await parseResponse.json();
         parsed =
-          (parseData.success && parseJobDescriptionResponse(parseData.parsedJd)) ||
+          parseJobDescriptionResponse(parseData.parsedJd) ||
           parseJobDescriptionLocal(fetched.descriptionRaw);
       } catch {
+        // Model bywa niedostępny, a limit kwot bywa wyczerpany. Lokalny parser
+        // heurystyczny daje gorszy wynik, ale zawsze jakiś — użytkownik nie
+        // zostaje z pustym ekranem po tym, jak ofertę udało się już pobrać.
         parsed = parseJobDescriptionLocal(fetched.descriptionRaw);
       }
 

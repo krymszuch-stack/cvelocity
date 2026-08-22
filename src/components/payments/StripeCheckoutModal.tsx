@@ -1,16 +1,37 @@
 import React, { useState } from 'react';
-import { ShieldCheck, Zap, AlertCircle, CheckCircle2, Lock } from 'lucide-react';
+import { ShieldCheck, AlertCircle, CheckCircle2, Lock } from 'lucide-react';
 import { Modal } from '../ui/Modal';
 import { Button } from '../ui/Button';
-import { useAuthStore } from '../../store/useAuthStore';
+import { clientEnv } from '../../lib/clientEnv';
+import { ApiError, api } from '../../lib/apiClient';
+import { useEntitlements } from '../../store/useEntitlements';
+
+/**
+ * Przejście do bramki płatności.
+ *
+ * Sesja płatności powstaje **po stronie serwera** (`POST /api/billing/checkout-session`),
+ * a przeglądarka jedynie przechodzi pod zwrócony adres. Trzy powody:
+ *
+ *  1. Poprzednia wersja używała `stripe.redirectToCheckout({ lineItems })` —
+ *     integracji czysto klienckiej, wyłączonej dla nowych kont Stripe. Nie
+ *     zadziałałaby na świeżo założonym koncie, a to jest dokładnie ten przypadek.
+ *  2. Cena pochodzi wtedy z tabeli `plans` w bazie, a nie z pola w kodzie
+ *     przeglądarki, które użytkownik może podmienić przed wysłaniem.
+ *  3. Nie doładowujemy skryptu firmy trzeciej, więc CSP zostaje przy
+ *     `script-src 'self'` bez wyjątków (`server.ts`).
+ *
+ * O tym, że subskrypcja jest aktywna, decyduje webhook Stripe'a — nie powrót
+ * użytkownika pod adres z `?checkout=success`, który da się wpisać ręcznie.
+ */
 
 export interface StripeCheckoutProduct {
-  sku: string;        // price_...
-  title: string;      // "CVELOCITY Pro"
-  price: string;      // "49 zł"
-  period: string;     // "/ miesiąc" | "jednorazowo"
+  /** Identyfikator ceny w Stripe (`price_...`). Serwer weryfikuje go w tabeli `plans`. */
+  sku: string;
+  title: string;
+  price: string;
+  period: string;
   recurring: boolean;
-  trialDays?: number; // np. 30 dla Pro Insights
+  trialDays?: number;
 }
 
 export interface StripeCheckoutModalProps {
@@ -18,25 +39,6 @@ export interface StripeCheckoutModalProps {
   onClose: () => void;
   product: StripeCheckoutProduct;
   onUnlocked?: () => void;
-}
-
-const STRIPE_KEY = (import.meta as any).env?.VITE_STRIPE_PUB_KEY as string | undefined;
-
-async function loadStripeClient(publishableKey: string): Promise<any> {
-  if (typeof window === 'undefined') return null;
-  if ((window as any).Stripe) {
-    return (window as any).Stripe(publishableKey);
-  }
-  return new Promise((resolve, reject) => {
-    const script = document.createElement('script');
-    script.src = 'https://js.stripe.com/v3/';
-    script.async = true;
-    script.onload = () => {
-      resolve((window as any).Stripe(publishableKey));
-    };
-    script.onerror = () => reject(new Error('Nie udało się pobrać Stripe JS SDK.'));
-    document.head.appendChild(script);
-  });
 }
 
 export const StripeCheckoutModal: React.FC<StripeCheckoutModalProps> = ({
@@ -47,69 +49,38 @@ export const StripeCheckoutModal: React.FC<StripeCheckoutModalProps> = ({
 }) => {
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
-  const { setSubscription } = useAuthStore();
+  const { grantDemoPro } = useEntitlements();
+
+  const paymentsAvailable = clientEnv.backendConfigured;
 
   const handleCheckout = async () => {
-    if (!STRIPE_KEY) {
-      // Demo fallback mode when key is absent
-      handleSuccess();
-      return;
-    }
-
     setLoading(true);
     setErrorMsg(null);
 
     try {
-      const stripe = await loadStripeClient(STRIPE_KEY);
-
-      if (!stripe) {
-        throw new Error('Nie udało się załadować biblioteki płatności Stripe.');
-      }
-
-      const { error } = await stripe.redirectToCheckout({
-        lineItems: [{ price: product.sku, quantity: 1 }],
-        mode: product.recurring ? 'subscription' : 'payment',
-        ...(product.recurring && product.trialDays
-          ? { subscriptionData: { trial_period_days: product.trialDays } }
-          : {}),
-        successUrl: `${window.location.origin}/?checkout=success`,
-        cancelUrl: `${window.location.origin}/?checkout=cancelled`,
+      const { url } = await api.post<{ url: string }>('/api/billing/checkout-session', {
+        priceId: product.sku,
       });
-
-      if (error) {
-        setErrorMsg(error.message || 'Płatność nie powiodła się.');
-      }
-    } catch (err: any) {
-      setErrorMsg(err.message || 'Wystąpił błąd podczas łączenia z systemem płatności.');
-    } finally {
+      window.location.assign(url);
+    } catch (err) {
+      setErrorMsg(
+        err instanceof ApiError
+          ? err.message
+          : 'Nie udało się rozpocząć płatności. Spróbuj ponownie za chwilę.'
+      );
       setLoading(false);
     }
   };
 
-  const handleSuccess = () => {
-    setSubscription({
-      status: product.recurring ? 'active' : 'free',
-      customerId: 'cus_demo_123',
-      sku: product.sku,
-      trialEndsAt: product.trialDays
-        ? new Date(Date.now() + product.trialDays * 86400000).toISOString()
-        : undefined,
-    });
-    if (onUnlocked) {
-      onUnlocked();
-    }
+  const handleDemoUnlock = () => {
+    grantDemoPro();
+    onUnlocked?.();
     onClose();
   };
 
   return (
-    <Modal
-      isOpen={isOpen}
-      onClose={onClose}
-      title={`Odblokuj: ${product.title}`}
-      size="sm"
-    >
+    <Modal isOpen={isOpen} onClose={onClose} title={`Odblokuj: ${product.title}`} size="sm">
       <div className="space-y-5">
-        {/* Price Tag */}
         <div className="flex items-baseline gap-1.5 border-b border-line pb-3">
           <span className="font-mono text-3xl font-bold text-ink">{product.price}</span>
           <span className="text-xs text-subtle">{product.period}</span>
@@ -118,7 +89,6 @@ export const StripeCheckoutModal: React.FC<StripeCheckoutModalProps> = ({
           </span>
         </div>
 
-        {/* Benefits Note */}
         <div className="space-y-2 text-xs text-muted">
           <p>
             {product.recurring
@@ -140,35 +110,43 @@ export const StripeCheckoutModal: React.FC<StripeCheckoutModalProps> = ({
           </div>
         )}
 
-        {/* Action CTA */}
         <div className="space-y-2 pt-2">
-          <Button
-            variant="primary"
-            className="w-full"
-            icon={Lock}
-            onClick={handleCheckout}
-            loading={loading}
-            disabled={loading}
-          >
-            {loading ? 'Ładowanie bezpiecznej bramki Stripe...' : 'Przejdź do bezpiecznej płatności'}
-          </Button>
-
-          {!STRIPE_KEY && (
+          {paymentsAvailable ? (
             <Button
-              variant="ghost"
-              size="sm"
-              className="w-full text-muted"
-              onClick={handleSuccess}
+              variant="primary"
+              className="w-full"
+              icon={Lock}
+              onClick={handleCheckout}
+              loading={loading}
+              disabled={loading}
             >
-              Symuluj natychmiastowe odblokowanie (tryb demo dev)
+              {loading ? 'Łączenie z bramką płatności...' : 'Przejdź do bezpiecznej płatności'}
+            </Button>
+          ) : (
+            <div className="flex gap-2 rounded-xl bg-warning-soft p-3 text-xs text-warning-fg">
+              <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />
+              <span>
+                Płatności nie są jeszcze uruchomione w tej instalacji. Nic nie zostanie pobrane.
+              </span>
+            </div>
+          )}
+
+          {/*
+            Odblokowanie na potrzeby pracy nad interfejsem. `import.meta.env.DEV`
+            jest podmieniane na stałą przy budowaniu, więc cały ten blok znika
+            z pakietu produkcyjnego — wcześniej przycisk nadający status Pro bez
+            płatności pokazywał się każdemu, kto wszedł na cennik bez klucza.
+          */}
+          {import.meta.env.DEV && (
+            <Button variant="ghost" size="sm" className="w-full text-muted" onClick={handleDemoUnlock}>
+              Odblokuj lokalnie (tylko tryb deweloperski)
             </Button>
           )}
         </div>
 
-        {/* Trust Badges */}
         <div className="flex items-center justify-center gap-2 border-t border-line/60 pt-3 text-[10px] text-subtle">
           <ShieldCheck className="h-3.5 w-3.5 text-brand-600" />
-          <span>Szyfrowane połączenie 256-bit SSL • Stripe Hosted Checkout</span>
+          <span>Płatność obsługuje Stripe. Dane karty nie trafiają na nasz serwer.</span>
         </div>
       </div>
     </Modal>

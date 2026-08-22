@@ -21,63 +21,24 @@ import { Input, Textarea } from '../../components/ui/Field';
 import { Card } from '../../components/ui/Card';
 import { Modal } from '../../components/ui/Modal';
 import { PageHeader } from '../../components/ui/PageHeader';
+import { StorageKeys, readJson, writeJson } from '../../lib/storage';
 
-const STORAGE_KEY = 'cvelocity_applications_data';
-
-const DEFAULT_APPLICATIONS: JobApplication[] = [
-  {
-    id: 'app-1',
-    company: 'TechCorp Solutions',
-    position: 'Senior Frontend Architect',
-    salary: '26 000 - 32 000 PLN B2B',
-    date: '2026-08-12',
-    status: 'Rozmowa',
-    notes: 'I etap techniczny przeszedł świetnie. II etap z VP of Engineering w czwartek o 14:00.',
-    jobUrl: 'https://justjoin.it',
-  },
-  {
-    id: 'app-2',
-    company: 'CloudScale Europe',
-    position: 'Full-Stack React & Node Engineer',
-    salary: '22 000 - 28 000 PLN B2B',
-    date: '2026-08-10',
-    status: 'Rozmowa',
-    notes: 'Zadanie rekrutacyjne z Next.js 15 i Tailwind v4 do oddania do piątku.',
-    jobUrl: 'https://nofluffjobs.com',
-  },
-  {
-    id: 'app-3',
-    company: 'AI Fintech Innovations',
-    position: 'TypeScript Platform Lead',
-    salary: '30 000 - 35 000 PLN B2B',
-    date: '2026-08-04',
-    status: 'Oferta',
-    notes: 'Otrzymano oficjalną ofertę współpracy! Decyzja do 20 sierpnia.',
-    jobUrl: 'https://remotive.com',
-  },
-  {
-    id: 'app-4',
-    company: 'Global SaaS Hub',
-    position: 'Frontend Developer',
-    salary: '18 000 - 24 000 PLN B2B',
-    date: '2026-08-02',
-    status: 'Wysłana',
-    notes: 'Aplikacja wysłana przez 1-Click Match z dopasowanym CV.',
-  },
-];
+/**
+ * Tracker startuje pusty.
+ *
+ * Wcześniej wstawiał tu cztery wymyślone aplikacje — z nazwami firm, widełkami
+ * i notatkami z rozmów, których nikt nigdy nie odbył. Ten sam problem został
+ * już raz usunięty z parserów; tracker wtedy przeoczono. Wymyślone dane
+ * w działającym ekranie zostają wymyślonymi danymi, a użytkownik nie ma jak
+ * odróżnić ich od własnych.
+ *
+ * Pusty stan obsługuje `TrackerTable`.
+ */
 
 export const ApplicationTracker: React.FC = () => {
-  const [applications, setApplications] = useState<JobApplication[]>(() => {
-    const saved = localStorage.getItem(STORAGE_KEY);
-    if (saved) {
-      try {
-        return JSON.parse(saved);
-      } catch (e) {
-        console.error('Błąd ładowania aplikacji z storage:', e);
-      }
-    }
-    return DEFAULT_APPLICATIONS;
-  });
+  const [applications, setApplications] = useState<JobApplication[]>(() =>
+    readJson<JobApplication[]>(StorageKeys.applications, [])
+  );
 
   const [filterStatus, setFilterStatus] = useState<string>('ALL');
   const [searchQuery, setSearchQuery] = useState<string>('');
@@ -92,7 +53,7 @@ export const ApplicationTracker: React.FC = () => {
   const [currentNotes, setCurrentNotes] = useState<string>('');
 
   useEffect(() => {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(applications));
+    writeJson(StorageKeys.applications, applications);
   }, [applications]);
 
   // Statistics
