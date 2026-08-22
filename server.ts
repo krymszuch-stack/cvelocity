@@ -11,6 +11,11 @@ import helmet from "helmet";
 import { jobsRouter } from "./src/server/routes/jobs.routes";
 import { aiRouter } from "./src/server/routes/ai.routes";
 import { statsRouter } from "./src/server/routes/stats.routes";
+import { meRouter } from "./src/server/routes/me.routes";
+import { vaultRouter } from "./src/server/routes/vault.routes";
+import { applicationsRouter } from "./src/server/routes/applications.routes";
+import { billingRouter } from "./src/server/routes/billing.routes";
+import { stripeWebhookRouter } from "./src/server/routes/stripe.routes";
 import { errorHandler } from "./src/server/middleware/errorHandler";
 import { standardApiLimiter } from "./src/server/middleware/rateLimiter";
 import { loadConfig } from "./src/server/config";
@@ -82,16 +87,32 @@ async function startServer() {
     next();
   });
 
+  // Weryfikacja podpisu Stripe'a liczy się z **dokładnych bajtów** ciała żądania,
+  // razem z kolejnością pól i białymi znakami. Po sparsowaniu do obiektu i
+  // ponownym zserializowaniu podpis już się nie zgadza. Stąd `express.raw` i to
+  // samo wymaganie kolejności co niżej: pierwszy parser wygrywa.
+  app.use("/api/stripe-webhook", express.raw({ type: "application/json", limit: "1mb" }));
+
   // Ogłoszenia bywają długie, a `/api/parse-jd` dostaje ich pełną treść.
   // Musi być zarejestrowane *przed* globalnym parserem: body-parser oznacza
   // żądanie jako odczytane (`req._body`) i każdy kolejny parser robi wtedy
   // no-op, więc podniesienie limitu poniżej progu 200 kB nigdy nie działało.
   app.use("/api/parse-jd", express.json({ limit: "1mb" }));
 
+  // Vault to całe CV z historią zatrudnienia — 200 kB bywa za mało przy dłuższym
+  // przebiegu zawodowym.
+  app.use("/api/vault", express.json({ limit: "1mb" }));
+
   // 200kB globally. The previous 10MB limit combined with 120 req/min allowed
   // 1.2GB/min of JSON per IP. Routes that genuinely need large bodies raise it
   // for themselves.
   app.use(express.json({ limit: "200kb" }));
+
+  // Webhook przed limiterem świadomie: Stripe ponawia dostarczenie po każdym
+  // niepowodzeniu, więc odbicie go z kodem 429 zamienia chwilowy ruch w pętlę
+  // ponowień. Rolę ochrony pełni tu weryfikacja podpisu — żądanie bez ważnego
+  // podpisu jest odrzucane, zanim cokolwiek zrobi.
+  app.use("/api", stripeWebhookRouter);
 
   app.use("/api", standardApiLimiter);
 
@@ -107,6 +128,15 @@ async function startServer() {
   app.use("/api", jobsRouter);
   app.use("/api", aiRouter);
   app.use("/api", statsRouter);
+
+  // Trasy wymagające konta. Rejestrowane zawsze — `requireAuth` odpowiada 501
+  // w trybie `BACKEND_MODE=local`, więc klient dostaje jasną informację, że ta
+  // instalacja nie prowadzi kont, zamiast trafiać na 404 nie do odróżnienia od
+  // literówki w adresie.
+  app.use("/api", meRouter);
+  app.use("/api", vaultRouter);
+  app.use("/api", applicationsRouter);
+  app.use("/api", billingRouter);
 
   // Nieznana ścieżka pod /api kończy się czystym 404 w JSON-ie. Bez tego łapie ją
   // fallback SPA poniżej i odsyła index.html ze statusem 200 — klient wywołujący

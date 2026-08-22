@@ -9,8 +9,9 @@ Lista rzeczy do zrobienia ręcznie: konta, klucze, DNS, formalności. Wszystko, 
 | Kiedy | Krok | Co blokuje |
 |---|---|---|
 | Teraz | [1 Gemini](#1--google-cloud--gemini-api) · [2 Supabase](#2--supabase) · [3 Stripe test](#3--stripe) | prace nad backendem |
+| Po kluczach | [Poradnik wdrożeniowy](./BACKEND-ROADMAP.md) | migracje, uruchomienie, wdrożenie |
 | Tydzień 1–2 | [4 Domena i poczta](#4--domena-dns-i-poczta) | rejestrację użytkowników |
-| Tydzień 4–5 | [5 Hosting](#5--hosting-frontendu) | publiczne wystawienie |
+| Tydzień 4–5 | [5 Hosting](#5--hosting) | publiczne wystawienie |
 | Przed 1. płatnością | [6 Formalności](#6--formalności) | przyjmowanie płatności |
 | Później | [7 Mini PC](#7--mini-pc) | worker scrapera |
 
@@ -158,17 +159,35 @@ Bez poprawnych rekordów maile potwierdzające rejestrację lądują w spamie. T
 
 ---
 
-## 5 · Hosting frontendu
+## 5 · Hosting
 
-1. **Vercel** → https://vercel.com → *Import Git Repository*
-   Framework: Vite · Build: `npm run build` · Output: `dist` · **Region: `fra1` (Frankfurt)**
+Frontend i API idą **z jednego kontenera na Cloud Run**. Komplet komend jest
+w [`docs/BACKEND-ROADMAP.md`](./BACKEND-ROADMAP.md) §6; tutaj tylko dlaczego tak.
 
-2. **Zmienne** → *Settings → Environment Variables* — **tylko te z `VITE_`**
-   ⚠️ Wszystko z `VITE_` trafia do bundla widocznego dla każdego. `STRIPE_SECRET_KEY` ani `service_role` nigdy tutaj.
+1. **Jeden adres = zero CORS.** Front wołający `/api/...` względnie trafia tam,
+   gdzie trzeba. Rozdzielenie hostingu wymagałoby `VITE_API_URL`, `ALLOWED_ORIGINS`,
+   CSP `connect-src` na domenę API i sesji działającej cross-origin — czyli
+   czterech miejsc, w których da się pomylić, w zamian za nic.
 
-3. **Nagłówki bezpieczeństwa** — przez `vercel.json` w repo (CSP, HSTS, Referrer-Policy). Robione po stronie kodu.
+2. **Skalowanie do zera = 0 zł.** Cloud Run przy `--min-instances 0` nie kosztuje
+   nic, gdy nikt nie korzysta. Ceną jest zimny start ~1–2 s przy pierwszym żądaniu.
 
-4. **Alternatywa:** Cloudflare Pages, jeśli DNS i tak masz na Cloudflare.
+3. ⚠️ **Vercel Hobby (darmowy) zabrania użytku komercyjnego.** Z chwilą
+   uruchomienia Stripe'a wymagałby planu Pro (~80 zł/mc). Dlatego nie jest tu
+   domyślnym wyborem, mimo że pod względem technicznym byłby wygodny.
+
+4. **Zmienne `VITE_`** są wbudowywane w pakiet przeglądarki **w trakcie budowania
+   obrazu**, nie odczytywane w czasie działania — przekazuje się je jako
+   `--build-arg`, nie przez `--set-env-vars`. Wszystko z tym prefiksem jest
+   publiczne; `STRIPE_SECRET_KEY` ani `service_role` nigdy tutaj.
+
+5. **Nagłówki bezpieczeństwa** ustawia `helmet` w `server.ts` (CSP, HSTS,
+   `X-Frame-Options: DENY`). Plik `vercel.json` zostaje w repozytorium na wypadek
+   postawienia frontendu osobno, ale przy wdrożeniu jednokontenerowym nie jest
+   używany.
+
+6. **Alternatywa:** dowolny hosting kontenerów (Cloudflare Containers, Fly.io,
+   własny mini PC za Tailscale). Obraz nie zakłada niczego specyficznego dla Google.
 
 ---
 
@@ -199,7 +218,9 @@ Bez poprawnych rekordów maile potwierdzające rejestrację lądują w spamie. T
 
 - [ ] Gemini na **płatnym** tierze + budżet z alertami
 - [ ] Supabase **Pro** (kopie zapasowe), region Frankfurt
-- [ ] `grep -r "service_role\|sk_live\|sk_test" dist/` → brak trafień
+- [ ] `grep -r "service_role\|sk_live\|sk_test" dist/client/` → brak trafień (krok automatyczny w CI)
+- [ ] RLS przetestowane na projekcie **zdalnym**, nie tylko lokalnym
+- [ ] Powtórzone zdarzenie webhooka nie tworzy duplikatu w `subscriptions`
 - [ ] SPF/DKIM/DMARC — mail-tester 10/10
 - [ ] Polityka prywatności, regulamin, lista podprocesorów opublikowane
 - [ ] Zgoda na AI **odrębna** od regulaminu; aplikacja działa bez niej

@@ -105,7 +105,8 @@ export function fillSlotSentence(
   targetKeywords: string[],
   variant: 'ACTION_FIRST' | 'METRIC_FIRST' | 'TOOL_FIRST' | 'PAR_STRUCTURE' = 'ACTION_FIRST'
 ): string {
-  let { action, target, tool, metric } = slot;
+  const { target, tool, metric } = slot;
+  let { action } = slot;
 
   // Substitute action with synonym if applicable
   const lowerAction = action.toLowerCase();

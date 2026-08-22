@@ -69,7 +69,62 @@ jobs:
             exit 1
           fi
 
+          # Frontend jest serwowany z tego samego kontenera co API. Gdyby build
+          # klienta wypadł z `npm run build`, ten krok to wychwyci — bez niego
+          # obraz wstawałby poprawnie i oddawał 404 na stronie głównej.
+          test "$(curl -s -o /dev/null -w '%{http_code}' -m 5 http://localhost:8099/)" = "200"
+
+          # Trasy kont są zarejestrowane zawsze. W trybie lokalnym (domyślnym)
+          # odpowiadają 501 "ta instalacja nie prowadzi kont", a nie 404 nie do
+          # odróżnienia od literówki w adresie.
+          test "$(curl -s -o /dev/null -w '%{http_code}' -m 5 http://localhost:8099/api/me)" = "501"
+
           kill $SERVER_PID
+
+      - name: Auth Boundary Smoke Test
+        env:
+          NODE_ENV: production
+          PORT: 8098
+          GEMINI_API_KEY: dummy-key-for-boot-test
+          BACKEND_MODE: cloud
+          SUPABASE_URL: https://example.supabase.co
+          SUPABASE_SERVICE_ROLE_KEY: dummy-key-for-boot-test
+        run: |
+          npm start &
+          SERVER_PID=$!
+          for i in $(seq 1 20); do
+            if curl -sf -m 2 "http://localhost:8098/api/health" > /dev/null; then
+              break
+            fi
+            sleep 1
+          done
+
+          # Z włączonym backendem żądanie bez tokenu musi zostać odrzucone,
+          # zanim dotknie bazy. Ten test broni granicy uwierzytelnienia: gdyby
+          # requireAuth kiedykolwiek przepuścił żądanie bez nagłówka
+          # Authorization, trasy vaultu i aplikacji wystawiłyby cudze dane.
+          for path in me vault applications; do
+            code=$(curl -s -o /dev/null -w '%{http_code}' -m 5 "http://localhost:8098/api/$path")
+            if [ "$code" != "401" ]; then
+              echo "BŁĄD: /api/$path bez tokenu zwróciło $code zamiast 401" >&2
+              kill $SERVER_PID
+              exit 1
+            fi
+          done
+
+          kill $SERVER_PID
+
+      - name: Secrets Must Not Reach The Browser Bundle
+        run: |
+          # Pozycja z checklisty w docs/SETUP.md, tutaj jako krok automatyczny —
+          # żeby nie dało się jej pominąć przez zapomnienie. Klucz service_role
+          # omija całe RLS, więc w pakiecie przeglądarki oznaczałby pełny dostęp
+          # do bazy dla każdego odwiedzającego.
+          if grep -rE "service_role|sk_live_|sk_test_|SUPABASE_SERVICE_ROLE" dist/client/; then
+            echo "BŁĄD: sekret trafił do pakietu przeglądarki" >&2
+            exit 1
+          fi
+          echo "✓ brak sekretów w dist/client/"
 
       - name: Build Container Image
         run: docker build -t cvelocity-api:ci .
