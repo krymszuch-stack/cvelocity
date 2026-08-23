@@ -58,9 +58,20 @@ pobranie zbiorów zewnętrznych się powiodło.
 ```bash
 npm run seed:lexicon                 # pełny przebieg (PoliMorf + ESCO + korpus dziedzinowy)
 npm run seed:lexicon -- --offline    # bez sieci, wyłącznie korpus dziedzinowy
+npm run seed:lexicon -- --esco-no-alt # same nazwy bazowe ESCO, bez synonimów
 npm run seed:lexicon -- --force      # ponowne pobranie źródeł
 npm run seed:lexicon -- --max-rows 200000   # skrócony przebieg kontrolny
 ```
+
+Pełny przebieg trwa kilkadziesiąt minut, bo etykiety alternatywne ESCO wymagają
+jednego żądania na pojęcie (ok. 16 tys. pojęć w obu filarach). Nazwy bazowe
+pochodzą z obchodu hierarchii i kosztują kilkaset żądań — `--esco-no-alt`
+zatrzymuje się na nich i skraca zaciąg do około minuty. To wystarczający tryb
+do pracy nad kodem; pełny przebieg wykonuje się raz i zostaje w `data/seed/`.
+
+Uwaga na endpoint `/api/search` taksonomii ESCO: deklaruje `total` całego filaru,
+ale oddaje tylko pierwsze ~200 trafień niezależnie od `limit` i `offset`. Nie
+nadaje się do eksportu zbiorczego — stąd obchód hierarchii po `narrowerConcept`.
 
 Zmienne środowiskowe: `SWG_DB_PATH` (ścieżka bazy), `POLIMORF_URL` oraz
 `ESCO_CSV_URL` (własne kopie zbiorów źródłowych).

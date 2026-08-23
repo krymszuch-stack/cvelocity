@@ -438,7 +438,7 @@ export class LexiconImporter {
       }
 
       if (this.options.escoSkipAltLabels) {
-        this.log(`ESCO ${conceptType}: pominięto etykiety alternatywne.`);
+        this.log(`ESCO ${conceptType}: pominięto etykiety alternatywne (--esco-no-alt).`);
         break;
       }
 

@@ -6,6 +6,7 @@
  * Uruchomienie:
  *   npm run seed:lexicon                 # pełny przebieg (sieć + korpus dziedzinowy)
  *   npm run seed:lexicon -- --offline    # bez sieci, wyłącznie korpus kuratorowany
+ *   npm run seed:lexicon -- --esco-no-alt # same nazwy bazowe ESCO (szybko)
  *   npm run seed:lexicon -- --force      # ponowne pobranie źródeł
  *   npm run seed:lexicon -- --db ./data/other.db --max-rows 200000
  *
@@ -23,6 +24,8 @@ interface CliOptions {
   force: boolean;
   batchSize: number;
   maxRows?: number;
+  escoNoAlt: boolean;
+  escoMax?: number;
 }
 
 function parseArgs(argv: string[]): CliOptions {
@@ -32,6 +35,7 @@ function parseArgs(argv: string[]): CliOptions {
     offline: false,
     force: false,
     batchSize: DEFAULT_BATCH_SIZE,
+    escoNoAlt: false,
   };
 
   for (let i = 0; i < argv.length; i++) {
@@ -54,6 +58,12 @@ function parseArgs(argv: string[]): CliOptions {
         break;
       case '--max-rows':
         options.maxRows = Number.parseInt(argv[++i] ?? '', 10) || undefined;
+        break;
+      case '--esco-no-alt':
+        options.escoNoAlt = true;
+        break;
+      case '--esco-max':
+        options.escoMax = Number.parseInt(argv[++i] ?? '', 10) || undefined;
         break;
       case '--help':
       case '-h':
@@ -82,6 +92,9 @@ Zasilenie bazy leksykalnej (PoliMorf + ESCO)
   --seed-dir <kat>     katalog na zbiory źródłowe (domyślnie ${DEFAULT_SEED_DIR})
   --batch-size <n>     rozmiar paczki transakcyjnej (domyślnie ${DEFAULT_BATCH_SIZE})
   --max-rows <n>       limit importowanych form PoliMorf (przebieg kontrolny)
+  --esco-no-alt        pomiń etykiety alternatywne ESCO (same nazwy bazowe,
+                       skraca zaciąg z kilkudziesięciu minut do ok. minuty)
+  --esco-max <n>       limit pojęć ESCO pobieranych ze szczegółami
 
 Zmienne środowiskowe:
   SWG_DB_PATH          domyślna ścieżka bazy
@@ -112,6 +125,8 @@ async function main(): Promise<void> {
       force: options.force,
       batchSize: options.batchSize,
       maxPolimorfRows: options.maxRows,
+      escoSkipAltLabels: options.escoNoAlt,
+      escoMaxConcepts: options.escoMax,
       logger: (message) => console.log(message),
     });
 
