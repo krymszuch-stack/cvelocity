@@ -288,7 +288,71 @@ export const HomeView: React.FC<HomeViewProps> = ({
 
   return (
     <div className="space-y-8 pb-12">
-      {/* 0. Klin wejściowy — wynik ATS bez zakładania konta */}
+      {/* 1. Nagłówek ekspozycyjny */}
+      <motion.div
+        initial={{ opacity: 0, y: 15 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.4, ease: [0.19, 1, 0.22, 1] }}
+        className="relative overflow-hidden px-4 py-10 text-center sm:py-14"
+      >
+        <div className="relative z-10 mx-auto flex max-w-3xl flex-col items-center gap-5">
+          <div className="glass-panel inline-flex items-center gap-2 rounded-full px-3.5 py-1.5 font-mono text-xs font-semibold text-brand-fg">
+            <Sparkles className="h-3.5 w-3.5 text-brand-500" />
+            CVELOCITY Career Hub • Edycja 2026
+          </div>
+
+          {/* Nagłówek na dwóch wierszach: powitanie zwykłym atramentem, nazwa
+              produktu wypełniona gradientem. Odwrotny podział — gradient na
+              powitaniu — sprawiłby, że barwy tańczą po imieniu użytkownika,
+              które bywa krótkie albo bardzo długie i nigdy nie wygląda tak samo. */}
+          <h1 className="text-display text-[2rem] text-ink sm:text-[2.75rem] lg:text-[3.5rem]">
+            {hasFullName ? (
+              <>
+                Witaj ponownie,
+                <br />
+                <span className="text-display-grad">{vault.personalInfo.fullName}</span>
+              </>
+            ) : (
+              <>
+                Twoje CV, przepuszczone
+                <br />
+                <span className="text-display-grad">przez filtry rekrutacji</span>
+              </>
+            )}
+          </h1>
+
+          <p className="max-w-xl text-balance text-sm leading-relaxed text-muted sm:text-base">
+            Asystent kariery, który przygotowuje dokumenty pokonujące automatyczne filtry ATS
+            i przyciągające uwagę rekruterów.
+          </p>
+
+          <div className="flex flex-wrap items-center justify-center gap-3 pt-1">
+            <button
+              type="button"
+              onClick={() => onNavigate('matcher')}
+              className="flex items-center gap-2 rounded-xl bg-brand-600 px-5 py-3 text-sm font-semibold text-on-brand shadow-raised transition-all hover:bg-brand-700 hover:scale-[1.02] focus-visible:outline-none"
+            >
+              <Search className="h-4 w-4" />
+              <span>Dopasuj do Oferty</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => onOpenAdvisor('Jak najlepiej zoptymalizować mój profil pod kątem ATS?')}
+              className="glass-panel flex items-center gap-2 rounded-xl px-5 py-3 text-sm font-semibold text-ink transition-colors hover:text-brand-fg focus-visible:outline-none"
+            >
+              <Sparkles className="h-4 w-4 text-brand-500" />
+              <span>Zapytaj Doradcę</span>
+            </button>
+          </div>
+        </div>
+      </motion.div>
+
+      {/* 2. Klin wejściowy — wynik ATS bez zakładania konta.
+
+          Stoi pod nagłówkiem, nie nad nim: strona ma się otwierać obietnicą,
+          a nie pustym formularzem. Kolejność „nagłówek → wezwanie do działania
+          → narzędzie" jest tu jedyną zmianą — sam klin działa bez zmian
+          i nadal nie wymaga konta. */}
       <QuickAtsCheck
         onSaveProfile={(parsedVault) => {
           onAdoptVault(parsedVault);
@@ -303,104 +367,54 @@ export const HomeView: React.FC<HomeViewProps> = ({
         }}
       />
 
-      {/* 1. Hero Banner */}
-      <motion.div
-        initial={{ opacity: 0, y: 15 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.4, ease: [0.19, 1, 0.22, 1] }}
-        className="relative overflow-hidden rounded-3xl border border-line bg-elevated p-6 shadow-sm sm:p-8"
-      >
-        <div className="relative z-10 flex flex-col justify-between gap-6 md:flex-row md:items-center">
-          <div className="max-w-2xl space-y-3">
-            <div className="inline-flex items-center gap-2 rounded-full border border-brand-200 bg-brand-50 px-3 py-1 font-mono text-xs font-semibold text-brand-fg">
-              <Sparkles className="h-3.5 w-3.5 text-brand-600" />
-              CVELOCITY Career Hub • Edycja 2026
-            </div>
-            <h1 className="text-2xl font-bold tracking-tight text-ink sm:text-3xl">
-              {hasFullName ? `Witaj ponownie, ${vault.personalInfo.fullName}` : 'Witaj w CVELOCITY'}
-            </h1>
-            <p className="text-sm leading-relaxed text-muted">
-              Twój asystent kariery napędzany sztuczną inteligencją. Przygotowuj dokumenty, które pokonują automatyczne filtry ATS i przyciągają uwagę rekruterów.
-            </p>
-          </div>
+      {/* 3. Liczniki profilu
 
-          <div className="flex shrink-0 flex-wrap items-center gap-3">
-            <button
-              type="button"
-              onClick={() => onNavigate('matcher')}
-              className="flex items-center gap-2 rounded-xl bg-brand-600 px-4 py-2.5 text-xs font-semibold text-on-brand shadow-raised transition-all hover:bg-brand-700 hover:scale-[1.02] focus-visible:outline-none"
-            >
-              <Search className="h-4 w-4" />
-              <span>Dopasuj do Oferty</span>
-            </button>
-            <button
-              type="button"
-              onClick={() => onOpenAdvisor('Jak najlepiej zoptymalizować mój profil pod kątem ATS?')}
-              className="flex items-center gap-2 rounded-xl border border-line bg-surface px-4 py-2.5 text-xs font-semibold text-ink transition-colors hover:bg-brand-50 hover:text-brand-fg focus-visible:outline-none"
-            >
-              <Sparkles className="h-4 w-4 text-brand-500" />
-              <span>Zapytaj Doradcę</span>
-            </button>
-          </div>
-        </div>
-      </motion.div>
-
-      {/* 2. User Stats Cards */}
-      <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
-        <Card variant="elevated" className="p-4">
-          <div className="flex items-center justify-between">
-            <span className="text-xs font-medium text-muted">Doświadczenie</span>
-            <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-brand-50 text-brand-600">
-              <Briefcase className="h-3.5 w-3.5" />
+          Cztery kafle różniły się wyłącznie ikoną, etykietą i liczbą, a każdy
+          powtarzał ten sam układ w JSX. Przy takim powielaniu zmiana wyglądu
+          wymaga czterech identycznych poprawek i któraś zawsze wypada — to ten
+          sam błąd, co „audit round 2" w historii tego repozytorium. Układ
+          mieszka teraz w jednym miejscu, dane w tablicy obok. */}
+      <div className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4">
+        {[
+          {
+            label: 'Doświadczenie',
+            icon: Briefcase,
+            value: historyCount,
+            caption: historyCount === 0 ? 'Brak wpisów w Vault' : 'Aktywne stanowiska',
+          },
+          {
+            label: 'Twarde Skille',
+            icon: Award,
+            value: hardSkillsCount,
+            caption: `+ ${certsCount} certyfikatów`,
+          },
+          {
+            label: 'Projekty',
+            icon: Zap,
+            value: projectsCount,
+            caption: projectsCount === 0 ? 'Brak wpisów w Vault' : 'Opisane w profilu',
+          },
+          {
+            label: 'Wykształcenie',
+            icon: TrendingUp,
+            value: educationCount,
+            caption: educationCount === 0 ? 'Brak wpisów w Vault' : 'Wpisy w profilu',
+          },
+        ].map(({ label, icon: Icon, value, caption }) => (
+          <Card key={label} variant="elevated" className="flex flex-col items-center p-5 text-center">
+            <div className="flex h-9 w-9 items-center justify-center rounded-xl border border-brand-500/20 bg-brand-500/10 text-brand-500">
+              <Icon className="h-4 w-4" />
             </div>
-          </div>
-          <div className="mt-2 font-mono text-2xl font-bold text-ink">{historyCount}</div>
-          <p className="mt-0.5 text-[11px] text-subtle">
-            {historyCount === 0 ? 'Brak wpisów w Vault' : 'Aktywne stanowiska'}
-          </p>
-        </Card>
-
-        <Card variant="elevated" className="p-4">
-          <div className="flex items-center justify-between">
-            <span className="text-xs font-medium text-muted">Twarde Skille</span>
-            <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-brand-50 text-brand-600">
-              <Award className="h-3.5 w-3.5" />
-            </div>
-          </div>
-          <div className="mt-2 font-mono text-2xl font-bold text-ink">{hardSkillsCount}</div>
-          <p className="mt-0.5 text-[11px] text-subtle">
-            + {certsCount} certyfikatów
-          </p>
-        </Card>
-
-        <Card variant="elevated" className="p-4">
-          <div className="flex items-center justify-between">
-            <span className="text-xs font-medium text-muted">Projekty</span>
-            <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-brand-50 text-brand-600">
-              <Zap className="h-3.5 w-3.5" />
-            </div>
-          </div>
-          <div className="mt-2 font-mono text-2xl font-bold text-ink">{projectsCount}</div>
-          <p className="mt-0.5 text-[11px] text-subtle">
-            {projectsCount === 0 ? 'Brak wpisów w Vault' : 'Opisane w profilu'}
-          </p>
-        </Card>
-
-        <Card variant="elevated" className="p-4">
-          <div className="flex items-center justify-between">
-            <span className="text-xs font-medium text-muted">Wykształcenie</span>
-            <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-brand-50 text-brand-600">
-              <TrendingUp className="h-3.5 w-3.5" />
-            </div>
-          </div>
-          <div className="mt-2 font-mono text-2xl font-bold text-ink">{educationCount}</div>
-          <p className="mt-0.5 text-[11px] text-subtle">
-            {educationCount === 0 ? 'Brak wpisów w Vault' : 'Wpisy w profilu'}
-          </p>
-        </Card>
+            {/* Liczba cyframi o stałej szerokości: przy przeliczaniu wartości
+                kafel nie drga, bo „1" zajmuje tyle samo miejsca co „8". */}
+            <div className="mt-3 font-mono text-3xl font-bold tabular-nums text-ink">{value}</div>
+            <div className="mt-1 text-xs font-medium text-muted">{label}</div>
+            <p className="mt-0.5 text-[11px] text-subtle">{caption}</p>
+          </Card>
+        ))}
       </div>
 
-      {/* 3. Quick Actions (Kafelki Szybkiego Startu) */}
+      {/* 4. Kafelki szybkiego startu */}
       <div>
         <div className="mb-4 flex items-center justify-between">
           <div>
@@ -455,7 +469,7 @@ export const HomeView: React.FC<HomeViewProps> = ({
         </motion.div>
       </div>
 
-      {/* 4. Career Microblog (Porady Rekrutacyjne) */}
+      {/* 5. Mikroblog kariery — porady rekrutacyjne */}
       <div className="space-y-4">
         <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-center">
           <div>
@@ -556,7 +570,7 @@ export const HomeView: React.FC<HomeViewProps> = ({
         )}
       </div>
 
-      {/* 5. Prywatność — twierdzenia weryfikowalne w kodzie, nie hasła marketingowe */}
+      {/* 6. Prywatność — twierdzenia weryfikowalne w kodzie, nie hasła marketingowe */}
       <div>
         <div className="mb-4">
           <h2 className="text-base font-bold text-ink">Twoje CV zostaje u Ciebie</h2>
@@ -607,7 +621,7 @@ export const HomeView: React.FC<HomeViewProps> = ({
         </Card>
       </div>
 
-      {/* 6. Career Tip Modal View */}
+      {/* 7. Okno pojedynczej porady */}
       <AnimatePresence>
         {activeTipModal && (
           <div className="fixed inset-0 z-50 flex items-center justify-center p-4">

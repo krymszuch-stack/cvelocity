@@ -78,8 +78,12 @@ export const Topbar: React.FC<TopbarProps> = ({
   };
 
   return (
+    /* Pasek pływa nad treścią zamiast dzielić ją kreską: odklejony od górnej
+       krawędzi, zaokrąglony i półprzezroczysty, żeby poświata tła przechodziła
+       pod spodem. Kreska pod paskiem cięłaby ją na pół i spłaszczała kadr.
+       `sticky` z odstępem robi resztę — pigułka jedzie z przewijaniem. */
     <header
-      className={`sticky top-0 z-20 flex h-14 w-full items-center justify-between border-b border-line bg-surface/80 px-4 backdrop-blur-xl sm:px-6 lg:px-8 ${className}`}
+      className={`glass-panel sticky top-3 z-20 mx-3 flex h-14 items-center justify-between rounded-2xl px-3 shadow-raised sm:mx-4 sm:px-4 lg:mx-6 ${className}`}
     >
       {/* Left: Mobile Toggle & Section Name */}
       <div className="flex items-center gap-3">

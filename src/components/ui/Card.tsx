@@ -23,9 +23,12 @@ export const Card: React.FC<CardProps> = ({
     ? 'sunken'
     : tone;
 
+  // `card-ambient` czyni wypełnienie lekko przepuszczalnym, żeby karta łapała
+  // poświatę tła zamiast ją zasłaniać (patrz tokens.css). `bg-elevated` zostaje
+  // jako wypełnienie zapasowe dla przeglądarek bez rozmycia tła.
   const toneStyles = {
     flat: 'bg-surface border-line',
-    raised: 'bg-elevated border-line shadow-raised',
+    raised: 'card-ambient bg-elevated border-line shadow-raised',
     sunken: 'bg-sunken border-line/80',
   };
 

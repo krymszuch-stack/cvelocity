@@ -98,7 +98,19 @@ button:focus-visible,
 }
 
 /* ============================================================
-   AURORA AMBIENT BACKGROUND (2026 Aesthetic)
+   POŚWIATA OTOCZENIA
+
+   Trzy plamy światła pod całym interfejsem. O jakości tego efektu decyduje
+   nie liczba plam, tylko dobór barw: para dopełniająca (chłodny błękit
+   naprzeciw ciepłego bursztynu) daje głębię, której nie da się uzyskać
+   zestawem kolorów sąsiadujących — te zlewają się w jednolitą mgłę.
+
+   Barwy siedzą w `--ambient-cool` i `--ambient-warm`, a ich moc w osobnych
+   tokenach `*-alpha`, bo jasny motyw potrzebuje ułamka tego, co ciemny:
+   na białym tle ta sama wartość daje brud zamiast światła.
+
+   Warstwa jest `fixed` i `pointer-events: none` — nie uczestniczy w układzie
+   ani w zdarzeniach, przewijanie jej nie rusza.
    ============================================================ */
 .aurora-bg {
   position: fixed;
@@ -111,34 +123,50 @@ button:focus-visible,
 .aurora-blob {
   position: absolute;
   border-radius: 50%;
-  filter: blur(90px);
+  filter: blur(100px);
   animation: aurora-drift 26s ease-in-out infinite alternate;
 }
 
+/* Chłód — lewy górny róg, tam gdzie wzrok trafia najpierw. */
 .aurora-blob-1 {
-  width: 46vw;
-  height: 46vw;
-  left: -10vw;
-  top: -12vw;
-  background: radial-gradient(circle at center, color-mix(in srgb, var(--brand-600) 24%, transparent), transparent 70%);
+  width: 58vw;
+  height: 58vw;
+  left: -14vw;
+  top: -20vw;
+  background: radial-gradient(
+    circle at center,
+    color-mix(in srgb, var(--ambient-cool) var(--ambient-cool-alpha), transparent),
+    transparent 70%
+  );
 }
 
+/* Ciepło — przeciwległy narożnik. Rozstawienie po przekątnej jest tu istotne:
+   nałożone na siebie barwy dopełniające wygaszają się w szarość. */
 .aurora-blob-2 {
   width: 52vw;
   height: 52vw;
-  right: -14vw;
-  top: 2vw;
-  background: radial-gradient(circle at center, color-mix(in srgb, var(--violet) 20%, transparent), transparent 70%);
+  right: -12vw;
+  top: 34vh;
+  background: radial-gradient(
+    circle at center,
+    color-mix(in srgb, var(--ambient-warm) var(--ambient-warm-alpha), transparent),
+    transparent 70%
+  );
   animation-duration: 34s;
   animation-delay: -9s;
 }
 
+/* Chłodny rozmyty spód, żeby przejście między dwiema plamami nie było pustką. */
 .aurora-blob-3 {
-  width: 60vw;
-  height: 44vw;
-  left: 18vw;
-  bottom: -20vw;
-  background: radial-gradient(circle at center, color-mix(in srgb, var(--brand-500) 16%, transparent), transparent 70%);
+  width: 70vw;
+  height: 46vw;
+  left: 16vw;
+  bottom: -18vh;
+  background: radial-gradient(
+    circle at center,
+    color-mix(in srgb, var(--ambient-cool) calc(var(--ambient-cool-alpha) / 2), transparent),
+    transparent 72%
+  );
   animation-duration: 40s;
   animation-delay: -17s;
 }
