@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import {
   Sparkles,
   HelpCircle,
@@ -6,13 +6,24 @@ import {
   BookOpen,
   ChevronDown,
   ChevronUp,
-  CheckCircle2,
-  Zap,
+  AlertTriangle,
+  MessageCircleQuestion,
+  LifeBuoy,
+  Wand2,
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
-import { MasterVault, JobOffer } from '../../types';
+import { MasterVault, JobOffer, InterviewCheatSheet } from '../../types';
 import { Card } from '../../components/ui/Card';
 import { Chip } from '../../components/ui/Chip';
+import { Button } from '../../components/ui/Button';
+import { Alert } from '../../components/ui/Feedback';
+import { EmptyState } from '../../components/ui/EmptyState';
+import { parseJobDescriptionLocal, ParsedJobDescription } from '../../lib/jdParser';
+import {
+  buildLocalInterviewCheatSheet,
+  generateCheatSheetEnrichmentWithAI,
+  mergeGeminiCheatSheetEnrichment,
+} from '../../lib/interviewCheatSheetEngine';
 
 export interface InterviewCheatSheetViewProps {
   vault: MasterVault;
@@ -20,213 +31,427 @@ export interface InterviewCheatSheetViewProps {
   className?: string;
 }
 
-interface QuestionItem {
-  question: string;
-  difficulty: 'Łatwe' | 'Średnie' | 'Wymagające';
-  category: 'Techniczne' | 'Behawioralne' | 'Architektura';
-  suggestedAnswerTip: string;
+type SectionKey = 'questions' | 'star' | 'glossary' | 'redFlags' | 'ask' | 'emergency';
+
+/**
+ * Most między `JobOffer` (to, czym dysponuje interfejs) a `ParsedJobDescription`
+ * (to, czego potrzebuje silnik). Lokalny parser wyciąga, co się da, z treści
+ * ogłoszenia, a pola, które oferta zna wprost — tytuł, firma, stos — nadpisują
+ * jego zgadywanie: dane strukturalne biją heurystykę na tekście.
+ */
+function toParsedJobDescription(jobOffer: JobOffer): ParsedJobDescription {
+  const rawText = jobOffer.rawDescription || jobOffer.description || '';
+  const parsed = parseJobDescriptionLocal(rawText, jobOffer.title || 'Stanowisko');
+
+  const techStack = jobOffer.techStack ?? [];
+  const requirements = jobOffer.requirements ?? [];
+
+  return {
+    ...parsed,
+    jobTitle: jobOffer.title || parsed.jobTitle,
+    companyName: jobOffer.company || parsed.companyName,
+    toolsAndTech: techStack.length > 0 ? techStack : parsed.toolsAndTech,
+    coreResponsibilities:
+      parsed.coreResponsibilities.length > 0 ? parsed.coreResponsibilities : requirements,
+    mandatoryRequirements:
+      parsed.mandatoryRequirements && parsed.mandatoryRequirements.length > 0
+        ? parsed.mandatoryRequirements
+        : requirements,
+  };
 }
+
+const QA_CATEGORY_LABEL: Record<string, string> = {
+  BEHAVIORAL: 'Behawioralne',
+  TECHNICAL: 'Techniczne',
+  MOTIVATION: 'Motywacja',
+  SITUATIONAL: 'Sytuacyjne',
+};
+
+const GLOSSARY_CATEGORY_LABEL: Record<string, string> = {
+  HARD_SKILL: 'Umiejętność',
+  TOOL: 'Narzędzie',
+  DOMAIN_CONCEPT: 'Pojęcie',
+  ACRONYM: 'Skrót',
+};
+
+const ASK_CATEGORY_LABEL: Record<string, string> = {
+  ROLE_SCOPE: 'Zakres roli',
+  TEAM_CULTURE: 'Zespół',
+  GROWTH: 'Rozwój',
+  BUSINESS_CONTEXT: 'Biznes',
+};
 
 export const InterviewCheatSheetView: React.FC<InterviewCheatSheetViewProps> = ({
   vault,
   jobOffer,
   className = '',
 }) => {
-  const [openSections, setOpenSections] = useState<{ [key: string]: boolean }>({
+  const [openSections, setOpenSections] = useState<Record<SectionKey, boolean>>({
     questions: true,
     star: true,
     glossary: false,
+    redFlags: false,
+    ask: false,
+    emergency: false,
   });
+  const [enrichment, setEnrichment] = useState<InterviewCheatSheet | null>(null);
+  const [isEnriching, setIsEnriching] = useState(false);
+  const [enrichError, setEnrichError] = useState<string | null>(null);
 
-  const toggleSection = (key: string) => {
+  const parsedJD = useMemo(() => toParsedJobDescription(jobOffer), [jobOffer]);
+
+  // Szkielet jest czystą funkcją (parsedJD, vault) — liczy się lokalnie, bez
+  // tokenów i bez sieci, więc `useMemo` wystarczy za całe zarządzanie stanem.
+  const localCheatSheet = useMemo(
+    () =>
+      buildLocalInterviewCheatSheet(
+        parsedJD,
+        vault,
+        jobOffer.title || '',
+        jobOffer.company || ''
+      ),
+    [parsedJD, vault, jobOffer.title, jobOffer.company]
+  );
+
+  const cheatSheet = enrichment ?? localCheatSheet;
+  const isEnriched = cheatSheet.generationMode === 'GEMINI_ENRICHED';
+
+  const toggleSection = (key: SectionKey) => {
     setOpenSections((prev) => ({ ...prev, [key]: !prev[key] }));
   };
 
-  const sampleQuestions: QuestionItem[] = [
-    {
-      question: `Jak podchodzisz do optymalizacji wydajności w aplikacjach opartych o ${(jobOffer.techStack || ['React', 'TypeScript'])[0] || 'React'}?`,
-      difficulty: 'Wymagające',
-      category: 'Techniczne',
-      suggestedAnswerTip: 'Wskaż profilowanie w Chrome DevTools, eliminację niepotrzebnych re-renderów, wirtualizację długich list i code splitting.',
-    },
-    {
-      question: 'Opowiedz o sytuacji, w której musiałeś podjąć trudną decyzję architektoniczną pod presją czasu.',
-      difficulty: 'Średnie',
-      category: 'Behawioralne',
-      suggestedAnswerTip: 'Użyj metody STAR: opisz kontekst awarii lub zmiany wymagań klienta, analizę ryzyk i wdrożony trade-off.',
-    },
-    {
-      question: `W jaki sposób zapewniasz bezpieczeństwo i odporność systemów na awarie w środowisku ${jobOffer.company}?`,
-      difficulty: 'Wymagające',
-      category: 'Architektura',
-      suggestedAnswerTip: 'Wymień mechanizmy Circuit Breaker, walidację danych na wejściu (Zod/Sanitization), rate limiting i monitorowanie metryk.',
-    },
-  ];
+  const handleEnrich = async () => {
+    setIsEnriching(true);
+    setEnrichError(null);
+    try {
+      const topRequirements = [
+        ...(parsedJD.mandatoryRequirements ?? []),
+        ...parsedJD.requiredHardSkills,
+      ].slice(0, 8);
 
-  const glossaryTerms = (jobOffer.techStack || jobOffer.requirements || ['React', 'TypeScript', 'Docker', 'PostgreSQL']).map((term) => ({
-    term,
-    definition: `Kluczowy element stosu technologicznego wymaganego w ogłoszeniu ${jobOffer.title}.`,
-  }));
+      const { enrichment: payload } = await generateCheatSheetEnrichmentWithAI(
+        jobOffer.title || parsedJD.jobTitle,
+        jobOffer.company || parsedJD.companyName,
+        jobOffer.rawDescription || jobOffer.description || '',
+        vault,
+        topRequirements
+      );
+
+      setEnrichment(mergeGeminiCheatSheetEnrichment(localCheatSheet, payload));
+    } catch (err) {
+      setEnrichError(
+        err instanceof Error
+          ? err.message
+          : 'Nie udało się wzbogacić ściągi. Szkielet poniżej pozostaje aktualny.'
+      );
+    } finally {
+      setIsEnriching(false);
+    }
+  };
+
+  const sectionHeader = (
+    key: SectionKey,
+    icon: React.ReactNode,
+    label: string,
+    count?: number
+  ) => (
+    <button
+      type="button"
+      onClick={() => toggleSection(key)}
+      className="flex w-full items-center justify-between text-left focus-visible:outline-none"
+    >
+      <div className="flex items-center gap-2">
+        {icon}
+        <h4 className="text-xs font-bold uppercase tracking-wider text-ink">
+          {label}
+          {count !== undefined ? ` (${count})` : ''}
+        </h4>
+      </div>
+      {openSections[key] ? (
+        <ChevronUp className="h-4 w-4 text-muted" />
+      ) : (
+        <ChevronDown className="h-4 w-4 text-muted" />
+      )}
+    </button>
+  );
+
+  const collapsible = (key: SectionKey, className: string, children: React.ReactNode) => (
+    <AnimatePresence>
+      {openSections[key] && (
+        <motion.div
+          initial={{ opacity: 0, height: 0 }}
+          animate={{ opacity: 1, height: 'auto' }}
+          exit={{ opacity: 0, height: 0 }}
+          className={className}
+        >
+          {children}
+        </motion.div>
+      )}
+    </AnimatePresence>
+  );
 
   return (
     <div className={`space-y-6 ${className}`}>
       {/* Header */}
-      <div className="flex items-center gap-3 rounded-2xl border border-line bg-elevated p-4 shadow-raised">
+      <div className="flex flex-wrap items-center gap-3 rounded-2xl border border-line bg-elevated p-4 shadow-raised">
         <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-brand-50 text-brand-600">
           <BookOpen className="h-4 w-4" />
         </div>
-        <div>
+        <div className="min-w-0 flex-1">
           <h3 className="text-xs font-bold uppercase tracking-wider text-ink">
             Ściąga na Rozmowę Rekrutacyjną (Interview Cheat Sheet)
           </h3>
           <p className="text-[11px] text-muted">
-            Personalizowany zestaw pytań, gotowe historie STAR i glosariusz techniczny dla stanowiska {jobOffer.title}.
+            Zbudowana lokalnie z Twojego Master Vaultu i treści oferty — bez zużycia tokenów.
           </p>
+        </div>
+        <div className="flex shrink-0 items-center gap-2">
+          <Chip variant={isEnriched ? 'brand' : 'neutral'} className="text-[10px] py-px">
+            {isEnriched ? 'Wzbogacona przez AI' : 'Szkielet lokalny · 0 tokenów'}
+          </Chip>
+          {!isEnriched && (
+            <Button
+              size="sm"
+              variant="secondary"
+              icon={Wand2}
+              loading={isEnriching}
+              onClick={handleEnrich}
+            >
+              Wzbogać przez AI
+            </Button>
+          )}
         </div>
       </div>
 
-      {/* Accordion 1: Probable Interview Questions */}
-      <Card tone="raised" className="space-y-3">
-        <button
-          type="button"
-          onClick={() => toggleSection('questions')}
-          className="flex w-full items-center justify-between text-left focus-visible:outline-none"
-        >
-          <div className="flex items-center gap-2">
-            <HelpCircle className="h-4 w-4 text-brand-600" />
-            <h4 className="text-xs font-bold uppercase tracking-wider text-ink">
-              1. Prawdopodobne Pytania Rekrutacyjne ({sampleQuestions.length})
-            </h4>
-          </div>
-          {openSections.questions ? <ChevronUp className="h-4 w-4 text-muted" /> : <ChevronDown className="h-4 w-4 text-muted" />}
-        </button>
+      {enrichError && (
+        <Alert variant="warning" title="Wzbogacenie nie powiodło się">
+          {enrichError}
+        </Alert>
+      )}
 
-        <AnimatePresence>
-          {openSections.questions && (
-            <motion.div
-              initial={{ opacity: 0, height: 0 }}
-              animate={{ opacity: 1, height: 'auto' }}
-              exit={{ opacity: 0, height: 0 }}
-              className="space-y-3 pt-2"
+      {cheatSheet.personalizedFraming && (
+        <Alert variant="info" title="Dlaczego ta rola i ta firma" icon={Sparkles}>
+          {cheatSheet.personalizedFraming}
+        </Alert>
+      )}
+
+      {/* 1. Bank pytań */}
+      <Card tone="raised" className="space-y-3">
+        {sectionHeader(
+          'questions',
+          <HelpCircle className="h-4 w-4 text-brand-600" />,
+          '1. Prawdopodobne Pytania Rekrutacyjne',
+          cheatSheet.qaBank.length
+        )}
+        {collapsible(
+          'questions',
+          'space-y-3 pt-2',
+          cheatSheet.qaBank.length === 0 ? (
+            <EmptyState
+              icon={HelpCircle}
+              title="Brak pytań do wygenerowania"
+              description="Wklej treść ogłoszenia — pytania budowane są z jego wymagań."
+            />
+          ) : (
+            cheatSheet.qaBank.map((qa) => (
+              <div
+                key={qa.id}
+                className="space-y-2 rounded-2xl border border-line bg-surface p-4 text-xs"
+              >
+                <div className="flex items-start justify-between gap-2">
+                  <span className="font-bold leading-snug text-ink">{qa.question}</span>
+                  <div className="flex shrink-0 items-center gap-1.5">
+                    <Chip variant="neutral" className="text-[10px] py-px">
+                      {QA_CATEGORY_LABEL[qa.category] ?? qa.category}
+                    </Chip>
+                    {qa.source === 'GEMINI_PERSONALIZED' && (
+                      <Chip variant="brand" className="text-[10px] py-px">
+                        AI
+                      </Chip>
+                    )}
+                  </div>
+                </div>
+                <div className="rounded-xl border border-brand-200/50 bg-brand-50/50 p-2.5 text-[11px] text-brand-fg">
+                  <strong>Wskazówka odpowiedzi:</strong> {qa.modelAnswer}
+                </div>
+              </div>
+            ))
+          )
+        )}
+      </Card>
+
+      {/* 2. Historie STAR */}
+      <Card tone="raised" className="space-y-3">
+        {sectionHeader(
+          'star',
+          <Award className="h-4 w-4 text-success-fg" />,
+          '2. Twoje Gotowe Historie STAR (z Master Vaultu)',
+          cheatSheet.starTalkingPoints.length
+        )}
+        {collapsible(
+          'star',
+          'space-y-3 pt-2',
+          cheatSheet.starTalkingPoints.length === 0 ? (
+            <EmptyState
+              icon={Award}
+              title="Brak historii do przekucia w STAR"
+              description="Uzupełnij doświadczenie w Master Vaulcie — historie budowane są wyłącznie z Twoich prawdziwych osiągnięć."
+            />
+          ) : (
+            cheatSheet.starTalkingPoints.map((point) => (
+              <div
+                key={point.id}
+                className="space-y-3 rounded-2xl border border-line bg-surface p-4 text-xs"
+              >
+                <div className="border-b border-line pb-2">
+                  <span className="font-bold text-ink">Pod wymaganie: </span>
+                  <span className="text-brand-fg">{point.relatedRequirement}</span>
+                </div>
+                <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-4">
+                  <div className="rounded-xl border border-line/60 bg-sunken p-2.5">
+                    <span className="mb-0.5 block font-mono text-[10px] font-bold text-muted">
+                      S (Situation)
+                    </span>
+                    <p className="text-[11px] text-ink/90">{point.situation}</p>
+                  </div>
+                  <div className="rounded-xl border border-line/60 bg-sunken p-2.5">
+                    <span className="mb-0.5 block font-mono text-[10px] font-bold text-muted">
+                      T (Task)
+                    </span>
+                    <p className="text-[11px] text-ink/90">{point.task}</p>
+                  </div>
+                  <div className="rounded-xl border border-line/60 bg-sunken p-2.5">
+                    <span className="mb-0.5 block font-mono text-[10px] font-bold text-muted">
+                      A (Action)
+                    </span>
+                    <p className="text-[11px] text-ink/90">{point.action}</p>
+                  </div>
+                  <div className="rounded-xl border border-success/30 bg-success-soft/50 p-2.5">
+                    <span className="mb-0.5 block font-mono text-[10px] font-bold text-success-fg">
+                      R (Result)
+                    </span>
+                    <p className="text-[11px] font-bold text-success-fg">{point.result}</p>
+                  </div>
+                </div>
+              </div>
+            ))
+          )
+        )}
+      </Card>
+
+      {/* 3. Glosariusz */}
+      <Card tone="raised" className="space-y-3">
+        {sectionHeader(
+          'glossary',
+          <Sparkles className="h-4 w-4 text-violet" />,
+          '3. Glosariusz Pojęć z Oferty',
+          cheatSheet.glossary.length
+        )}
+        {collapsible(
+          'glossary',
+          'grid grid-cols-1 gap-2 pt-2 sm:grid-cols-2',
+          cheatSheet.glossary.map((term) => (
+            <div
+              key={term.id}
+              className="space-y-1 rounded-xl border border-line bg-surface p-3 text-xs"
             >
-              {sampleQuestions.map((q, idx) => (
-                <div
-                  key={idx}
-                  className="rounded-2xl border border-line bg-surface p-4 space-y-2 text-xs"
+              <div className="flex items-center justify-between gap-2">
+                <span className="font-bold text-brand-fg">{term.term}</span>
+                <Chip variant="neutral" className="text-[10px] py-px">
+                  {GLOSSARY_CATEGORY_LABEL[term.category] ?? term.category}
+                </Chip>
+              </div>
+              <p className="text-[11px] text-muted">{term.definition}</p>
+            </div>
+          ))
+        )}
+      </Card>
+
+      {/* 4. Checklista wymagań */}
+      <Card tone="raised" className="space-y-3">
+        {sectionHeader(
+          'redFlags',
+          <AlertTriangle className="h-4 w-4 text-warning-fg" />,
+          '4. O To Na Pewno Zapytają',
+          cheatSheet.redFlagsChecklist.length
+        )}
+        {collapsible(
+          'redFlags',
+          'space-y-2 pt-2',
+          cheatSheet.redFlagsChecklist.map((item) => (
+            <div
+              key={item.id}
+              className="space-y-1 rounded-xl border border-line bg-surface p-3 text-xs"
+            >
+              <div className="flex items-start justify-between gap-2">
+                <span className="font-bold leading-snug text-ink">{item.label}</span>
+                <Chip
+                  variant={item.severity === 'MUST_KNOW' ? 'danger' : 'warning'}
+                  className="shrink-0 text-[10px] py-px"
                 >
-                  <div className="flex items-start justify-between gap-2">
-                    <span className="font-bold text-ink leading-snug">{q.question}</span>
-                    <div className="flex items-center gap-1.5 shrink-0">
-                      <Chip variant={q.difficulty === 'Wymagające' ? 'danger' : 'warning'} className="text-[10px] py-px">
-                        {q.difficulty}
-                      </Chip>
-                      <Chip variant="neutral" className="text-[10px] py-px">
-                        {q.category}
-                      </Chip>
-                    </div>
-                  </div>
-
-                  <div className="rounded-xl border border-brand-200/50 bg-brand-50/50 p-2.5 text-[11px] text-brand-fg">
-                    <strong>Wskazówka odpowiedzi:</strong> {q.suggestedAnswerTip}
-                  </div>
-                </div>
-              ))}
-            </motion.div>
-          )}
-        </AnimatePresence>
+                  {item.severity === 'MUST_KNOW' ? 'Konieczne' : 'Warto'}
+                </Chip>
+              </div>
+              <p className="text-[11px] text-muted">{item.detail}</p>
+            </div>
+          ))
+        )}
       </Card>
 
-      {/* Accordion 2: Candidate's STAR Stories */}
+      {/* 5. Pytania do rekrutera */}
       <Card tone="raised" className="space-y-3">
-        <button
-          type="button"
-          onClick={() => toggleSection('star')}
-          className="flex w-full items-center justify-between text-left focus-visible:outline-none"
-        >
-          <div className="flex items-center gap-2">
-            <Award className="h-4 w-4 text-success-fg" />
-            <h4 className="text-xs font-bold uppercase tracking-wider text-ink">
-              2. Twoje Gotowe Historie STAR (Z bazy Master Vault)
-            </h4>
-          </div>
-          {openSections.star ? <ChevronUp className="h-4 w-4 text-muted" /> : <ChevronDown className="h-4 w-4 text-muted" />}
-        </button>
-
-        <AnimatePresence>
-          {openSections.star && (
-            <motion.div
-              initial={{ opacity: 0, height: 0 }}
-              animate={{ opacity: 1, height: 'auto' }}
-              exit={{ opacity: 0, height: 0 }}
-              className="space-y-3 pt-2"
+        {sectionHeader(
+          'ask',
+          <MessageCircleQuestion className="h-4 w-4 text-brand-600" />,
+          '5. Pytania, Które Warto Zadać',
+          cheatSheet.questionsToAsk.length
+        )}
+        {collapsible(
+          'ask',
+          'space-y-2 pt-2',
+          cheatSheet.questionsToAsk.map((item) => (
+            <div
+              key={item.id}
+              className="space-y-1 rounded-xl border border-line bg-surface p-3 text-xs"
             >
-              {vault.history.slice(0, 2).map((h, i) => (
-                <div key={h.id} className="rounded-2xl border border-line bg-surface p-4 space-y-3 text-xs">
-                  <div className="flex items-center justify-between border-b border-line pb-2">
-                    <span className="font-bold text-ink">{h.role} w <strong className="text-brand-fg">{h.company}</strong></span>
-                    <span className="font-mono text-[10px] text-muted">{h.startDate} – {h.isCurrent ? 'Obecnie' : h.endDate}</span>
-                  </div>
-
-                  <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-4">
-                    <div className="rounded-xl border border-line/60 bg-sunken p-2.5">
-                      <span className="font-mono text-[10px] font-bold text-muted block mb-0.5">S (Situation)</span>
-                      <p className="text-[11px] text-ink/90">{h.description || 'Skalowanie infrastruktury i platformy'}</p>
-                    </div>
-                    <div className="rounded-xl border border-line/60 bg-sunken p-2.5">
-                      <span className="font-mono text-[10px] font-bold text-muted block mb-0.5">T (Task)</span>
-                      <p className="text-[11px] text-ink/90">Redukcja czasu ładowania i optymalizacja API</p>
-                    </div>
-                    <div className="rounded-xl border border-line/60 bg-sunken p-2.5">
-                      <span className="font-mono text-[10px] font-bold text-muted block mb-0.5">A (Action)</span>
-                      <p className="text-[11px] text-ink/90">Wdrożenie architektury mikroserwisowej i cache'owania</p>
-                    </div>
-                    <div className="rounded-xl border border-success/30 bg-success-soft/50 p-2.5">
-                      <span className="font-mono text-[10px] font-bold text-success-fg block mb-0.5">R (Result)</span>
-                      <p className="text-[11px] text-success-fg font-bold">
-                        {h.highlights[0]?.text || '+35% wzrost przepustowości systemu'}
-                      </p>
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </motion.div>
-          )}
-        </AnimatePresence>
+              <div className="flex items-start justify-between gap-2">
+                <span className="font-bold leading-snug text-ink">{item.question}</span>
+                <Chip variant="neutral" className="shrink-0 text-[10px] py-px">
+                  {ASK_CATEGORY_LABEL[item.category] ?? item.category}
+                </Chip>
+              </div>
+              <p className="text-[11px] text-muted">{item.rationale}</p>
+            </div>
+          ))
+        )}
       </Card>
 
-      {/* Accordion 3: Glossary */}
+      {/* 6. Zwroty ratunkowe */}
       <Card tone="raised" className="space-y-3">
-        <button
-          type="button"
-          onClick={() => toggleSection('glossary')}
-          className="flex w-full items-center justify-between text-left focus-visible:outline-none"
-        >
-          <div className="flex items-center gap-2">
-            <Sparkles className="h-4 w-4 text-violet" />
-            <h4 className="text-xs font-bold uppercase tracking-wider text-ink">
-              3. Glosariusz Słów Kluczowych Oferty ({glossaryTerms.length})
-            </h4>
-          </div>
-          {openSections.glossary ? <ChevronUp className="h-4 w-4 text-muted" /> : <ChevronDown className="h-4 w-4 text-muted" />}
-        </button>
-
-        <AnimatePresence>
-          {openSections.glossary && (
-            <motion.div
-              initial={{ opacity: 0, height: 0 }}
-              animate={{ opacity: 1, height: 'auto' }}
-              exit={{ opacity: 0, height: 0 }}
-              className="grid grid-cols-1 gap-2 sm:grid-cols-2 pt-2"
+        {sectionHeader(
+          'emergency',
+          <LifeBuoy className="h-4 w-4 text-violet" />,
+          '6. Zwroty Ratunkowe',
+          cheatSheet.emergencyPhrases.length
+        )}
+        {collapsible(
+          'emergency',
+          'space-y-2 pt-2',
+          cheatSheet.emergencyPhrases.map((phrase) => (
+            <div
+              key={phrase.id}
+              className="space-y-1 rounded-xl border border-line bg-surface p-3 text-xs"
             >
-              {glossaryTerms.map((g, idx) => (
-                <div key={idx} className="rounded-xl border border-line bg-surface p-3 text-xs space-y-1">
-                  <span className="font-bold text-brand-fg">{g.term}</span>
-                  <p className="text-[11px] text-muted">{g.definition}</p>
-                </div>
-              ))}
-            </motion.div>
-          )}
-        </AnimatePresence>
+              <span className="font-mono text-[10px] font-bold uppercase tracking-wider text-muted">
+                {phrase.scenario}
+              </span>
+              <p className="text-[11px] font-bold text-ink">{phrase.phrasePL}</p>
+              {phrase.phraseEN && (
+                <p className="text-[11px] italic text-muted">{phrase.phraseEN}</p>
+              )}
+            </div>
+          ))
+        )}
       </Card>
     </div>
   );

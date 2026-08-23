@@ -23,6 +23,8 @@ export const StorageKeys = {
   sidebarCollapsed: `${PREFIX}sidebar-collapsed`,
   favoriteTips: `${PREFIX}favorite-tips`,
   entitlementsCache: `${PREFIX}entitlements-cache`,
+  cheatSheetCache: `${PREFIX}cheatsheet`,
+  onboardingDismissed: `${PREFIX}onboarding-dismissed`,
 } as const;
 
 export type StorageKey = (typeof StorageKeys)[keyof typeof StorageKeys];
@@ -30,6 +32,17 @@ export type StorageKey = (typeof StorageKeys)[keyof typeof StorageKeys];
 /** Vault zapisywany pod profilem — jedyny klucz z częścią zmienną. */
 export function vaultKeyFor(profileId: string): string {
   return `${StorageKeys.vault}:${profileId}`;
+}
+
+/**
+ * Cache spersonalizowanej części ściągi, kluczowany skrótem (oferta + vault).
+ *
+ * Wchodzi pod wspólny prefiks świadomie. Wpis zawiera punkty STAR zbudowane
+ * z prawdziwej historii zatrudnienia, więc jest daną osobową i musi znikać
+ * razem z resztą przy `wipeAppStorage()` — dokładnie tego pilnuje ten rejestr.
+ */
+export function cheatSheetCacheKeyFor(hash: string): string {
+  return `${StorageKeys.cheatSheetCache}:${hash}`;
 }
 
 /**

@@ -16,6 +16,7 @@ import {
 } from "./pseudonymize";
 import { UNIVERSAL_CV_REFRAMING_SYSTEM_PROMPT } from "../data/universalCvReframingPrompt";
 import { ATS_CV_REFRAMING_SYSTEM_PROMPT } from "../data/atsCvReframingPrompt";
+import { INTERVIEW_CHEAT_SHEET_SYSTEM_PROMPT } from "../data/interviewCheatSheetPrompt";
 
 
 
@@ -565,3 +566,157 @@ Zwróć odpowiedź WYŁĄCZNIE jako ustrukturyzowany obiekt JSON.
   };
 }
 
+
+/**
+ * Spersonalizowana część ściągi na rozmowę.
+ *
+ * Model dostaje tu wyłącznie to, czego nie da się zbudować lokalnie: punkty STAR
+ * osadzone w prawdziwej historii zatrudnienia, uzasadnienie „dlaczego ta firma"
+ * i zwroty ratunkowe dopasowane tonem. Słownik, checklista, bank pytań i pytania
+ * do rekrutera powstają za zero tokenów po stronie klienta
+ * (`src/lib/interviewCheatSheetEngine.ts`), więc nie ma powodu za nie płacić.
+ *
+ * Granica danych jak w liście motywacyjnym: zdjęcie odpada całkowicie, reszta
+ * danych identyfikujących idzie placeholderami i wraca przez `rehydrate`.
+ * Kandydat ma zobaczyć swoje punkty STAR, nie punkty „[KANDYDAT]".
+ */
+export async function generateInterviewCheatSheetEnrichmentWithFlash(
+  vault: Partial<MasterVault>,
+  targetRole: string,
+  companyName: string,
+  jobDescription: string,
+  topRequirements: string[]
+): Promise<{
+  starTalkingPoints: Array<{
+    relatedRequirement: string;
+    situation: string;
+    task: string;
+    action: string;
+    result: string;
+    sourceExperienceId?: string;
+  }>;
+  personalizedFraming: string;
+  emergencyPhrases: Array<{ scenario: string; phrasePL: string; phraseEN?: string }>;
+}> {
+  const company = companyName || "Państwa Firmie";
+  const role = targetRole || "oferowanym stanowisku";
+
+  const safeVault = stripSensitiveFields(vault);
+  const names = identifyingValues(vault);
+
+  const history = pseudonymize(
+    truncateForModel(JSON.stringify(safeVault.history || []), 20_000),
+    names
+  );
+  const projects = pseudonymize(
+    truncateForModel(JSON.stringify(safeVault.projects || []), 8_000),
+    names
+  );
+  const summary = pseudonymize(safeVault.personalInfo?.summary || '', names);
+  // Ogłoszenie bywa wklejane z portalu razem z adresem e-mail rekrutera.
+  const jd = pseudonymize(truncateForModel(jobDescription || ''), names);
+
+  const map = new Map([...history.map, ...projects.map, ...summary.map, ...jd.map]);
+
+  const prompt = `
+${INTERVIEW_CHEAT_SHEET_SYSTEM_PROMPT}
+
+ZADANIE:
+Przygotuj materiał do przećwiczenia rozmowy kwalifikacyjnej na stanowisko "${role}" w firmie "${company}".
+
+Kluczowe wymagania z oferty (topRequirements): ${topRequirements.join(", ") || "brak — użyj ogólnego kontekstu oferty"}
+
+Dane Kandydata z CV (MasterVault):
+- Imię i Nazwisko: [KANDYDAT]
+- Tytuł/Stanowisko: ${safeVault.personalInfo?.title || ''}
+- Podsumowanie: ${summary.text}
+- Umiejętności: ${[...(safeVault.skillsMatrix?.hardSkills || []), ...(safeVault.skillsMatrix?.toolsAndTech || [])].join(', ')}
+- Doświadczenie zawodowe: ${history.text}
+- Projekty: ${projects.text}
+
+Treść Ogłoszenia o Pracę (${company}):
+"""
+${jd.text || 'Standardowe ogłoszenie o pracę na stanowisku ' + role}
+"""
+
+Zwróć odpowiedź WYŁĄCZNIE jako ustrukturyzowany obiekt JSON.
+`;
+
+  assertNoPii(prompt);
+
+  const response = await generateWithUsage({
+    model: getGeminiModel(),
+    contents: prompt,
+    config: {
+      maxOutputTokens: MAX_OUTPUT_TOKENS,
+      responseMimeType: "application/json",
+      responseSchema: {
+        type: Type.OBJECT,
+        properties: {
+          starTalkingPoints: {
+            type: Type.ARRAY,
+            items: {
+              type: Type.OBJECT,
+              properties: {
+                relatedRequirement: { type: Type.STRING },
+                situation: { type: Type.STRING },
+                task: { type: Type.STRING },
+                action: { type: Type.STRING },
+                result: { type: Type.STRING },
+                sourceExperienceId: { type: Type.STRING },
+              },
+              required: ["relatedRequirement", "situation", "task", "action", "result"],
+            },
+          },
+          personalizedFraming: { type: Type.STRING },
+          emergencyPhrases: {
+            type: Type.ARRAY,
+            items: {
+              type: Type.OBJECT,
+              properties: {
+                scenario: { type: Type.STRING },
+                phrasePL: { type: Type.STRING },
+                phraseEN: { type: Type.STRING },
+              },
+              required: ["scenario", "phrasePL"],
+            },
+          },
+        },
+        required: ["starTalkingPoints", "personalizedFraming", "emergencyPhrases"],
+      },
+    },
+  }, "cheat-sheet");
+
+  const parsed = parseModelJson<{
+    starTalkingPoints?: Array<Record<string, string>>;
+    personalizedFraming?: string;
+    emergencyPhrases?: Array<Record<string, string>>;
+  }>(response.text, "cheat-sheet");
+
+  const realName = vault.personalInfo?.fullName?.trim();
+  const restore = (value: string): string => {
+    const rehydrated = rehydrate(value || '', map);
+    return realName ? rehydrated.split('[KANDYDAT]').join(realName) : rehydrated;
+  };
+
+  return {
+    starTalkingPoints: (Array.isArray(parsed.starTalkingPoints) ? parsed.starTalkingPoints : []).map(
+      (point) => ({
+        relatedRequirement: restore(point.relatedRequirement),
+        situation: restore(point.situation),
+        task: restore(point.task),
+        action: restore(point.action),
+        result: restore(point.result),
+        sourceExperienceId: point.sourceExperienceId,
+      })
+    ),
+    personalizedFraming: restore(parsed.personalizedFraming || ''),
+    emergencyPhrases: (Array.isArray(parsed.emergencyPhrases) ? parsed.emergencyPhrases : []).map(
+      (phrase) => ({
+        scenario: restore(phrase.scenario),
+        phrasePL: restore(phrase.phrasePL),
+        phraseEN: phrase.phraseEN ? restore(phrase.phraseEN) : undefined,
+      })
+    ),
+  };
+}

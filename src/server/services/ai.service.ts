@@ -3,6 +3,7 @@ import {
   optimizeDeltaPhrases,
   parseJobDescriptionWithGemini,
   generateCoverLetterWithFlash,
+  generateInterviewCheatSheetEnrichmentWithFlash,
 } from '../gemini';
 import { MasterVault } from '../../types';
 
@@ -58,6 +59,28 @@ export class AiService {
       optimizedBullet: `Zrealizowałem ${originalBullet.trim().replace(/^[-•*]\s*/, '')}${kwText} ${rolePrefix}, osiągając wymierną poprawę kluczowych wskaźników wydajnościowych.`,
       method: 'SLOT_FILLING',
     };
+  }
+
+  /**
+   * Generuje spersonalizowaną część ściągi na rozmowę.
+   *
+   * Reszta ściągi (słownik, checklista, bank pytań) powstaje lokalnie i za zero
+   * tokenów — tutaj trafia tylko to, co wymaga osadzenia w historii kandydata.
+   */
+  async generateCheatSheetEnrichment(
+    targetRole: string,
+    companyName: string,
+    jobDescription: string,
+    vault: MasterVault,
+    topRequirements: string[] = []
+  ) {
+    return generateInterviewCheatSheetEnrichmentWithFlash(
+      vault,
+      targetRole,
+      companyName,
+      jobDescription,
+      topRequirements
+    );
   }
 
   /** Generuje list motywacyjny na podstawie profilu i treści ogłoszenia. */
