@@ -14,6 +14,13 @@ Każdy brief kończy się sekcją „Czego **nie** robić". To nie jest ozdobnik
 model o mniejszej pojemności rozszerza zakres zadania częściej, niż go zawęża,
 a zakres jest tu jedyną rzeczą, której CI nie obali.
 
+> **Uwaga o stanie repozytorium.** Po napisaniu tych briefów warstwa wizualna
+> została przebudowana (commit `78a999b`): nowe tokeny w `src/styles/tokens.css`,
+> poświata tła w `src/index.css`, zmieniony układ `HomeView.tsx`. Dla Z-2 i Z-3
+> nie ma to znaczenia — dotyczą `relevanceRanking.ts` i `storage.ts`, których
+> tamta zmiana nie tknęła. Dla Z-1 zmienił się punkt odniesienia: liczba „przed"
+> w tabeli niżej pochodzi już z `main` po tej przebudowie.
+
 ---
 
 ## Z-1 · Wyprowadź `mammoth` z głównej paczki (pilot)
@@ -24,12 +31,16 @@ plików DOCX, choć korzysta z niej dopiero ten, kto wgra CV w tym formacie.
 → `src/lib/cvUniversalParser.ts` → `import * as mammoth from 'mammoth'` (linia 3).
 Import statyczny wciąga bibliotekę do paczki wejściowej.
 
-**Stan przed zmianą** (`npm run build`, wyjście Vite):
+**Stan przed zmianą** (`npm run build` na commicie `78a999b`, wyjście Vite):
 
 | Paczka | Rozmiar | gzip |
 | --- | --- | --- |
-| `assets/index-*.js` (wejściowa) | 1 211,26 kB | 344,47 kB |
+| `assets/index-*.js` (wejściowa) | 1 210,02 kB | 344,56 kB |
 | `assets/pdf-*.js` (już leniwa) | 479,34 kB | 142,68 kB |
+
+> Liczba jest z bieżącego `main`. Jeśli po Twojej stronie wyjdzie inna, zmierz
+> „przed" u siebie i podaj obie własne liczby — porównanie ma być wewnętrznie
+> spójne, a nie zgodne z tą tabelą.
 
 **Zadanie.** Zamień statyczny import `mammoth` na `await import('mammoth')`
 wewnątrz gałęzi obsługującej `.docx`/`.doc` w `extractTextFromAnyFile`.
@@ -42,7 +53,7 @@ Zrób to tak samo — nie wymyślaj własnej konwencji.
 
 **Kryteria akceptacji**
 - [ ] `npm run build` przechodzi, a w wyjściu Vite pojawia się nowa, osobna paczka z `mammoth`
-- [ ] paczka `assets/index-*.js` jest mniejsza niż 1 211,26 kB
+- [ ] paczka `assets/index-*.js` jest wyraźnie mniejsza niż zmierzona przez Ciebie wartość „przed"
 - [ ] `npm test` na zielono — `src/lib/__tests__/cv_parser.test.ts` nie może się ruszyć
 - [ ] `npm run lint` bez błędów
 - [ ] opis PR-a zawiera **wklejone wyjście Vite przed i po**, nie samo zdanie „bundle mniejszy"
@@ -75,14 +86,23 @@ implementacja robi, żeby przyszła optymalizacja miała co złamać:
 - `matchedKeywords` bez powtórzeń przy doświadczeniu z kilkoma punktami
 - premia za świeżość: `recencyBonus` zeruje się od szóstego doświadczenia
   (`Math.max(0, 0.1 - originalIndex * 0.02)`) — przypnij to testem
-- `titleSimilarity`: zgodność dokładna, zawieranie się, część wspólna słów, brak
+- `titleSimilarity`: zgodność dokładna, zawieranie się, część wspólna słów, brak.
+  Funkcja nie jest eksportowana i **nie eksportuj jej na potrzeby testu** — to
+  zmiana w kodzie produkcyjnym. Testuj przez `rankExperienceByRelevance`
+  z doświadczeniami o pustych `highlights`: wtedy oba składniki punktowe
+  z punktów wynoszą zero i zostaje `roleTitleScore * 0.15 + recencyBonus`,
+  czyli wartość dająca się policzyć na kartce
 
 **Część 2 — pomiar.** Dodaj `src/lib/__tests__/relevanceRanking.bench.test.ts`
 wzorowany na `src/lib/__tests__/vaultPersistence.bench.test.ts`. Wymagania stamtąd:
 **żadnych progów czasowych w asercjach** — test wypisuje liczby przez `console.log`,
 a asercje pilnują wyłącznie tego, że dane wejściowe mają zakładany rozmiar.
 Zmierz `rankExperienceByRelevance` dla siatki: 10 / 50 / 200 doświadczeń
-× 20 / 100 słów kluczowych, po 8 punktów na doświadczenie.
+× 20 / 100 słów kluczowych, po 8 punktów na doświadczenie. Sześć kombinacji,
+każda w pętli powtórzeń (rząd 100–500, tyle żeby pojedynczy pomiar nie tonął
+w rozdzielczości zegara), wynik jako **średni czas jednego wywołania**.
+Wypisz to jako tabelę Markdown przez `console.log`, żeby dało się ją przenieść
+do opisu PR-a bez przepisywania.
 
 **Pliki w zakresie:** `src/lib/__tests__/relevance_ranking.test.ts` (dopisanie),
 `src/lib/__tests__/relevanceRanking.bench.test.ts` (nowy).
@@ -135,6 +155,14 @@ Dwie kopie tej samej atrapy rozjadą się przy pierwszej zmianie.
   i `skillvault_master_vault_enc_v2` są usuwane bezwarunkowo
 - `wipeAppStorage` — usuwa klucze `cvelocity:*` i `skillvault*`, **zachowuje**
   `StorageKeys.theme`, **nie rusza** klucza obcego (np. `inna-apka:coś`)
+- `wipeAppStorage` — usuwa **kilka** kluczy naraz. To nie jest ten sam przypadek
+  co usunięcie jednego: pętla idzie po indeksach `localStorage.key(i)`, a każde
+  usunięcie przesuwa indeksy. Kod zbiera klucze przed usuwaniem właśnie po to,
+  żeby tego uniknąć — test ma tę własność przypiąć
+- wszystkie funkcje przy braku `localStorage` (renderowanie po stronie serwera).
+  `isBrowser()` jest osobną gałęzią w każdej z nich i nikt jej dziś nie sprawdza;
+  ustaw `globalThis.localStorage` na `undefined` i sprawdź, że wywołania nie
+  rzucają, a `readRaw` zwraca `null`
 
 **Pliki w zakresie:** `src/lib/__tests__/helpers/memoryStorage.ts` (nowy),
 `src/lib/__tests__/storage.test.ts` (nowy),
