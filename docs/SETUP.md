@@ -161,7 +161,41 @@ Bez poprawnych rekordów maile potwierdzające rejestrację lądują w spamie. T
 
 ## 5 · Hosting
 
-Frontend i API idą **z jednego kontenera na Cloud Run**. Komplet komend jest
+### Stan faktyczny: Firebase Hosting, sam frontend
+
+Dziś aplikacja stoi pod **https://cvelocity.oathcry.com** na Firebase Hosting
+(projekt `skillvault-99a72`) i jest to **wyłącznie frontend**. Backendu tam nie
+ma: `/api/health` oddaje stronę HTML, bo trafia w regułę przepisującą wszystko
+na `index.html`. Wszystko, co wymaga serwera — Doradca AI, parsowanie ogłoszeń
+przez Gemini, konta, limity — pod tym adresem nie działa.
+
+Konfiguracja wdrożenia leży teraz w repozytorium (`firebase.json`,
+`.firebaserc`), a nie na czyimś laptopie. Wdrożenie to:
+
+```bash
+firebase login          # raz, kontem z dostępem do projektu
+firebase deploy --only hosting
+```
+
+`predeploy` w `firebase.json` uruchamia `npm run build:client` samo, więc nie da
+się wysłać nieodświeżonego katalogu `dist/`.
+
+> **Pamięć podręczna.** Serwowany dotąd `index.html` miał `Cache-Control:
+> max-age=3600`, czyli po wdrożeniu nowa wersja pokazywała się nawet po godzinie
+> — i wyglądało to jak nieudane wdrożenie. `firebase.json` ustawia na nim
+> `no-cache`, a `immutable` zostawia dla `/assets/**` i `/fonts/**`, których
+> nazwy zawierają skrót zawartości. Po pierwszym wdrożeniu z tą konfiguracją
+> problem znika; przy sprawdzaniu tego wdrożenia odśwież stronę z pominięciem
+> pamięci podręcznej.
+
+> **Nagłówki bezpieczeństwa.** Ustawia je `helmet` w `server.ts`, ale na Firebase
+> serwer nie działa, więc nie ustawiał ich nikt. `firebase.json` deklaruje ten
+> sam zestaw co `vercel.json` (`X-Content-Type-Options`, `X-Frame-Options`,
+> `Referrer-Policy`, `Permissions-Policy`); HSTS Firebase dokłada sam.
+
+### Docelowo: jeden kontener na Cloud Run
+
+Frontend i API mają iść **z jednego kontenera na Cloud Run**. Komplet komend jest
 w [`docs/BACKEND-ROADMAP.md`](./BACKEND-ROADMAP.md) §6; tutaj tylko dlaczego tak.
 
 1. **Jeden adres = zero CORS.** Front wołający `/api/...` względnie trafia tam,
