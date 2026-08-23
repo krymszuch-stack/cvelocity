@@ -11,6 +11,15 @@ sprawdzić, że reguła nie została wymyślona.
 Wizję produktu opisują `SYSTEM_ARCHITECTURE_GUIDANCE.md` i `README.md`, model
 zagrożeń `SECURITY.md`. Tutaj jest wyłącznie to, jak pisać kod, żeby pasował.
 
+Bieżące obserwacje właściciela repo — rzeczy zauważone, ale jeszcze nie
+naprawione — są w [`NOTATKI.md`](./NOTATKI.md). Przejrzyj je przed zmianą
+w obszarze, którego dotyczą; to kanał na spostrzeżenia, nie na reguły.
+
+Incydenty, z których wyprowadzono reguły poniżej, są opisane w archiwum
+[`docs/historia/`](./docs/historia/). Dokumenty pochodzą sprzed przebudowy
+projektu i nie opisują stanu bieżącego — służą wyłącznie do sprawdzenia,
+skąd wzięła się dana reguła.
+
 ## Dwa pakiety, dwie konfiguracje
 
 | | katalog główny | `semantic-work-graph/` |

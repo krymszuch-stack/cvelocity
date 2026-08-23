@@ -101,6 +101,25 @@ describe('buildGlossary', () => {
     expect(react!.definition).toMatch(/interfejsów/i);
   });
 
+  /**
+   * Reguła 8 z AGENTS.md: domena to prace fizyczne, nie tylko IT. Monter odpada
+   * na SEP-ie i UDT, nie na Kubernetesie — glosariusz złożony wyłącznie
+   * z terminów programistycznych zostawiłby go z samymi ogólnikami.
+   */
+  it('defines trade qualifications, not just IT terms', () => {
+    const jd = makeParsedJD({
+      requiredHardSkills: ['SEP G1', 'UDT', 'MAG'],
+      toolsAndTech: ['F-Gaz'],
+    });
+    const glossary = buildGlossary(jd);
+
+    for (const term of ['SEP G1', 'UDT', 'MAG', 'F-Gaz']) {
+      const entry = glossary.find((g) => g.term.toLowerCase() === term.toLowerCase());
+      expect(entry, `brak definicji dla ${term}`).toBeDefined();
+      expect(entry!.definition).not.toMatch(/Kluczowy termin z oferty/);
+    }
+  });
+
   it('gives unknown terms a non-empty generic fallback instead of nothing', () => {
     const glossary = buildGlossary(makeParsedJD({ requiredHardSkills: ['SuperNicheFramework9000'] }));
     const unknown = glossary.find((g) => g.term === 'SuperNicheFramework9000');

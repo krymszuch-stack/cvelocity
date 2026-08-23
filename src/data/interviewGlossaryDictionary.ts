@@ -2,6 +2,12 @@
  * Lokalny słownik definicji pojęć branżowych/technicznych używany przez
  * interviewCheatSheetEngine.ts do budowy sekcji "Glosariusz" bez wywołania Gemini.
  * Klucze porównywane są case-insensitive (patrz lookupGlossaryDefinition).
+ *
+ * Słownik obejmuje zawody fizyczne na równi z IT (reguła 8 w AGENTS.md).
+ * Kandydat na montera odpada na SEP-ie, UDT i F-Gazie, nie na Kubernetesie —
+ * glosariusz złożony wyłącznie z terminów programistycznych byłby dla niego
+ * pusty, a to jego rozmowa jest za tydzień. Które uprawnienia w ogóle istnieją,
+ * mówi `src/data/licenses.ts`; tutaj jest wyłącznie to, co znaczą.
  */
 export const INTERVIEW_GLOSSARY_DICTIONARY: Record<string, string> = {
   'typescript': 'Nadzbiór JavaScriptu z systemem statycznych typów — wyłapuje błędy już na etapie kompilacji, a nie dopiero w przeglądarce.',
@@ -39,6 +45,30 @@ export const INTERVIEW_GLOSSARY_DICTIONARY: Record<string, string> = {
   'sla': 'Service Level Agreement — umowa określająca gwarantowany poziom jakości/dostępności usługi.',
   'crm': 'Customer Relationship Management — system do zarządzania relacjami i historią kontaktów z klientami.',
   'erp': 'Enterprise Resource Planning — zintegrowany system zarządzania zasobami i procesami całej organizacji.',
+
+  // ---------- Uprawnienia i pojęcia zawodów fizycznych ----------
+  'sep': 'Uprawnienia energetyczne (SEP) potwierdzające prawo do pracy przy urządzeniach elektrycznych, cieplnych lub gazowych. Na rozmowie podaj grupę (G1 elektryczne, G2 cieplne, G3 gazowe), zakres — eksploatacja czy dozór — i termin ważności.',
+  'sep g1': 'Uprawnienia SEP grupy 1 — urządzenia i instalacje elektryczne, najczęściej do 1 kV. Rozróżnij eksploatację (E) od dozoru (D): pracodawcy pytają o to wprost.',
+  'sep g2': 'Uprawnienia SEP grupy 2 — urządzenia wytwarzające, przetwarzające i przesyłające ciepło, w tym kotły i sieci cieplne.',
+  'sep g3': 'Uprawnienia SEP grupy 3 — urządzenia i instalacje gazowe: sieci, kotłownie, przyłącza.',
+  'udt': 'Uprawnienia wydawane przez Urząd Dozoru Technicznego na obsługę urządzeń podlegających dozorowi — wózków widłowych, suwnic, podestów, urządzeń ciśnieniowych. Podaj kategorię i datę ważności, bo uprawnienie wygasa.',
+  'wózek widłowy': 'Obsługa wózka jezdniowego podnośnikowego wymaga uprawnień UDT w odpowiedniej kategorii (np. II WJO). Przy wymianie butli gazowej potrzebne bywa osobne uprawnienie.',
+  'f-gaz': 'Certyfikat F-Gaz — uprawnienia do pracy z fluorowanymi gazami cieplarnianymi w klimatyzacji, chłodnictwie i pompach ciepła. Wymóg formalny, którego nie zastąpi doświadczenie.',
+  'mig': 'Spawanie MIG (131) — metoda elektrodą topliwą w osłonie gazu obojętnego, stosowana głównie do aluminium i stopów nieżelaznych.',
+  'mag': 'Spawanie MAG (135) — elektroda topliwa w osłonie gazu aktywnego, podstawowa metoda przy stali konstrukcyjnej. Najczęściej wymagana w ogłoszeniach produkcyjnych.',
+  'tig': 'Spawanie TIG (141) — elektroda nietopliwa w osłonie argonu, ceniona za jakość i estetykę spoiny; typowa przy stali nierdzewnej i aluminium.',
+  'mma': 'Spawanie MMA (111) — elektrodą otuloną, metoda uniwersalna i odporna na warunki polowe, częsta na budowach i przy montażu konstrukcji.',
+  'haccp': 'Analiza Zagrożeń i Krytyczne Punkty Kontroli — obowiązkowy system bezpieczeństwa żywności. Przygotuj przykład punktu krytycznego ze swojego stanowiska, np. kontroli temperatury.',
+  'gmp': 'Dobra Praktyka Produkcyjna — zasady utrzymania powtarzalnej jakości i higieny produkcji, wymagane w branży spożywczej, farmaceutycznej i kosmetycznej.',
+  'sanepid': 'Orzeczenie do celów sanitarno-epidemiologicznych — badanie dopuszczające do pracy przy żywności lub z ludźmi. Wymóg formalny, sprawdzany na starcie.',
+  'bhp': 'Bezpieczeństwo i higiena pracy — szkolenia okresowe i zasady bezpiecznego wykonywania zadań. Bądź gotów opisać, jak reagujesz na zagrożenie na stanowisku.',
+  'praca na wysokości': 'Praca powyżej 1 m nad poziomem terenu wymaga orzeczenia lekarskiego i szkolenia; powyżej 3 m obowiązują dodatkowe środki ochrony przed upadkiem.',
+  'utrzymanie ruchu': 'Dział odpowiedzialny za sprawność maszyn: przeglądy zapobiegawcze, usuwanie awarii i minimalizowanie przestojów linii produkcyjnej.',
+  '5s': 'Metoda organizacji stanowiska pracy w pięciu krokach (selekcja, systematyka, sprzątanie, standaryzacja, samodyscyplina) — podstawa lean w zakładach produkcyjnych.',
+  'kaizen': 'Filozofia ciągłego doskonalenia małymi krokami — na rozmowie w produkcji warto mieć przykład własnego usprawnienia stanowiska.',
+  'iso 9001': 'Norma systemu zarządzania jakością — określa, jak firma dokumentuje procesy i reaguje na niezgodności.',
+  'wms': 'Warehouse Management System — system zarządzania magazynem sterujący przyjęciami, kompletacją i inwentaryzacją.',
+  'kompletacja': 'Zbieranie towarów z magazynu według zamówienia (picking). Pracodawcy pytają o wydajność i dokładność — przygotuj liczby, jeśli je znasz.',
 };
 
 /** Czy słownik zna ten termin (case-insensitive). */
