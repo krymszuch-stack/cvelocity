@@ -245,6 +245,76 @@ export interface PreFlightCheckItem {
   category: 'FACT_ACCURACY' | 'DEALBREAKER' | 'PAGE_BUDGET' | 'METRICS' | 'LANGUAGE';
 }
 
+/**
+ * Ściąga na rozmowę kwalifikacyjną.
+ *
+ * Szkielet (słownik, pytania, checklista, pytania do rekrutera) powstaje lokalnie
+ * i deterministycznie z (ParsedJobDescription, MasterVault) — zero tokenów. Model
+ * dokłada wyłącznie to, co naprawdę wymaga personalizacji, i podmienia tylko
+ * odpowiadające mu pola; stąd `source` przy pozycjach i `generationMode` na całości.
+ */
+export interface GlossaryTerm {
+  id: string;
+  term: string;
+  definition: string;
+  category: 'HARD_SKILL' | 'TOOL' | 'DOMAIN_CONCEPT' | 'ACRONYM';
+  source: 'JD_KEYWORD' | 'JD_TOOL' | 'JD_HARD_SKILL';
+}
+
+export interface StarTalkingPoint {
+  id: string;
+  relatedRequirement: string;
+  situation: string;
+  task: string;
+  action: string;
+  result: string;
+  sourceExperienceId?: string;
+}
+
+export interface InterviewQaItem {
+  id: string;
+  question: string;
+  modelAnswer: string;
+  category: 'BEHAVIORAL' | 'TECHNICAL' | 'MOTIVATION' | 'SITUATIONAL';
+  source: 'LOCAL_TEMPLATE' | 'GEMINI_PERSONALIZED';
+}
+
+export interface RedFlagConceptItem {
+  id: string;
+  label: string;
+  detail: string;
+  severity: 'MUST_KNOW' | 'GOOD_TO_KNOW';
+  source: 'MANDATORY_REQUIREMENT' | 'CORE_RESPONSIBILITY' | 'SENIORITY_IMPLICATION';
+}
+
+export interface EmergencyPhrase {
+  id: string;
+  scenario: string;
+  phrasePL: string;
+  phraseEN?: string;
+}
+
+export interface QuestionToAsk {
+  id: string;
+  question: string;
+  rationale: string;
+  category: 'ROLE_SCOPE' | 'TEAM_CULTURE' | 'GROWTH' | 'BUSINESS_CONTEXT';
+}
+
+export interface InterviewCheatSheet {
+  targetJobTitle: string;
+  companyName: string;
+  generatedAt: string;
+  glossary: GlossaryTerm[];
+  starTalkingPoints: StarTalkingPoint[];
+  qaBank: InterviewQaItem[];
+  redFlagsChecklist: RedFlagConceptItem[];
+  emergencyPhrases: EmergencyPhrase[];
+  questionsToAsk: QuestionToAsk[];
+  personalizedFraming?: string;
+  generationMode: 'LOCAL_SKELETON' | 'GEMINI_ENRICHED';
+}
+
 export interface JobOffer {
   id: string;
   title: string;
