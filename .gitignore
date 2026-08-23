@@ -38,6 +38,15 @@ yarn-error.log*
 # każdej zmianie daje konflikt, którego nie da się rozwiązać.
 *.db
 *.db-journal
+*.db-wal
+*.db-shm
+
+# Zbiory źródłowe leksykonu pobierane przez `npm run seed:lexicon`
+# (PoliMorf ~47 MB + eksport ESCO). Odtwarzalne komendą, więc nie trzymamy
+# ich w historii repozytorium.
+semantic-work-graph/data/seed/*.gz
+semantic-work-graph/data/seed/*.tab
+semantic-work-graph/data/seed/esco-skills.pl.csv
 
 # Jeden menedżer pakietów. CI, Dockerfile i README używają npm; drugi lockfile
 # obok oznacza dwa różne drzewa zależności zależnie od tego, kto co uruchomił.
