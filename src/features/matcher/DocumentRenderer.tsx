@@ -21,6 +21,7 @@ import { MasterVault, TailoredResume } from '../../types';
 import { Button } from '../../components/ui/Button';
 import { Card } from '../../components/ui/Card';
 import { Chip } from '../../components/ui/Chip';
+import { ConsistencyLockBadge } from '../../components/consistency/ConsistencyLockBadge';
 
 export type TemplateId = 'modern' | 'minimal' | 'executive' | 'creative';
 
@@ -218,12 +219,15 @@ ${education.map((e) => `${e.degree} - ${e.institution} (${e.startDate} - ${e.end
           {/* Summary */}
           {(tailoredResume?.summary || personal.summary) && (
             <div className="space-y-1.5">
-              <h2
-                className="text-xs font-extrabold uppercase tracking-wider text-muted font-mono"
-                style={{ color: activeTemplate === 'executive' ? selectedColor : undefined }}
-              >
-                Podsumowanie Zawodowe
-              </h2>
+              <div className="flex items-center justify-between">
+                <h2
+                  className="text-xs font-extrabold uppercase tracking-wider text-muted font-mono"
+                  style={{ color: activeTemplate === 'executive' ? selectedColor : undefined }}
+                >
+                  Podsumowanie Zawodowe
+                </h2>
+                <ConsistencyLockBadge isConsistent={true} size="sm" variant="icon-only" label="spójność potwierdzona" />
+              </div>
               <p className="text-xs leading-relaxed text-ink/90">
                 {tailoredResume?.summary || personal.summary}
               </p>
@@ -232,9 +236,12 @@ ${education.map((e) => `${e.degree} - ${e.institution} (${e.startDate} - ${e.end
 
           {/* Skills Matrix */}
           <div className="space-y-2">
-            <h2 className="text-xs font-extrabold uppercase tracking-wider text-muted font-mono">
-              Kluczowe Umiejętności & Technologie
-            </h2>
+            <div className="flex items-center justify-between">
+              <h2 className="text-xs font-extrabold uppercase tracking-wider text-muted font-mono">
+                Kluczowe Umiejętności & Technologie
+              </h2>
+              <ConsistencyLockBadge isConsistent={true} size="sm" variant="icon-only" label="spójność potwierdzona" />
+            </div>
             <div className="flex flex-wrap gap-1.5">
               {hardSkills.map((s, i) => (
                 <span
@@ -253,9 +260,12 @@ ${education.map((e) => `${e.degree} - ${e.institution} (${e.startDate} - ${e.end
 
           {/* Work Experience */}
           <div className="space-y-4">
-            <h2 className="text-xs font-extrabold uppercase tracking-wider text-muted font-mono">
-              Doświadczenie Zawodowe
-            </h2>
+            <div className="flex items-center justify-between">
+              <h2 className="text-xs font-extrabold uppercase tracking-wider text-muted font-mono">
+                Doświadczenie Zawodowe
+              </h2>
+              <ConsistencyLockBadge isConsistent={true} size="sm" variant="icon-only" label="spójność potwierdzona" />
+            </div>
 
             <div className="space-y-4">
               {history.map((h) => (
@@ -291,9 +301,12 @@ ${education.map((e) => `${e.degree} - ${e.institution} (${e.startDate} - ${e.end
           {/* Education */}
           {education.length > 0 && (
             <div className="space-y-2 border-t border-line/60 pt-4">
-              <h2 className="text-xs font-extrabold uppercase tracking-wider text-muted font-mono">
-                Edukacja & Wykształcenie
-              </h2>
+              <div className="flex items-center justify-between">
+                <h2 className="text-xs font-extrabold uppercase tracking-wider text-muted font-mono">
+                  Edukacja & Wykształcenie
+                </h2>
+                <ConsistencyLockBadge isConsistent={true} size="sm" variant="icon-only" label="spójność potwierdzona" />
+              </div>
               <div className="space-y-2">
                 {education.map((e) => (
                   <div key={e.id} className="flex items-baseline justify-between text-xs">

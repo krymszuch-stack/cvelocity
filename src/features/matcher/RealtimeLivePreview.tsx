@@ -7,6 +7,7 @@ import {
   BookOpen,
   Sparkles,
   CheckCircle2,
+  Tag,
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import {
@@ -21,10 +22,19 @@ import { CVWordBuilder } from './CVWordBuilder';
 import { AtsSimulatorView } from './AtsSimulatorView';
 import { CoverLetterView } from './CoverLetterView';
 import { InterviewCheatSheetView } from './InterviewCheatSheetView';
+import { ConsistencyGuardView } from '../consistency/ConsistencyGuardView';
+import { JDKeywordMapper } from './JDKeywordMapper';
 import { Tabs } from '../../components/ui/Tabs';
 import { Button } from '../../components/ui/Button';
 
-export type SubTabId = 'preview' | 'editor' | 'report' | 'coverLetter' | 'cheatSheet';
+export type SubTabId =
+  | 'preview'
+  | 'editor'
+  | 'report'
+  | 'mapper'
+  | 'coverLetter'
+  | 'cheatSheet'
+  | 'consistency';
 
 export interface RealtimeLivePreviewProps {
   vault: MasterVault;
@@ -51,8 +61,10 @@ export const RealtimeLivePreview: React.FC<RealtimeLivePreviewProps> = ({
     { id: 'preview' as SubTabId, label: 'Podgląd CV (A4)', icon: Eye },
     { id: 'editor' as SubTabId, label: 'Edytor Dokumentu', icon: FileEdit },
     { id: 'report' as SubTabId, label: 'Raport ATS & Wynik', icon: ShieldCheck },
+    { id: 'mapper' as SubTabId, label: 'Mapper Słów Kluczowych', icon: Tag },
     { id: 'coverLetter' as SubTabId, label: 'List Motywacyjny', icon: FileText },
     { id: 'cheatSheet' as SubTabId, label: 'Ściąga na Rozmowę', icon: BookOpen },
+    { id: 'consistency' as SubTabId, label: 'ConsistencyGuard 🔒', icon: ShieldCheck },
   ];
 
   return (
@@ -107,6 +119,14 @@ export const RealtimeLivePreview: React.FC<RealtimeLivePreviewProps> = ({
             />
           )}
 
+          {activeSubTab === 'mapper' && (
+            <JDKeywordMapper
+              initialJdText={jobOffer.description || jobOffer.requirements?.join(' ') || jobOffer.title}
+              vault={vault}
+              tailoredResume={tailoredResume}
+            />
+          )}
+
           {activeSubTab === 'coverLetter' && (
             <CoverLetterView
               coverLetter={coverLetter}
@@ -117,6 +137,12 @@ export const RealtimeLivePreview: React.FC<RealtimeLivePreviewProps> = ({
             <InterviewCheatSheetView
               vault={vault}
               jobOffer={jobOffer}
+            />
+          )}
+
+          {activeSubTab === 'consistency' && (
+            <ConsistencyGuardView
+              vault={vault}
             />
           )}
         </motion.div>

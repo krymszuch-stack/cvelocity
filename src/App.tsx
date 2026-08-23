@@ -19,6 +19,11 @@ import { GlobalShell, NavTabId } from './components/GlobalShell';
 import { CommandPalette } from './components/CommandPalette';
 import { Skeleton } from './components/ui/Skeleton';
 import { HomeView } from './views/HomeView';
+import { ReactFloatingPanel } from './components/hud/ReactFloatingPanel';
+import { SkillBridgeMatrixModal } from './components/bridge/SkillBridgeMatrixModal';
+import { ElevatorPitchModal } from './features/pitch/ElevatorPitchModal';
+import { InterviewLoopModal } from './features/loop/InterviewLoopModal';
+import { DrillModeModal } from './features/drill/DrillModeModal';
 
 // Lazy-loaded heavy views for fast initial bundle & LCP
 const JobMatcher = lazy(() => import('./features/matcher/JobMatcher').then((m) => ({ default: m.JobMatcher })));
@@ -29,6 +34,7 @@ const GeminiAdvisorModal = lazy(() => import('./features/advisor/GeminiAdvisorMo
 const ApplicationTracker = lazy(() => import('./features/tracker/ApplicationTracker').then((m) => ({ default: m.ApplicationTracker })));
 const PricingView = lazy(() => import('./views/PricingView').then((m) => ({ default: m.PricingView })));
 const DesignTokensShowcaseModal = lazy(() => import('./components/DesignTokensShowcaseModal').then((m) => ({ default: m.DesignTokensShowcaseModal })));
+const InterviewCockpitView = lazy(() => import('./features/cockpit/InterviewCockpitView').then((m) => ({ default: m.InterviewCockpitView })));
 
 const ViewLoadingFallback = () => (
   <div className="space-y-4 p-4 sm:p-6" aria-busy="true" aria-live="polite">
@@ -110,6 +116,38 @@ function MainApp() {
     setAdvisorOpen(true, initialQuestion);
   };
 
+  const [isHUDOpen, setHUDOpen] = useState(false);
+  const [isSkillBridgeOpen, setSkillBridgeOpen] = useState(false);
+  const [isPitchOpen, setPitchOpen] = useState(false);
+  const [isLoopOpen, setLoopOpen] = useState(false);
+  const [isDrillOpen, setDrillOpen] = useState(false);
+
+  // Globalne skróty Ctrl+H (Live HUD), Ctrl+B (Skill Bridge), Ctrl+P (Elevator Pitch), Ctrl+L (Interview Loop), Cmd+D (Practice / DrillMode)
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.ctrlKey || e.metaKey) {
+        if (e.key.toLowerCase() === 'h') {
+          e.preventDefault();
+          setHUDOpen((prev) => !prev);
+        } else if (e.key.toLowerCase() === 'b') {
+          e.preventDefault();
+          setSkillBridgeOpen((prev) => !prev);
+        } else if (e.key.toLowerCase() === 'p') {
+          e.preventDefault();
+          setPitchOpen((prev) => !prev);
+        } else if (e.key.toLowerCase() === 'l') {
+          e.preventDefault();
+          setLoopOpen((prev) => !prev);
+        } else if (e.key.toLowerCase() === 'd') {
+          e.preventDefault();
+          setDrillOpen((prev) => !prev);
+        }
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, []);
+
   return (
     <GlobalShell
       activeTab={activeTab}
@@ -117,6 +155,9 @@ function MainApp() {
       onOpenAdvisor={handleOpenAdvisor}
       onOpenAuthModal={() => setAuthModalOpen(true)}
       onOpenDesignTokens={() => setDesignTokensOpen(true)}
+      onOpenHUD={() => setHUDOpen(true)}
+      onOpenPitch={() => setPitchOpen(true)}
+      onOpenDrill={() => setDrillOpen(true)}
       isAuthenticated={isAuthenticated}
       userEmail={user?.email}
     >
@@ -146,6 +187,15 @@ function MainApp() {
                 vault={vault}
                 onUpdateVault={setVault}
                 onOpenAdvisor={handleOpenAdvisor}
+              />
+            )}
+
+            {/* Tab: Kokpit Rozmowy (Interview Playbook & Tactical Cockpit) */}
+            {activeTab === 'cockpit' && (
+              <InterviewCockpitView
+                vault={vault}
+                onOpenDrill={() => setDrillOpen(true)}
+                onOpenHUD={() => setHUDOpen(true)}
               />
             )}
 
@@ -208,6 +258,40 @@ function MainApp() {
         onSuccessVaultLoaded={(loadedVault) => {
           setVault(loadedVault);
         }}
+      />
+
+      {/* Live HUD Teleprompter Floating Panel (Ctrl+H) */}
+      <ReactFloatingPanel
+        isOpen={isHUDOpen}
+        onClose={() => setHUDOpen(false)}
+        vault={vault}
+      />
+
+      {/* Skill Bridge Matrix Modal (Ctrl+B) */}
+      <SkillBridgeMatrixModal
+        isOpen={isSkillBridgeOpen}
+        onClose={() => setSkillBridgeOpen(false)}
+        vault={vault}
+      />
+
+      {/* Elevator Pitch Generator Modal (Ctrl+P) */}
+      <ElevatorPitchModal
+        isOpen={isPitchOpen}
+        onClose={() => setPitchOpen(false)}
+        vault={vault}
+      />
+
+      {/* Interview Loop Manager Modal (Ctrl+L) */}
+      <InterviewLoopModal
+        isOpen={isLoopOpen}
+        onClose={() => setLoopOpen(false)}
+        vault={vault}
+      />
+
+      {/* Mock Drill Mode Modal (Cmd+D / Practice) */}
+      <DrillModeModal
+        isOpen={isDrillOpen}
+        onClose={() => setDrillOpen(false)}
       />
 
       {/* Command Palette (Cmd+K) */}

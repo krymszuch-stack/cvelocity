@@ -4,11 +4,12 @@ import { Shell, ShellProps } from './layout/Shell';
 export type NavTabId =
   | 'home'
   | 'matcher'
+  | 'cockpit'
+  | 'applications'
   | 'vault'
   | 'parser'
   | 'profiler'
-  | 'pricing'
-  | 'applications';
+  | 'pricing';
 
 export type GlobalShellProps = ShellProps;
 

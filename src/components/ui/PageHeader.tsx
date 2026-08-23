@@ -3,7 +3,7 @@ import React from 'react';
 export interface PageHeaderProps {
   title: string;
   description?: string;
-  badge?: string;
+  badge?: React.ReactNode;
   badgeVariant?: 'brand' | 'success' | 'warning';
   actions?: React.ReactNode;
   className?: string;

@@ -25,6 +25,9 @@ export const StorageKeys = {
   entitlementsCache: `${PREFIX}entitlements-cache`,
   cheatSheetCache: `${PREFIX}cheatsheet`,
   onboardingDismissed: `${PREFIX}onboarding-dismissed`,
+  interviewLoops: `${PREFIX}interview-loops`,
+  drillHistory: `${PREFIX}drill-history`,
+  cockpitProgress: `${PREFIX}cockpit-progress`,
 } as const;
 
 export type StorageKey = (typeof StorageKeys)[keyof typeof StorageKeys];

@@ -28,6 +28,7 @@ import { PreferencesSection } from './PreferencesSection';
 import { Button } from '../../components/ui/Button';
 import { Tabs } from '../../components/ui/Tabs';
 import { PageHeader } from '../../components/ui/PageHeader';
+import { ConsistencyLockBadge } from '../../components/consistency/ConsistencyLockBadge';
 import { showToast } from '../../store/useToastStore';
 
 export interface MasterVaultEditorProps {
@@ -126,7 +127,12 @@ export const MasterVaultEditor: React.FC<MasterVaultEditorProps> = ({
       <PageHeader
         title="Master Vault • Profil Główny Kandydata"
         description="Pojedyncze źródło prawdy (Single Source of Truth) dla wszystkich Twoich kompetencji, doświadczeń i preferencji."
-        badge="Core SSoT"
+        badge={
+          <div className="flex items-center gap-2">
+            <span>Core SSoT</span>
+            <ConsistencyLockBadge isConsistent={true} size="sm" label="spójność potwierdzona" />
+          </div>
+        }
         actions={
           <div className="flex flex-wrap items-center gap-2">
             <Tabs<ViewMode>

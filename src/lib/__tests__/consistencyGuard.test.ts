@@ -1,0 +1,286 @@
+import { describe, it, expect } from 'vitest';
+import {
+  parseDateRangeToYears,
+  calculateYearsDifference,
+  detectSkillContradictions,
+  validateConsistency,
+  renderCvFromClaims,
+  renderHudFromClaims,
+  renderPitchFromClaims,
+  renderLinkedInFromClaims,
+  extractClaimsFromVault,
+  MAX_ALLOWED_YEAR_DIFFERENCE,
+} from '../consistencyGuard';
+import { MasterVault } from '../../types';
+import { createEmptyVault } from '../sampleVault';
+import { ag } from '../../skills/liveHudSkill';
+import { invokeClaimConsistencyGuard } from '../../skills/claim-consistency-guard';
+
+describe('ConsistencyGuard Engine', () => {
+  const createMockVault = (): MasterVault => {
+    const vault = createEmptyVault('Jan Kowalski', 'jan@example.com');
+    vault.personalInfo.title = 'Senior Full-Stack Engineer';
+    vault.skillsMatrix.hardSkills = ['TypeScript', 'React', 'Node.js', 'PostgreSQL'];
+    vault.skillsMatrix.toolsAndTech = ['Docker', 'Git', 'AWS'];
+    vault.history = [
+      {
+        id: 'exp_1',
+        company: 'Cloud Corp',
+        role: 'Senior Developer',
+        location: 'Warszawa',
+        startDate: '2021-01',
+        endDate: '2023-01', // Dokładnie 2.0 lata
+        isCurrent: false,
+        highlights: [
+          {
+            id: 'hl_1',
+            text: 'Wzrost wydajności API o 40% w architekturze mikroserwisowej.',
+            action: 'Wdrożenie',
+            target: 'API',
+            tool: 'Node.js',
+            metric: '+40% TPS',
+            keywords: ['TypeScript', 'Node.js', 'PostgreSQL'],
+          },
+        ],
+      },
+      {
+        id: 'exp_2',
+        company: 'Tech Innovators',
+        role: 'Lead Architect',
+        location: 'Kraków',
+        startDate: '2023-02',
+        endDate: '2024-08', // 1.5 roku
+        isCurrent: false,
+        highlights: [
+          {
+            id: 'hl_2',
+            text: 'Budowa portalu w React z czasem ładowania < 1s.',
+            action: 'Architektura',
+            target: 'Frontend',
+            tool: 'React',
+            metric: '<1s LCP',
+            keywords: ['React', 'TypeScript', 'TailwindCSS'],
+          },
+        ],
+      },
+    ];
+    vault.projects = [
+      {
+        id: 'proj_1',
+        name: 'System Analityczny ATS',
+        role: 'Główny Inżynier',
+        description: 'Autorski silnik rankingowy ATS.',
+        techStack: ['TypeScript', 'Vitest'],
+        metrics: '99.9% uptime',
+      },
+    ];
+    return vault;
+  };
+
+  describe('Parsowanie dat i obliczanie różnicy w latach', () => {
+    it('poprawnie oblicza czas trwania dla formatu YYYY-MM', () => {
+      const parsed = parseDateRangeToYears({ start: '2021-01', end: '2023-01' });
+      expect(parsed).not.toBeNull();
+      expect(parsed?.durationYears).toBeCloseTo(2.0, 1);
+    });
+
+    it('zwraca różnicę <= 0.5 roku dla nieznacznych rozbieżności', () => {
+      const rangeA = { start: '2021-01', end: '2023-01' }; // 2.0 lata
+      const rangeB = { start: '2021-01', end: '2023-04' }; // 2.25 roku (różnica 0.25 roku)
+      const diff = calculateYearsDifference(rangeA, rangeB);
+      expect(diff).toBeLessThanOrEqual(MAX_ALLOWED_YEAR_DIFFERENCE);
+    });
+
+    it('zwraca różnicę > 0.5 roku gdy rozbieżność przekracza 6 miesięcy', () => {
+      const rangeA = { start: '2021-01', end: '2023-01' }; // 2.0 lata
+      const rangeB = { start: '2021-01', end: '2024-01' }; // 3.0 lata (różnica 1.0 roku)
+      const diff = calculateYearsDifference(rangeA, rangeB);
+      expect(diff).toBeGreaterThan(MAX_ALLOWED_YEAR_DIFFERENCE);
+    });
+  });
+
+  describe('Ekstrakcja claimów z MasterVault', () => {
+    it('ekstrahuje powiązane claimy z historii i projektów', () => {
+      const vault = createMockVault();
+      const claims = extractClaimsFromVault(vault);
+      expect(claims.length).toBeGreaterThanOrEqual(3);
+
+      const expClaim = claims.find((c) => c.id === 'claim_exp_exp_1');
+      expect(expClaim).toBeDefined();
+      expect(expClaim?.sourceProject).toBe('Cloud Corp');
+      expect(expClaim?.tags).toContain('TypeScript');
+    });
+  });
+
+  describe('Wykrywanie sprzeczności w skillach (Skill Contradictions)', () => {
+    it('wykrywa sprzeczność tagu negującego bazę danych z tagiem SQL', () => {
+      const claim = {
+        id: 'claim_conflict',
+        sourceProject: 'Projekt X',
+        dateRange: { start: '2022-01', end: '2023-01' },
+        tags: ['Brak znajomości SQL', 'PostgreSQL Expert'],
+      };
+      const issues = detectSkillContradictions(claim, [claim]);
+      expect(issues.length).toBeGreaterThan(0);
+      expect(issues[0]).toContain('SQL');
+    });
+
+    it('wykrywa sprzeczność deklaracji junior-only ze stanowiskiem Senior/Architect', () => {
+      const claim = {
+        id: 'claim_conflict_junior',
+        sourceProject: 'Projekt Y',
+        dateRange: { start: '2022-01', end: '2023-01' },
+        tags: ['Tylko Junior', 'Lead Architect'],
+      };
+      const issues = detectSkillContradictions(claim, [claim]);
+      expect(issues.length).toBeGreaterThan(0);
+      expect(issues[0]).toContain('Junior');
+    });
+  });
+
+  describe('Główny walidator (validateConsistency)', () => {
+    it('zwraca isConsistent: true gdy wszystkie projekcje są zgodne z MasterVault', () => {
+      const vault = createMockVault();
+      const result = validateConsistency(vault, {
+        projectedItems: [
+          {
+            sectionId: 'cv',
+            sectionName: 'Doświadczenie CV',
+            claimId: 'claim_exp_exp_1',
+            claimedDateRange: { start: '2021-01', end: '2023-01' }, // 2.0 lata (zgodne z exp_1)
+            claimedTags: ['TypeScript', 'Node.js'],
+          },
+        ],
+      });
+
+      expect(result.isConsistent).toBe(true);
+      expect(result.alerts).toHaveLength(0);
+      expect(result.sections.cv.isConsistent).toBe(true);
+    });
+
+    it('generuje ALERT DATE_MISMATCH gdy różnica w latach przekracza 0.5 roku', () => {
+      const vault = createMockVault();
+      const result = validateConsistency(vault, {
+        projectedItems: [
+          {
+            sectionId: 'cv',
+            sectionName: 'Doświadczenie CV',
+            claimId: 'claim_exp_exp_1',
+            claimedDateRange: { start: '2020-01', end: '2023-01' }, // 3.0 lata vs 2.0 w Vault (różnica 1.0 > 0.5)
+          },
+        ],
+      });
+
+      expect(result.isConsistent).toBe(false);
+      const dateAlert = result.alerts.find((a) => a.type === 'DATE_MISMATCH');
+      expect(dateAlert).toBeDefined();
+      expect(dateAlert?.severity).toBe('ALERT');
+      expect(dateAlert?.details?.differenceYears).toBeGreaterThan(0.5);
+    });
+
+    it('generuje ALERT SKILL_CONTRADICTION w przypadku sprzecznych kompetencji', () => {
+      const vault = createMockVault();
+      const result = validateConsistency(vault, {
+        projectedItems: [
+          {
+            sectionId: 'hud',
+            sectionName: 'Wskaźniki HUD',
+            claimId: 'claim_exp_exp_1',
+            claimedTags: ['Brak znajomości SQL', 'PostgreSQL'],
+          },
+        ],
+      });
+
+      expect(result.isConsistent).toBe(false);
+      const skillAlert = result.alerts.find((a) => a.type === 'SKILL_CONTRADICTION');
+      expect(skillAlert).toBeDefined();
+      expect(skillAlert?.severity).toBe('ALERT');
+    });
+
+    it('generuje ostrzeżenie gdy claimId nie istnieje w MasterVault', () => {
+      const vault = createMockVault();
+      const result = validateConsistency(vault, {
+        claimIdsToCheck: ['claim_nieistniejacy_123'],
+      });
+
+      const missingAlert = result.alerts.find((a) => a.type === 'CLAIM_NOT_FOUND');
+      expect(missingAlert).toBeDefined();
+    });
+  });
+
+  describe('Renderery pobierające dane z MasterVault przez claimId', () => {
+    it('renderCvFromClaims tworzy sekcje CV oparte na powiązaniach claimId', () => {
+      const vault = createMockVault();
+      const cvOutput = renderCvFromClaims(vault, ['claim_exp_exp_1', 'claim_proj_proj_1']);
+
+      expect(cvOutput.candidateName).toBe('Jan Kowalski');
+      expect(cvOutput.sections.length).toBeGreaterThan(0);
+      const items = cvOutput.sections.flatMap((s) => s.items);
+      expect(items.some((i) => i.claimId === 'claim_exp_exp_1')).toBe(true);
+      expect(items.some((i) => i.project === 'Cloud Corp')).toBe(true);
+    });
+
+    it('renderHudFromClaims agreguje metryki i skille z claimów', () => {
+      const vault = createMockVault();
+      const hudOutput = renderHudFromClaims(vault, ['claim_exp_exp_1', 'claim_exp_exp_2']);
+
+      expect(hudOutput.activeClaimsCount).toBe(2);
+      expect(hudOutput.timelineCoverageYears).toBeGreaterThanOrEqual(3.0);
+      expect(hudOutput.skillsRadar.some((s) => s.skill === 'TypeScript')).toBe(true);
+      expect(hudOutput.consistencyScore).toBe(100);
+    });
+
+    it('renderPitchFromClaims generuje 30-sekundowy pitch na bazie zweryfikowanych faktów', () => {
+      const vault = createMockVault();
+      const pitchOutput = renderPitchFromClaims(vault, ['claim_exp_exp_1', 'claim_exp_exp_2']);
+
+      expect(pitchOutput.hook).toContain('filar');
+      expect(pitchOutput.coreStrengths).toHaveLength(2);
+      expect(pitchOutput.elevatorPitchText).toContain('Cloud Corp');
+      expect(pitchOutput.callToAction).toBeTruthy();
+    });
+
+    it('renderLinkedInFromClaims generuje profil z pozycjami powiązanymi z claimId', () => {
+      const vault = createMockVault();
+      const linkedIn = renderLinkedInFromClaims(vault, ['claim_exp_exp_1', 'claim_exp_exp_2']);
+
+      expect(linkedIn.headline).toContain('Full-Stack');
+      expect(linkedIn.experience.length).toBe(2);
+      expect(linkedIn.experience[0].company).toBe('Cloud Corp');
+      expect(linkedIn.skills).toContain('TypeScript');
+    });
+  });
+
+  describe('Skill ClaimConsistencyGuard (claim-consistency-guard-v1)', () => {
+    it('posiada poprawne ID, zależności i rejestrację w ag', () => {
+      const skill = ag.getSkill('claim-consistency-guard-v1');
+      expect(skill).toBeDefined();
+      expect(skill?.dependencies).toContain('master-vault');
+      expect(skill?.dependencies).toContain('cv-renderer');
+      expect(skill?.dependencies).toContain('linkedin-exporter');
+    });
+
+    it('obsługuje wywołanie invokeClaimConsistencyGuard dla walidacji i rendererów', () => {
+      const vault = createMockVault();
+      const res = invokeClaimConsistencyGuard({ action: 'validate', vault }) as { isConsistent: boolean };
+      expect(res.isConsistent).toBe(true);
+
+      const linkedInRes = invokeClaimConsistencyGuard({
+        action: 'renderLinkedIn',
+        vault,
+        claimIds: ['claim_exp_exp_1'],
+      }) as { headline: string };
+      expect(linkedInRes.headline).toBeDefined();
+    });
+
+    it('obsługuje wyzwalacze zdarzeń before-generate-cv, onSave, onExport, onGenerate', () => {
+      const vault = createMockVault();
+      expect(() => {
+        ag.emit('before-generate-cv', { vault });
+        ag.emit('onSave', { vault });
+        ag.emit('onExport', { vault });
+        ag.emit('onGenerate', { vault });
+      }).not.toThrow();
+    });
+  });
+});

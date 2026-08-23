@@ -97,6 +97,19 @@ export interface Project {
   link?: string;
 }
 
+export interface ClaimDateRange {
+  start: string;
+  end: string;
+}
+
+export interface Claim {
+  id: string;
+  sourceProject: string;
+  dateRange: ClaimDateRange | string;
+  metric?: string;
+  tags: string[];
+}
+
 export interface MasterVault {
   version: string;
   updatedAt: string;
@@ -106,6 +119,7 @@ export interface MasterVault {
   history: WorkExperience[];
   education: Education[];
   projects: Project[];
+  claims?: Claim[];
 }
 
 export interface PhraseSlot {
@@ -271,6 +285,44 @@ export interface StarTalkingPoint {
   sourceExperienceId?: string;
 }
 
+export interface STARStory {
+  id: string;
+  title: string;
+  situation: string;
+  task: string;
+  action: string;
+  result: string;
+  metrics: string[];
+  tags: string[];
+  projectId: string;
+  durationSec: number;
+}
+
+export interface SkillBridge {
+  id: string;
+  missingSkill: string;
+  adjacentSkill: string;
+  conceptualEquivalence: string;
+  bridgeExplanation: string;
+  talkingPoint: string;
+  evidenceFromVault?: string;
+  learningCurveDays?: number;
+  confidenceScore: number;
+}
+
+export interface ElevatorPitchOutput {
+  oneLiner: string;
+  thirtySeconds: string;
+  ninetySeconds: string;
+  metricsUsed: string[];
+  targetRole: string;
+  estimatedDurationSec: {
+    oneLiner: number;
+    thirtySeconds: number;
+    ninetySeconds: number;
+  };
+}
+
 export interface InterviewQaItem {
   id: string;
   question: string;
@@ -285,6 +337,64 @@ export interface RedFlagConceptItem {
   detail: string;
   severity: 'MUST_KNOW' | 'GOOD_TO_KNOW';
   source: 'MANDATORY_REQUIREMENT' | 'CORE_RESPONSIBILITY' | 'SENIORITY_IMPLICATION';
+}
+
+export type InterviewStage =
+  | 'INTRO'
+  | 'TECHNICAL'
+  | 'SYSTEM_DESIGN'
+  | 'BEHAVIORAL'
+  | 'CANDIDATE_QA'
+  | 'WRAP_UP';
+
+export interface PreCallChecklistItem {
+  id: string;
+  category: 'TECHNICAL' | 'RESEARCH' | 'ENVIRONMENT';
+  label: string;
+  completed: boolean;
+}
+
+export interface LiveNoteItem {
+  id: string;
+  timestamp: string;
+  stage: InterviewStage;
+  text: string;
+  sentiment?: 'POSITIVE' | 'NEUTRAL' | 'CHALLENGING';
+}
+
+export interface LiveTrackerState {
+  currentStage: InterviewStage;
+  startedAt?: string;
+  stageDurations: Partial<Record<InterviewStage, number>>;
+  notes: LiveNoteItem[];
+  interviewerQuestions: string[];
+}
+
+export interface PostCallDebrief {
+  overallRating: 1 | 2 | 3 | 4 | 5;
+  whatWentWell: string;
+  trickyQuestions: string[];
+  topicsToClarifyInFollowUp: string;
+  salaryTimelineNotes?: string;
+  generatedFollowUpEmail: string;
+  completedAt?: string;
+}
+
+export interface InterviewLoopSession {
+  id: string;
+  jobOfferId?: string;
+  companyName: string;
+  roleTitle: string;
+  jdText?: string;
+  scheduledAt: string;
+  status: 'UPCOMING' | 'IN_PROGRESS' | 'COMPLETED';
+  tags?: string[];
+  selectedStories?: STARStory[];
+  selectedBridges?: SkillBridge[];
+  preCallChecklist: PreCallChecklistItem[];
+  liveTracker: LiveTrackerState;
+  postCallDebrief?: PostCallDebrief;
+  updatedAt: string;
 }
 
 export interface EmergencyPhrase {

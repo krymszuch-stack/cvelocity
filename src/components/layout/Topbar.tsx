@@ -11,6 +11,7 @@ import {
   FileText,
   LogOut,
   ExternalLink,
+  Target,
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { ThemeToggle } from '../ThemeToggle';
@@ -26,6 +27,9 @@ export interface TopbarProps {
   onOpenAdvisor: () => void;
   onOpenAuthModal: () => void;
   onOpenDesignTokens?: () => void;
+  onOpenHUD?: () => void;
+  onOpenPitch?: () => void;
+  onOpenDrill?: () => void;
   isAuthenticated?: boolean;
   userEmail?: string;
   className?: string;
@@ -34,6 +38,7 @@ export interface TopbarProps {
 const TAB_NAMES: Record<NavTabId, string> = {
   home: 'Strona Główna',
   matcher: 'Agregator Ofert & ATS Simulator',
+  cockpit: 'Kokpit Rozmowy • Playbook Taktyczny',
   applications: 'Pipeline Aplikacji',
   vault: 'Master Vault • Profil Kandydata',
   parser: 'Wczytywanie & Scalanie CV',
@@ -47,6 +52,9 @@ export const Topbar: React.FC<TopbarProps> = ({
   onOpenAdvisor,
   onOpenAuthModal,
   onOpenDesignTokens,
+  onOpenHUD,
+  onOpenPitch,
+  onOpenDrill,
   isAuthenticated = false,
   userEmail,
   className = '',
@@ -121,6 +129,60 @@ export const Topbar: React.FC<TopbarProps> = ({
           </span>
         </button>
 
+
+        {/* Live HUD Teleprompter Button */}
+        {onOpenHUD && (
+          <motion.button
+            type="button"
+            onClick={onOpenHUD}
+            whileHover={{ scale: 1.05 }}
+            whileTap={{ scale: 0.95 }}
+            transition={{ duration: 0.18, ease: [0.19, 1, 0.22, 1] }}
+            className="flex h-9 items-center gap-1.5 rounded-lg border border-brand-500/30 bg-brand-500/10 px-2.5 text-xs font-mono font-bold text-brand-600 hover:bg-brand-500/20 focus-visible:outline-none"
+            aria-label="Otwórz Live HUD Teleprompter (Ctrl+H)"
+            title="Otwórz Live HUD Teleprompter (Ctrl+H)"
+          >
+            <Zap className="h-3.5 w-3.5" />
+            <span className="hidden md:inline">HUD</span>
+            <span className="hidden lg:inline text-[9px] opacity-70">Ctrl+H</span>
+          </motion.button>
+        )}
+
+        {/* Elevator Pitch Button */}
+        {onOpenPitch && (
+          <motion.button
+            type="button"
+            onClick={onOpenPitch}
+            whileHover={{ scale: 1.05 }}
+            whileTap={{ scale: 0.95 }}
+            transition={{ duration: 0.18, ease: [0.19, 1, 0.22, 1] }}
+            className="flex h-9 items-center gap-1.5 rounded-lg border border-line bg-surface px-2.5 text-xs font-mono font-bold text-ink hover:border-brand-500 hover:text-brand-600 focus-visible:outline-none"
+            aria-label="Otwórz Elevator Pitch Generator (Ctrl+P)"
+            title="Otwórz Elevator Pitch Generator (Ctrl+P)"
+          >
+            <Sparkles className="h-3.5 w-3.5 text-brand-600" />
+            <span className="hidden md:inline">Pitch</span>
+            <span className="hidden lg:inline text-[9px] text-muted">Ctrl+P</span>
+          </motion.button>
+        )}
+
+        {/* Mock Drill Mode (Practice) Button */}
+        {onOpenDrill && (
+          <motion.button
+            type="button"
+            onClick={onOpenDrill}
+            whileHover={{ scale: 1.05 }}
+            whileTap={{ scale: 0.95 }}
+            transition={{ duration: 0.18, ease: [0.19, 1, 0.22, 1] }}
+            className="flex h-9 items-center gap-1.5 rounded-lg border border-line bg-surface px-2.5 text-xs font-mono font-bold text-ink hover:border-brand-500 hover:text-brand-600 focus-visible:outline-none"
+            aria-label="Otwórz Mock Drill Mode (Cmd+D)"
+            title="Otwórz Mock Drill Mode (Cmd+D)"
+          >
+            <Target className="h-3.5 w-3.5 text-brand-600" />
+            <span className="hidden md:inline">Practice</span>
+            <span className="hidden lg:inline text-[9px] text-muted">Cmd+D</span>
+          </motion.button>
+        )}
 
         {/* Advisor Button with Ping Indicator */}
         <AdvisorButton onClick={onOpenAdvisor} />

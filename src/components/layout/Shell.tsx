@@ -11,6 +11,9 @@ export interface ShellProps {
   onOpenAdvisor: (initialQuestion?: string) => void;
   onOpenAuthModal: () => void;
   onOpenDesignTokens?: () => void;
+  onOpenHUD?: () => void;
+  onOpenPitch?: () => void;
+  onOpenDrill?: () => void;
   isAuthenticated?: boolean;
   userEmail?: string;
   planStatus?: 'free' | 'trialing' | 'active';
@@ -23,6 +26,9 @@ export const Shell: React.FC<ShellProps> = ({
   onOpenAdvisor,
   onOpenAuthModal,
   onOpenDesignTokens,
+  onOpenHUD,
+  onOpenPitch,
+  onOpenDrill,
   isAuthenticated = false,
   userEmail,
   planStatus = 'free',
@@ -114,6 +120,9 @@ export const Shell: React.FC<ShellProps> = ({
           onOpenAdvisor={() => onOpenAdvisor()}
           onOpenAuthModal={onOpenAuthModal}
           onOpenDesignTokens={onOpenDesignTokens}
+          onOpenHUD={onOpenHUD}
+          onOpenPitch={onOpenPitch}
+          onOpenDrill={onOpenDrill}
           isAuthenticated={isAuthenticated}
           userEmail={userEmail}
         />

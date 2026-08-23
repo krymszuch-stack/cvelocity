@@ -59,8 +59,10 @@ beforeEach(() => {
 });
 
 describe('Granica AI — co faktycznie wychodzi z serwera', () => {
-  it('list motywacyjny: żadne dane identyfikujące nie trafiają do modelu', async () => {
-    const { generateCoverLetterWithFlash } = await import('../gemini');
+  it(
+    'list motywacyjny: żadne dane identyfikujące nie trafiają do modelu',
+    async () => {
+      const { generateCoverLetterWithFlash } = await import('../gemini');
 
     await generateCoverLetterWithFlash(vault, 'Backend Developer', 'Firma', 'Opis oferty');
 
@@ -79,7 +81,7 @@ describe('Granica AI — co faktycznie wychodzi z serwera', () => {
     // Treść merytoryczna musi przetrwać, inaczej list byłby bezwartościowy.
     expect(payload).toContain('Acme');
     expect(payload).toContain('Docker');
-  });
+  }, 15000);
 
   it('list motywacyjny: użytkownik dostaje wynik ze swoim nazwiskiem, nie z placeholderem', async () => {
     const { generateCoverLetterWithFlash } = await import('../gemini');

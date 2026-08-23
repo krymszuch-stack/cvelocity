@@ -10,7 +10,7 @@ import { resolve } from 'node:path';
  */
 
 const root = resolve(__dirname, '../../..');
-const tokens = readFileSync(resolve(root, 'src/styles/tokens.css'), 'utf8');
+const tokens = readFileSync(resolve(root, 'src/styles/tokens.css'), 'utf8').replace(/\r\n/g, '\n');
 
 /** Wycina ciało bloku CSS zaczynającego się od podanego selektora. */
 function block(selectorStart: string): string {

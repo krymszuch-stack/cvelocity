@@ -10,6 +10,9 @@ import {
   MessageCircleQuestion,
   LifeBuoy,
   Wand2,
+  Target,
+  Zap,
+  Radio,
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { MasterVault, JobOffer, InterviewCheatSheet } from '../../types';
@@ -24,6 +27,11 @@ import {
   generateCheatSheetEnrichmentWithAI,
   mergeGeminiCheatSheetEnrichment,
 } from '../../lib/interviewCheatSheetEngine';
+import { STARStoryView } from '../star/STARStoryView';
+import { DrillModeModal } from '../drill/DrillModeModal';
+import { DrillQuestion, DEFAULT_DRILL_QUESTIONS } from '../../lib/drillEngine';
+import { ElevatorPitchModal } from '../pitch/ElevatorPitchModal';
+import { InterviewLoopModal } from '../loop/InterviewLoopModal';
 
 export interface InterviewCheatSheetViewProps {
   vault: MasterVault;
@@ -97,6 +105,9 @@ export const InterviewCheatSheetView: React.FC<InterviewCheatSheetViewProps> = (
   const [enrichment, setEnrichment] = useState<InterviewCheatSheet | null>(null);
   const [isEnriching, setIsEnriching] = useState(false);
   const [enrichError, setEnrichError] = useState<string | null>(null);
+  const [isDrillOpen, setIsDrillOpen] = useState(false);
+  const [isPitchOpen, setIsPitchOpen] = useState(false);
+  const [isLoopModalOpen, setIsLoopModalOpen] = useState(false);
 
   const parsedJD = useMemo(() => toParsedJobDescription(jobOffer), [jobOffer]);
 
@@ -115,6 +126,20 @@ export const InterviewCheatSheetView: React.FC<InterviewCheatSheetViewProps> = (
 
   const cheatSheet = enrichment ?? localCheatSheet;
   const isEnriched = cheatSheet.generationMode === 'GEMINI_ENRICHED';
+
+  // Budowanie pytań do DrillMode z pytań oferty + domyślnych
+  const drillQuestions: DrillQuestion[] = useMemo(() => {
+    const fromCheatSheet: DrillQuestion[] = cheatSheet.qaBank.map((qa) => ({
+      id: qa.id,
+      question: qa.question,
+      category: qa.category === 'TECHNICAL' ? 'TECHNICAL' : 'BEHAVIORAL',
+      hint: 'Wskazówka ze ściągi rekrutacyjnej dopasowanej do tej oferty.',
+      targetDurationSec: 60,
+      referenceNotes: qa.modelAnswer,
+    }));
+
+    return [...fromCheatSheet, ...DEFAULT_DRILL_QUESTIONS];
+  }, [cheatSheet.qaBank]);
 
   const toggleSection = (key: SectionKey) => {
     setOpenSections((prev) => ({ ...prev, [key]: !prev[key] }));
@@ -206,6 +231,30 @@ export const InterviewCheatSheetView: React.FC<InterviewCheatSheetViewProps> = (
           </p>
         </div>
         <div className="flex shrink-0 items-center gap-2">
+          <Button
+            size="sm"
+            variant="outline"
+            icon={Radio}
+            onClick={() => setIsLoopModalOpen(true)}
+          >
+            Interview Loop 🎙️
+          </Button>
+          <Button
+            size="sm"
+            variant="outline"
+            icon={Zap}
+            onClick={() => setIsPitchOpen(true)}
+          >
+            Elevator Pitch ⚡
+          </Button>
+          <Button
+            size="sm"
+            variant="primary"
+            icon={Target}
+            onClick={() => setIsDrillOpen(true)}
+          >
+            Uruchom DrillMode 🎯
+          </Button>
           <Chip variant={isEnriched ? 'brand' : 'neutral'} className="text-[10px] py-px">
             {isEnriched ? 'Wzbogacona przez AI' : 'Szkielet lokalny · 0 tokenów'}
           </Chip>
@@ -291,51 +340,7 @@ export const InterviewCheatSheetView: React.FC<InterviewCheatSheetViewProps> = (
         {collapsible(
           'star',
           'space-y-3 pt-2',
-          cheatSheet.starTalkingPoints.length === 0 ? (
-            <EmptyState
-              icon={Award}
-              title="Brak historii do przekucia w STAR"
-              description="Uzupełnij doświadczenie w Master Vaulcie — historie budowane są wyłącznie z Twoich prawdziwych osiągnięć."
-            />
-          ) : (
-            cheatSheet.starTalkingPoints.map((point) => (
-              <div
-                key={point.id}
-                className="space-y-3 rounded-2xl border border-line bg-surface p-4 text-xs"
-              >
-                <div className="border-b border-line pb-2">
-                  <span className="font-bold text-ink">Pod wymaganie: </span>
-                  <span className="text-brand-fg">{point.relatedRequirement}</span>
-                </div>
-                <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-4">
-                  <div className="rounded-xl border border-line/60 bg-sunken p-2.5">
-                    <span className="mb-0.5 block font-mono text-[10px] font-bold text-muted">
-                      S (Situation)
-                    </span>
-                    <p className="text-[11px] text-ink/90">{point.situation}</p>
-                  </div>
-                  <div className="rounded-xl border border-line/60 bg-sunken p-2.5">
-                    <span className="mb-0.5 block font-mono text-[10px] font-bold text-muted">
-                      T (Task)
-                    </span>
-                    <p className="text-[11px] text-ink/90">{point.task}</p>
-                  </div>
-                  <div className="rounded-xl border border-line/60 bg-sunken p-2.5">
-                    <span className="mb-0.5 block font-mono text-[10px] font-bold text-muted">
-                      A (Action)
-                    </span>
-                    <p className="text-[11px] text-ink/90">{point.action}</p>
-                  </div>
-                  <div className="rounded-xl border border-success/30 bg-success-soft/50 p-2.5">
-                    <span className="mb-0.5 block font-mono text-[10px] font-bold text-success-fg">
-                      R (Result)
-                    </span>
-                    <p className="text-[11px] font-bold text-success-fg">{point.result}</p>
-                  </div>
-                </div>
-              </div>
-            ))
-          )
+          <STARStoryView vault={vault} />
         )}
       </Card>
 
@@ -453,6 +458,28 @@ export const InterviewCheatSheetView: React.FC<InterviewCheatSheetViewProps> = (
           ))
         )}
       </Card>
+
+      {/* Modal trybu DrillMode */}
+      <DrillModeModal
+        isOpen={isDrillOpen}
+        onClose={() => setIsDrillOpen(false)}
+        customQuestions={drillQuestions}
+      />
+
+      {/* Modal Elevator Pitch Generator */}
+      <ElevatorPitchModal
+        isOpen={isPitchOpen}
+        onClose={() => setIsPitchOpen(false)}
+        vault={vault}
+      />
+
+      {/* Modal Interview Loop Manager */}
+      <InterviewLoopModal
+        isOpen={isLoopModalOpen}
+        onClose={() => setIsLoopModalOpen(false)}
+        vault={vault}
+        jobOffer={jobOffer}
+      />
     </div>
   );
 };

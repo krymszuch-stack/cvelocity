@@ -7,6 +7,7 @@ import {
 import {
   IconHome,
   IconMatcher,
+  IconBrain,
   IconApplications,
   IconVault,
   IconParser,
@@ -45,6 +46,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
   const navItems = [
     { id: 'home' as NavTabId, label: 'Strona Główna', icon: IconHome as any },
     { id: 'matcher' as NavTabId, label: 'Dopasowanie Ofert', icon: IconMatcher as any, badge: 'ATS', badgeVariant: 'brand' as const },
+    { id: 'cockpit' as NavTabId, label: 'Kokpit Rozmowy', icon: IconBrain as any, badge: 'Trener', badgeVariant: 'brand' as const },
     { id: 'applications' as NavTabId, label: 'Aplikacje', icon: IconApplications as any, badge: 'CRM', badgeVariant: 'success' as const },
     { id: 'vault' as NavTabId, label: 'Master Vault', icon: IconVault as any, badge: 'Core', badgeVariant: 'brand' as const },
     { id: 'parser' as NavTabId, label: 'Wczytaj CV', icon: IconParser as any },
