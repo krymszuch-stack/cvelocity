@@ -20,6 +20,13 @@ Incydenty, z których wyprowadzono reguły poniżej, są opisane w archiwum
 projektu i nie opisują stanu bieżącego — służą wyłącznie do sprawdzenia,
 skąd wzięła się dana reguła.
 
+Ten plik jest kontraktem dla obu agentów: Claude Code trafia tu przez
+`CLAUDE.md`, Antigravity czyta go natywnie. Antigravity dostaje dodatkowo reguły
+per-obszar w [`.agents/rules/`](./.agents/rules/) — one nie powtarzają treści
+stąd, tylko wskazują właściwą sekcję i dokładają pułapkę specyficzną dla danego
+katalogu. **Limit Antigravity to 12 000 znaków na plik reguł**, więc ten plik
+i katalog `.agents/` pilnuje `scripts/sprawdz-limity-regul.mjs` w CI.
+
 ## Dwa pakiety, dwie konfiguracje
 
 | | katalog główny | `semantic-work-graph/` |
@@ -88,7 +95,7 @@ wyłącznie przez `src/lib/apiClient.ts` — nie wpisuj `fetch` do komponentu.
 omija RLS, więc pole z żądania pozwoliłoby nadpisać cudze dane
 (`src/server/routes/vault.routes.ts:36`).
 
-## Dziewięć reguł
+## Dziesięć reguł
 
 Każda ma za sobą konkretny błąd w historii tego repozytorium.
 
@@ -156,59 +163,20 @@ tworzy okno, w którym dane są tylko w pamięci. Domknij je przy ukryciu karty
 `beforeunload`) i odmontowaniu komponentu.
 > Wzorzec i testy: `src/lib/deferredWriter.ts`.
 
+**10. Sprawdź, jak daleko odjechał `main`, zanim zaczniesz.** Gałąź kilkadziesiąt
+commitów w tyle nie da się już zmergować — da się ją tylko przepisać. Przed pracą
+uruchom `scripts/sprawdz-swiezosc.sh`; powyżej progu rebase'uj albo zacznij od
+`origin/main`. Skończoną pracę scalaj od razu, a nie „jak będzie gotowa".
+> Silnik Ściągi na Rozmowę przeleżał na gałęzi sprzed przebudowy katalogów, aż
+> `main` odjechał o 94 commity. Merge dokładałby drugi komplet plików obok
+> istniejących, więc PR #87 musiał portować logikę ręcznie. W tym samym czasie
+> `main` pokazywał użytkownikom atrapę tej funkcji z fabrykowanymi danymi.
+
 ## Co wolno delegować agentowi autonomicznemu
 
-> **Deleguj to, co CI potrafi obalić. Resztę albo najpierw obłóż testem, albo zatrzymaj.**
-
-Agent autonomiczny udowadnia dokładnie jedno: „testy przechodzą, build zielony".
-Bramką jest `npm run lint` → `npm test` → `npm run build` w `.github/workflows/ci.yml`.
-
-Są jednak zmiany, **których CI nie obali** — i to one wyznaczają granicę.
-
-### Zielona lista
-
-Praca mechaniczna, o wąskim zakresie, w całości weryfikowalna przez CI.
-
-| Typ zadania | Dlaczego bezpieczne |
-| --- | --- |
-| Dopisanie testów do istniejących modułów `src/lib/` | Nowy przechodzący test sam siebie dowodzi |
-| Usuwanie nieużywanych importów i martwego kodu | Pilnuje `tsc --noEmit` |
-| Dynamiczny `import()` dla ciężkich bibliotek | Weryfikowalne rozmiarem bundla w wyjściu builda |
-| Przepięcie ręcznie pisanych modali na `src/components/ui/Modal.tsx` | Istniejący komponent bazowy, jasny cel |
-| Uzupełnienie komentarzy „dlaczego" tam, gdzie ich brak | Nie zmienia zachowania |
-
-### Czerwona lista
-
-| Obszar | Powód |
-| --- | --- |
-| `src/server/net/safeFetch.ts`, walidacja SSRF, rate limiting | Publiczne, płatne endpointy; kod generowany przez modele często zawiera podatności |
-| Logika uwierzytelniania i szyfrowania | To repo ma historię deklaracji „AES-256" przy zapisie jawnym tekstem (`localProfile.ts:103`). Testy wolno delegować, zmiany zachowania nie |
-| `src/lib/jdParser.ts`, `atsSimulator.ts`, `knockouts.ts` — poprawność wyników | Zasada zera wymyślonych danych wymaga osądu i konfrontacji z prawdziwymi ogłoszeniami |
-| Ciało dokumentu A4 w rendererach CV | Kartka musi zostać biała w trybie ciemnym; podmiana kolorów na tokeny motywu przechodzi build i psuje eksport PDF — CI tego nie obali |
-| `semantic-work-graph/` | Poza zasięgiem CI; nikt nie zweryfikuje zmiany automatycznie |
-| `.github/workflows/**`, `Dockerfile`, `vercel.json`, `.env*` | Konfiguracja wdrożeniowa |
-| Decyzje architektoniczne | Przekrojowe, wymagają projektu, nie wykonania |
-
-### Zadania cykliczne raportują, nie commitują
-
-Bezobsługowe zmiany w kodzie według harmonogramu maksymalizują obciążenie
-recenzją i ryzyko. Wąskim gardłem nie jest limit zadań agenta, tylko zdolność
-właściciela repo do recenzowania PR-ów.
-
-Zadanie cykliczne ma wbudowaną zasadę: **gdy nie ma co zgłosić, nie otwiera
-issue**. Bez tego w kolejce lądują śmieciowe zgłoszenia w nieskończoność.
-
-### Reguły antykolizyjne
-
-1. **Jeden plik = jeden otwarty PR.** Partycjonuj po plikach, nie po limicie agenta.
-2. **Pliki współdzielone są poza zasięgiem agenta:** `src/index.css`,
-   `src/types/index.ts`, `AGENTS.md`. Jeśli zadanie wymaga nowego tokena
-   w `index.css` — zatrzymaj się i napisz o tym w PR, nie zaszywaj koloru
-   w komponencie.
-3. **Najwyżej cztery otwarte PR-y od agentów naraz.** Limit wynika z recenzji.
-4. **Pilot przed skalowaniem.** Pierwsze zadanie danego typu idzie pojedynczo.
-
-Gotowe briefy, napisane według tych reguł: [`docs/zadania-dla-agenta.md`](./docs/zadania-dla-agenta.md).
+Zielona i czerwona lista zadań, zasady zadań cyklicznych i reguły antykolizyjne:
+[`docs/agents/delegowanie.md`](./docs/agents/delegowanie.md). Gotowe briefy:
+[`docs/zadania-dla-agenta.md`](./docs/zadania-dla-agenta.md).
 
 ## Zanim zgłosisz zmianę
 

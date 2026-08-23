@@ -1,0 +1,100 @@
+name: Higiena gałęzi
+
+# Raportuje stan gałęzi zdalnych raz w tygodniu. Nic nie kasuje — decyzję
+# podejmuje właściciel repo.
+#
+# Powstało po tym, jak gotowy silnik Ściągi na Rozmowę przeleżał na gałęzi
+# sprzed przebudowy katalogów, aż `main` odjechał o 94 commity i scalenie
+# przestało być możliwe (PR #87 musiał portować logikę ręcznie). Nic o tej
+# gałęzi nie przypominało, bo nic jej nie liczyło.
+
+on:
+  schedule:
+    # Poniedziałek 06:00 UTC — raport czeka na początek tygodnia.
+    - cron: '0 6 * * 1'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  issues: write
+
+jobs:
+  raport:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+        with:
+          # Klasyfikacja liczy commity i porównuje patch-id, więc płytki
+          # checkout dałby wynik bez sensu.
+          fetch-depth: 0
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22.x
+
+      - name: Zbuduj raport
+        id: raport
+        run: |
+          if node scripts/raport-galezi.mjs > /tmp/raport.md && [ -s /tmp/raport.md ]; then
+            echo "jest_tresc=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "jest_tresc=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Zaktualizuj zgłoszenie
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+
+            // Znacznik pozwala odnaleźć własne zgłoszenie bez trzymania jego
+            // numeru w repozytorium.
+            const MARKER = '<!-- higiena-galezi -->';
+            const TYTUL = 'Higiena gałęzi — cotygodniowy raport';
+
+            const { owner, repo } = context.repo;
+            const otwarte = await github.paginate(github.rest.issues.listForRepo, {
+              owner, repo, state: 'open', per_page: 100,
+            });
+            const istniejace = otwarte.find(
+              (i) => !i.pull_request && (i.body || '').includes(MARKER)
+            );
+
+            const jestTresc = ${{ steps.raport.outputs.jest_tresc }};
+
+            if (!jestTresc) {
+              // AGENTS.md: zadanie cykliczne, które nie ma co zgłosić, nie
+              // otwiera zgłoszenia. Bez tego w kolejce lądowałyby śmieciowe
+              // raporty „wszystko w porządku" w nieskończoność.
+              if (istniejace) {
+                await github.rest.issues.createComment({
+                  owner, repo, issue_number: istniejace.number,
+                  body: 'Wszystkie gałęzie są w normie — zamykam. Zgłoszenie wróci, gdy pojawi się co raportować.',
+                });
+                await github.rest.issues.update({
+                  owner, repo, issue_number: istniejace.number, state: 'closed',
+                });
+                core.info(`Zamknięto #${istniejace.number} — nie ma czego raportować.`);
+              } else {
+                core.info('Nie ma czego raportować i nie ma otwartego zgłoszenia. Koniec.');
+              }
+              return;
+            }
+
+            const body = `${MARKER}\n\n${fs.readFileSync('/tmp/raport.md', 'utf8')}`;
+
+            if (istniejace) {
+              // Aktualizacja, nie nowe zgłoszenie: w repo wisi już kilkanaście
+              // otwartych issue i cotygodniowy duplikat byłby czystym szumem.
+              await github.rest.issues.update({
+                owner, repo, issue_number: istniejace.number, title: TYTUL, body,
+              });
+              core.info(`Zaktualizowano #${istniejace.number}.`);
+            } else {
+              const { data } = await github.rest.issues.create({
+                owner, repo, title: TYTUL, body,
+              });
+              core.info(`Utworzono #${data.number}.`);
+            }
