@@ -1,20 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import { Building2, Briefcase, DollarSign, Calendar, Globe, FileText, Check } from 'lucide-react';
-import { ApplicationStatus } from './StatusSelect';
+import { ApplicationStatus, JobApplication } from '../../types';
 import { Modal } from '../../components/ui/Modal';
 import { Input, Textarea, Select } from '../../components/ui/Field';
 import { Button } from '../../components/ui/Button';
 
-export interface JobApplication {
-  id: string;
-  company: string;
-  position: string;
-  salary: string;
-  date: string;
-  status: ApplicationStatus;
-  notes?: string;
-  jobUrl?: string;
-}
+// Jak wyżej: definicja jest w `src/types`, tutaj zostaje tylko przepustka
+// dla modułów, które importowały ją stąd.
+export type { JobApplication };
 
 export interface ApplicationModalProps {
   isOpen: boolean;

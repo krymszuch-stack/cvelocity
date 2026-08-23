@@ -17,6 +17,21 @@
 
 <!-- Dopisuj tutaj. Jeden punkt = jedna uwaga. -->
 
+- Silnik „następnego kroku" (`src/lib/nextAction.ts`) liczy się w przeglądarce,
+  choć raport strategiczny przewiduje dla niego endpoint `GET /api/next-action`.
+  Powód jest w kodzie, nie w wygodzie: `AuthContext` zakłada wyłącznie profil
+  lokalny i nikogo nie uwierzytelnia (`src/context/AuthContext.tsx:30`), a
+  `setAccessTokenProvider` nie ma po stronie klienta ani jednego logowania,
+  które dostarczyłoby token. Trasy pod `requireAuth` — `/api/vault`
+  i `/api/applications` — są więc z tej przeglądarki nieosiągalne i dalej mają
+  zero wywołań, dokładnie jak opisuje reguła 5 w `AGENTS.md`. Endpoint czytający
+  Supabase zwracałby dziś „uzupełnij profil" każdemu, bo vault nigdy tam nie
+  trafia. Przeniesienie silnika na serwer ma sens dopiero po zalogowaniu
+  po stronie klienta i po fazie 1–3 synchronizacji vaultu; sam silnik jest już
+  czystą funkcją bez dostępu do DOM-u i do schowka, więc przeprowadzka to
+  podmiana źródła danych, nie przepisanie logiki.
+  _(wpis od agenta — usuń, jeśli nieaktualny)_
+
 - `JobOffer` gubi część płatnego parsowania oferty. `/api/parse-jd` zwraca pełne
   `ParsedJobDescription`, ale do `JobOffer` trafiają z niego tylko tytuł, firma,
   widełki, `requirements` i `techStack`. `seniorityLevel`, `coreResponsibilities`,

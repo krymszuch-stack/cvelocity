@@ -456,3 +456,50 @@ export interface ApplicationHistoryRecord {
 }
 
 
+
+export type ApplicationStatus = 'Wysłana' | 'Rozmowa' | 'Oferta' | 'Odrzucona';
+
+/**
+ * Jedna aplikacja o pracę w Pipeline.
+ *
+ * Typ mieszkał wcześniej w `features/tracker/ApplicationModal.tsx`, czyli
+ * w module okna dialogowego. Przeniesiony tutaj, bo przestał być sprawą
+ * jednego ekranu: czyta go silnik „następnego kroku" i mechanizm odblokowań,
+ * a `src/lib/` nie ma prawa importować niczego z `src/features/`.
+ *
+ * Pola rozmowy (`interviewAt`, `briefDoneAt`, `debriefSentAt`) są tu celowo,
+ * a nie w osobnym bycie. Rozmowa nie istnieje sama dla siebie — zawsze jest
+ * rozmową o **tę** aplikację, i to właśnie ona wiąże trening oraz narzędzia
+ * live z konkretnym wpisem w Pipeline. Osobna encja wymagałaby klucza obcego
+ * i synchronizacji, a przy jednej rozmowie na aplikację nie kupowałaby nic.
+ */
+export interface JobApplication {
+  id: string;
+  company: string;
+  position: string;
+  salary: string;
+  /** Data wysłania aplikacji, `YYYY-MM-DD`. */
+  date: string;
+  status: ApplicationStatus;
+  notes?: string;
+  jobUrl?: string;
+
+  /**
+   * Wynik ATS zapisany w chwili analizy oferty, 0–100.
+   *
+   * Pole opcjonalne, bo aplikacja dodana ręcznie w Pipeline nigdy nie
+   * przeszła przez symulator i **nie ma** wyniku. Zera nie wpisujemy: zero
+   * znaczyłoby „zmierzono i wyszło fatalnie", a prawda jest taka, że nie
+   * mierzono (reguła 1 w `AGENTS.md`).
+   */
+  atsScore?: number;
+  /** Braki wskazane przez symulator ATS przy tym wyniku. */
+  missingKeywords?: string[];
+
+  /** Termin rozmowy, ISO 8601 z godziną. Ustawiany, gdy status = „Rozmowa". */
+  interviewAt?: string;
+  /** Kiedy odhaczono przygotowanie przed rozmową (Pre-Call Brief). */
+  briefDoneAt?: string;
+  /** Kiedy wysłano follow-up po rozmowie. */
+  debriefSentAt?: string;
+}

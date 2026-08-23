@@ -5,6 +5,7 @@ import { MasterVault } from '../../types';
 import { NavTabId } from '../../components/GlobalShell';
 import { Button } from '../../components/ui/Button';
 import { StorageKeys, readJson, writeJson } from '../../lib/storage';
+import { isVaultEmpty } from '../../lib/vaultCompleteness';
 
 export interface WelcomeWizardProps {
   vault: MasterVault;
@@ -13,21 +14,15 @@ export interface WelcomeWizardProps {
 }
 
 /**
- * Pusty profil poznajemy po tym, że nie ma w nim ani danych kontaktowych, ani
- * niczego, co użytkownik mógłby wpisać sam lub zaimportować z CV. Wystarczy
- * jedno wypełnione pole, żeby przewodnik zniknął — kto zaczął, ten nie jest
- * już nowy i nie potrzebuje instrukcji na pół ekranu.
+ * „Nowy" znaczy: żadna sekcja profilu nie ma jeszcze treści. Wystarczy jedna
+ * wypełniona, żeby przewodnik zniknął — kto zaczął, ten nie potrzebuje już
+ * instrukcji na pół ekranu.
+ *
+ * Warunek stał tu wcześniej wypisany z ręki i sprawdzał sześć pól. Ta sama
+ * rzecz jest teraz liczona przez `measureVaultCompleteness`, więc lokalna
+ * kopia znikła: dwie definicje „pustego profilu" rozjechałyby się przy
+ * pierwszym dołożeniu sekcji (reguła 3 w `AGENTS.md`).
  */
-function isNewUser(vault: MasterVault): boolean {
-  return (
-    !vault.personalInfo.fullName &&
-    !vault.personalInfo.email &&
-    vault.history.length === 0 &&
-    vault.education.length === 0 &&
-    vault.skillsMatrix.hardSkills.length === 0 &&
-    vault.skillsMatrix.toolsAndTech.length === 0
-  );
-}
 
 export const WelcomeWizard: React.FC<WelcomeWizardProps> = ({
   vault,
@@ -48,21 +43,21 @@ export const WelcomeWizard: React.FC<WelcomeWizardProps> = ({
 
   const steps = [
     {
-      tab: 'vault' as const,
+      tab: 'profil' as const,
       title: '1. Uzupełnij profil',
       description:
         'Dodaj dane, doświadczenie i stack technologiczny, żeby dopasowanie było trafne od pierwszej oferty.',
       icon: FolderOpen,
     },
     {
-      tab: 'parser' as const,
+      tab: 'profil' as const,
       title: '2. Wczytaj CV',
       description:
         'Zaimportuj PDF lub DOCX albo wklej treść CV, a CVelocity uzupełni brakujące pola profilu.',
       icon: FileText,
     },
     {
-      tab: 'matcher' as const,
+      tab: 'aplikuj' as const,
       title: '3. Porównaj ofertę',
       description:
         'Wklej ogłoszenie z OLX, Pracuj.pl czy No Fluff Jobs i sprawdź dopasowanie do swojego profilu.',
@@ -72,7 +67,7 @@ export const WelcomeWizard: React.FC<WelcomeWizardProps> = ({
 
   return (
     <AnimatePresence>
-      {isNewUser(vault) && !dismissed && (
+      {isVaultEmpty(vault) && !dismissed && (
         <motion.div
           initial={{ opacity: 0, y: -10 }}
           animate={{ opacity: 1, y: 0 }}
@@ -94,7 +89,7 @@ export const WelcomeWizard: React.FC<WelcomeWizardProps> = ({
                 size="sm"
                 icon={ArrowRight}
                 iconPosition="right"
-                onClick={() => onNavigate('vault')}
+                onClick={() => onNavigate('profil')}
               >
                 Uruchom przewodnik
               </Button>
@@ -113,7 +108,7 @@ export const WelcomeWizard: React.FC<WelcomeWizardProps> = ({
               const Icon = step.icon;
               return (
                 <button
-                  key={step.tab}
+                  key={step.title}
                   type="button"
                   onClick={() => onNavigate(step.tab)}
                   className="rounded-xl border border-brand-200 bg-surface/80 p-3 text-left transition-all duration-150 hover:-translate-y-0.5 hover:border-brand-500"

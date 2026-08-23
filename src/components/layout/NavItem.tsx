@@ -1,5 +1,5 @@
 import React from 'react';
-import { LucideIcon } from 'lucide-react';
+import { Lock, LucideIcon } from 'lucide-react';
 import { motion } from 'motion/react';
 
 export interface NavItemProps {
@@ -9,6 +9,14 @@ export interface NavItemProps {
   isCollapsed?: boolean;
   badge?: string;
   badgeVariant?: 'brand' | 'success' | 'warning';
+  /**
+   * Pozycja widoczna, ale jeszcze niedostępna. `lockedReason` mówi, co ją
+   * odblokuje — bez tego wyszarzony przycisk jest tylko frustracją.
+   */
+  isLocked?: boolean;
+  lockedReason?: string;
+  /** Podpowiedź przy rozwiniętym pasku. Krótkie „co tu robię". */
+  hint?: string;
   onClick?: () => void;
   className?: string;
 }
@@ -20,6 +28,9 @@ export const NavItem: React.FC<NavItemProps> = ({
   isCollapsed = false,
   badge,
   badgeVariant = 'brand',
+  isLocked = false,
+  lockedReason,
+  hint,
   onClick,
   className = '',
 }) => {
@@ -29,22 +40,30 @@ export const NavItem: React.FC<NavItemProps> = ({
     warning: 'bg-warning-soft text-warning-fg border-warning/30',
   };
 
+  // Zablokowana pozycja zostaje przyciskiem, a nie zmienia się w `div`:
+  // czytnik ekranu ma ją ogłosić razem z powodem, zamiast pominąć jak dekorację.
+  const title = isLocked ? lockedReason : isCollapsed ? label : hint;
+
   return (
     <button
       type="button"
-      onClick={onClick}
+      onClick={isLocked ? undefined : onClick}
+      disabled={isLocked}
       className={`group relative flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-xs font-semibold transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500/50 ${
         isCollapsed ? 'justify-center px-2' : ''
       } ${
-        isActive
-          ? 'text-brand-fg font-bold'
-          : 'text-muted hover:bg-brand-500/5 hover:text-ink'
+        isLocked
+          ? 'cursor-not-allowed text-subtle opacity-60'
+          : isActive
+            ? 'text-brand-fg font-bold'
+            : 'text-muted hover:bg-brand-500/5 hover:text-ink'
       } ${className}`}
-      title={isCollapsed ? label : undefined}
+      title={title}
       aria-current={isActive ? 'page' : undefined}
+      aria-disabled={isLocked || undefined}
     >
       {/* Active Indicator & Background with Framer Motion layoutId */}
-      {isActive && (
+      {isActive && !isLocked && (
         <motion.div
           layoutId="activeNav"
           transition={{ type: 'spring', stiffness: 500, damping: 35 }}
@@ -65,7 +84,8 @@ export const NavItem: React.FC<NavItemProps> = ({
       {!isCollapsed && (
         <div className="relative z-10 flex min-w-0 flex-1 items-center justify-between">
           <span className="truncate">{label}</span>
-          {badge && (
+          {isLocked && <Lock className="ml-2 h-3 w-3 shrink-0 text-subtle" aria-hidden="true" />}
+          {!isLocked && badge && (
             <span
               className={`ml-2 rounded-md border px-1.5 py-0.5 font-mono text-[9px] font-bold uppercase tracking-wider ${
                 badgeStyles[badgeVariant]

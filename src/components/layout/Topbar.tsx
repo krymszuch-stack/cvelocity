@@ -1,22 +1,19 @@
 import React, { useState, useRef, useEffect } from 'react';
 import {
   Menu,
-  Zap,
   Palette,
   User,
-  ShieldCheck,
-  Sparkles,
   Search,
   CreditCard,
   FileText,
+  LogIn,
   LogOut,
   ExternalLink,
-  Target,
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { ThemeToggle } from '../ThemeToggle';
 import { AdvisorButton } from '../ui/AdvisorButton';
-import { NavTabId } from '../GlobalShell';
+import { NAV_SECTIONS, NavTabId } from '../../lib/navigation';
 import { useEntitlements } from '../../store/useEntitlements';
 import { useAuth } from '../../context/AuthContext';
 import { showToast } from '../../store/useToastStore';
@@ -26,35 +23,31 @@ export interface TopbarProps {
   onOpenMobileMenu: () => void;
   onOpenAdvisor: () => void;
   onOpenAuthModal: () => void;
+  onSelectTab?: (tab: NavTabId) => void;
   onOpenDesignTokens?: () => void;
-  onOpenHUD?: () => void;
-  onOpenPitch?: () => void;
-  onOpenDrill?: () => void;
   isAuthenticated?: boolean;
   userEmail?: string;
   className?: string;
 }
 
+/**
+ * Nazwy sekcji biorą się z `NAV_SECTIONS`, a nie z drugiej ręcznej mapy —
+ * poprzednia wersja miała osiem wpisów wypisanych obok listy w pasku bocznym
+ * i przy każdej zmianie trzeba było trafić w oba miejsca.
+ */
 const TAB_NAMES: Record<NavTabId, string> = {
-  home: 'Strona Główna',
-  matcher: 'Agregator Ofert & ATS Simulator',
-  cockpit: 'Kokpit Rozmowy • Playbook Taktyczny',
-  applications: 'Pipeline Aplikacji',
-  vault: 'Master Vault • Profil Kandydata',
-  parser: 'Wczytywanie & Scalanie CV',
-  profiler: 'Filtry i Priorytety',
-  pricing: 'Cennik & Pakiety',
-};
+  home: 'Twój następny krok',
+  pricing: 'Cennik i pakiety',
+  ...Object.fromEntries(NAV_SECTIONS.map((section) => [section.id, section.label])),
+} as Record<NavTabId, string>;
 
 export const Topbar: React.FC<TopbarProps> = ({
   activeTab,
   onOpenMobileMenu,
   onOpenAdvisor,
   onOpenAuthModal,
+  onSelectTab,
   onOpenDesignTokens,
-  onOpenHUD,
-  onOpenPitch,
-  onOpenDrill,
   isAuthenticated = false,
   userEmail,
   className = '',
@@ -130,59 +123,11 @@ export const Topbar: React.FC<TopbarProps> = ({
         </button>
 
 
-        {/* Live HUD Teleprompter Button */}
-        {onOpenHUD && (
-          <motion.button
-            type="button"
-            onClick={onOpenHUD}
-            whileHover={{ scale: 1.05 }}
-            whileTap={{ scale: 0.95 }}
-            transition={{ duration: 0.18, ease: [0.19, 1, 0.22, 1] }}
-            className="flex h-9 items-center gap-1.5 rounded-lg border border-brand-500/30 bg-brand-500/10 px-2.5 text-xs font-mono font-bold text-brand-600 hover:bg-brand-500/20 focus-visible:outline-none"
-            aria-label="Otwórz Live HUD Teleprompter (Ctrl+H)"
-            title="Otwórz Live HUD Teleprompter (Ctrl+H)"
-          >
-            <Zap className="h-3.5 w-3.5" />
-            <span className="hidden md:inline">HUD</span>
-            <span className="hidden lg:inline text-[9px] opacity-70">Ctrl+H</span>
-          </motion.button>
-        )}
-
-        {/* Elevator Pitch Button */}
-        {onOpenPitch && (
-          <motion.button
-            type="button"
-            onClick={onOpenPitch}
-            whileHover={{ scale: 1.05 }}
-            whileTap={{ scale: 0.95 }}
-            transition={{ duration: 0.18, ease: [0.19, 1, 0.22, 1] }}
-            className="flex h-9 items-center gap-1.5 rounded-lg border border-line bg-surface px-2.5 text-xs font-mono font-bold text-ink hover:border-brand-500 hover:text-brand-600 focus-visible:outline-none"
-            aria-label="Otwórz Elevator Pitch Generator (Ctrl+P)"
-            title="Otwórz Elevator Pitch Generator (Ctrl+P)"
-          >
-            <Sparkles className="h-3.5 w-3.5 text-brand-600" />
-            <span className="hidden md:inline">Pitch</span>
-            <span className="hidden lg:inline text-[9px] text-muted">Ctrl+P</span>
-          </motion.button>
-        )}
-
-        {/* Mock Drill Mode (Practice) Button */}
-        {onOpenDrill && (
-          <motion.button
-            type="button"
-            onClick={onOpenDrill}
-            whileHover={{ scale: 1.05 }}
-            whileTap={{ scale: 0.95 }}
-            transition={{ duration: 0.18, ease: [0.19, 1, 0.22, 1] }}
-            className="flex h-9 items-center gap-1.5 rounded-lg border border-line bg-surface px-2.5 text-xs font-mono font-bold text-ink hover:border-brand-500 hover:text-brand-600 focus-visible:outline-none"
-            aria-label="Otwórz Mock Drill Mode (Cmd+D)"
-            title="Otwórz Mock Drill Mode (Cmd+D)"
-          >
-            <Target className="h-3.5 w-3.5 text-brand-600" />
-            <span className="hidden md:inline">Practice</span>
-            <span className="hidden lg:inline text-[9px] text-muted">Cmd+D</span>
-          </motion.button>
-        )}
+        {/* Nie ma tu już przycisków HUD, Pitch i Practice.
+            Były widoczne od pierwszej sekundy, każdy z własnym skrótem
+            klawiszowym, a dotyczą wyłącznie rozmowy, która została umówiona.
+            Przeniesione do Zasobnika Rozmowy na karcie aplikacji w Pipeline —
+            pojawiają się tam, gdzie mają sens, i wtedy, gdy mają sens. */}
 
         {/* Advisor Button with Ping Indicator */}
         <AdvisorButton onClick={onOpenAdvisor} />
@@ -221,13 +166,10 @@ export const Topbar: React.FC<TopbarProps> = ({
 
             <motion.button
               type="button"
-              onClick={() => {
-                if (isAuthenticated) {
-                  setIsDropdownOpen((prev) => !prev);
-                } else {
-                  onOpenAuthModal();
-                }
-              }}
+              // Menu otwiera się także bez konta: siedzi w nim cennik i
+              // logowanie, więc odsyłanie niezalogowanego prosto do modala
+              // zamykało mu jedyną drogę do informacji o pakietach.
+              onClick={() => setIsDropdownOpen((prev) => !prev)}
               whileHover={{ scale: 1.03 }}
               whileTap={{ scale: 0.97 }}
               transition={{ duration: 0.18, ease: [0.19, 1, 0.22, 1] }}
@@ -254,7 +196,7 @@ export const Topbar: React.FC<TopbarProps> = ({
 
           {/* Profile & Stripe Customer Portal Dropdown */}
           <AnimatePresence>
-            {isDropdownOpen && isAuthenticated && (
+            {isDropdownOpen && (
               <motion.div
                 initial={{ opacity: 0, scale: 0.95, y: 6 }}
                 animate={{ opacity: 1, scale: 1, y: 0 }}
@@ -263,8 +205,12 @@ export const Topbar: React.FC<TopbarProps> = ({
                 className="absolute right-0 mt-2 w-56 overflow-hidden rounded-2xl border border-line bg-elevated p-1.5 shadow-floating z-50 text-xs"
               >
                 <div className="border-b border-line/60 p-2.5">
-                  <div className="font-bold text-ink truncate">{user?.name || 'Profil lokalny'}</div>
-                  <div className="font-mono text-[10px] text-muted truncate">{userEmail}</div>
+                  <div className="font-bold text-ink truncate">
+                    {isAuthenticated ? user?.name || 'Profil lokalny' : 'Bez profilu'}
+                  </div>
+                  <div className="font-mono text-[10px] text-muted truncate">
+                    {isAuthenticated ? userEmail : 'Dane trzymane w tej przeglądarce'}
+                  </div>
                   <div className="mt-1.5">
                     <span
                       className={`inline-block rounded-md px-1.5 py-px font-mono text-[9px] font-bold uppercase ${
@@ -277,6 +223,23 @@ export const Topbar: React.FC<TopbarProps> = ({
                 </div>
 
                 <div className="py-1">
+                  {/* Cennik zszedł z paska bocznego tutaj: nie jest krokiem
+                      w podróży kandydata, więc nie ma czego robić obok
+                      czterech sekcji, które nimi są. */}
+                  {onSelectTab && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        onSelectTab('pricing');
+                        setIsDropdownOpen(false);
+                      }}
+                      className="flex w-full items-center gap-2.5 rounded-xl px-2.5 py-2 text-ink hover:bg-brand-50 hover:text-brand-fg transition-colors"
+                    >
+                      <CreditCard className="h-3.5 w-3.5 text-muted" />
+                      <span>Cennik i pakiety</span>
+                    </button>
+                  )}
+
                   <button
                     type="button"
                     onClick={handleOpenCustomerPortal}
@@ -298,17 +261,31 @@ export const Topbar: React.FC<TopbarProps> = ({
                 </div>
 
                 <div className="border-t border-line/60 pt-1">
-                  <button
-                    type="button"
-                    onClick={() => {
-                      logout();
-                      setIsDropdownOpen(false);
-                    }}
-                    className="flex w-full items-center gap-2.5 rounded-xl px-2.5 py-2 text-danger-fg hover:bg-danger-soft transition-colors"
-                  >
-                    <LogOut className="h-3.5 w-3.5" />
-                    <span>Wyloguj</span>
-                  </button>
+                  {isAuthenticated ? (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        logout();
+                        setIsDropdownOpen(false);
+                      }}
+                      className="flex w-full items-center gap-2.5 rounded-xl px-2.5 py-2 text-danger-fg hover:bg-danger-soft transition-colors"
+                    >
+                      <LogOut className="h-3.5 w-3.5" />
+                      <span>Wyloguj</span>
+                    </button>
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        onOpenAuthModal();
+                        setIsDropdownOpen(false);
+                      }}
+                      className="flex w-full items-center gap-2.5 rounded-xl px-2.5 py-2 text-ink hover:bg-brand-50 hover:text-brand-fg transition-colors"
+                    >
+                      <LogIn className="h-3.5 w-3.5 text-muted" />
+                      <span>Załóż profil w tej przeglądarce</span>
+                    </button>
+                  )}
                 </div>
               </motion.div>
             )}

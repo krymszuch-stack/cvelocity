@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Sidebar } from './Sidebar';
 import { Topbar } from './Topbar';
 import { MobileSidebar } from '../MobileSidebar';
-import { NavTabId } from '../GlobalShell';
+import { NavSectionId, NavTabId } from '../../lib/navigation';
 
 export interface ShellProps {
   children: React.ReactNode;
@@ -11,9 +11,9 @@ export interface ShellProps {
   onOpenAdvisor: (initialQuestion?: string) => void;
   onOpenAuthModal: () => void;
   onOpenDesignTokens?: () => void;
-  onOpenHUD?: () => void;
-  onOpenPitch?: () => void;
-  onOpenDrill?: () => void;
+  /** Sekcje odblokowane dla tego użytkownika (progresywne odsłanianie). */
+  unlockedSections?: Partial<Record<NavSectionId, boolean>>;
+  lockReasons?: Partial<Record<NavSectionId, string>>;
   isAuthenticated?: boolean;
   userEmail?: string;
   planStatus?: 'free' | 'trialing' | 'active';
@@ -26,9 +26,8 @@ export const Shell: React.FC<ShellProps> = ({
   onOpenAdvisor,
   onOpenAuthModal,
   onOpenDesignTokens,
-  onOpenHUD,
-  onOpenPitch,
-  onOpenDrill,
+  unlockedSections,
+  lockReasons,
   isAuthenticated = false,
   userEmail,
   planStatus = 'free',
@@ -80,6 +79,8 @@ export const Shell: React.FC<ShellProps> = ({
           onToggleCollapse={() => setIsSidebarCollapsed(!isSidebarCollapsed)}
           onOpenAdvisor={() => onOpenAdvisor()}
           onOpenAuthModal={onOpenAuthModal}
+          unlockedSections={unlockedSections}
+          lockReasons={lockReasons}
           isAuthenticated={isAuthenticated}
           userEmail={userEmail}
           planStatus={planStatus}
@@ -105,6 +106,8 @@ export const Shell: React.FC<ShellProps> = ({
             setIsMobileDrawerOpen(false);
             onOpenAuthModal();
           }}
+          unlockedSections={unlockedSections}
+          lockReasons={lockReasons}
           isAuthenticated={isAuthenticated}
           userEmail={userEmail}
           planStatus={planStatus}
@@ -119,10 +122,8 @@ export const Shell: React.FC<ShellProps> = ({
           onOpenMobileMenu={() => setIsMobileDrawerOpen(true)}
           onOpenAdvisor={() => onOpenAdvisor()}
           onOpenAuthModal={onOpenAuthModal}
+          onSelectTab={handleSelectTab}
           onOpenDesignTokens={onOpenDesignTokens}
-          onOpenHUD={onOpenHUD}
-          onOpenPitch={onOpenPitch}
-          onOpenDrill={onOpenDrill}
           isAuthenticated={isAuthenticated}
           userEmail={userEmail}
         />

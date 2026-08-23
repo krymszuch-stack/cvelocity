@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useMemo } from 'react';
 import {
   Plus,
   Search,
@@ -12,8 +12,10 @@ import {
   FileText,
 } from 'lucide-react';
 import { motion } from 'motion/react';
-import { ApplicationStatus } from './StatusSelect';
-import { JobApplication, ApplicationModal } from './ApplicationModal';
+import { ApplicationModal } from './ApplicationModal';
+import { ApplicationStatus, JobApplication, MasterVault } from '../../types';
+import { useApplications } from '../../store/useApplications';
+import { InterviewPanel } from '../pipeline/InterviewPanel';
 import { TrackerTable } from './TrackerTable';
 import { StatTile } from '../../components/ui/StatTile';
 import { Button } from '../../components/ui/Button';
@@ -21,7 +23,7 @@ import { Input, Textarea } from '../../components/ui/Field';
 import { Card } from '../../components/ui/Card';
 import { Modal } from '../../components/ui/Modal';
 import { PageHeader } from '../../components/ui/PageHeader';
-import { StorageKeys, readJson, writeJson } from '../../lib/storage';
+
 
 /**
  * Tracker startuje pusty.
@@ -33,12 +35,28 @@ import { StorageKeys, readJson, writeJson } from '../../lib/storage';
  * odróżnić ich od własnych.
  *
  * Pusty stan obsługuje `TrackerTable`.
+ *
+ * Lista nie jest już prywatnym stanem tego komponentu — siedzi w
+ * `useApplications`, bo tych samych danych potrzebują silnik „następnego kroku"
+ * i mechanizm odblokowań. Tutaj zostaje wyłącznie filtrowanie i widok.
  */
 
-export const ApplicationTracker: React.FC = () => {
-  const [applications, setApplications] = useState<JobApplication[]>(() =>
-    readJson<JobApplication[]>(StorageKeys.applications, [])
-  );
+export interface ApplicationTrackerProps {
+  vault: MasterVault;
+  /** Czy Zasobnik Rozmowy jest już dostępny (progresywne odsłanianie). */
+  interviewToolboxUnlocked?: boolean;
+  showShortcutsHint?: boolean;
+  onDismissShortcutsHint?: () => void;
+}
+
+export const ApplicationTracker: React.FC<ApplicationTrackerProps> = ({
+  vault,
+  interviewToolboxUnlocked = false,
+  showShortcutsHint = false,
+  onDismissShortcutsHint,
+}) => {
+  const { applications, saveApplication, removeApplication, patchApplication, setStatus } =
+    useApplications();
 
   const [filterStatus, setFilterStatus] = useState<string>('ALL');
   const [searchQuery, setSearchQuery] = useState<string>('');
@@ -51,10 +69,6 @@ export const ApplicationTracker: React.FC = () => {
   // Notes Drawer/Modal
   const [notesApp, setNotesApp] = useState<JobApplication | null>(null);
   const [currentNotes, setCurrentNotes] = useState<string>('');
-
-  useEffect(() => {
-    writeJson(StorageKeys.applications, applications);
-  }, [applications]);
 
   // Statistics
   const totalApps = applications.length;
@@ -86,22 +100,16 @@ export const ApplicationTracker: React.FC = () => {
   }, [applications, filterStatus, searchQuery, sortBy]);
 
   const handleStatusChange = (id: string, newStatus: ApplicationStatus) => {
-    setApplications((prev) =>
-      prev.map((app) => (app.id === id ? { ...app, status: newStatus } : app))
-    );
+    setStatus(id, newStatus);
   };
 
   const handleSaveApp = (app: JobApplication) => {
-    if (editingApp) {
-      setApplications((prev) => prev.map((item) => (item.id === app.id ? app : item)));
-    } else {
-      setApplications((prev) => [app, ...prev]);
-    }
+    saveApplication(app);
   };
 
   const handleDeleteApp = (id: string) => {
     if (confirm('Czy na pewno chcesz usunąć to zgłoszenie z pipeline?')) {
-      setApplications((prev) => prev.filter((item) => item.id !== id));
+      removeApplication(id);
     }
   };
 
@@ -112,9 +120,7 @@ export const ApplicationTracker: React.FC = () => {
 
   const handleSaveNotes = () => {
     if (!notesApp) return;
-    setApplications((prev) =>
-      prev.map((item) => (item.id === notesApp.id ? { ...item, notes: currentNotes } : item))
-    );
+    patchApplication(notesApp.id, { notes: currentNotes });
     setNotesApp(null);
   };
 
@@ -147,6 +153,19 @@ export const ApplicationTracker: React.FC = () => {
           </Button>
         }
       />
+
+      {/* Zasobnik Rozmowy — nad tabelą, bo gdy rozmowa jest umówiona, to ona
+          jest najważniejszą rzeczą na tym ekranie. Sam się nie pokaże, dopóki
+          żadna aplikacja nie ma statusu „Rozmowa". */}
+      {interviewToolboxUnlocked && (
+        <InterviewPanel
+          applications={applications}
+          vault={vault}
+          onPatch={patchApplication}
+          showShortcutsHint={showShortcutsHint}
+          onDismissShortcutsHint={onDismissShortcutsHint}
+        />
+      )}
 
       {/* KPI Top Stat Tiles */}
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
