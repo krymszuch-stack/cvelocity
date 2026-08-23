@@ -167,12 +167,27 @@ jobs:
       - name: Install Dependencies
         run: npm ci
 
+      # Przyjmowane są dwie nazwy sekretu, bo istnieją dwie drogi utworzenia konta
+      # usługi. `firebase init hosting:github` zakłada je samo i nazywa sekret od
+      # identyfikatora projektu; konto utworzone ręcznie trafia zwykle pod nazwę
+      # ogólną. Wartości sekretu nie da się odczytać po zapisaniu, więc nie da się
+      # jej przepisać z jednego do drugiego — tolerowanie obu nazw jest tańsze niż
+      # zakładanie konta po raz drugi tylko po to, żeby zmienić etykietę.
+      #
+      # Pierwszeństwo ma nazwa z identyfikatorem projektu: konto zakładane
+      # automatycznie ma węższy zakres uprawnień niż konto Admin SDK, więc jeśli
+      # istnieją oba, właściwe jest to bezpieczniejsze.
       - name: Deploy to Firebase Hosting
         env:
-          FIREBASE_SERVICE_ACCOUNT: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
+          FIREBASE_SERVICE_ACCOUNT_SCOPED: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_SKILLVAULT_99A72 }}
+          FIREBASE_SERVICE_ACCOUNT_GENERIC: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
         run: |
+          FIREBASE_SERVICE_ACCOUNT="${FIREBASE_SERVICE_ACCOUNT_SCOPED:-$FIREBASE_SERVICE_ACCOUNT_GENERIC}"
+
           if [ -z "$FIREBASE_SERVICE_ACCOUNT" ]; then
-            echo "BŁĄD: brak sekretu FIREBASE_SERVICE_ACCOUNT" >&2
+            echo "BŁĄD: nie ustawiono ani FIREBASE_SERVICE_ACCOUNT_SKILLVAULT_99A72," >&2
+            echo "      ani FIREBASE_SERVICE_ACCOUNT. Konto usługi zakłada" >&2
+            echo "      \`firebase init hosting:github\` — patrz docs/SETUP.md, sekcja 5." >&2
             exit 1
           fi
 

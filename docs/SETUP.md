@@ -176,7 +176,43 @@ a nie na czyimś laptopie.
 `.github/workflows/ci.yml` wysyła frontend przy każdym wypchnięciu na `main`.
 Zależy od `build-and-test`, więc czerwone testy zatrzymują wdrożenie zamiast
 opublikować zepsutą wersję; pull requesty są sprawdzane, ale nie publikowane.
-Uwierzytelnia się sekretem `FIREBASE_SERVICE_ACCOUNT` z ustawień repozytorium.
+Uwierzytelnia się kluczem konta usługi z sekretów repozytorium.
+
+#### Konto usługi do wdrożeń
+
+Zakłada je **`firebase init hosting:github`**, uruchomione w katalogu z tym
+repozytorium (nie w katalogu domowym — komenda czyta `firebase.json` z bieżącego
+katalogu). Utworzy konto o zakresie ograniczonym do hostingu i zapisze jego klucz
+jako sekret `FIREBASE_SERVICE_ACCOUNT_SKILLVAULT_99A72`.
+
+> Komenda generuje przy okazji własne pliki `.github/workflows/firebase-hosting-*.yml`.
+> **Nie commituj ich** — dublują zadanie `deploy-hosting`, a w dodatku wdrażają
+> bez oglądania się na testy. Konto usługi i sekret powstają zdalnie i przetrwają
+> usunięcie tych plików. Sprawdź też `git diff firebase.json`.
+
+Ręcznie, gdyby trzeba było odtworzyć uprawnienia, potrzebne są dwie role:
+
+| rola | identyfikator |
+|---|---|
+| Firebase Hosting Admin | `roles/firebasehosting.admin` |
+| Przeglądający klucze interfejsu API | `roles/serviceusage.apiKeysViewer` |
+
+Drugą łatwo pominąć — dokumentacja Firebase wymienia ją jako osobny wymóg
+wdrożenia przez CLI, obok roli hostingowej.
+
+> **Nie używaj do tego konta Admin SDK** (`firebase-adminsdk-…`). Ma role
+> „Administrator Uwierzytelniania Firebase", „Administrator Bazy danych czasu
+> rzeczywistego" i „Twórca tokenów konta usługi" — czyli administrację kontami
+> użytkowników, pełny dostęp do danych i możliwość podszycia się pod inne konta
+> usługi. Jego klucz w sekrecie repozytorium oznacza, że dowolny workflow może
+> to wszystko zrobić, żeby wysłać pliki statyczne na CDN. Konto o zakresie
+> hostingu ogranicza najgorszy przypadek do wdrożenia złego frontendu.
+
+Workflow przyjmuje obie nazwy sekretu — z identyfikatorem projektu i ogólną
+`FIREBASE_SERVICE_ACCOUNT` — z pierwszeństwem dla tej pierwszej, bo konto
+zakładane automatycznie ma węższe uprawnienia. Wartości sekretu nie da się
+odczytać po zapisaniu, więc przepisanie jej między nazwami nie jest możliwe;
+tolerowanie obu jest tańsze niż zakładanie konta drugi raz.
 
 Ręcznie, gdy trzeba wdrożyć poza kolejnością:
 
