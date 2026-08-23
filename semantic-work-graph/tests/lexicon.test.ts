@@ -5,7 +5,15 @@ import {
   DERIVED_LABEL_PREFIX,
   SqliteGraphRepository,
 } from '../src/repositories/SqliteGraphRepository.js';
-import { LexiconImporter, ALLOWED_POS_TAGS, DEFAULT_BATCH_SIZE, parseCsvLine, escoResultToSynonyms } from '../src/seed/LexiconImporter.js';
+import {
+  LexiconImporter,
+  ALLOWED_POS_TAGS,
+  DEFAULT_BATCH_SIZE,
+  ESCO_CONCEPT_TYPES,
+  ESCO_CONCEPT_SCHEMES,
+  parseCsvLine,
+  escoResultToSynonyms,
+} from '../src/seed/LexiconImporter.js';
 import { LinguisticEngine, LEMMA_CACHE_LIMIT } from '../src/services/LinguisticEngine.js';
 import { JargonMapper } from '../src/services/JargonMapper.js';
 import { buildOfflineMorphCorpus, dedupeByPosPriority } from '../src/seed/lexicon/PolishMorphology.js';
@@ -547,15 +555,53 @@ describe('Leksykon: deterministyczna lematyzacja PL i tezaurus umiejętności ES
       expect(rows[0]).toEqual({
         canonicalName: 'zarządzanie projektami',
         altLabel: 'zarządzanie projektami',
-        category: 'ESCO',
+        category: 'ESCO/umiejętność',
       });
       expect(rows.map((r) => r.altLabel)).toContain('kierowanie projektami');
       expect(rows.map((r) => r.altLabel)).toContain('project management');
       expect(rows.every((r) => r.canonicalName === 'zarządzanie projektami')).toBe(true);
     });
 
+    it('buduje most z angielskiej etykiety, gdy pojęcie nie ma polskich synonimów', () => {
+      // Polskie etykiety alternatywne ma tylko ok. 10% pojęć ESCO. Bez angielskiego
+      // odpowiednika większość rekordów wnosiłaby wyłącznie własną nazwę.
+      const rows = escoResultToSynonyms({
+        preferredLabel: { pl: 'testowanie oprogramowania', en: 'software testing' },
+        alternativeLabel: { en: ['QA testing'] },
+      });
+
+      expect(rows.map((r) => r.altLabel)).toEqual([
+        'testowanie oprogramowania',
+        'software testing',
+        'qa testing',
+      ]);
+    });
+
+    it('rozróżnia filar zawodów od filaru umiejętności w kategorii', () => {
+      const rows = escoResultToSynonyms(
+        { preferredLabel: { pl: 'spawacz', en: 'welder' } },
+        'occupation'
+      );
+      expect(rows.every((r) => r.category === 'ESCO/zawód')).toBe(true);
+    });
+
+    it('nie duplikuje etykiety powtórzonej w kilku polach rekordu', () => {
+      const rows = escoResultToSynonyms({
+        preferredLabel: { pl: 'docker', en: 'docker' },
+        alternativeLabel: { pl: ['Docker'], en: ['docker'] },
+      });
+      expect(rows).toHaveLength(1);
+      expect(rows[0].altLabel).toBe('docker');
+    });
+
     it('pomija rekord ESCO bez polskiej etykiety', () => {
       expect(escoResultToSynonyms({ preferredLabel: { en: 'only english' } })).toEqual([]);
+    });
+
+    it('zaciąga oba filary taksonomii', () => {
+      expect([...ESCO_CONCEPT_TYPES]).toEqual(['skill', 'occupation']);
+      expect(ESCO_CONCEPT_SCHEMES.skill).toContain('concept-scheme/skills');
+      expect(ESCO_CONCEPT_SCHEMES.occupation).toContain('concept-scheme/occupations');
     });
   });
 
