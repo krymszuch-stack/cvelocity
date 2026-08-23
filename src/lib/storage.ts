@@ -24,6 +24,7 @@ export const StorageKeys = {
   favoriteTips: `${PREFIX}favorite-tips`,
   entitlementsCache: `${PREFIX}entitlements-cache`,
   cheatSheetCache: `${PREFIX}cheatsheet`,
+  onboardingDismissed: `${PREFIX}onboarding-dismissed`,
 } as const;
 
 export type StorageKey = (typeof StorageKeys)[keyof typeof StorageKeys];

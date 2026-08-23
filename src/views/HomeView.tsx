@@ -27,6 +27,7 @@ import { motion, AnimatePresence } from 'motion/react';
 import { Card } from '../components/ui/Card';
 import { TrustRow } from '../components/ui/TrustChip';
 import { QuickAtsCheck } from '../features/quickcheck/QuickAtsCheck';
+import { WelcomeWizard } from '../features/onboarding/WelcomeWizard';
 import { showToast } from '../store/useToastStore';
 import { MasterVault } from '../types';
 import { NavTabId } from '../components/GlobalShell';
@@ -288,6 +289,9 @@ export const HomeView: React.FC<HomeViewProps> = ({
 
   return (
     <div className="space-y-8 pb-12">
+      {/* 0. Przewodnik pierwszego uruchomienia — tylko dla pustego profilu */}
+      <WelcomeWizard vault={vault} onNavigate={onNavigate} />
+
       {/* 1. Nagłówek ekspozycyjny */}
       <motion.div
         initial={{ opacity: 0, y: 15 }}

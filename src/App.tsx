@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from 'motion/react';
 import { useDeferredPersist } from './hooks/useDeferredPersist';
 import { MasterVault } from './types';
 import { createEmptyVault } from './lib/sampleVault';
+import { mergeImportedVault } from './lib/vaultImportMerge';
 import {
   ANONYMOUS_PROFILE_ID,
   getActiveProfile,
@@ -102,49 +103,7 @@ function MainApp() {
   useDeferredPersist(vault, persistVault);
 
   const handleApplyParsedVault = (parsed: Partial<MasterVault>) => {
-    setVault((prev) => {
-      const existingHistoryKeys = new Set(
-        prev.history.map((h) => `${h.company.toLowerCase().trim()}_${h.role.toLowerCase().trim()}`)
-      );
-      const newHistory = (parsed.history || []).filter(
-        (h) => !existingHistoryKeys.has(`${h.company.toLowerCase().trim()}_${h.role.toLowerCase().trim()}`)
-      );
-
-      const isPrevSample = prev.history.some((h) => h.company.includes('TechCorp') || h.company.includes('FinTech'));
-      const mergedHistory = isPrevSample && parsed.history && parsed.history.length > 0
-        ? parsed.history
-        : [...(parsed.history || []), ...newHistory];
-
-      const existingEduKeys = new Set(
-        prev.education.map((e) => `${e.institution.toLowerCase().trim()}_${e.degree.toLowerCase().trim()}`)
-      );
-      const newEducation = (parsed.education || []).filter(
-        (e) => !existingEduKeys.has(`${e.institution.toLowerCase().trim()}_${e.degree.toLowerCase().trim()}`)
-      );
-
-      return {
-        ...prev,
-        personalInfo: {
-          ...prev.personalInfo,
-          ...(parsed.personalInfo || {}),
-        },
-        skillsMatrix: {
-          ...prev.skillsMatrix,
-          hardSkills: Array.from(
-            new Set([...(prev.skillsMatrix?.hardSkills || []), ...(parsed.skillsMatrix?.hardSkills || [])])
-          ),
-          softSkills: Array.from(
-            new Set([...(prev.skillsMatrix?.softSkills || []), ...(parsed.skillsMatrix?.softSkills || [])])
-          ),
-        },
-        profiler: {
-          ...prev.profiler,
-          languages: parsed.profiler?.languages || prev.profiler?.languages || [],
-        },
-        history: mergedHistory,
-        education: [...prev.education, ...newEducation],
-      };
-    });
+    setVault((prev) => mergeImportedVault(prev, parsed));
   };
 
   const handleOpenAdvisor = (initialQuestion?: string) => {
