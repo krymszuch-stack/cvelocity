@@ -17,6 +17,10 @@
   --color-surface: var(--surface);
   --color-sunken: var(--sunken);
   --color-elevated: var(--elevated);
+  /* Kartka dokumentu. Nie zmienia się z motywem — patrz `--paper` niżej. */
+  --color-paper: var(--paper);
+  --color-paper-ink: var(--paper-ink);
+  --color-paper-line: var(--paper-line);
 
   /* Typography / Ink */
   --color-ink: var(--ink);
@@ -60,6 +64,14 @@
   /* Box Shadows */
   --shadow-raised: var(--shadow-raised);
   --shadow-floating: var(--shadow-floating);
+
+  /* Skala typograficzna nagłówków ekspozycyjnych.
+     Osobno od skali Tailwinda, bo hero rządzi się innymi prawami niż tekst:
+     interlinia poniżej 1, światło międzyliterowe na minusie, waga 700+. */
+  --text-display-sm: 2.25rem;   /* 36px */
+  --text-display-md: 3rem;      /* 48px */
+  --text-display-lg: 4rem;      /* 64px */
+  --text-display-xl: 5rem;      /* 80px */
 }
 
 /* ============================================================
@@ -70,6 +82,15 @@
   --surface: #f6f6f5;
   --sunken: #ececea;
   --elevated: #ffffff;
+
+  /* Kartka dokumentu A4.
+     Celowo poza systemem motywów: podgląd CV pokazuje to, co wyjdzie
+     z drukarki, a papier nie ma trybu ciemnego. Renderer, który sięgnie tu
+     po `--surface`, wyświetli czarną kartkę po przełączeniu motywu i psuje
+     eksport do PDF-a — a build tego nie wyłapie. */
+  --paper: #ffffff;
+  --paper-ink: #17171a;
+  --paper-line: #e2e2e0;
 
   /* Typography / Ink */
   --ink: #17171a;
@@ -121,6 +142,31 @@
   --shadow-floating: 0 8px 24px rgba(23, 23, 26, 0.14), 0 24px 64px rgba(23, 23, 26, 0.18);
   --ease: cubic-bezier(0.19, 1, 0.22, 1);
   --spring: cubic-bezier(0.34, 1.56, 0.64, 1);
+
+  /* --- Poświata otoczenia ------------------------------------------------
+     Para dopełniająca: chłodny błękit i ciepły bursztyn po przeciwnych
+     stronach kadru. Poprzednia wersja mieszała błękit z fioletem — kolory
+     sąsiadujące na kole barw, więc tło wychodziło jednolicie sine i płaskie.
+     Napięcie między barwami dopełniającymi jest tym, co odróżnia „ciemne tło"
+     od głębi. W jasnym motywie obie schodzą do ułamka mocy, bo na białym
+     te same wartości dają brudną mgłę zamiast światła. */
+  --ambient-cool: #4361ff;
+  --ambient-warm: #f97316;
+  --ambient-cool-alpha: 14%;
+  --ambient-warm-alpha: 11%;
+
+  /* --- Szkło -------------------------------------------------------------
+     Pływające panele (pasek nawigacji, plakietki) leżą NAD poświatą, więc
+     muszą ją przepuszczać. Wypełnienie jest półprzezroczyste, a rozmycie
+     robi resztę. */
+  --glass-fill: rgba(255, 255, 255, 0.72);
+  --glass-line: rgba(23, 23, 26, 0.08);
+  --glass-shine: rgba(255, 255, 255, 0.9);
+  --glass-blur: 20px;
+
+  /* Wypełnienie nagłówka ekspozycyjnego: chłód → atrament → ciepło.
+     Ten sam ruch barwny co poświata, tylko zamknięty w literach. */
+  --display-grad: linear-gradient(100deg, #3b5bdb 0%, var(--ink) 48%, #c2410c 100%);
 }
 
 /* ============================================================
@@ -128,19 +174,30 @@
    ============================================================ */
 [data-theme="dark"],
 .dark {
-  /* Surfaces */
-  --surface: #101013;
-  --sunken: #17171b;
-  --elevated: #1c1c21;
+  /* Surfaces
+     Ciemny motyw schodzi niżej niż wcześniejsze #101013 i dostaje chłodny
+     odcień zamiast czystej szarości. Powód jest jeden: poświata otoczenia
+     ma być widoczna. Na neutralnej szarości barwne światło robi się brudne,
+     na granatowej czerni — świeci. */
+  --surface: #07080f;
+  --sunken: #0b0c16;
+  --elevated: #101221;
+
+  /* Kartka dokumentu A4 — biała także tutaj. Patrz komentarz w `:root`. */
+  --paper: #ffffff;
+  --paper-ink: #17171a;
+  --paper-line: #e2e2e0;
 
   /* Typography / Ink */
-  --ink: #f1f1f3;
-  --muted: #a4a7b0;
-  --subtle: #9497a1;
+  --ink: #f2f4f8;
+  --muted: #9aa1b4;
+  /* 5,4:1 na `--elevated`. Wcześniejsza, ciemniejsza wartość wypadała na
+     kartach poniżej progu AA dla tekstu podstawowego. */
+  --subtle: #828a9e;
 
   /* Lines */
-  --line: #26262c;
-  --line-strong: #33343b;
+  --line: #1c1f2e;
+  --line-strong: #2b3047;
 
   /* Brand Ramp (Dark) */
   --brand-50: #1b1d2f;
@@ -179,6 +236,24 @@
   /* Shadows */
   --shadow-raised: 0 1px 2px rgba(0, 0, 0, 0.4), 0 4px 16px rgba(0, 0, 0, 0.5);
   --shadow-floating: 0 8px 32px rgba(0, 0, 0, 0.6), 0 24px 64px rgba(0, 0, 0, 0.7);
+
+  /* --- Poświata otoczenia (patrz komentarz w `:root`) --------------------
+     W ciemnym motywie para dopełniająca pracuje pełną mocą — to ona niesie
+     cały efekt głębi. */
+  --ambient-cool: #4361ff;
+  --ambient-warm: #ff8a3d;
+  --ambient-cool-alpha: 42%;
+  --ambient-warm-alpha: 34%;
+
+  /* --- Szkło ------------------------------------------------------------- */
+  --glass-fill: rgba(16, 18, 33, 0.62);
+  --glass-line: rgba(255, 255, 255, 0.09);
+  --glass-shine: rgba(255, 255, 255, 0.14);
+  --glass-blur: 20px;
+
+  /* Wypełnienie nagłówka ekspozycyjnego. Punkt środkowy to `--ink`, więc
+     środek napisu zostaje czytelny nawet wtedy, gdy skrajne barwy nie są. */
+  --display-grad: linear-gradient(100deg, #6b8afd 0%, var(--ink) 46%, #ff9a52 100%);
 }
 
 /* ============================================================
@@ -200,6 +275,158 @@
   color: transparent;
   -webkit-text-fill-color: transparent;
   filter: drop-shadow(0 8px 32px color-mix(in srgb, var(--violet) 38%, transparent));
+}
+
+/* ============================================================
+   NAGŁÓWEK EKSPOZYCYJNY
+
+   Wypełnienie gradientem chłód → atrament → ciepło. Środek gradientu to
+   `--ink`, więc najdłuższy fragment napisu ma pełny kontrast tekstu, a barwy
+   pracują na końcach, gdzie zwykle stoją krótsze słowa.
+
+   Bez `.text-display-grad` element zachowuje kolor `--ink` — jeśli
+   przeglądarka nie obsłuży przycinania tła do tekstu, napis nie znika.
+   ============================================================ */
+.text-display {
+  font-weight: 700;
+  letter-spacing: -0.035em;
+  line-height: 0.98;
+  text-wrap: balance;
+}
+
+.text-display-grad {
+  background-image: var(--display-grad);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  -webkit-text-fill-color: transparent;
+}
+
+/* ============================================================
+   SZKŁO
+
+   Panel leżący nad poświatą. Górna krawędź dostaje jaśniejszą linię
+   (`--glass-shine`) — to ona sprzedaje wrażenie tafli, bo naśladuje światło
+   ślizgające się po górnej fasce. Sam `backdrop-filter` daje mgłę, nie szkło.
+
+   `@supports` jest tu istotne: bez obsługi rozmycia półprzezroczyste
+   wypełnienie zostawia nieczytelny tekst na przypadkowym tle, więc panel
+   dostaje wtedy pełne krycie zamiast efektu.
+   ============================================================ */
+.glass-panel {
+  background-color: var(--glass-fill);
+  border: 1px solid var(--glass-line);
+  /* Sam blask górnej krawędzi. Cień zostaje po stronie wywołującego, bo
+     pływająca plakietka i przyklejony pasek boczny potrzebują różnych. */
+  box-shadow: inset 0 1px 0 0 var(--glass-shine);
+}
+
+@supports (backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px)) {
+  .glass-panel {
+    -webkit-backdrop-filter: blur(var(--glass-blur)) saturate(1.4);
+    backdrop-filter: blur(var(--glass-blur)) saturate(1.4);
+  }
+}
+
+@supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+  .glass-panel,
+  .glass-rail {
+    background-color: var(--elevated);
+  }
+}
+
+/* ============================================================
+   KAFEL PRZEPUSZCZAJĄCY ŚWIATŁO
+
+   Karty nie są nieprzezroczyste, tylko przepuszczają poświatę spod spodu.
+   To dlatego kafle po lewej stronie ekranu wpadają w chłód, a te po prawej
+   w ciepło — bez ani jednej reguły przypisującej im kolor. Nieprzezroczyste
+   wypełnienie odcina ten efekt i cała siatka robi się jednakowo szara.
+
+   Krycie jest wysokie (82%), bo pod kartą stoi tekst, a nie dekoracja:
+   niżej zaczynają prześwitywać elementy sąsiednie i spada kontrast treści.
+   ============================================================ */
+@supports (backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px)) {
+  .card-ambient {
+    background-color: color-mix(in srgb, var(--elevated) 82%, transparent);
+    -webkit-backdrop-filter: blur(12px);
+    backdrop-filter: blur(12px);
+  }
+}
+
+/* Pionowa szyna (pasek boczny). Osobna klasa, a nie `.glass-panel` z klasami
+   narzędziowymi kasującymi ramki: `border` w skrócie ustawia wszystkie cztery
+   krawędzie i wygrywa z `border-y-0`, bo tokens.css ładuje się po Tailwindzie.
+   Efektem była kreska ucinająca pasek w poprzek — dlatego szyna deklaruje
+   wyłącznie tę krawędź, którą naprawdę ma mieć. */
+.glass-rail {
+  background-color: var(--glass-fill);
+  border-right: 1px solid var(--glass-line);
+  box-shadow: inset -1px 0 0 0 var(--glass-shine);
+}
+
+@supports (backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px)) {
+  .glass-rail {
+    -webkit-backdrop-filter: blur(var(--glass-blur)) saturate(1.4);
+    backdrop-filter: blur(var(--glass-blur)) saturate(1.4);
+  }
+}
+
+/* ============================================================
+   KARTKA DOKUMENTU
+
+   Podgląd CV to symulacja wydruku, a papier nie ma trybu ciemnego. Kartka
+   musi zostać biała także wtedy, gdy cała reszta interfejsu jest czarna —
+   inaczej podgląd kłamie, a eksport do PDF-a wychodzi z czarnym tłem.
+
+   Klasa nie podmienia klas narzędziowych w JSX, tylko **przedefiniowuje
+   zmienne motywu lokalnie**. Dzięki temu każde `bg-surface`, `text-ink`
+   i `border-line` w środku kartki rozwiązuje się do wartości papierowych bez
+   dotykania choćby jednego komponentu, a nowy element dodany w przyszłości
+   dostaje to zachowanie automatycznie. Wymiana klas jedna po drugiej
+   rozjeżdża się przy pierwszym dopisanym akapicie.
+
+   `color-scheme: light` dokłada natywne kontrolki (paski przewijania,
+   zaznaczenie) w wersji jasnej.
+   ============================================================ */
+.doc-paper {
+  /* Nadpisane muszą być OBIE warstwy nazw, i to jest tu cała sztuczka.
+
+     Klasy narzędziowe Tailwinda nie czytają `--surface`, tylko `--color-surface`
+     z bloku `@theme`. A `--color-surface: var(--surface)` jest zadeklarowane
+     na `:root`, więc rozwiązuje się **tam** — w kontekście korzenia — i w dół
+     dziedziczy się już gotowa wartość, nie odwołanie. Przestawienie samego
+     `--surface` niżej w drzewie nie zmienia zatem niczego, co robi `bg-surface`.
+
+     Ustawienie `--color-*` na tej klasie sprawia, że rozwiązują się dopiero
+     tutaj, z papierowymi wartościami. Surowe nazwy zostają dla reguł, które
+     sięgają po nie wprost. */
+  --paper-sunken: #f2f2f0;
+  --paper-muted: #595d65;
+  --paper-subtle: #72767e;
+  --paper-line-strong: #d3d3d0;
+
+  --surface: var(--paper);
+  --elevated: var(--paper);
+  --sunken: var(--paper-sunken);
+  --ink: var(--paper-ink);
+  --muted: var(--paper-muted);
+  --subtle: var(--paper-subtle);
+  --line: var(--paper-line);
+  --line-strong: var(--paper-line-strong);
+
+  --color-surface: var(--paper);
+  --color-elevated: var(--paper);
+  --color-sunken: var(--paper-sunken);
+  --color-ink: var(--paper-ink);
+  --color-muted: var(--paper-muted);
+  --color-subtle: var(--paper-subtle);
+  --color-line: var(--paper-line);
+  --color-line-strong: var(--paper-line-strong);
+
+  color-scheme: light;
+  background-color: var(--paper);
+  color: var(--paper-ink);
 }
 
 /* Violet glow used under brand-filled surfaces (logo mark, premium badges). */

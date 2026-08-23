@@ -54,7 +54,7 @@ export const Shell: React.FC<ShellProps> = ({
 
   return (
     <div className="relative flex min-h-screen bg-surface font-sans text-ink">
-      {/* 2026 Aurora Ambient Background */}
+      {/* Poświata otoczenia — patrz `.aurora-bg` w index.css */}
       <div className="aurora-bg">
         <div className="aurora-blob aurora-blob-1" />
         <div className="aurora-blob aurora-blob-2" />
@@ -63,7 +63,7 @@ export const Shell: React.FC<ShellProps> = ({
 
       {/* Desktop Sticky Sidebar (16rem / 4rem) */}
       <aside
-        className={`sticky top-0 z-30 hidden h-screen shrink-0 border-r border-line bg-sunken/80 backdrop-blur-md transition-all duration-300 lg:block ${
+        className={`glass-rail sticky top-0 z-30 hidden h-screen shrink-0 transition-all duration-300 lg:block ${
           isSidebarCollapsed ? 'w-16' : 'w-64'
         }`}
       >

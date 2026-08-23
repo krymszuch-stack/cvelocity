@@ -158,7 +158,7 @@ ${education.map((e) => `${e.degree} - ${e.institution} (${e.startDate} - ${e.end
       <div className="overflow-x-auto p-2 sm:p-4 flex justify-center bg-sunken/40 rounded-3xl border border-line">
         <div
           id="cv-printable-document"
-          className="relative min-h-[1050px] w-full max-w-[794px] rounded-2xl border border-line bg-surface p-8 sm:p-12 text-ink shadow-floating space-y-6"
+          className="doc-paper relative min-h-[1050px] w-full max-w-[794px] rounded-2xl border border-line p-8 sm:p-12 shadow-floating space-y-6"
           style={{ '--doc-accent': selectedColor } as React.CSSProperties}
         >
           {/* Header Section */}
