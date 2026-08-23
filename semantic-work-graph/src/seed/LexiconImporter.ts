@@ -446,7 +446,7 @@ export class LexiconImporter {
         fresh.map(([uri]) => uri),
         conceptType
       );
-      rows.push(...synonyms);
+      appendAll(rows, synonyms);
 
       pending = new Map([...discovered].filter(([uri]) => !knownUris.has(uri)));
     }
@@ -555,7 +555,7 @@ export class LexiconImporter {
           continue;
         }
 
-        synonyms.push(...escoResultToSynonyms(payload as EscoSearchResult, conceptType));
+        appendAll(synonyms, escoResultToSynonyms(payload as EscoSearchResult, conceptType));
 
         for (const [key, links] of Object.entries(payload._links ?? {})) {
           if (!key.startsWith('narrower') || !Array.isArray(links)) continue;
@@ -707,7 +707,7 @@ export class LexiconImporter {
 
     const skillRows: SkillSynonym[] = buildOfflineSkillThesaurus();
     if (skillFile) {
-      skillRows.push(...(await this.readSkillCsv(skillFile)));
+      appendAll(skillRows, await this.readSkillCsv(skillFile));
     }
 
     const skillRowsWritten = this.importSkillThesaurus(skillRows);
@@ -765,6 +765,19 @@ interface EscoLink {
 
 interface EscoResourceResponse extends EscoSearchResult {
   _links?: Record<string, EscoLink[] | EscoLink | undefined>;
+}
+
+/**
+ * Dopisuje wszystkie elementy `source` na koniec `target`.
+ *
+ * Naturalne `target.push(...source)` przekazuje każdy element jako osobny
+ * argument wywołania, więc przy tablicach rzędu stu tysięcy pozycji przepełnia
+ * stos (`RangeError: Maximum call stack size exceeded`). Taksonomia ESCO ma
+ * ponad 150 tysięcy etykiet, czyli dokładnie ten rząd wielkości.
+ */
+export function appendAll<T>(target: T[], source: readonly T[]): T[] {
+  for (const item of source) target.push(item);
+  return target;
 }
 
 function firstLabel(value: string | string[] | undefined): string | null {
