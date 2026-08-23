@@ -47,6 +47,7 @@ yarn-error.log*
 semantic-work-graph/data/seed/*.gz
 semantic-work-graph/data/seed/*.tab
 semantic-work-graph/data/seed/esco-skills.pl.csv
+semantic-work-graph/data/seed/esco-taxonomy.pl.csv
 
 # Jeden menedżer pakietów. CI, Dockerfile i README używają npm; drugi lockfile
 # obok oznacza dwa różne drzewa zależności zależnie od tego, kto co uruchomił.

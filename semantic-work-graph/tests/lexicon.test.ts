@@ -5,7 +5,16 @@ import {
   DERIVED_LABEL_PREFIX,
   SqliteGraphRepository,
 } from '../src/repositories/SqliteGraphRepository.js';
-import { LexiconImporter, ALLOWED_POS_TAGS, DEFAULT_BATCH_SIZE, parseCsvLine, escoResultToSynonyms } from '../src/seed/LexiconImporter.js';
+import {
+  LexiconImporter,
+  ALLOWED_POS_TAGS,
+  DEFAULT_BATCH_SIZE,
+  ESCO_CONCEPT_TYPES,
+  ESCO_CONCEPT_SCHEMES,
+  parseCsvLine,
+  escoResultToSynonyms,
+  appendAll,
+} from '../src/seed/LexiconImporter.js';
 import { LinguisticEngine, LEMMA_CACHE_LIMIT } from '../src/services/LinguisticEngine.js';
 import { JargonMapper } from '../src/services/JargonMapper.js';
 import { buildOfflineMorphCorpus, dedupeByPosPriority } from '../src/seed/lexicon/PolishMorphology.js';
@@ -465,6 +474,23 @@ describe('Leksykon: deterministyczna lematyzacja PL i tezaurus umiejętności ES
       expect(mapper.getSynonymsForSkill('zupełnieniezwiązanytermin')).toEqual([]);
     });
 
+    it('kuratorowana nazwa bazowa wygrywa z konkurencyjną nazwą z ESCO', () => {
+      // ESCO nazywa Pythona „python (programowanie komputerowe)”. Obie nazwy
+      // trafiają do tabeli, a rozstrzyga kolejność zapisu: korpus kuratorowany
+      // idzie pierwszy, więc ma niższe `id`, a wyszukiwanie bierze `ORDER BY id
+      // LIMIT 1`. Ten niezmiennik jest niejawny - odwrócenie kolejności importu
+      // przestawiłoby nazwy bazowe wszystkich 100 technologii bez żadnego błędu.
+      repo.insertSynonymBatch([
+        {
+          canonicalName: 'python (programowanie komputerowe)',
+          altLabel: 'python',
+          category: 'ESCO/umiejętność',
+        },
+      ]);
+
+      expect(mapper.findCanonicalSkill('python')).toBe('python');
+    });
+
     it('podaje kategorię dziedzinową umiejętności', () => {
       expect(mapper.getCategoryForSkill('k8s')).toBe('Chmura');
       expect(mapper.getCategoryForSkill('scrum')).toBe('Metodyki');
@@ -547,15 +573,71 @@ describe('Leksykon: deterministyczna lematyzacja PL i tezaurus umiejętności ES
       expect(rows[0]).toEqual({
         canonicalName: 'zarządzanie projektami',
         altLabel: 'zarządzanie projektami',
-        category: 'ESCO',
+        category: 'ESCO/umiejętność',
       });
       expect(rows.map((r) => r.altLabel)).toContain('kierowanie projektami');
       expect(rows.map((r) => r.altLabel)).toContain('project management');
       expect(rows.every((r) => r.canonicalName === 'zarządzanie projektami')).toBe(true);
     });
 
+    it('buduje most z angielskiej etykiety, gdy pojęcie nie ma polskich synonimów', () => {
+      // Polskie etykiety alternatywne ma tylko ok. 10% pojęć ESCO. Bez angielskiego
+      // odpowiednika większość rekordów wnosiłaby wyłącznie własną nazwę.
+      const rows = escoResultToSynonyms({
+        preferredLabel: { pl: 'testowanie oprogramowania', en: 'software testing' },
+        alternativeLabel: { en: ['QA testing'] },
+      });
+
+      expect(rows.map((r) => r.altLabel)).toEqual([
+        'testowanie oprogramowania',
+        'software testing',
+        'qa testing',
+      ]);
+    });
+
+    it('rozróżnia filar zawodów od filaru umiejętności w kategorii', () => {
+      const rows = escoResultToSynonyms(
+        { preferredLabel: { pl: 'spawacz', en: 'welder' } },
+        'occupation'
+      );
+      expect(rows.every((r) => r.category === 'ESCO/zawód')).toBe(true);
+    });
+
+    it('nie duplikuje etykiety powtórzonej w kilku polach rekordu', () => {
+      const rows = escoResultToSynonyms({
+        preferredLabel: { pl: 'docker', en: 'docker' },
+        alternativeLabel: { pl: ['Docker'], en: ['docker'] },
+      });
+      expect(rows).toHaveLength(1);
+      expect(rows[0].altLabel).toBe('docker');
+    });
+
+    it('dopisuje setki tysięcy wierszy bez przepełnienia stosu', () => {
+      // Taksonomia ESCO to ponad 150 tys. etykiet. `target.push(...source)`
+      // przekazuje każdą z nich jako osobny argument wywołania i wywraca się
+      // na `RangeError: Maximum call stack size exceeded` - dokładnie tak padł
+      // pierwszy pełny przebieg zasiewu.
+      const target: number[] = [];
+      const source = Array.from({ length: 200_000 }, (_, i) => i);
+
+      expect(() => appendAll(target, source)).not.toThrow();
+      expect(target).toHaveLength(200_000);
+      expect(target[199_999]).toBe(199_999);
+    });
+
+    it('zachowuje kolejność i nie gubi elementów przy dopisywaniu', () => {
+      expect(appendAll([1, 2], [3, 4])).toEqual([1, 2, 3, 4]);
+      expect(appendAll([1], [])).toEqual([1]);
+    });
+
     it('pomija rekord ESCO bez polskiej etykiety', () => {
       expect(escoResultToSynonyms({ preferredLabel: { en: 'only english' } })).toEqual([]);
+    });
+
+    it('zaciąga oba filary taksonomii', () => {
+      expect([...ESCO_CONCEPT_TYPES]).toEqual(['skill', 'occupation']);
+      expect(ESCO_CONCEPT_SCHEMES.skill).toContain('concept-scheme/skills');
+      expect(ESCO_CONCEPT_SCHEMES.occupation).toContain('concept-scheme/occupations');
     });
   });
 
