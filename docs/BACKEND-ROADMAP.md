@@ -361,6 +361,68 @@ Pozycje produktowe i formalne są w [`docs/SETUP.md`](./SETUP.md). Poniżej wył
 
 ---
 
+## Dodatek · Powiadomienia push — przygotowane, niewdrożone
+
+Klucz publiczny VAPID dla tego projektu istnieje i leży w `.env.example` jako
+`VITE_VAPID_PUBLIC_KEY`. **Nie ma jeszcze ani jednej linijki kodu, która by go
+używała** i jest to celowe — ta sekcja opisuje, dlaczego i co będzie potrzebne.
+
+### Dlaczego to czeka na backend
+
+VAPID służy do **identyfikacji serwera nadającego** wobec serwisu push. Cały
+mechanizm zakłada, że istnieje coś, co wysyła: przy każdym powiadomieniu serwer
+podpisuje token JWT swoim kluczem prywatnym i dokłada dwa nagłówki:
+
+| nagłówek | zawartość |
+|---|---|
+| `Authorization` | `WebPush <JWT>` — podpis, adresat (pochodzenie serwisu push), czas wygaśnięcia, kontakt |
+| `Crypto-Key` | `p256ecdsa=<klucz publiczny base64url>` |
+
+Pod `cvelocity.oathcry.com` stoi sam frontend na Firebase Hosting — `/api/*`
+oddaje `index.html`, bo trafia w regułę przepisującą. Nie ma czego podpisać ani
+kto miałby wysłać. Push wchodzi po wdrożeniu z §6.
+
+### Czego **nie** będzie potrzeba
+
+Zależności `firebase` w przeglądarce. Historycznie Chrome wymagał FCM
+z własnymi nagłówkami i polem `gcm_sender_id` w manifeście; VAPID to znosi
+i pozwala trzymać się standardowego Web Push Protocol, tego samego w Chrome
+i Firefoksie ([Chrome for Developers, „Web Push
+Interop Wins"](https://developer.chrome.com/blog/web-push-interop-wins)).
+
+Po stronie klienta wystarczają wbudowane API przeglądarki:
+
+```js
+const registration = await navigator.serviceWorker.register('/sw.js');
+await registration.pushManager.subscribe({
+  userVisibleOnly: true,
+  applicationServerKey, // klucz publiczny jako Uint8Array
+});
+```
+
+Zero dodatkowych kilobajtów w pakiecie. Po stronie serwera biblioteka
+podpisująca JWT (np. `web-push`) — tam rozmiar nie ma znaczenia.
+
+### Podział kluczy
+
+- **publiczny** — trafia do pakietu przeglądarki i jest przekazywany serwisowi
+  push jako `applicationServerKey`. Jest publiczny z definicji, więc `VITE_`
+  jest tu poprawnym prefiksem i wersjonowanie go w repozytorium nie szkodzi;
+- **prywatny** — wyłącznie serwerowy, podpisuje JWT. Nigdy z prefiksem `VITE_`,
+  nigdy w repozytorium, na produkcji w Secret Managerze — te same zasady co
+  `STRIPE_SECRET_KEY` i `service_role` (patrz §6, „Sekrety").
+
+### Co trzeba będzie dopisać
+
+1. Service worker (`public/sw.js`) z obsługą zdarzenia `push`
+2. Prośbę o zgodę — **nie przy wejściu na stronę**, tylko przy akcji, z której
+   powiadomienie wynika, bo zgoda odrzucona raz jest trudna do odzyskania
+3. Trwałe przechowywanie subskrypcji (tabela w Supabase, powiązana z `user_id`)
+4. Nadawcę po stronie serwera i sprzątanie subskrypcji, na które serwis push
+   odpowiada `404`/`410` — inaczej tabela rośnie o martwe wpisy
+
+---
+
 ## Rozwiązywanie problemów
 
 | Objaw | Przyczyna | Naprawa |
