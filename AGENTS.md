@@ -199,6 +199,8 @@ issue**. Bez tego w kolejce lądują śmieciowe zgłoszenia w nieskończoność.
 3. **Najwyżej cztery otwarte PR-y od agentów naraz.** Limit wynika z recenzji.
 4. **Pilot przed skalowaniem.** Pierwsze zadanie danego typu idzie pojedynczo.
 
+Gotowe briefy, napisane według tych reguł: [`docs/zadania-dla-agenta.md`](./docs/zadania-dla-agenta.md).
+
 ## Zanim zgłosisz zmianę
 
 - [ ] `npm run lint` bez błędów (to bramka CI)
