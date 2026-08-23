@@ -29,6 +29,12 @@ jobs:
       - name: Install Dependencies
         run: npm ci
 
+      # Antigravity przycina plik reguł powyżej 12 000 znaków i nie zgłasza tego
+      # błędem — kontrakt urywa się w połowie, a agent pracuje dalej na resztce.
+      # Ten krok zamienia cichą utratę reguł w czerwony build.
+      - name: Limity plików reguł (AGENTS.md, .agents/)
+        run: node scripts/sprawdz-limity-regul.mjs
+
       - name: Type Check
         run: npm run lint
 
