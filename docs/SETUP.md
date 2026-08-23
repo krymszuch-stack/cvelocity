@@ -169,16 +169,38 @@ ma: `/api/health` oddaje stronę HTML, bo trafia w regułę przepisującą wszys
 na `index.html`. Wszystko, co wymaga serwera — Doradca AI, parsowanie ogłoszeń
 przez Gemini, konta, limity — pod tym adresem nie działa.
 
-Konfiguracja wdrożenia leży teraz w repozytorium (`firebase.json`,
-`.firebaserc`), a nie na czyimś laptopie. Wdrożenie to:
+Konfiguracja wdrożenia leży w repozytorium (`firebase.json`, `.firebaserc`),
+a nie na czyimś laptopie.
+
+**Wdrożenie jest automatyczne.** Zadanie `deploy-hosting` w
+`.github/workflows/ci.yml` wysyła frontend przy każdym wypchnięciu na `main`.
+Zależy od `build-and-test`, więc czerwone testy zatrzymują wdrożenie zamiast
+opublikować zepsutą wersję; pull requesty są sprawdzane, ale nie publikowane.
+Uwierzytelnia się sekretem `FIREBASE_SERVICE_ACCOUNT` z ustawień repozytorium.
+
+Ręcznie, gdy trzeba wdrożyć poza kolejnością:
 
 ```bash
 firebase login          # raz, kontem z dostępem do projektu
 firebase deploy --only hosting
 ```
 
-`predeploy` w `firebase.json` uruchamia `npm run build:client` samo, więc nie da
-się wysłać nieodświeżonego katalogu `dist/`.
+Obie ścieżki budują przez `predeploy` z `firebase.json`, czyli `npm run
+build:client`. Jedno miejsce decyduje, co trafia na hosting, więc wdrożenie
+z laptopa i to z CI dają ten sam wynik — i nie da się wysłać nieodświeżonego
+katalogu `dist/`.
+
+> **Zmienne `VITE_`.** Workflow nie ustawia żadnej, bo wśród sekretów
+> repozytorium nie ma tych, które kod czyta (`VITE_API_URL`, `VITE_SUPABASE_*`,
+> `VITE_STRIPE_PUBLISHABLE_KEY`). Pakiet powstaje więc w trybie bez backendu —
+> tak samo jak wersja stojąca dziś pod tym adresem. Gdy backend ruszy, trzeba je
+> dołożyć jako sekrety i przekazać do kroku wdrożenia; są wbudowywane podczas
+> budowania, nie odczytywane w czasie działania.
+>
+> Sekrety `VITE_FIREBASE_*` w ustawieniach repozytorium są pozostałością po
+> okresie, gdy aplikacja nazywała się SkillVault i używała Firebase do
+> uwierzytelniania. Dziś nie czyta ich żaden kod — występują wyłącznie
+> w deklaracjach typów w `src/vite-env.d.ts`.
 
 > **Pamięć podręczna.** Serwowany dotąd `index.html` miał `Cache-Control:
 > max-age=3600`, czyli po wdrożeniu nowa wersja pokazywała się nawet po godzinie

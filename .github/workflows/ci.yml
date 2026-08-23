@@ -128,3 +128,69 @@ jobs:
 
       - name: Build Container Image
         run: docker build -t cvelocity-api:ci .
+
+  # Wdrożenie frontendu na Firebase Hosting.
+  #
+  # Osobne zadanie z `needs: build-and-test`, a nie kolejny krok wyżej — dzięki
+  # temu czerwone testy zatrzymują wdrożenie zamiast wysłać zepsutą wersję.
+  # Warunek `if` przepuszcza wyłącznie wypchnięcia na `main`: pull requesty mają
+  # być sprawdzane, nie publikowane.
+  #
+  # Buduje `predeploy` z `firebase.json`, nie ten workflow. Jedno miejsce
+  # określa, co trafia na hosting, więc wdrożenie z laptopa i to z CI dają ten
+  # sam wynik.
+  #
+  # Uwaga o zmiennych `VITE_`: kod czyta `VITE_API_URL`, `VITE_SUPABASE_*`
+  # i `VITE_STRIPE_PUBLISHABLE_KEY`. Żadna z nich nie jest tu ustawiana, bo nie
+  # ma ich wśród sekretów repozytorium — pakiet powstaje więc w trybie bez
+  # backendu, dokładnie tak jak wersja stojąca dziś pod tym adresem. Gdy backend
+  # ruszy, trzeba je dołożyć jako sekrety i przekazać do kroku wdrożenia;
+  # są wbudowywane podczas budowania, a nie odczytywane w czasie działania.
+  deploy-hosting:
+    needs: build-and-test
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+
+    permissions:
+      contents: read
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22.x
+          cache: 'npm'
+
+      - name: Install Dependencies
+        run: npm ci
+
+      - name: Deploy to Firebase Hosting
+        env:
+          FIREBASE_SERVICE_ACCOUNT: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
+        run: |
+          if [ -z "$FIREBASE_SERVICE_ACCOUNT" ]; then
+            echo "BŁĄD: brak sekretu FIREBASE_SERVICE_ACCOUNT" >&2
+            exit 1
+          fi
+
+          # Konto usługi trafia do pliku poza katalogiem roboczym: w repozytorium
+          # mogłoby zostać przypadkiem dodane do commita, a `git status` nie jest
+          # tu niczyim nawykiem. RUNNER_TEMP znika razem z maszyną zadania.
+          CREDS="$RUNNER_TEMP/firebase-service-account.json"
+          printf '%s' "$FIREBASE_SERVICE_ACCOUNT" > "$CREDS"
+          chmod 600 "$CREDS"
+          export GOOGLE_APPLICATION_CREDENTIALS="$CREDS"
+
+          # Wersja przypięta: `@latest` w potoku wdrożeniowym oznacza, że nowe
+          # wydanie narzędzia może popsuć wdrożenie bez żadnej zmiany po naszej
+          # stronie.
+          npx --yes firebase-tools@15.28.1 deploy \
+            --only hosting \
+            --project skillvault-99a72 \
+            --non-interactive \
+            --message "$GITHUB_SHA"
+
+          rm -f "$CREDS"
