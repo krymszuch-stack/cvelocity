@@ -117,3 +117,80 @@ export async function getEntitlements(userId: string): Promise<Entitlements> {
     },
   };
 }
+
+export interface AiTaskResult<T> {
+  data: T;
+  usage?: {
+    promptTokens: number;
+    completionTokens: number;
+    model: string;
+    calculatedCost?: number | null;
+  };
+}
+
+/**
+ * Rezerwuje atomowo 1 wywołanie AI z użyciem blokady pesymistycznej w bazie PostgreSQL (SELECT FOR UPDATE).
+ */
+export async function reserveAiQuota(userId: string, maxDailyUses: number): Promise<{ allowed: boolean; current_uses?: number }> {
+  const { data, error } = await getSupabase().rpc('reserve_ai_quota', {
+    p_user_id: userId,
+    p_max_daily_uses: maxDailyUses,
+  });
+
+  if (error) {
+    throw new Error(`Nie udało się zarezerwować limitu AI: ${error.message}`);
+  }
+
+  return (data as { allowed: boolean; current_uses?: number }) ?? { allowed: false };
+}
+
+/**
+ * Zwrot zarezerwowanego limitu AI w przypadku awarii wykonania operacji LLM.
+ */
+export async function refundAiQuota(userId: string): Promise<void> {
+  const { error } = await getSupabase().rpc('refund_ai_quota', {
+    p_user_id: userId,
+  });
+
+  if (error) {
+    console.warn(`[quota] Nie udało się zwrócić limitu AI dla użytkownika ${userId}:`, error.message);
+  }
+}
+
+/**
+ * Wykonuje potok wywołania AI z pre-flight rezerwacją pesymistyczną,
+ * wykonaniem zadania LLM, księgowaniem tokenów i automatyczną refundacją w razie awarii.
+ */
+export async function executeAiOperation<T>(
+  userId: string,
+  tier: string,
+  context: string,
+  runAiTask: () => Promise<AiTaskResult<T>>
+): Promise<T> {
+  const maxUses = tier === 'PRO' || tier === 'active' || tier === 'trialing' ? 100 : 5;
+
+  const reservation = await reserveAiQuota(userId, maxUses);
+  if (!reservation.allowed) {
+    throw new QuotaExceededError('ai');
+  }
+
+  try {
+    const result = await runAiTask();
+
+    if (result.usage) {
+      const { recordUsage } = await import('./usageLedger');
+      recordUsage({
+        userId,
+        context,
+        model: result.usage.model,
+        promptTokens: result.usage.promptTokens,
+        outputTokens: result.usage.completionTokens,
+      });
+    }
+
+    return result.data;
+  } catch (error) {
+    await refundAiQuota(userId);
+    throw error;
+  }
+}
