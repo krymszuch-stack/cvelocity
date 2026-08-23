@@ -1,5 +1,6 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
 import type { MasterVault, WorkExperience, Project } from '../../types';
+import { createDeferredWriter, PERSIST_DELAY_MS } from '../deferredWriter';
 
 /**
  * Pomiar kosztu utrwalania Master Vaultu.
@@ -101,6 +102,75 @@ describe('koszt utrwalania Master Vaultu', () => {
     );
 
     expect(perWrite).toBeGreaterThan(0);
+  });
+
+  it('porównuje sesję pisania przed odłożeniem zapisu i po nim', () => {
+    // Pomiar przepuszcza dane przez prawdziwego writera, a nie przez wzór
+    // szacujący liczbę zapisów. Zegary są atrapami (sterujemy upływem czasu),
+    // ale `JSON.stringify` w funkcji zapisującej jest prawdziwy, więc zmierzony
+    // koszt to koszt faktycznie wykonanej pracy.
+    const keystrokes = 200;
+    const msBetweenKeystrokes = 40;
+
+    // --- przed zmianą: zapis przy każdej zmianie stanu -----------------------
+    let writesBefore = 0;
+    let costBefore = 0;
+    for (let i = 0; i < keystrokes; i++) {
+      const edited = { ...vault, updatedAt: String(i) };
+      const t0 = performance.now();
+      JSON.stringify(edited);
+      costBefore += performance.now() - t0;
+      writesBefore++;
+    }
+
+    // --- po zmianie: ten sam ciąg zdarzeń przez createDeferredWriter ---------
+    vi.useFakeTimers();
+    let writesAfter = 0;
+    let costAfter = 0;
+
+    const writer = createDeferredWriter<MasterVault>((value) => {
+      const t0 = performance.now();
+      JSON.stringify(value);
+      costAfter += performance.now() - t0;
+      writesAfter++;
+    });
+
+    for (let i = 0; i < keystrokes; i++) {
+      writer.push({ ...vault, updatedAt: String(i) } as MasterVault);
+      vi.advanceTimersByTime(msBetweenKeystrokes);
+    }
+    // Użytkownik przestaje pisać — zaległy zapis dochodzi.
+    vi.advanceTimersByTime(PERSIST_DELAY_MS);
+    vi.useRealTimers();
+
+    console.log(
+      `\n  sesja ${keystrokes} znaków (co ${msBetweenKeystrokes} ms):` +
+        `\n    przed: ${writesBefore} serializacji, ${costBefore.toFixed(1)} ms na gł. wątku` +
+        `\n    po:    ${writesAfter} serializacji, ${costAfter.toFixed(1)} ms na gł. wątku` +
+        `\n    redukcja zapisów: ${(100 - (writesAfter / writesBefore) * 100).toFixed(1)}%\n`
+    );
+
+    // Pisanie w tempie szybszym niż opóźnienie bez przerwy przesuwa zegar,
+    // więc do zapisu dochodzi dopiero po zatrzymaniu się użytkownika.
+    expect(writesAfter).toBe(1);
+    expect(writesBefore).toBe(keystrokes);
+    expect(costAfter).toBeLessThan(costBefore);
+  });
+
+  it('nie gubi ostatniej zmiany, gdy karta znika przed upływem opóźnienia', () => {
+    vi.useFakeTimers();
+    const persisted: string[] = [];
+    const writer = createDeferredWriter<MasterVault>((v) => persisted.push(v.updatedAt));
+
+    writer.push({ ...vault, updatedAt: 'ostatnia-zmiana' } as MasterVault);
+    vi.advanceTimersByTime(PERSIST_DELAY_MS - 100); // zapis jeszcze nie nastąpił
+    expect(persisted).toHaveLength(0);
+
+    // Odpowiednik zamknięcia karty: bindFlushOnHide woła dokładnie to.
+    writer.flush();
+    vi.useRealTimers();
+
+    expect(persisted).toEqual(['ostatnia-zmiana']);
   });
 
   it('porównuje koszt zapisu pełnego z porównaniem referencji', () => {

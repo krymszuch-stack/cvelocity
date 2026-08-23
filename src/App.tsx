@@ -1,5 +1,6 @@
-import React, { useState, useEffect, useRef, Suspense, lazy } from 'react';
+import React, { useState, useEffect, useCallback, useRef, Suspense, lazy } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
+import { useDeferredPersist } from './hooks/useDeferredPersist';
 import { MasterVault } from './types';
 import { createEmptyVault } from './lib/sampleVault';
 import {
@@ -81,13 +82,24 @@ function MainApp() {
   // Jeden zapis, pod jednym kluczem. Wcześniej każda zmiana trafiała naraz do
   // klucza globalnego i do klucza profilu, więc te same dane leżały w schowku
   // w dwóch kopiach, które potrafiły się rozjechać.
-  useEffect(() => {
-    if (isAuthenticated && user) {
-      saveUserVault(vault);
-    } else {
-      saveProfileVault(ANONYMOUS_PROFILE_ID, vault);
-    }
-  }, [vault, isAuthenticated, user, saveUserVault]);
+  //
+  // Zapis jest odłożony w czasie, bo utrwalanie to pełna serializacja drzewa,
+  // a edytor tworzy nowy obiekt vaultu przy każdej edycji pola — bez odłożenia
+  // `JSON.stringify` całych 38 kB wykonywał się przy każdym wpisanym znaku.
+  // `useDeferredPersist` dosyła zaległy zapis przy ukryciu karty, zamknięciu
+  // strony i odmontowaniu, więc opóźnienie nie tworzy okna utraty danych.
+  const persistVault = useCallback(
+    (current: MasterVault) => {
+      if (isAuthenticated && user) {
+        saveUserVault(current);
+      } else {
+        saveProfileVault(ANONYMOUS_PROFILE_ID, current);
+      }
+    },
+    [isAuthenticated, user, saveUserVault]
+  );
+
+  useDeferredPersist(vault, persistVault);
 
   const handleApplyParsedVault = (parsed: Partial<MasterVault>) => {
     setVault((prev) => {
