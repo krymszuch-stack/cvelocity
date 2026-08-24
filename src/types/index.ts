@@ -231,13 +231,17 @@ export interface CoverLetter {
   fullText: string;
 }
 
-export interface ConsistencyCheckIssue {
-  type: 'GAP' | 'SLOGAN' | 'UNQUANTIFIED' | 'MISSING_FIELD';
-  severity: 'HIGH' | 'MEDIUM' | 'LOW';
-  title: string;
-  description: string;
-  suggestion: string;
-}
+/**
+ * Rodzaj luki w profilu.
+ *
+ * Nazewnictwo pochodzi z `ConsistencyCheckIssue`, który stał tu wcześniej
+ * z właściwym słownictwem i zerem konsumentów — ani jeden plik go nie
+ * produkował, ani jeden nie czytał. Reguła 5 działa w obie strony: kod bez
+ * konsumenta albo go dostaje, albo znika. Została sama klasyfikacja, bo
+ * posługuje się nią katalog pytań uzupełniających (`src/lib/cvQuestionEngine.ts`),
+ * a druga kopia tej listy rozjechałaby się przy pierwszej nowej kategorii.
+ */
+export type GapKind = 'GAP' | 'SLOGAN' | 'UNQUANTIFIED' | 'MISSING_FIELD';
 
 export interface LayeredFactItem {
   id: string;
