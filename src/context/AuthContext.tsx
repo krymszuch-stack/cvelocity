@@ -1,4 +1,12 @@
-import React, { createContext, useContext, useState, useCallback, useMemo } from 'react';
+import React, {
+  createContext,
+  useCallback,
+  useContext,
+  useEffect,
+  useMemo,
+  useState,
+} from 'react';
+import type { Session } from '@supabase/supabase-js';
 import {
   LocalProfile,
   getActiveProfile,
@@ -9,45 +17,98 @@ import {
   saveProfileVault,
 } from '../lib/localProfile';
 import { MasterVault } from '../types';
+import { getSupabaseBrowserClient } from '../lib/supabaseClient';
+import { saveCloudVault } from '../lib/cloudVault';
+import { authErrorMessage } from '../lib/authErrors';
+import { removeRaw, vaultKeyFor } from '../lib/storage';
+import { showToast } from '../store/useToastStore';
 
 /**
  * Jedyne źródło prawdy o tym, kto korzysta z aplikacji.
  *
- * Wcześniej były dwa: `AuthModal` zapisywał użytkownika do `useAppStore`, a
- * `Topbar` czytał `isAuthenticated` z tego kontekstu. Efekt widoczny gołym
- * okiem — po „zalogowaniu" pasek górny dalej pokazywał „Zaloguj się", bo stan,
- * który ustawiał modal, nie był tym, który czytał interfejs.
+ * Obsługuje **dwa tryby naraz** i to jest decyzja produktowa, nie zaszłość:
  *
- * Metody `login`, `register`, `loginOAuth`, `completeTwoFactorLogin`,
- * `enableTwoFactor` i `disableTwoFactor` zostały usunięte: żadna nie miała ani
- * jednego wywołania, a wszystkie opierały się na module udającym system kont.
+ * - `local` — profil w tej przeglądarce, bez konta i bez serwera. Dane nie
+ *   opuszczają urządzenia, co polityka prywatności obiecuje wprost i co dla
+ *   części osób jest powodem, żeby w ogóle wpisać tu swoje CV.
+ * - `cloud` — konto w Supabase. Synchronizacja między urządzeniami i kopia
+ *   zapasowa, kosztem zaufania nam swoich danych.
+ *
+ * Wybór należy do użytkownika. Zlikwidowanie trybu lokalnego zamieniłoby
+ * aplikację działającą bez rejestracji w kolejną, która żąda konta na wejściu.
  */
+
+export type AuthMode = 'local' | 'cloud';
+
+export interface AuthActionResult {
+  ok: boolean;
+  /** Komunikat po polsku, gotowy do pokazania. Pusty przy powodzeniu. */
+  message: string;
+  /** `true`, gdy konto powstało, ale czeka na potwierdzenie adresu. */
+  needsEmailConfirmation?: boolean;
+}
+
 interface AuthContextType {
   user: LocalProfile | null;
   isAuthenticated: boolean;
+  /** `null`, gdy nikt nie jest zalogowany. */
+  mode: AuthMode | null;
+  /** Sesja Supabase — `null` w trybie lokalnym. */
+  session: Session | null;
+  /** Czy ta instalacja w ogóle ma skonfigurowane konta w chmurze. */
+  cloudAvailable: boolean;
   userVault: MasterVault | null;
+
   /**
    * Zakłada profil w tej przeglądarce. Świadomie nie nazywa się `login` —
    * nic tu nikogo nie uwierzytelnia i interfejs mówi o tym wprost.
    */
   signInLocally: (name: string, email?: string) => MasterVault;
-  logout: () => void;
-  deleteAccount: () => void;
+
+  signUpCloud: (email: string, password: string, displayName: string) => Promise<AuthActionResult>;
+  signInCloud: (email: string, password: string) => Promise<AuthActionResult>;
+  requestPasswordReset: (email: string) => Promise<AuthActionResult>;
+  resendConfirmation: (email: string) => Promise<AuthActionResult>;
+
+  logout: () => Promise<void>;
+  deleteAccount: () => Promise<AuthActionResult>;
   saveUserVault: (vault: MasterVault) => void;
   saveCurrentVault: (vault: MasterVault) => void;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-export const AuthProvider: React.FC<{ children: React.ReactNode; onVaultLoaded?: (vault: MasterVault) => void }> = ({
-  children,
-  onVaultLoaded,
-}) => {
+/** Adres, na który wraca użytkownik po kliknięciu linku z maila. */
+function redirectTarget(): string {
+  return `${window.location.origin}/`;
+}
+
+/** Zamienia konto Supabase na ten sam kształt, którego używa reszta interfejsu. */
+function profileFromSession(session: Session): LocalProfile {
+  const meta = session.user.user_metadata as { display_name?: string } | undefined;
+  const email = session.user.email ?? '';
+  return {
+    id: session.user.id,
+    name: meta?.display_name?.trim() || email.split('@')[0] || 'Użytkownik',
+    email,
+    createdAt: session.user.created_at ?? new Date().toISOString(),
+  };
+}
+
+export const AuthProvider: React.FC<{
+  children: React.ReactNode;
+  onVaultLoaded?: (vault: MasterVault) => void;
+}> = ({ children, onVaultLoaded }) => {
   const [user, setUser] = useState<LocalProfile | null>(() => getActiveProfile());
+  const [mode, setMode] = useState<AuthMode | null>(() => (getActiveProfile() ? 'local' : null));
+  const [session, setSession] = useState<Session | null>(null);
   const [userVault, setUserVault] = useState<MasterVault | null>(() => {
     const active = getActiveProfile();
     return active ? loadProfileVault(active.id) : null;
   });
+
+  const supabase = getSupabaseBrowserClient();
+  const cloudAvailable = supabase !== null;
 
   // Uwaga: celowo brak efektu przeładowującego vault przy każdej zmianie `user`.
   // Każda ścieżka ustawia vault jawnie wartością, którą właśnie wyliczyła, a
@@ -56,10 +117,57 @@ export const AuthProvider: React.FC<{ children: React.ReactNode; onVaultLoaded?:
   // exceeded"). Leniwy inicjalizator wyżej pokrywa przypadek wejścia na stronę
   // z istniejącym profilem.
 
+  /**
+   * Nasłuch sesji. Obsługuje też powrót z linku potwierdzającego e-mail —
+   * `detectSessionInUrl` w `supabaseClient.ts` wyłapuje token z adresu i
+   * emituje `SIGNED_IN`, więc nie trzeba osobno parsować fragmentu URL-a.
+   */
+  useEffect(() => {
+    if (!supabase) return;
+
+    let aktywny = true;
+
+    supabase.auth.getSession().then(({ data }) => {
+      if (!aktywny || !data.session) return;
+      setSession(data.session);
+      setUser(profileFromSession(data.session));
+      setMode('cloud');
+    });
+
+    const { data: sub } = supabase.auth.onAuthStateChange((event, nowaSesja) => {
+      if (!aktywny) return;
+
+      if (nowaSesja) {
+        setSession(nowaSesja);
+        setUser(profileFromSession(nowaSesja));
+        setMode('cloud');
+        // Link potwierdzający zostawia token we fragmencie adresu. Zostaje on
+        // w historii przeglądarki i w pasku adresu, więc sprzątamy go od razu.
+        if (event === 'SIGNED_IN' && window.location.hash.includes('access_token')) {
+          window.history.replaceState(null, '', window.location.pathname);
+        }
+        return;
+      }
+
+      if (event === 'SIGNED_OUT') {
+        setSession(null);
+        setUser(null);
+        setMode(null);
+        setUserVault(null);
+      }
+    });
+
+    return () => {
+      aktywny = false;
+      sub.subscription.unsubscribe();
+    };
+  }, [supabase]);
+
   const signInLocally = useCallback(
     (name: string, email?: string): MasterVault => {
       const { profile, vault } = createLocalProfile(name, email);
       setUser(profile);
+      setMode('local');
       setUserVault(vault);
       onVaultLoaded?.(vault);
       return vault;
@@ -67,18 +175,111 @@ export const AuthProvider: React.FC<{ children: React.ReactNode; onVaultLoaded?:
     [onVaultLoaded]
   );
 
-  const logout = useCallback(() => {
+  const signUpCloud = useCallback(
+    async (email: string, password: string, displayName: string): Promise<AuthActionResult> => {
+      if (!supabase) return { ok: false, message: 'Konta w chmurze nie są tu skonfigurowane.' };
+
+      const { data, error } = await supabase.auth.signUp({
+        email,
+        password,
+        // `display_name` czyta wyzwalacz `handle_new_user` w bazie i zakłada
+        // z niego wiersz w `profiles` (migracja 0001).
+        options: { data: { display_name: displayName.trim() }, emailRedirectTo: redirectTarget() },
+      });
+
+      if (error) return { ok: false, message: authErrorMessage(error) };
+
+      // Przy włączonym potwierdzaniu adresu Supabase zwraca użytkownika bez
+      // sesji. To nie jest błąd — to jest ten moment, w którym trzeba wysłać
+      // człowieka do skrzynki.
+      if (!data.session) return { ok: true, message: '', needsEmailConfirmation: true };
+
+      return { ok: true, message: '' };
+    },
+    [supabase]
+  );
+
+  const signInCloud = useCallback(
+    async (email: string, password: string): Promise<AuthActionResult> => {
+      if (!supabase) return { ok: false, message: 'Konta w chmurze nie są tu skonfigurowane.' };
+
+      const { error } = await supabase.auth.signInWithPassword({ email, password });
+      if (error) return { ok: false, message: authErrorMessage(error) };
+      return { ok: true, message: '' };
+    },
+    [supabase]
+  );
+
+  const requestPasswordReset = useCallback(
+    async (email: string): Promise<AuthActionResult> => {
+      if (!supabase) return { ok: false, message: 'Konta w chmurze nie są tu skonfigurowane.' };
+
+      const { error } = await supabase.auth.resetPasswordForEmail(email, {
+        redirectTo: redirectTarget(),
+      });
+
+      // Nawet przy błędzie odpowiadamy tak samo: inaczej formularz resetu
+      // powiedziałby obcemu, czy dany adres ma u nas konto.
+      if (error) return { ok: false, message: authErrorMessage(error) };
+      return { ok: true, message: '' };
+    },
+    [supabase]
+  );
+
+  const resendConfirmation = useCallback(
+    async (email: string): Promise<AuthActionResult> => {
+      if (!supabase) return { ok: false, message: 'Konta w chmurze nie są tu skonfigurowane.' };
+
+      const { error } = await supabase.auth.resend({ type: 'signup', email });
+      if (error) return { ok: false, message: authErrorMessage(error) };
+      return { ok: true, message: '' };
+    },
+    [supabase]
+  );
+
+  const logout = useCallback(async () => {
+    if (mode === 'cloud' && supabase) {
+      const wychodzacy = user?.id;
+      await supabase.auth.signOut();
+      // Lokalna kopia CV znika razem z sesją. Bez tego dokument zostawałby
+      // na dysku pod kluczem, którego po wylogowaniu nic już nie odczyta ani
+      // nie skasuje — na wspólnym komputerze to jest wyciek, nie niedopatrzenie.
+      if (wychodzacy) removeRaw(vaultKeyFor(wychodzacy));
+      return;
+    }
+
     signOutLocalProfile();
     setUser(null);
+    setMode(null);
     setUserVault(null);
-  }, []);
+  }, [mode, supabase, user]);
 
-  const deleteAccount = useCallback(() => {
+  const deleteAccount = useCallback(async (): Promise<AuthActionResult> => {
+    if (mode === 'cloud' && supabase) {
+      const { error } = await supabase.functions.invoke('usun-konto');
+      if (error) {
+        return { ok: false, message: 'Nie udało się usunąć konta. Spróbuj ponownie za chwilę.' };
+      }
+      await supabase.auth.signOut();
+      deleteLocalProfile();
+      setSession(null);
+      setUser(null);
+      setMode(null);
+      setUserVault(null);
+      return { ok: true, message: '' };
+    }
+
     deleteLocalProfile();
     setUser(null);
+    setMode(null);
     setUserVault(null);
-  }, []);
+    return { ok: true, message: '' };
+  }, [mode, supabase]);
 
+  /**
+   * Zapis vaultu. Sanityzacja jest wspólna dla obu trybów; różni się wyłącznie
+   * miejsce docelowe.
+   */
   const saveUserVaultFunc = useCallback(
     (vault: MasterVault) => {
       if (!user) return;
@@ -106,24 +307,59 @@ export const AuthProvider: React.FC<{ children: React.ReactNode; onVaultLoaded?:
         ? { ...vault, personalInfo: { ...personalInfo, ...cleaned } }
         : vault;
 
+      // Kopia lokalna powstaje w obu trybach: w chmurowym jest zabezpieczeniem
+      // na czas bez sieci i znika przy wylogowaniu.
       saveProfileVault(user.id, sanitizedVault);
       setUserVault((prev) => (prev === sanitizedVault ? prev : sanitizedVault));
+
+      if (mode === 'cloud') {
+        // Zapis do chmury jest asynchroniczny, a `persistVault` w App.tsx nie
+        // czeka na wynik — sygnalizujemy więc awarię wprost, zamiast pozwolić
+        // użytkownikowi wierzyć, że dokument jest bezpieczny.
+        void saveCloudVault(sanitizedVault).catch(() => {
+          showToast('Nie udało się zapisać CV w chmurze', {
+            message: 'Zmiany zostały zachowane w tej przeglądarce. Spróbujemy ponownie.',
+            variant: 'error',
+          });
+        });
+      }
     },
-    [user]
+    [user, mode]
   );
 
   const value = useMemo(
     () => ({
       user,
       isAuthenticated: !!user,
+      mode,
+      session,
+      cloudAvailable,
       userVault,
       signInLocally,
+      signUpCloud,
+      signInCloud,
+      requestPasswordReset,
+      resendConfirmation,
       logout,
       deleteAccount,
       saveUserVault: saveUserVaultFunc,
       saveCurrentVault: saveUserVaultFunc,
     }),
-    [user, userVault, signInLocally, logout, deleteAccount, saveUserVaultFunc]
+    [
+      user,
+      mode,
+      session,
+      cloudAvailable,
+      userVault,
+      signInLocally,
+      signUpCloud,
+      signInCloud,
+      requestPasswordReset,
+      resendConfirmation,
+      logout,
+      deleteAccount,
+      saveUserVaultFunc,
+    ]
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

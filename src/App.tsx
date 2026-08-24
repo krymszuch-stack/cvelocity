@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useMemo, Suspense, lazy } from 'react';
+import React, { useState, useEffect, useCallback, useMemo, useRef, Suspense, lazy } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { useDeferredPersist } from './hooks/useDeferredPersist';
 import { useUnlocks } from './hooks/useUnlocks';
@@ -26,6 +26,8 @@ import { Skeleton } from './components/ui/Skeleton';
 import { HomeView } from './views/HomeView';
 import { NextActionCard } from './components/nextaction/NextActionCard';
 import { CvQuestionsCard } from './features/questions/CvQuestionsCard';
+import { fetchCloudVault, saveCloudVault } from './lib/cloudVault';
+import { resolveVaultOnSignIn } from './lib/vaultSync';
 import { SkillBridgeMatrixModal } from './components/bridge/SkillBridgeMatrixModal';
 import { ElevatorPitchModal } from './features/pitch/ElevatorPitchModal';
 import { DrillModeModal } from './features/drill/DrillModeModal';
@@ -65,7 +67,7 @@ function MainApp() {
     advisorInitialQuestion,
   } = useAppStore();
 
-  const { userVault, saveUserVault, user, isAuthenticated } = useAuth();
+  const { userVault, saveUserVault, user, isAuthenticated, mode } = useAuth();
 
   const [vault, setVault] = useState<MasterVault>(() => {
     // Ślad po danych demonstracyjnych, które kiedyś wgrywały się same. Wpis
@@ -90,6 +92,68 @@ function MainApp() {
       setVault(userVault);
     }
   }, [userVault]);
+
+  /**
+   * Pierwsze spotkanie lokalnego CV z kontem w chmurze.
+   *
+   * Rozstrzygnięcie żyje tutaj, a nie w `AuthContext`, bo to `MainApp` trzyma
+   * vault — kontekst jest wyżej w drzewie i nie ma do niego dostępu.
+   *
+   * `vaultRef` zamiast `vault` w zależnościach jest konieczne: efekt ma
+   * zadziałać **raz po zalogowaniu**, a nie przy każdym wpisanym znaku.
+   * Wpisanie `vault` do tablicy zależności robiłoby żądanie do chmury po każdej
+   * literze i nadpisywało dopiero co pobrane dane.
+   */
+  const vaultRef = useRef(vault);
+  // Aktualizacja w efekcie, nie w trakcie renderu — ten sam wzorzec co
+  // `persistRef` w `useDeferredPersist.ts`.
+  useEffect(() => {
+    vaultRef.current = vault;
+  }, [vault]);
+
+  const syncedForUser = useRef<string | null>(null);
+
+  useEffect(() => {
+    if (mode !== 'cloud' || !user) return;
+    if (syncedForUser.current === user.id) return;
+    syncedForUser.current = user.id;
+
+    let aktywny = true;
+
+    void (async () => {
+      try {
+        const chmura = await fetchCloudVault();
+        if (!aktywny) return;
+
+        const wynik = resolveVaultOnSignIn(vaultRef.current, chmura);
+        setVault(wynik.vault);
+
+        if (wynik.shouldUpload) {
+          await saveCloudVault(wynik.vault);
+          if (wynik.action === 'scal-i-wyslij') {
+            showToast('Połączyliśmy CV z tego urządzenia z tym z konta', {
+              message: 'Nic nie zostało usunięte — wpisy z obu miejsc są na miejscu.',
+              variant: 'info',
+            });
+          }
+        }
+      } catch {
+        if (!aktywny) return;
+        // Nieudany odczyt nie może skasować tego, co użytkownik ma na ekranie —
+        // `resolveVaultOnSignIn` nigdy nie dostanie tu pustej chmury „na wszelki
+        // wypadek", bo w ogóle nie dochodzi do rozstrzygnięcia.
+        syncedForUser.current = null;
+        showToast('Nie udało się pobrać CV z konta', {
+          message: 'Pracujesz na wersji z tego urządzenia. Odśwież stronę, żeby spróbować ponownie.',
+          variant: 'error',
+        });
+      }
+    })();
+
+    return () => {
+      aktywny = false;
+    };
+  }, [mode, user]);
 
   // Jeden zapis, pod jednym kluczem. Wcześniej każda zmiana trafiała naraz do
   // klucza globalnego i do klucza profilu, więc te same dane leżały w schowku
