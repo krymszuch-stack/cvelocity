@@ -62,6 +62,11 @@ export const ProfileSection: React.FC<ProfileSectionProps> = ({
   const [step, setStep] = useState<ProfileStep>(initialStep);
   const completeness = measureVaultCompleteness(vault);
 
+  const handleApplyAndSwitch = (parsed: Partial<MasterVault>) => {
+    onApplyParsedVault(parsed);
+    setStep('dane');
+  };
+
   return (
     <div className="space-y-5">
       <div className="rounded-2xl border border-line bg-elevated p-4 sm:p-5">
@@ -90,7 +95,7 @@ export const ProfileSection: React.FC<ProfileSectionProps> = ({
 
       {step === 'dane' && renderEditor({ vault, onChange: onChangeVault, onOpenAdvisor })}
 
-      {step === 'import' && renderParser({ currentVault: vault, onApplyParsedVault })}
+      {step === 'import' && renderParser({ currentVault: vault, onApplyParsedVault: handleApplyAndSwitch })}
 
       {step === 'preferencje' &&
         renderProfiler({

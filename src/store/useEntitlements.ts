@@ -42,7 +42,7 @@ export interface EntitlementsState {
   source: 'local' | 'server';
 }
 
-const FREE_IMPORTS = 1;
+const FREE_IMPORTS = 10;
 const FREE_AI_USES = 5;
 
 const getMonthKey = () => new Date().toISOString().slice(0, 7);
