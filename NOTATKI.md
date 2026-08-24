@@ -17,6 +17,37 @@
 
 <!-- Dopisuj tutaj. Jeden punkt = jedna uwaga. -->
 
+- `matchSubRoles` nie trafia w realistyczny tytuł zawodu fizycznego, a trafia
+  w informatyczny — i to psuje więcej niż podpowiedzi. Marka figuruje
+  w katalogu jako `'Junkers / Bosch'`, a `phraseSpecificity`
+  (`specializationIndex.ts:121`) wymaga **wszystkich** członów frazy, więc
+  „Serwisant kotłów gazowych Junkers" zbiera zero punktów, podczas gdy
+  „Frontend Developer React TypeScript" zbiera dwadzieścia — React i TypeScript
+  stoją w katalogu jako osobne umiejętności. Domyślny próg `minimumScore = 4`
+  przepuszcza więc programistę i odrzuca montera, dokładnie odwrotnie do
+  reguły 8. `cvQuestionEngine` obchodzi to progiem zerowym i trzecim stanem
+  „nie wiem" (wtedy pokazuje przykłady z obu światów), ale sam indeks zostaje
+  niedokładny — a korzysta z niego też `quickAtsCheck`. Naprawa to albo
+  rozbicie fraz wielomarkowych przy imporcie katalogu, albo dopuszczenie
+  trafienia częściowego z niższą wagą.
+  _(wpis od agenta — usuń, jeśli nieaktualny)_
+
+- `AchievementEditor.handleUpdateText` (`:37-55`) wyciąga słowa kluczowe
+  wyrażeniem `/^[A-Za-z0-9+#.-]+$/`, które **odrzuca polskie znaki**.
+  „wdrożenie", „bezpieczeństwo" czy „zarządzanie" nigdy nie zostaną słowem
+  kluczowym, więc chipy pod osiągnięciem są dla polskojęzycznego CV prawie
+  puste. Reszta projektu ma do tego `getPolishStem` i `HR_AND_COMMON_STOP_WORDS`
+  w `atsSimulator.ts` — ten regex jest trzecim, gorszym podejściem do tego
+  samego zadania.
+  _(wpis od agenta — usuń, jeśli nieaktualny)_
+
+- Martwy łańcuch propa `onOpenAdvisor`: `ExperienceSection` (`:22, :29, :225`)
+  przyjmuje go i przekazuje do `AchievementEditor`, gdzie jest destrukturyzowany
+  (`:19`) i **nigdy nieużyty**. Nie usunąłem przy okazji usuwania fałszywego
+  przycisku „AI", bo skasowanie propa kaskaduje w górę przez dwa komponenty
+  i ich wywołania — to osobna, mechaniczna zmiana (reguła 5).
+  _(wpis od agenta — usuń, jeśli nieaktualny)_
+
 - Silnik „następnego kroku" (`src/lib/nextAction.ts`) liczy się w przeglądarce,
   choć raport strategiczny przewiduje dla niego endpoint `GET /api/next-action`.
   Powód jest w kodzie, nie w wygodzie: `AuthContext` zakłada wyłącznie profil

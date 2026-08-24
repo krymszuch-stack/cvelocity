@@ -58,6 +58,32 @@ Podstawa prawna: art. 6 ust. 1 lit. f RODO (ochrona usługi przed nadużyciami i
 
 ---
 
+### 3.4 Korpus podpowiedzi do formularzy *(przygotowany, jeszcze nieuruchomiony)*
+
+Formularze podpowiadają nazwy umiejętności, narzędzi i uprawnień. Dziś te
+podpowiedzi pochodzą **wyłącznie z Twoich własnych danych** na Twoim urządzeniu
+oraz z wbudowanego katalogu zawodów — nic nie opuszcza przeglądarki.
+
+Docelowo chcemy je wzbogacić o to, co na tym samym stanowisku wpisali inni.
+Ta funkcja **jeszcze nie działa** i nie ruszy bez Twojej wyraźnej, odrębnej zgody.
+Kiedy ruszy, będzie działać tak:
+
+- do korpusu trafiają **wyłącznie nazwy** umiejętności, narzędzi i uprawnień —
+  na przykład „SEP G3" albo „Excel". **Nie trafia treść Twojego CV**: żadnych
+  opisów obowiązków, osiągnięć, dat zatrudnienia, widełek ani nazwisk;
+- Twój pojedynczy wpis **nie jest widoczny dla nikogo**. Nazwa pojawia się
+  w podpowiedziach dopiero wtedy, gdy poda ją co najmniej **pięć różnych osób** —
+  wcześniej wskazywałaby konkretnego człowieka, a nie rynek;
+- zgoda jest **dobrowolna, a jej brak niczego nie ogranicza**. Aplikacja działa
+  wtedy dokładnie tak samo, tylko bez tej jednej warstwy podpowiedzi;
+- zgodę możesz cofnąć w każdej chwili. Cofnięcie i „usuń moje dane" kasują Twój
+  wkład — a jeśli przez to nazwa spadnie poniżej progu pięciu osób, znika
+  z podpowiedzi wszystkim.
+
+Podstawa prawna: art. 6 ust. 1 lit. a RODO (zgoda).
+
+---
+
 ## 4. Czego nie robimy
 
 - **Nie stosujemy plików cookies** — żadnych, także własnych. Dlatego nie ma banera zgody: nie ma na co się zgadzać. `localStorage` służy wyłącznie przechowywaniu Twoich danych na Twoim urządzeniu i nie jest wysyłany na żaden serwer.
