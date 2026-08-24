@@ -58,7 +58,37 @@ Podstawa prawna: art. 6 ust. 1 lit. f RODO (ochrona usługi przed nadużyciami i
 
 ---
 
-### 3.4 Korpus podpowiedzi do formularzy *(przygotowany, jeszcze nieuruchomiony)*
+### 3.4 Konto w chmurze — wyłącznie jeśli je założysz
+
+Aplikacja działa **bez konta**. Możesz korzystać z niej w trybie „tylko na tym
+urządzeniu”: wtedy Twoje CV nie opuszcza przeglądarki i sekcja 3.1 opisuje
+wszystko, co się dzieje.
+
+Jeśli założysz konto, dochodzi to:
+
+- **przechowujemy Twój adres e-mail i CV na serwerze** (Supabase, region
+  Frankfurt), żeby wróciły po wyczyszczeniu przeglądarki i na innym urządzeniu;
+- **hasła nie znamy.** Liczy je i przechowuje Supabase Auth w postaci skrótu;
+  administrator nie ma do niego dostępu i nie jest w stanie go odczytać;
+- **wysyłamy dwa rodzaje wiadomości** — link potwierdzający adres i link do
+  ustawienia nowego hasła. Nie ma newslettera i nie ma wiadomości
+  marketingowych;
+- **Twoje dane widzisz wyłącznie Ty.** Pilnuje tego mechanizm bazy danych
+  (Row Level Security), a nie kod aplikacji — zapytanie o cudzy wiersz wraca
+  puste, niezależnie od tego, co wyśle przeglądarka;
+- **konto usuwasz sam, jednym przyciskiem**, w menu profilu. Kasujemy wtedy
+  dane i samo konto. Operacja jest natychmiastowa i nieodwracalna.
+
+Przy zakładaniu konta sprawdzamy, czy podane hasło nie figuruje w znanych
+wyciekach danych. Robimy to tak, że **hasło nigdzie nie jest wysyłane**:
+przeglądarka liczy jego skrót i przekazuje nam wyłącznie pięć pierwszych
+znaków, a porównanie odbywa się z powrotem u Ciebie.
+
+Podstawa prawna: art. 6 ust. 1 lit. b RODO (wykonanie usługi na Twoje żądanie).
+
+---
+
+### 3.5 Korpus podpowiedzi do formularzy *(przygotowany, jeszcze nieuruchomiony)*
 
 Formularze podpowiadają nazwy umiejętności, narzędzi i uprawnień. Dziś te
 podpowiedzi pochodzą **wyłącznie z Twoich własnych danych** na Twoim urządzeniu
