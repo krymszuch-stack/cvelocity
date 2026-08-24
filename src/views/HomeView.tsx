@@ -235,7 +235,7 @@ export const HomeView: React.FC<HomeViewProps> = ({
       title: 'Dopasuj CV do oferty',
       description: 'Wklej treść oferty pracy i zoptymalizuj słowa kluczowe ATS.',
       icon: Search,
-      tab: 'matcher' as NavTabId,
+      tab: 'aplikuj' as NavTabId,
       badge: 'Główne narzędzie',
       badgeColor: 'brand',
     },
@@ -243,7 +243,7 @@ export const HomeView: React.FC<HomeViewProps> = ({
       title: 'Edytuj Master Vault',
       description: 'Zarządzaj pełną historią zatrudnienia, projektami i matrycą skilli.',
       icon: FileText,
-      tab: 'vault' as NavTabId,
+      tab: 'profil' as NavTabId,
       badge: `${historyCount} pozycji`,
       badgeColor: 'success',
     },
@@ -251,7 +251,7 @@ export const HomeView: React.FC<HomeViewProps> = ({
       title: 'Wczytaj istniejące CV',
       description: 'Zaimportuj plik PDF lub DOCX i połącz dane bez utraty wpisów.',
       icon: UploadCloud,
-      tab: 'parser' as NavTabId,
+      tab: 'profil' as NavTabId,
       badge: '1 darmowy/mc',
       badgeColor: 'warning',
     },
@@ -259,7 +259,7 @@ export const HomeView: React.FC<HomeViewProps> = ({
       title: 'Śledź aplikacje',
       description: 'Zarządzaj procesami rekrutacyjnymi, terminami rozmów i ofertami.',
       icon: Layers,
-      tab: 'applications' as NavTabId,
+      tab: 'pipeline' as NavTabId,
       badge: 'CRM Rejestr',
       badgeColor: 'brand',
     },
@@ -333,7 +333,7 @@ export const HomeView: React.FC<HomeViewProps> = ({
           <div className="flex flex-wrap items-center justify-center gap-3 pt-1">
             <button
               type="button"
-              onClick={() => onNavigate('matcher')}
+              onClick={() => onNavigate('aplikuj')}
               className="flex items-center gap-2 rounded-xl bg-brand-600 px-5 py-3 text-sm font-semibold text-on-brand shadow-raised transition-all hover:bg-brand-700 hover:scale-[1.02] focus-visible:outline-none"
             >
               <Search className="h-4 w-4" />
@@ -367,7 +367,7 @@ export const HomeView: React.FC<HomeViewProps> = ({
         }}
         onOpenEditor={(parsedVault) => {
           onAdoptVault(parsedVault);
-          onNavigate('vault');
+          onNavigate('profil');
         }}
       />
 

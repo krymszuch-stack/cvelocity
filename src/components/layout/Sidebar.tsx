@@ -5,18 +5,25 @@ import {
   LogIn,
 } from 'lucide-react';
 import {
-  IconHome,
   IconMatcher,
   IconBrain,
   IconApplications,
   IconVault,
-  IconParser,
-  IconProfiler,
-  IconPricing,
   IconSparkles,
 } from '../ui/icons/ModernIcons';
 import { NavItem } from './NavItem';
-import { NavTabId } from '../GlobalShell';
+import { NAV_SECTIONS, NavSectionId, NavTabId } from '../../lib/navigation';
+
+/**
+ * Ikona na sekcję. Osobna mapa, bo `NAV_SECTIONS` opisuje strukturę produktu
+ * i nie ma powodu, żeby wiedziało cokolwiek o komponentach ikon.
+ */
+const SECTION_ICONS: Record<NavSectionId, typeof IconVault> = {
+  profil: IconVault,
+  aplikuj: IconMatcher,
+  trenuj: IconBrain,
+  pipeline: IconApplications,
+};
 
 export interface SidebarProps {
   activeTab: NavTabId;
@@ -25,6 +32,10 @@ export interface SidebarProps {
   onToggleCollapse: () => void;
   onOpenAdvisor: () => void;
   onOpenAuthModal: () => void;
+  /** Które sekcje są już dostępne. Brak wpisu znaczy „dostępna". */
+  unlockedSections?: Partial<Record<NavSectionId, boolean>>;
+  /** Czemu sekcja jest jeszcze zamknięta — pokazywane w podpowiedzi. */
+  lockReasons?: Partial<Record<NavSectionId, string>>;
   isAuthenticated?: boolean;
   userEmail?: string;
   planStatus?: 'free' | 'trialing' | 'active';
@@ -38,22 +49,13 @@ export const Sidebar: React.FC<SidebarProps> = ({
   onToggleCollapse,
   onOpenAdvisor,
   onOpenAuthModal,
+  unlockedSections,
+  lockReasons,
   isAuthenticated = false,
   userEmail,
   planStatus = 'free',
   className = '',
 }) => {
-  const navItems = [
-    { id: 'home' as NavTabId, label: 'Strona Główna', icon: IconHome as any },
-    { id: 'matcher' as NavTabId, label: 'Dopasowanie Ofert', icon: IconMatcher as any, badge: 'ATS', badgeVariant: 'brand' as const },
-    { id: 'cockpit' as NavTabId, label: 'Kokpit Rozmowy', icon: IconBrain as any, badge: 'Trener', badgeVariant: 'brand' as const },
-    { id: 'applications' as NavTabId, label: 'Aplikacje', icon: IconApplications as any, badge: 'CRM', badgeVariant: 'success' as const },
-    { id: 'vault' as NavTabId, label: 'Master Vault', icon: IconVault as any, badge: 'Core', badgeVariant: 'brand' as const },
-    { id: 'parser' as NavTabId, label: 'Wczytaj CV', icon: IconParser as any },
-    { id: 'profiler' as NavTabId, label: 'Filtry i Priorytety', icon: IconProfiler as any },
-    { id: 'pricing' as NavTabId, label: 'Cennik & Pakiety', icon: IconPricing as any, badge: 'Pro', badgeVariant: 'brand' as const },
-  ];
-
   return (
     <div
       className={`flex h-full flex-col justify-between p-3.5 transition-all duration-300 ${
@@ -65,7 +67,12 @@ export const Sidebar: React.FC<SidebarProps> = ({
         {/* Brand Logo & Collapse Toggle */}
         <div className="flex h-10 items-center justify-between px-1.5">
           {!isCollapsed ? (
-            <div className="flex items-center gap-2.5">
+            <button
+              type="button"
+              onClick={() => onSelectTab('home')}
+              className="flex items-center gap-2.5 rounded-xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500/50"
+              title="Ekran startowy — Twój następny krok"
+            >
               <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-brand-grad text-on-brand shadow-brand-glow">
                 <IconSparkles className="h-4 w-4" />
               </div>
@@ -77,11 +84,16 @@ export const Sidebar: React.FC<SidebarProps> = ({
                   v2.0
                 </span>
               </div>
-            </div>
+            </button>
           ) : (
-            <div className="mx-auto flex h-8 w-8 items-center justify-center rounded-xl bg-brand-grad text-on-brand shadow-brand-glow">
+            <button
+              type="button"
+              onClick={() => onSelectTab('home')}
+              className="mx-auto flex h-8 w-8 items-center justify-center rounded-xl bg-brand-grad text-on-brand shadow-brand-glow focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500/50"
+              title="Ekran startowy — Twój następny krok"
+            >
               <IconSparkles className="h-4 w-4" />
-            </div>
+            </button>
           )}
 
           <button
@@ -95,19 +107,29 @@ export const Sidebar: React.FC<SidebarProps> = ({
         </div>
 
         {/* Navigation Items Group */}
+        {/* Cztery kroki jednej podróży zamiast ośmiu równorzędnych narzędzi.
+            Kolejność jest kolejnością, w jakiej się ich używa, a nie listą
+            posortowaną według ważności modułu. */}
         <nav className="flex flex-col gap-1 pt-2" aria-label="Główna nawigacja">
-          {navItems.map((item) => (
-            <NavItem
-              key={item.id}
-              icon={item.icon}
-              label={item.label}
-              badge={item.badge}
-              badgeVariant={item.badgeVariant}
-              isActive={activeTab === item.id}
-              isCollapsed={isCollapsed}
-              onClick={() => onSelectTab(item.id)}
-            />
-          ))}
+          {NAV_SECTIONS.map((section, index) => {
+            const isLocked = unlockedSections?.[section.id] === false;
+
+            return (
+              <NavItem
+                key={section.id}
+                icon={SECTION_ICONS[section.id] as any}
+                label={section.label}
+                badge={String(index + 1)}
+                badgeVariant="brand"
+                hint={section.hint}
+                isLocked={isLocked}
+                lockedReason={lockReasons?.[section.id]}
+                isActive={activeTab === section.id}
+                isCollapsed={isCollapsed}
+                onClick={() => onSelectTab(section.id)}
+              />
+            );
+          })}
         </nav>
       </div>
 

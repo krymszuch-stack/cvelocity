@@ -28,6 +28,7 @@ export const StorageKeys = {
   interviewLoops: `${PREFIX}interview-loops`,
   drillHistory: `${PREFIX}drill-history`,
   cockpitProgress: `${PREFIX}cockpit-progress`,
+  uxMilestones: `${PREFIX}ux-milestones`,
 } as const;
 
 export type StorageKey = (typeof StorageKeys)[keyof typeof StorageKeys];

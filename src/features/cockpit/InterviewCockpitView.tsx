@@ -35,14 +35,20 @@ import { loadDrillHistory } from '../../lib/drillEngine';
 export interface InterviewCockpitViewProps {
   vault: MasterVault;
   onOpenDrill?: () => void;
-  onOpenHUD?: () => void;
+  /**
+   * Elevator Pitch. Stał tu wcześniej przycisk teleprompteru (HUD) — narzędzia
+   * używanego **w trakcie** rozmowy, nie podczas przygotowań. Przeniósł się do
+   * Zasobnika Rozmowy w Pipeline, gdzie jest karta konkretnej rozmowy; tutaj
+   * został pitch, który jest ćwiczeniem i do sekcji TRENUJ należy.
+   */
+  onOpenPitch?: () => void;
   className?: string;
 }
 
 export const InterviewCockpitView: React.FC<InterviewCockpitViewProps> = ({
   vault,
   onOpenDrill,
-  onOpenHUD,
+  onOpenPitch,
   className = '',
 }) => {
   const [activeSection, setActiveSection] = useState<CockpitSectionId>('pitch');
@@ -237,15 +243,15 @@ export const InterviewCockpitView: React.FC<InterviewCockpitViewProps> = ({
                 ⏱️ Drill (60s)
               </Button>
             )}
-            {onOpenHUD && (
+            {onOpenPitch && (
               <Button
                 type="button"
                 variant="secondary"
                 size="sm"
                 className="flex-1"
-                onClick={onOpenHUD}
+                onClick={onOpenPitch}
               >
-                🎙️ Teleprompter
+                🎤 Elevator Pitch
               </Button>
             )}
           </div>

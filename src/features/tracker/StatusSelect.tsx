@@ -1,7 +1,10 @@
 import React from 'react';
 import { ChevronDown, Check } from 'lucide-react';
+import { ApplicationStatus } from '../../types';
 
-export type ApplicationStatus = 'Wysłana' | 'Rozmowa' | 'Oferta' | 'Odrzucona';
+// Typ mieszka w `src/types`, bo czyta go też silnik „następnego kroku".
+// Re-eksport, żeby wywołania `from './StatusSelect'` dalej działały.
+export type { ApplicationStatus };
 
 export interface StatusSelectProps {
   status: ApplicationStatus;

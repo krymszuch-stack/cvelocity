@@ -31,6 +31,8 @@ import { AtsSimulatorView } from './AtsSimulatorView';
 import { PageHeader } from '../../components/ui/PageHeader';
 import { Button } from '../../components/ui/Button';
 import { Modal } from '../../components/ui/Modal';
+import { useApplications } from '../../store/useApplications';
+import { JobApplication } from '../../types';
 import { showToast } from '../../store/useToastStore';
 
 export interface JobMatcherProps {
@@ -55,6 +57,8 @@ export const JobMatcher: React.FC<JobMatcherProps> = ({
   const [isFetchingUrl, setIsFetchingUrl] = useState(false);
   const [urlError, setUrlError] = useState<string | null>(null);
   const [isTailoring, setIsTailoring] = useState(false);
+
+  const { saveApplication } = useApplications();
 
   const handleMatchJob = async (job: JobOffer) => {
     setSelectedJob(job);
@@ -85,7 +89,9 @@ export const JobMatcher: React.FC<JobMatcherProps> = ({
           toolsAndTech: vault.skillsMatrix?.toolsAndTech || [],
           softSkills: vault.skillsMatrix?.softSkills || [],
         },
-        atsScore: 92,
+        // Wypełniane zaraz po symulacji. Stała w tym miejscu była wartością
+        // wymyśloną, którą łatwo przeoczyć przy refaktorze i wypuścić na ekran.
+        atsScore: 0,
       };
 
       // 2. Run Slot Filling & ATS Simulation
@@ -225,7 +231,30 @@ export const JobMatcher: React.FC<JobMatcherProps> = ({
                 tailoredResume={tailoredResume}
                 coverLetter={coverLetter}
                 onSaveTailoredCV={() => {
-                  showToast('Zapisano w pipeline', { message: 'Dopasowane dokumenty trafiły do Twoich aplikacji.' });
+                  // Przycisk wcześniej wyłącznie pokazywał komunikat „Zapisano
+                  // w pipeline". Nic nie zapisywał — użytkownik wracał do
+                  // Pipeline i nie zastawał tam niczego. To jest ten zapis.
+                  //
+                  // Wynik ATS i braki idą z tej samej symulacji, którą widać
+                  // obok na ekranie, więc reguła „popraw dopasowanie" na
+                  // ekranie startowym opiera się na liczbie faktycznie
+                  // zmierzonej, a nie oszacowanej po fakcie.
+                  const application: JobApplication = {
+                    id: `app-${Date.now()}`,
+                    company: selectedJob.company,
+                    position: selectedJob.title,
+                    salary: selectedJob.salary || '',
+                    date: new Date().toISOString().slice(0, 10),
+                    status: 'Wysłana',
+                    jobUrl: selectedJob.url,
+                    atsScore: atsResult.overallScore,
+                    missingKeywords: atsResult.missingHardSkills,
+                  };
+
+                  saveApplication(application);
+                  showToast('Zapisano w Pipeline', {
+                    message: `${selectedJob.title} — dopasowanie ${atsResult.overallScore}%.`,
+                  });
                   setIsAtsModalOpen(false);
                 }}
               />

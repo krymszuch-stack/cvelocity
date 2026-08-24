@@ -1,9 +1,12 @@
-import React, { useState, useEffect, useCallback, useRef, Suspense, lazy } from 'react';
+import React, { useState, useEffect, useCallback, useMemo, Suspense, lazy } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { useDeferredPersist } from './hooks/useDeferredPersist';
+import { useUnlocks } from './hooks/useUnlocks';
 import { MasterVault } from './types';
 import { createEmptyVault } from './lib/sampleVault';
 import { mergeImportedVault } from './lib/vaultImportMerge';
+import { NavTabId, isNavSectionId, resolveTabId } from './lib/navigation';
+import { resolveNextAction } from './lib/nextAction';
 import {
   ANONYMOUS_PROFILE_ID,
   getActiveProfile,
@@ -13,16 +16,17 @@ import {
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { ThemeProvider } from './providers/ThemeProvider';
 import { ToastHost } from './components/ui/ToastHost';
+import { showToast } from './store/useToastStore';
 import { useAppStore } from './store/useAppStore';
+import { useApplications } from './store/useApplications';
 import { AuthModal } from './features/auth/AuthModal';
-import { GlobalShell, NavTabId } from './components/GlobalShell';
+import { GlobalShell } from './components/GlobalShell';
 import { CommandPalette } from './components/CommandPalette';
 import { Skeleton } from './components/ui/Skeleton';
 import { HomeView } from './views/HomeView';
-import { ReactFloatingPanel } from './components/hud/ReactFloatingPanel';
+import { NextActionCard } from './components/nextaction/NextActionCard';
 import { SkillBridgeMatrixModal } from './components/bridge/SkillBridgeMatrixModal';
 import { ElevatorPitchModal } from './features/pitch/ElevatorPitchModal';
-import { InterviewLoopModal } from './features/loop/InterviewLoopModal';
 import { DrillModeModal } from './features/drill/DrillModeModal';
 
 // Lazy-loaded heavy views for fast initial bundle & LCP
@@ -35,6 +39,7 @@ const ApplicationTracker = lazy(() => import('./features/tracker/ApplicationTrac
 const PricingView = lazy(() => import('./views/PricingView').then((m) => ({ default: m.PricingView })));
 const DesignTokensShowcaseModal = lazy(() => import('./components/DesignTokensShowcaseModal').then((m) => ({ default: m.DesignTokensShowcaseModal })));
 const InterviewCockpitView = lazy(() => import('./features/cockpit/InterviewCockpitView').then((m) => ({ default: m.InterviewCockpitView })));
+const ProfileSection = lazy(() => import('./features/profile/ProfileSection').then((m) => ({ default: m.ProfileSection })));
 
 const ViewLoadingFallback = () => (
   <div className="space-y-4 p-4 sm:p-6" aria-busy="true" aria-live="polite">
@@ -52,8 +57,6 @@ function MainApp() {
     setActiveTab,
     isAdvisorOpen,
     setAdvisorOpen,
-    isTokenModalOpen,
-    setTokenModalOpen,
     isAuthModalOpen,
     setAuthModalOpen,
     isDesignTokensOpen,
@@ -78,13 +81,14 @@ function MainApp() {
     return createEmptyVault(profile?.name, profile?.email);
   });
 
+  const { applications } = useApplications();
+
   // Sync user vault when authenticated user changes
   useEffect(() => {
     if (userVault) {
       setVault(userVault);
     }
   }, [userVault]);
-
 
   // Jeden zapis, pod jednym kluczem. Wcześniej każda zmiana trafiała naraz do
   // klucza globalnego i do klucza profilu, więc te same dane leżały w schowku
@@ -108,6 +112,56 @@ function MainApp() {
 
   useDeferredPersist(vault, persistVault);
 
+  const unlocks = useUnlocks(vault, applications);
+
+  /**
+   * Czas, względem którego liczone są reguły „rozmowa za mniej niż 48 h"
+   * i „aplikacja bez odpowiedzi od tygodnia".
+   *
+   * Odświeżany przy powrocie na kartę, a nie zegarem co minutę. Karta otwarta
+   * w tle przez pół dnia i tak nikomu niczego nie przypomni, a przerysowywanie
+   * całego drzewa co sześćdziesiąt sekund kosztowałoby więcej niż jest warte.
+   */
+  const [now, setNow] = useState(() => new Date());
+
+  useEffect(() => {
+    const refresh = () => {
+      if (document.visibilityState === 'visible') setNow(new Date());
+    };
+    document.addEventListener('visibilitychange', refresh);
+    return () => document.removeEventListener('visibilitychange', refresh);
+  }, []);
+
+  const nextAction = useMemo(
+    () => resolveNextAction({ vault, applications, now }),
+    [vault, applications, now]
+  );
+
+  /**
+   * Jedyne wejście do zmiany sekcji.
+   *
+   * Tłumaczy identyfikatory sprzed konsolidacji (`vault`, `matcher`…) i pilnuje
+   * odblokowań. Pasek boczny sam wyszarza zamknięte sekcje, ale nie jest
+   * jedyną drogą — paleta poleceń i rekomendacje też tu trafiają, więc reguła
+   * musi stać w miejscu, przez które przechodzą wszystkie.
+   */
+  const navigate = useCallback(
+    (tab: NavTabId | string) => {
+      const target = resolveTabId(tab);
+
+      if (isNavSectionId(target) && unlocks.sections[target] === false) {
+        showToast('Ta sekcja jest jeszcze zamknięta', {
+          message: unlocks.reasons[target],
+          variant: 'info',
+        });
+        return;
+      }
+
+      setActiveTab(target);
+    },
+    [setActiveTab, unlocks]
+  );
+
   const handleApplyParsedVault = (parsed: Partial<MasterVault>) => {
     setVault((prev) => mergeImportedVault(prev, parsed));
   };
@@ -116,48 +170,23 @@ function MainApp() {
     setAdvisorOpen(true, initialQuestion);
   };
 
-  const [isHUDOpen, setHUDOpen] = useState(false);
+  // Narzędzia sekcji TRENUJ. Otwierane z Kokpitu, nie z paska górnego —
+  // wcześniej wisiały w globalnej nawigacji razem ze skrótami Ctrl+B/P/D,
+  // widoczne od pierwszej sekundy, choć dotyczą rozmowy, której nikt jeszcze
+  // nie umówił. Zasobnik Rozmowy (HUD, pętla) mieszka teraz w Pipeline.
   const [isSkillBridgeOpen, setSkillBridgeOpen] = useState(false);
   const [isPitchOpen, setPitchOpen] = useState(false);
-  const [isLoopOpen, setLoopOpen] = useState(false);
   const [isDrillOpen, setDrillOpen] = useState(false);
-
-  // Globalne skróty Ctrl+H (Live HUD), Ctrl+B (Skill Bridge), Ctrl+P (Elevator Pitch), Ctrl+L (Interview Loop), Cmd+D (Practice / DrillMode)
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.ctrlKey || e.metaKey) {
-        if (e.key.toLowerCase() === 'h') {
-          e.preventDefault();
-          setHUDOpen((prev) => !prev);
-        } else if (e.key.toLowerCase() === 'b') {
-          e.preventDefault();
-          setSkillBridgeOpen((prev) => !prev);
-        } else if (e.key.toLowerCase() === 'p') {
-          e.preventDefault();
-          setPitchOpen((prev) => !prev);
-        } else if (e.key.toLowerCase() === 'l') {
-          e.preventDefault();
-          setLoopOpen((prev) => !prev);
-        } else if (e.key.toLowerCase() === 'd') {
-          e.preventDefault();
-          setDrillOpen((prev) => !prev);
-        }
-      }
-    };
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
-  }, []);
 
   return (
     <GlobalShell
       activeTab={activeTab}
-      onSelectTab={setActiveTab}
+      onSelectTab={navigate}
       onOpenAdvisor={handleOpenAdvisor}
       onOpenAuthModal={() => setAuthModalOpen(true)}
       onOpenDesignTokens={() => setDesignTokensOpen(true)}
-      onOpenHUD={() => setHUDOpen(true)}
-      onOpenPitch={() => setPitchOpen(true)}
-      onOpenDrill={() => setDrillOpen(true)}
+      unlockedSections={unlocks.sections}
+      lockReasons={unlocks.reasons}
       isAuthenticated={isAuthenticated}
       userEmail={user?.email}
     >
@@ -169,20 +198,35 @@ function MainApp() {
           exit={{ opacity: 0, y: -6 }}
           transition={{ duration: 0.25, ease: [0.19, 1, 0.22, 1] }}
         >
-          {/* Tab 1: Home View (Quick Start, Stats & Career Microblog) */}
+          {/* Ekran startowy: jedna rekomendacja na górze, reszta pod nią. */}
           {activeTab === 'home' && (
-            <HomeView
-              vault={vault}
-              onNavigate={setActiveTab}
-              onOpenAdvisor={handleOpenAdvisor}
-              onAdoptVault={setVault}
-            />
+            <div className="space-y-6">
+              <NextActionCard action={nextAction} onNavigate={navigate} />
+              <HomeView
+                vault={vault}
+                onNavigate={navigate}
+                onOpenAdvisor={handleOpenAdvisor}
+                onAdoptVault={setVault}
+              />
+            </div>
           )}
 
-          {/* Lazy Loaded Views */}
           <Suspense fallback={<ViewLoadingFallback />}>
-            {/* Tab 2: Job Matcher & ATS Simulator */}
-            {activeTab === 'matcher' && (
+            {/* PROFIL — dane, import CV i preferencje jako kroki jednej sekcji */}
+            {activeTab === 'profil' && (
+              <ProfileSection
+                vault={vault}
+                onChangeVault={setVault}
+                onApplyParsedVault={handleApplyParsedVault}
+                onOpenAdvisor={handleOpenAdvisor}
+                renderEditor={(props) => <MasterVaultEditor {...props} />}
+                renderParser={(props) => <CVParserModal {...props} />}
+                renderProfiler={(props) => <ProfilerSection {...props} />}
+              />
+            )}
+
+            {/* APLIKUJ — oferta, dopasowanie ATS, generator dokumentów */}
+            {activeTab === 'aplikuj' && (
               <JobMatcher
                 vault={vault}
                 onUpdateVault={setVault}
@@ -190,52 +234,32 @@ function MainApp() {
               />
             )}
 
-            {/* Tab: Kokpit Rozmowy (Interview Playbook & Tactical Cockpit) */}
-            {activeTab === 'cockpit' && (
+            {/* TRENUJ — przygotowanie do rozmowy */}
+            {activeTab === 'trenuj' && (
               <InterviewCockpitView
                 vault={vault}
                 onOpenDrill={() => setDrillOpen(true)}
-                onOpenHUD={() => setHUDOpen(true)}
+                onOpenPitch={() => setPitchOpen(true)}
               />
             )}
 
-            {/* Tab 3: Master Vault Candidate Profile */}
-            {activeTab === 'vault' && (
-              <MasterVaultEditor
+            {/* PIPELINE — wysłane aplikacje i kontekstowy Zasobnik Rozmowy */}
+            {activeTab === 'pipeline' && (
+              <ApplicationTracker
                 vault={vault}
-                onChange={setVault}
-                onOpenAdvisor={handleOpenAdvisor}
+                interviewToolboxUnlocked={unlocks.interviewToolbox}
+                showShortcutsHint={unlocks.showShortcutsHint}
+                onDismissShortcutsHint={unlocks.dismissShortcutsHint}
               />
             )}
 
-            {/* Tab 4: CV Parser & Import */}
-            {activeTab === 'parser' && (
-              <CVParserModal
-                currentVault={vault}
-                onApplyParsedVault={handleApplyParsedVault}
-              />
-            )}
-
-            {/* Tab 5: Profiler & Preferences */}
-            {activeTab === 'profiler' && (
-              <ProfilerSection
-                profiler={vault.profiler}
-                onChange={(updatedProfiler) => setVault({ ...vault, profiler: updatedProfiler })}
-              />
-            )}
-
-            {/* Tab 6: Recruitment Applications Tracker */}
-            {activeTab === 'applications' && <ApplicationTracker />}
-
-            {/* Tab 7: Pricing / Subscription Overview */}
+            {/* Cennik — poza czterema krokami, wchodzi się z menu konta */}
             {activeTab === 'pricing' && <PricingView />}
           </Suspense>
         </motion.div>
       </AnimatePresence>
 
-      {/* Lazy Modals outside AnimatePresence of page content */}
       <Suspense fallback={null}>
-        {/* Gemini AI Advisor Modal */}
         <GeminiAdvisorModal
           isOpen={isAdvisorOpen}
           onClose={() => setAdvisorOpen(false)}
@@ -243,15 +267,12 @@ function MainApp() {
           initialQuestion={advisorInitialQuestion}
         />
 
-        {/* Design Tokens Showcase Modal */}
         <DesignTokensShowcaseModal
           isOpen={isDesignTokensOpen}
           onClose={() => setDesignTokensOpen(false)}
         />
       </Suspense>
 
-
-      {/* Auth Modal */}
       <AuthModal
         isOpen={isAuthModalOpen}
         onClose={() => setAuthModalOpen(false)}
@@ -260,41 +281,22 @@ function MainApp() {
         }}
       />
 
-      {/* Live HUD Teleprompter Floating Panel (Ctrl+H) */}
-      <ReactFloatingPanel
-        isOpen={isHUDOpen}
-        onClose={() => setHUDOpen(false)}
-        vault={vault}
-      />
-
-      {/* Skill Bridge Matrix Modal (Ctrl+B) */}
+      {/* Narzędzia treningowe — otwierane z Kokpitu w sekcji TRENUJ */}
       <SkillBridgeMatrixModal
         isOpen={isSkillBridgeOpen}
         onClose={() => setSkillBridgeOpen(false)}
         vault={vault}
       />
 
-      {/* Elevator Pitch Generator Modal (Ctrl+P) */}
       <ElevatorPitchModal
         isOpen={isPitchOpen}
         onClose={() => setPitchOpen(false)}
         vault={vault}
       />
 
-      {/* Interview Loop Manager Modal (Ctrl+L) */}
-      <InterviewLoopModal
-        isOpen={isLoopOpen}
-        onClose={() => setLoopOpen(false)}
-        vault={vault}
-      />
+      <DrillModeModal isOpen={isDrillOpen} onClose={() => setDrillOpen(false)} />
 
-      {/* Mock Drill Mode Modal (Cmd+D / Practice) */}
-      <DrillModeModal
-        isOpen={isDrillOpen}
-        onClose={() => setDrillOpen(false)}
-      />
-
-      {/* Command Palette (Cmd+K) */}
+      {/* Paleta poleceń (Cmd+K) — jedyny skrót globalny, jaki został */}
       <CommandPalette />
     </GlobalShell>
   );
