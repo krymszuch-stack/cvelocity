@@ -10,12 +10,15 @@ import { OrthographyChecker } from '../src/services/OrthographyChecker.js';
 import fs from 'fs';
 import path from 'path';
 
+import { resetDefaultLexiconRepository } from '../src/repositories/defaultLexicon.js';
+
 const TEST_DB_PATH = './data/test_swg_bilingual.db';
 
 describe('Bilingual Polish/English & Morphological Linguistic Suite', () => {
   let repo: SqliteGraphRepository;
 
   beforeEach(async () => {
+    resetDefaultLexiconRepository();
     if (fs.existsSync(TEST_DB_PATH)) {
       fs.unlinkSync(TEST_DB_PATH);
     }
@@ -23,6 +26,7 @@ describe('Bilingual Polish/English & Morphological Linguistic Suite', () => {
   });
 
   afterEach(async () => {
+    resetDefaultLexiconRepository();
     await repo.close();
     if (fs.existsSync(TEST_DB_PATH)) {
       fs.unlinkSync(TEST_DB_PATH);

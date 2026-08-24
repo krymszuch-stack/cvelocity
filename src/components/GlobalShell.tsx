@@ -2,8 +2,7 @@ import React from 'react';
 import { Shell, ShellProps } from './layout/Shell';
 
 /**
- * Typ zakładek mieszkał tutaj jako ręcznie pisany zbiór ośmiu identyfikatorów.
- * Teraz pochodzi z `src/lib/navigation.ts`, razem z etykietami i podpowiedziami
+ * Typ zakładek pochodzi z `src/lib/navigation.ts`, razem z etykietami i podpowiedziami
  * — po to, żeby nie dało się dodać sekcji do typu i zapomnieć o niej w menu.
  * Re-eksport zostaje, bo pół aplikacji importuje `NavTabId` stąd.
  */

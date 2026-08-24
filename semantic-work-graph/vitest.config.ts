@@ -15,8 +15,15 @@ export default defineConfig({
     environment: 'node',
     globals: false,
     // Baza SQLite jest zasobem współdzielonym między plikami testowymi
-    // (ten sam plik `.db` + tryb WAL), więc pliki uruchamiamy sekwencyjnie.
+    // (ten sam plik `.db` + tryb WAL), więc pliki uruchamiamy sekwencyjnie w procesach fork.
     fileParallelism: false,
+    isolate: false,
+    pool: 'forks',
+    poolOptions: {
+      forks: {
+        singleFork: true,
+      },
+    },
     testTimeout: 30_000,
     hookTimeout: 30_000,
   },

@@ -6,6 +6,7 @@ import {
   PostCallDebrief,
 } from '../types';
 import { StorageKeys } from './storage';
+import { getFollowUpEmailOpenings, selectVariantIndex } from './phrasingVariations';
 
 export const DEFAULT_PRE_CALL_CHECKLIST: Omit<PreCallChecklistItem, 'completed'>[] = [
   // Techniczne
@@ -165,13 +166,14 @@ export function addLiveNote(
 }
 
 /**
- * Generuje profesjonalnego maila z podziękowaniem (Follow-Up Email)
- * Szablon: "Dziękuję za rozmowę o [stanowisko]. Szczególnie podobało mi się [1 punkt z rozmowy]. Potwierdzam zainteresowanie i proszę o info nt. następnego kroku."
+ * Generuje treść wiadomości e-mail z podziękowaniem po rozmowie (Follow-up Email)
+ * z bogatym i zróżnicowanym doborem przywitań i wstępów.
  */
 export function generateFollowUpEmail(
   session: InterviewLoopSession,
   candidateName = 'Kandydat',
-  debriefData?: Partial<PostCallDebrief>
+  debriefData?: Partial<PostCallDebrief>,
+  variantIndex?: number
 ): string {
   const role = session.roleTitle;
   const highlightPoint =
@@ -179,10 +181,13 @@ export function generateFollowUpEmail(
     session.liveTracker.notes[0]?.text ||
     'omówienie wyzwań architektonicznych i planów rozwojowych zespołu';
 
+  const openings = getFollowUpEmailOpenings(role, highlightPoint);
+  const idx = selectVariantIndex(variantIndex ?? session.companyName + role, openings.length);
+  const opening = openings[idx];
+
   return (
-    `Dzień dobry,\n\n` +
-    `Dziękuję za rozmowę o ${role}. Szczególnie podobało mi się ${highlightPoint}. ` +
-    `Potwierdzam zainteresowanie i proszę o info nt. następnego kroku.\n\n` +
+    `${opening}\n\n` +
+    `Potwierdzam duże zainteresowanie dołączeniem do Państwa zespołu i będę wdzięczny za informację dotyczącą kolejnych kroków w procesie rekrutacyjnym.\n\n` +
     `Z poważaniem,\n` +
     `${candidateName}`
   );

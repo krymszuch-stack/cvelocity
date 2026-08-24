@@ -137,6 +137,12 @@ export function buildLocalStarSeeds(parsedJD: ParsedJobDescription, vault: Maste
     const highlight = (experience.highlights || [])[0];
     if (!highlight) return;
 
+    const hlText = typeof highlight === 'string' ? highlight : (highlight.text || '');
+    const hlTarget = typeof highlight === 'object' && highlight !== null ? highlight.target : undefined;
+    const hlAction = typeof highlight === 'object' && highlight !== null ? highlight.action : undefined;
+    const hlTool = typeof highlight === 'object' && highlight !== null ? highlight.tool : undefined;
+    const hlMetric = typeof highlight === 'object' && highlight !== null ? highlight.metric : undefined;
+
     const relatedRequirement =
       experience.role && jdKeywords.some((k) => k && experience.role.toLowerCase().includes(k))
         ? experience.role
@@ -145,15 +151,15 @@ export function buildLocalStarSeeds(parsedJD: ParsedJobDescription, vault: Maste
     seeds.push({
       id: `star-local-${seeds.length}`,
       relatedRequirement,
-      situation: `Praca na stanowisku ${experience.role} w ${experience.company}.`,
-      task: highlight.target
-        ? `Zadanie związane z: ${highlight.target}.`
-        : `Realizacja obowiązków związanych z rolą ${experience.role}.`,
-      action: highlight.action
-        ? `${highlight.action}${highlight.tool ? ` przy użyciu ${highlight.tool}` : ''}.`
-        : highlight.text || 'Brak szczegółowego opisu działania w Master Vault.',
-      result: highlight.metric
-        ? `Efekt: ${highlight.metric}.`
+      situation: `Praca na stanowisku ${experience.role || 'specjalisty'} w ${experience.company || 'firmie'}.`,
+      task: hlTarget
+        ? `Zadanie związane z: ${hlTarget}.`
+        : `Realizacja obowiązków związanych z rolą ${experience.role || 'specjalisty'}.`,
+      action: hlAction
+        ? `${hlAction}${hlTool ? ` przy użyciu ${hlTool}` : ''}.`
+        : hlText || 'Brak szczegółowego opisu działania w Master Vault.',
+      result: hlMetric
+        ? `Efekt: ${hlMetric}.`
         : 'Efekt: dodaj konkretną liczbę/wynik do tego wpisu w Master Vault, żeby wzmocnić odpowiedź.',
       sourceExperienceId: experience.id,
     });

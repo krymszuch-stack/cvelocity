@@ -10,6 +10,7 @@ import {
   RefreshCw,
   Minus,
   Sparkles,
+  AlertTriangle,
 } from 'lucide-react';
 import { motion } from 'motion/react';
 import { MasterVault } from '../../types';
@@ -95,6 +96,18 @@ export const DiffView: React.FC<DiffViewProps> = ({
           <p className="text-[11px] text-muted">Silnik Universal Parser</p>
         </div>
       </div>
+
+      {/* Cyrillic Script Alert Banner */}
+      {parsedData.hasCyrillicScript && (
+        <div className="flex items-start gap-3 rounded-2xl border border-amber-500/30 bg-amber-500/10 p-4 text-amber-900 dark:text-amber-200">
+          <AlertTriangle className="h-5 w-5 shrink-0 text-amber-600 mt-0.5" />
+          <div className="text-xs leading-relaxed">
+            <span className="font-bold block text-sm">Wykryto alfabet cyrylicki (cyrylicę)</span>
+            Parser CV zoptymalizowany jest pod dokumenty w alfabecie łacińskim (język polski i angielski).
+            Jeżeli niektóre sekcje nie zostały poprawnie odczytane, wprowadź dane ręcznie lub wklej wersję przetłumaczoną na język polski / angielski.
+          </div>
+        </div>
+      )}
 
       {/* Section 1: Personal Info Diff */}
       <Card tone="raised" className="space-y-4">
@@ -355,7 +368,7 @@ export const DiffView: React.FC<DiffViewProps> = ({
               >
                 <div>
                   <p className="font-bold text-ink">
-                    {edu.degree || 'Kierunek nieokreślony'}
+                    {edu.degree ? (edu.fieldOfStudy ? `${edu.degree} - ${edu.fieldOfStudy}` : edu.degree) : (edu.fieldOfStudy || 'Edukacja')}
                     {edu.institution && <span className="text-brand-fg"> — {edu.institution}</span>}
                   </p>
                   <p className="font-mono text-[11px] text-muted">

@@ -19,10 +19,10 @@ export type NavSectionId = 'profil' | 'aplikuj' | 'trenuj' | 'pipeline';
 
 /**
  * Ekrany poza czterema sekcjami. `home` to ekran startowy z rekomendacją
- * „następny krok" — wchodzi się na niego przez logo, nie przez pozycję menu,
- * żeby nie zajmował piątego slotu. `pricing` siedzi w menu konta.
+ * „następny krok", `pricing` siedzi w menu konta, a `ats-lab` to dedykowane
+ * laboratorium audytu wielosilnikowego.
  */
-export type NavTabId = NavSectionId | 'home' | 'pricing';
+export type NavTabId = NavSectionId | 'home' | 'pricing' | 'ats-lab';
 
 export const NAV_SECTION_IDS: readonly NavSectionId[] = [
   'profil',
@@ -93,6 +93,6 @@ const LEGACY_TAB_MAP: Record<string, NavTabId> = {
  * bo pusty ekran jest gorszy od ekranu nie tego, co się kliknęło.
  */
 export function resolveTabId(value: string): NavTabId {
-  if (isNavSectionId(value) || value === 'home' || value === 'pricing') return value;
+  if (isNavSectionId(value) || value === 'home' || value === 'pricing' || value === 'ats-lab') return value;
   return LEGACY_TAB_MAP[value] ?? 'home';
 }

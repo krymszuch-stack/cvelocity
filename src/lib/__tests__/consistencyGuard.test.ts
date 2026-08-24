@@ -234,7 +234,7 @@ describe('ConsistencyGuard Engine', () => {
       const vault = createMockVault();
       const pitchOutput = renderPitchFromClaims(vault, ['claim_exp_exp_1', 'claim_exp_exp_2']);
 
-      expect(pitchOutput.hook).toContain('filar');
+      expect(pitchOutput.hook).toContain('Jan Kowalski');
       expect(pitchOutput.coreStrengths).toHaveLength(2);
       expect(pitchOutput.elevatorPitchText).toContain('Cloud Corp');
       expect(pitchOutput.callToAction).toBeTruthy();

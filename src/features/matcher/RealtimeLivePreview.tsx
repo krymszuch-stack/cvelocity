@@ -130,6 +130,8 @@ export const RealtimeLivePreview: React.FC<RealtimeLivePreviewProps> = ({
           {activeSubTab === 'coverLetter' && (
             <CoverLetterView
               coverLetter={coverLetter}
+              vault={vault}
+              jobOffer={jobOffer}
             />
           )}
 

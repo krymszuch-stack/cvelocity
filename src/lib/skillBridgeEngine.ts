@@ -144,14 +144,18 @@ export function getAllCandidateSkills(vault: MasterVault): string[] {
  * Buduje most kompetencyjny dla pojedynczej brakującej umiejętności.
  */
 export function findSkillBridgeForGap(
-  missingSkill: string,
-  vault: MasterVault
+  missingSkill: string | undefined | null,
+  vault: MasterVault | Partial<MasterVault> | undefined | null
 ): SkillBridge | undefined {
-  const candidateSkills = getAllCandidateSkills(vault);
+  const skillStr = typeof missingSkill === 'string' ? missingSkill.trim() : String(missingSkill || '').trim();
+  if (!skillStr) return undefined;
+
+  const safeVault = (vault || {}) as MasterVault;
+  const candidateSkills = getAllCandidateSkills(safeVault);
   const candLowerMap = new Map(candidateSkills.map((s) => [s.toLowerCase(), s]));
 
   for (const def of BRIDGE_DEFINITIONS) {
-    if (def.targetSkillRegex.test(missingSkill)) {
+    if (def.targetSkillRegex.test(skillStr)) {
       // Szukamy najlepszej umiejętności pokrewnej posiadanej przez kandydata
       let foundAdjacent: string | undefined;
       for (const adj of def.adjacentSkills) {
@@ -166,30 +170,39 @@ export function findSkillBridgeForGap(
 
       // Szukamy dowodu z MasterVault (np. projektu lub firmy)
       let evidenceFromVault: string | undefined;
-      for (const exp of vault.history || []) {
-        const matchHl = (exp.highlights || []).find(
-          (hl) =>
-            hl.tool?.toLowerCase() === adjacentSkill.toLowerCase() ||
-            hl.keywords?.some((k) => k.toLowerCase() === adjacentSkill.toLowerCase())
-        );
+      for (const exp of safeVault.history || []) {
+        const matchHl = (exp?.highlights || []).find((rawHl) => {
+          const hl = rawHl as unknown;
+          if (typeof hl === 'string') {
+            return hl.toLowerCase().includes(adjacentSkill.toLowerCase());
+          }
+          if (typeof hl === 'object' && hl !== null) {
+            const obj = hl as { tool?: string; keywords?: string[] };
+            return (
+              obj.tool?.toLowerCase() === adjacentSkill.toLowerCase() ||
+              obj.keywords?.some((k) => k.toLowerCase() === adjacentSkill.toLowerCase())
+            );
+          }
+          return false;
+        });
         if (matchHl) {
-          evidenceFromVault = `${exp.company} (${exp.role})`;
+          evidenceFromVault = `${exp.company || 'Firma'} (${exp.role || 'Rola'})`;
           break;
         }
       }
 
       const talkingPoint = def.templateTalkingPoint(
-        missingSkill,
+        skillStr,
         adjacentSkill,
         evidenceFromVault
       );
 
       return {
-        id: `bridge_${missingSkill.toLowerCase().replace(/[^a-z0-9]/g, '_')}`,
-        missingSkill,
+        id: `bridge_${skillStr.toLowerCase().replace(/[^a-z0-9]/g, '_')}`,
+        missingSkill: skillStr,
         adjacentSkill,
         conceptualEquivalence: def.conceptualEquivalence,
-        bridgeExplanation: `Brak ${missingSkill} jest w 100% zrównoważony przez znajomość ${adjacentSkill}.`,
+        bridgeExplanation: `Brak ${skillStr} jest w 100% zrównoważony przez znajomość ${adjacentSkill}.`,
         talkingPoint,
         evidenceFromVault,
         learningCurveDays: def.learningCurveDays,
@@ -201,12 +214,12 @@ export function findSkillBridgeForGap(
   // Most domyślny / generyczny oparty na solidnych podstawach inżynieryjnych
   const fallbackAdjacent = candidateSkills[0] || 'powiązane technologie projektowe';
   return {
-    id: `bridge_generic_${missingSkill.toLowerCase().replace(/[^a-z0-9]/g, '_')}`,
-    missingSkill,
+    id: `bridge_generic_${skillStr.toLowerCase().replace(/[^a-z0-9]/g, '_')}`,
+    missingSkill: skillStr,
     adjacentSkill: fallbackAdjacent,
     conceptualEquivalence: 'Transferowalność fundamentalnych wzorców inżynieryjnych i sprawdzona szybkość adaptacji nowych narzędzi.',
-    bridgeExplanation: `Solidne podstawy w ${fallbackAdjacent} pozwalają na błyskawiczne wdrożenie w specyfikę ${missingSkill}.`,
-    talkingPoint: `Chociaż dotychczas skupiałem się na ${fallbackAdjacent}, fundamentalne prymitywy i architektura ${missingSkill} są tożsame. W moich projektach wielokrotnie udowodniłem zdolność szybkiego przyswajania nowych standardów bez kompromisów jakościowych.`,
+    bridgeExplanation: `Solidne podstawy w ${fallbackAdjacent} pozwalają na błyskawiczne wdrożenie w specyfikę ${skillStr}.`,
+    talkingPoint: `Chociaż dotychczas skupiałem się na ${fallbackAdjacent}, fundamentalne prymitywy i architektura ${skillStr} są tożsame. W moich projektach wielokrotnie udowodniłem zdolność szybkiego przyswajania nowych standardów bez kompromisów jakościowych.`,
     learningCurveDays: 7,
     confidenceScore: 85,
   };
@@ -216,13 +229,14 @@ export function findSkillBridgeForGap(
  * Generuje listę mostów kompetencyjnych dla podanej listy brakujących umiejętności.
  */
 export function generateSkillBridges(
-  missingSkills: string[],
-  vault: MasterVault
+  missingSkills: string[] | undefined | null,
+  vault: MasterVault | Partial<MasterVault> | undefined | null
 ): SkillBridge[] {
-  if (!missingSkills || missingSkills.length === 0) return [];
-  const uniqueMissing = Array.from(new Set(missingSkills.map((s) => s.trim()))).filter(Boolean);
+  if (!Array.isArray(missingSkills) || missingSkills.length === 0) return [];
+  const safeVault = (vault || {}) as MasterVault;
+  const uniqueMissing = Array.from(new Set(missingSkills.map((s) => (typeof s === 'string' ? s.trim() : String(s || '').trim())))).filter(Boolean);
   return uniqueMissing
-    .map((skill) => findSkillBridgeForGap(skill, vault))
+    .map((skill) => findSkillBridgeForGap(skill, safeVault))
     .filter((b): b is SkillBridge => Boolean(b));
 }
 

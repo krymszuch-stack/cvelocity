@@ -586,4 +586,460 @@ export function simulateAtsCheck(
   };
 }
 
+export interface AtsEngineResult {
+  id: string;
+  name: string;
+  component: string;
+  category: string;
+  score: number;
+  status: 'OPTIMAL' | 'ACCEPTABLE' | 'RISKY' | 'REJECTED';
+  keyStrengths: string[];
+  penaltiesAndFlags: string[];
+  recommendation: string;
+  proposals: string[];
+  weightsFocus: string;
+}
+
+export interface MultiEngineAtsConsensus {
+  medianScore: number;
+  meanScore: number;
+  minScore: number;
+  maxScore: number;
+  consensusGrade: 'EXCELLENT' | 'GOOD' | 'NEEDS_WORK' | 'CRITICAL_RISK';
+  summaryJustification: string;
+  careerFitAdvice: {
+    isRealisticFit: boolean;
+    verdict: string;
+    actionablePlan: string;
+    suggestedAlternativeRoles: string[];
+  };
+  engines: AtsEngineResult[];
+  globalBestPractices: { title: string; badExample: string; goodExample: string; explanation: string }[];
+}
+
+export function calculateMedian(scores: number[]): number {
+  if (scores.length === 0) return 0;
+  const sorted = [...scores].sort((a, b) => a - b);
+  const mid = Math.floor(sorted.length / 2);
+  return sorted.length % 2 !== 0 ? sorted[mid] : Math.round((sorted[mid - 1] + sorted[mid]) / 2);
+}
+
+/**
+ * Wielosilnikowa symulacja audytu ATS oparta na 10 wewnętrznych modułach i filtrach CVelocity.
+ * Oblicza medianę rynkową, indywidualne oceny modułów, konkretne propozycje zmian oraz realistyczną ocenę dopasowania.
+ */
+export function simulateMultiEngineATS(
+  vault: MasterVault | Partial<MasterVault> | undefined | null,
+  jobOfferText: string = '',
+  targetRoleTitle: string = ''
+): MultiEngineAtsConsensus {
+  const safeVault: MasterVault = {
+    version: vault?.version || '1.0.0',
+    updatedAt: vault?.updatedAt || new Date().toISOString(),
+    personalInfo: vault?.personalInfo || { fullName: '', title: targetRoleTitle || '', email: '', phone: '', location: '', summary: '' },
+    skillsMatrix: vault?.skillsMatrix || { hardSkills: [], softSkills: [], toolsAndTech: [], certifications: [] },
+    history: vault?.history || [],
+    education: vault?.education || [],
+    projects: vault?.projects || [],
+    profiler: vault?.profiler || {
+      flags: [],
+      languages: [],
+      licenses: [],
+      experienceLevel: 'MID',
+      location: { city: '', radiusKm: 0, willingnessToTravel: false, hybridWork: false, remoteOnly: false },
+    },
+  };
+
+  const dummyResume: TailoredResume = {
+    targetJobTitle: targetRoleTitle || safeVault.personalInfo?.title || '',
+    companyName: '',
+    summary: safeVault.personalInfo?.summary || '',
+    selectedHighlights: [],
+    skillsMatched: {
+      hardSkills: safeVault.skillsMatrix?.hardSkills || [],
+      toolsAndTech: safeVault.skillsMatrix?.toolsAndTech || [],
+      softSkills: safeVault.skillsMatrix?.softSkills || [],
+    },
+    atsScore: 0,
+  };
+
+  const baseResult = simulateAtsCheck(
+    dummyResume,
+    safeVault,
+    jobOfferText
+  );
+
+  const hardCoverage = baseResult.layer2Nlp?.hardSkillsCoverage ?? 50;
+  const structScore = baseResult.structureScore ?? 80;
+  const recencyScore = baseResult.layer3Scoring?.recencyScore ?? 70;
+  const titleScore = baseResult.layer3Scoring?.titleMatchScore ?? 70;
+  const ocrWarningsCount = baseResult.ocrWarnings?.length ?? 0;
+  const missingHardCount = baseResult.missingHardSkills?.length ?? 0;
+
+  // Weryfikacja obecności twardych metryk liczbowych w historii
+  let hasMetrics = false;
+  let metricsCount = 0;
+  for (const exp of safeVault.history || []) {
+    for (const hl of exp?.highlights || []) {
+      const text = typeof hl === 'string' ? hl : (hl?.text || '');
+      if (/\d+[%kKmM+xX]?/.test(text)) {
+        hasMetrics = true;
+        metricsCount++;
+      }
+    }
+  }
+
+  // Weryfikacja wykształcenia i certyfikatów
+  const hasEducation = (safeVault.education || []).length > 0;
+  const hasCerts = (safeVault.skillsMatrix?.certifications || []).length > 0;
+
+  // 1. Moduł Struktury i Czytelności OCR (cvUniversalParser / Warstwa 1)
+  const ocrScore = Math.min(100, Math.max(0, Math.round(
+    structScore * 0.60 + (ocrWarningsCount === 0 ? 40 : 10)
+  )));
+  const engine1: AtsEngineResult = {
+    id: 'struktura_ocr',
+    name: 'Audytor Struktury i Odczytu Maszynowego',
+    component: 'cvUniversalParser.ts (Warstwa 1)',
+    category: 'Układ dokumentu i parsowalność',
+    score: ocrScore,
+    status: ocrScore >= 80 ? 'OPTIMAL' : ocrScore >= 65 ? 'ACCEPTABLE' : ocrScore >= 50 ? 'RISKY' : 'REJECTED',
+    weightsFocus: 'Układ jednokolumnowy (60%), Brak blokad graficznych OCR (40%)',
+    keyStrengths: [
+      structScore >= 80 ? 'Prawidłowy podział na sekcje główne' : 'Rozpoznano bloki tekstu',
+      ocrWarningsCount === 0 ? 'Brak elementów zakłócających odczyt automatyczny' : 'Format czytelny dla parsera',
+    ],
+    penaltiesAndFlags: [
+      ...(ocrWarningsCount > 0 ? ['Wykryto nietypowe symbole lub złożony podział bloków'] : []),
+    ],
+    recommendation: 'Zachowaj czysty, jednokolumnowy układ z tradycyjnymi nagłówkami bez zagnieżdżonych tabel.',
+    proposals: [
+      'Stosuj proste punktorowanie zamiast grafik czy pasków postępu.',
+      'Upewnij się, że dane kontaktowe znajdują się w głównej treści, a nie w stopce pliku.',
+    ],
+  };
+
+  // 2. Moduł Słów Kluczowych i Fleksji Języka Polskiego (Lematyzator / Warstwa 2)
+  const lematyzatorScore = Math.min(100, Math.max(0, Math.round(
+    hardCoverage * 0.70 + (missingHardCount === 0 ? 30 : Math.max(0, 30 - missingHardCount * 5))
+  )));
+  const engine2: AtsEngineResult = {
+    id: 'slowa_kluczowe_fleksja',
+    name: 'Analizator Słów Kluczowych i Odmiany Polskiej',
+    component: 'atsSimulator.ts (Lematyzator Fleksyjny)',
+    category: 'Dopasowanie semantyczne i słownikowe',
+    score: lematyzatorScore,
+    status: lematyzatorScore >= 80 ? 'OPTIMAL' : lematyzatorScore >= 65 ? 'ACCEPTABLE' : lematyzatorScore >= 50 ? 'RISKY' : 'REJECTED',
+    weightsFocus: 'Pokrycie wymagań twardych (70%), Zgodność lematyczna form odmienionych (30%)',
+    keyStrengths: [
+      hardCoverage >= 70 ? `Wysokie pokrycie słów kluczowych (${hardCoverage}%)` : 'Podstawowe pojęcia odnalezione w profilu',
+    ],
+    penaltiesAndFlags: [
+      ...(missingHardCount > 0 ? [`Brak ${missingHardCount} kluczowych pojęć/technologii wymienionych w ofercie`] : []),
+    ],
+    recommendation: 'Uzupełnij brakujące pojęcia w profilu, jeśli posiadasz z nimi doświadczenie.',
+    proposals: [
+      missingHardCount > 0
+        ? `Dopisz w doświadczeniu konkretne narzędzia z oferty: ${baseResult.missingHardSkills?.slice(0, 3).join(', ')}.`
+        : 'Utrzymaj aktualne nasycenie frazami branżowymi.',
+    ],
+  };
+
+  // 3. Moduł Kryteriów Formalnych i Uprawnień (knockouts.ts)
+  const knockoutsScore = Math.min(100, Math.max(0, Math.round(
+    (hasCerts ? 35 : 15) + (hasEducation ? 25 : 10) + (safeVault.profiler?.languages?.length ? 25 : 10) + 15
+  )));
+  const engine3: AtsEngineResult = {
+    id: 'kryteria_formalne',
+    name: 'Audytor Uprawnień i Wymagań Formalnych',
+    component: 'knockouts.ts (Kryteria Zero-Jedynkowe)',
+    category: 'Uprawnienia, certyfikaty i wykształcenie',
+    score: knockoutsScore,
+    status: knockoutsScore >= 80 ? 'OPTIMAL' : knockoutsScore >= 65 ? 'ACCEPTABLE' : knockoutsScore >= 50 ? 'RISKY' : 'REJECTED',
+    weightsFocus: 'Uprawnienia państwowe/branżowe (35%), Wykształcenie (25%), Języki obce (25%)',
+    keyStrengths: [
+      hasCerts ? 'Udokumentowane uprawnienia lub certyfikaty specjalistyczne' : 'Wprowadzone dane formalne',
+      hasEducation ? 'Uzupełniona ścieżka edukacyjna' : 'Podstawowe dane formalne obecne',
+    ],
+    penaltiesAndFlags: [
+      ...(!hasCerts ? ['Brak wpisów w sekcji uprawnień formalnych (np. SEP, UDT, certyfikaty inżynierskie)'] : []),
+    ],
+    recommendation: 'Jeśli posiadasz uprawnienia (np. prawo jazdy, certyfikaty), podaj ich pełne oficjalne nazwy.',
+    proposals: [
+      'Wpisz oficjalny numer lub instytucję wydającą certyfikat.',
+      'Dopisz poziom języka obcego zgodnie ze skalą CEFR (np. B2, C1).',
+    ],
+  };
+
+  // 4. Moduł Świeżości Umiejętności (Recency Bias & relevanceRanking.ts)
+  const recencyScoreEngine = Math.min(100, Math.max(0, Math.round(
+    recencyScore * 0.70 + hardCoverage * 0.30
+  )));
+  const engine4: AtsEngineResult = {
+    id: 'swiezosc_umiejetnosci',
+    name: 'Weryfikator Świeżości Umiejętności',
+    component: 'relevanceRanking.ts (Aktualność Ostatnich 2 Lat)',
+    category: 'Dynamika i aktualność kompetencji',
+    score: recencyScoreEngine,
+    status: recencyScoreEngine >= 80 ? 'OPTIMAL' : recencyScoreEngine >= 65 ? 'ACCEPTABLE' : recencyScoreEngine >= 50 ? 'RISKY' : 'REJECTED',
+    weightsFocus: 'Obecność technologii w bieżącym/najnowszym stanowisku (70%), Pokrycie (30%)',
+    keyStrengths: [
+      recencyScore >= 75 ? 'Główne technologie używane w najnowszych projektach' : 'Ciągłość rozwoju zawodowego',
+    ],
+    penaltiesAndFlags: [
+      ...(recencyScore < 70 ? ['Kluczowe umiejętności widoczne są wyłącznie w starszych rolach sprzed lat'] : []),
+    ],
+    recommendation: 'Wymień kluczowe narzędzia w opisie aktualnego lub ostatniego stanowiska.',
+    proposals: [
+      'Przenieś najważniejsze technologie do opisu bieżącego miejsca pracy.',
+      'Podkreśl, jak rozwijasz te umiejętności w najnowszych projektach.',
+    ],
+  };
+
+  // 5. Moduł Zgodności Tytułu Stanowiska (Title Matcher)
+  const titleScoreEngine = Math.min(100, Math.max(0, Math.round(
+    titleScore * 0.75 + hardCoverage * 0.25
+  )));
+  const engine5: AtsEngineResult = {
+    id: 'zgodnosc_tytulu',
+    name: 'Weryfikator Nagłówka i Nazwy Stanowiska',
+    component: 'atsSimulator.ts (Dopasowanie Tytułu Roli)',
+    category: 'Zbieżność roli i pozycjonowanie kandydata',
+    score: titleScoreEngine,
+    status: titleScoreEngine >= 80 ? 'OPTIMAL' : titleScoreEngine >= 65 ? 'ACCEPTABLE' : titleScoreEngine >= 50 ? 'RISKY' : 'REJECTED',
+    weightsFocus: 'Zgodność nagłówka profilu z tytułem oferty (75%), Baza kompetencji (25%)',
+    keyStrengths: [
+      titleScore >= 75 ? 'Nagłówek profilu precyzyjnie odpowiada szukanemu stanowisku' : 'Zrozumiała specjalizacja',
+    ],
+    penaltiesAndFlags: [
+      ...(titleScore < 70 ? ['Nagłówek w CV różni się znacząco od nazwy stanowiska w ogłoszeniu'] : []),
+    ],
+    recommendation: 'Dostosuj nagłówek pod swoim imieniem i nazwiskiem do nazwy roli w ogłoszeniu.',
+    proposals: [
+      `Zmień nagłówek na: „${targetRoleTitle || safeVault.personalInfo.title || 'Specjalista w branży'}”.`,
+      'Unikaj poetyckich lub zbyt ogólnych określeń typu „Człowiek orkiestra”.',
+    ],
+  };
+
+  // 6. Moduł Twardych Liczb i Metryk Osiągnięć (drillEngine & elevatorPitchEngine)
+  const metricsScoreEngine = Math.min(100, Math.max(0, Math.round(
+    (hasMetrics ? 70 + Math.min(30, metricsCount * 10) : 25)
+  )));
+  const engine6: AtsEngineResult = {
+    id: 'metryki_liczbowe',
+    name: 'Analizator Twardych Liczb i Wyników KPI',
+    component: 'elevatorPitchEngine.ts & drillEngine.ts (Ekstrakcja Metryk)',
+    category: 'Wymierność i dowodowość osiągnięć',
+    score: metricsScoreEngine,
+    status: metricsScoreEngine >= 80 ? 'OPTIMAL' : metricsScoreEngine >= 65 ? 'ACCEPTABLE' : metricsScoreEngine >= 50 ? 'RISKY' : 'REJECTED',
+    weightsFocus: 'Obecność liczb, procentów, skali, oszczędności i budżetów (100%)',
+    keyStrengths: [
+      hasMetrics ? `Wykryto ${metricsCount} mierzalnych wskaźników w opisach doświadczenia` : 'Opisano zrealizowane zadania',
+    ],
+    penaltiesAndFlags: [
+      ...(!hasMetrics ? ['Opisy stanowisk to wyłącznie lista obowiązków bez wymiernych liczb i efektów'] : []),
+    ],
+    recommendation: 'Przekształć obowiązki w sukcesy ze wzorem: [Co zrobiłem] + [Jakim narzędziem] + [Jaki wynik liczbowy].',
+    proposals: [
+      'Podaj procentowy wzrost, spadek awaryjności, zaoszczędzony czas lub budżet.',
+      'Określ skalę projektów (np. wielkość zespołu, liczba użytkowników, wolumen obsłużonych zgłoszeń).',
+    ],
+  };
+
+  // 7. Moduł Naturalności i Gęstości Słów (Brak spamu / Stuffing Guard)
+  const isOverStuffed = hardCoverage > 95 && !hasMetrics;
+  const naturalnessScore = Math.min(100, Math.max(0, Math.round(
+    hardCoverage * 0.50 + (hasMetrics ? 30 : 15) + (isOverStuffed ? -25 : 20)
+  )));
+  const engine7: AtsEngineResult = {
+    id: 'naturalnosc_jezyka',
+    name: 'Strażnik Naturalności i Gęstości Słów',
+    component: 'atsSimulator.ts (Detektor Przeładowania Słowami)',
+    category: 'Płynność językowa i brak sztucznego spamu',
+    score: naturalnessScore,
+    status: naturalnessScore >= 80 ? 'OPTIMAL' : naturalnessScore >= 65 ? 'ACCEPTABLE' : naturalnessScore >= 50 ? 'RISKY' : 'REJECTED',
+    weightsFocus: 'Wplecenie umiejętności w zdania (50%), Spójność z opisem ról (50%)',
+    keyStrengths: [
+      !isOverStuffed ? 'Naturalna struktura zdań bez sztucznego upychania słów kluczowych' : 'Wysokie nasycenie terminami',
+    ],
+    penaltiesAndFlags: [
+      ...(isOverStuffed ? ['Wykryto suchą listę słów kluczowych niepopartą żadnym opisem projektowym'] : []),
+    ],
+    recommendation: 'Nie twórz wielkich list samych nazw technologii bez osadzenia ich w zrealizowanych zadaniach.',
+    proposals: [
+      'Zamiast wymieniać 30 narzędzi w rzędzie, opisz 4 najważniejsze w punktach doświadczenia.',
+    ],
+  };
+
+  // 8. Moduł Spójności Dat i Faktów (consistencyGuard)
+  const consistencyScore = Math.min(100, Math.max(0, Math.round(
+    structScore * 0.50 + (safeVault.history.length > 0 ? 30 : 10) + 20
+  )));
+  const engine8: AtsEngineResult = {
+    id: 'spojnosc_profilu',
+    name: 'Strażnik Spójności i Ciągłości Zatrudnienia',
+    component: 'consistencyEngine.ts (Strażnik Faktów)',
+    category: 'Brak sprzeczności i ciągłość chronologiczna',
+    score: consistencyScore,
+    status: consistencyScore >= 80 ? 'OPTIMAL' : consistencyScore >= 65 ? 'ACCEPTABLE' : consistencyScore >= 50 ? 'RISKY' : 'REJECTED',
+    weightsFocus: 'Brak luk czasowych (50%), Spójność dat i ról (50%)',
+    keyStrengths: [
+      safeVault.history.length > 0 ? 'Zachowana chronologiczna ciągłość wpisów zawodowych' : 'Podstawowe ramy czasowe',
+    ],
+    penaltiesAndFlags: [],
+    recommendation: 'Podawaj daty w spójnym formacie (miesiąc i rok), aby parser nie naliczał luk w zatrudnieniu.',
+    proposals: [
+      'Stosuj format MM.RRRR (np. 03.2021 – 08.2023).',
+    ],
+  };
+
+  // 9. Przesiewowy Audyt Wymagań (quickAtsCheck)
+  const quickScore = Math.min(100, Math.max(0, Math.round(
+    hardCoverage * 0.40 + titleScore * 0.30 + structScore * 0.30
+  )));
+  const engine9: AtsEngineResult = {
+    id: 'przesiew_wymagan',
+    name: 'Przesiewowy Tester Rekrutacyjny',
+    component: 'quickAtsCheck.ts (Szybkie Sito Formalne)',
+    category: 'Wstępna kwalifikacja aplikacji',
+    score: quickScore,
+    status: quickScore >= 80 ? 'OPTIMAL' : quickScore >= 65 ? 'ACCEPTABLE' : quickScore >= 50 ? 'RISKY' : 'REJECTED',
+    weightsFocus: 'Pokrycie bazowe (40%), Tytuł (30%), Struktura (30%)',
+    keyStrengths: [
+      quickScore >= 70 ? 'Wysoka szansa przejścia automatycznego sita w pierwszym etapie' : 'Dokument zawiera dane bazowe',
+    ],
+    penaltiesAndFlags: [
+      ...(quickScore < 60 ? ['Ryzyko automatycznego odrzucenia z powodu niskiego dopasowania początkowego'] : []),
+    ],
+    recommendation: 'Sprawdź, czy oferta nie wymaga odmiennej specjalizacji.',
+    proposals: [
+      'Dopasuj CV ściśle pod jedno konkretne ogłoszenie, zamiast wysyłać generyczny dokument.',
+    ],
+  };
+
+  // 10. Główny Konsensus CVelocity (cvelocity_consensus)
+  const cvelocityScore = Math.min(100, Math.max(0, Math.round(
+    hardCoverage * 0.35 + recencyScore * 0.25 + structScore * 0.20 + titleScore * 0.10 + (hasMetrics ? 10 : 0)
+  )));
+  const engine10: AtsEngineResult = {
+    id: 'konsensus_cvelocity',
+    name: 'Główny Zrównoważony Konsensus CVelocity',
+    component: 'atsScorer.ts (Zbalansowany Model Końcowy)',
+    category: 'Końcowa syntetyczna ocena dopasowania',
+    score: cvelocityScore,
+    status: cvelocityScore >= 80 ? 'OPTIMAL' : cvelocityScore >= 65 ? 'ACCEPTABLE' : cvelocityScore >= 50 ? 'RISKY' : 'REJECTED',
+    weightsFocus: 'Wszystkie 9 wymiarów zbalansowane (100%)',
+    keyStrengths: [
+      cvelocityScore >= 75 ? 'Zrównoważony profil o wysokiej odporności na błędy parsowania' : 'Stabilny szkielet CV',
+    ],
+    penaltiesAndFlags: [
+      ...(missingHardCount > 2 ? [`Brak ${missingHardCount} kluczowych kompetencji twardych`] : []),
+    ],
+    recommendation: 'Skorzystaj z generatora Historii STAR i doprecyzuj najważniejsze projekty.',
+    proposals: [
+      'Wygeneruj ściągę na rozmowę i przećwicz odpowiedzi w trybie symulatora pytań.',
+    ],
+  };
+
+  const engines = [engine1, engine2, engine3, engine4, engine5, engine6, engine7, engine8, engine9, engine10];
+  const allScores = engines.map((e) => e.score);
+  const medianScore = calculateMedian(allScores);
+  const meanScore = Math.round(allScores.reduce((sum, s) => sum + s, 0) / allScores.length);
+  const minScore = Math.min(...allScores);
+  const maxScore = Math.max(...allScores);
+
+  const consensusGrade: MultiEngineAtsConsensus['consensusGrade'] =
+    medianScore >= 80 ? 'EXCELLENT' : medianScore >= 65 ? 'GOOD' : medianScore >= 50 ? 'NEEDS_WORK' : 'CRITICAL_RISK';
+
+  // Uczciwa ocena predyspozycji zawodowych i alternatywne ścieżki
+  const isRealisticFit = medianScore >= 60 && missingHardCount <= 4;
+  const suggestedAlternativeRoles: string[] = [];
+
+  const careerVerdict = isRealisticFit
+    ? 'Stanowisko jest w zasięgu Twoich kompetencji. Profil wymaga jedynie kosmetycznego dopasowania akcentów i uzupełnienia metryk.'
+    : 'Wykryto znaczącą lukę kompetencyjną. Brakuje ponad połowy kluczowych wymagań technicznych lub uprawnień formalnych.';
+
+  const careerPlan = isRealisticFit
+    ? 'Dopracuj opisy osiągnięć liczbami, ujednolić nagłówek i aplikuj śmiało.'
+    : 'Zamiast sztucznie dopisywać nieznane narzędzia (co natychmiast wyjdzie podczas rozmowy technicznej), rekomendujemy rozważenie stanowisk pokrewnych o niższym progu wejścia lub uzupełnienie twardych kwalifikacji.';
+
+  if (!isRealisticFit) {
+    // Sugestie alternatywnych stanowisk
+    const currentTitle = (safeVault.personalInfo.title || '').toLowerCase();
+    if (currentTitle.includes('devops') || currentTitle.includes('cloud')) {
+      suggestedAlternativeRoles.push('Administrator Systemów Linux', 'Junior Cloud Engineer', 'Inżynier Wsparcia IT L2/L3');
+    } else if (currentTitle.includes('programista') || currentTitle.includes('developer') || currentTitle.includes('frontend') || currentTitle.includes('backend')) {
+      suggestedAlternativeRoles.push('Młodszy Programista (Junior Developer)', 'Tester Oprogramowania (QA)', 'Wdrożeniowiec Systemów');
+    } else if (currentTitle.includes('elektryk') || currentTitle.includes('monter') || currentTitle.includes('technik')) {
+      suggestedAlternativeRoles.push('Pomocnik Montera / Elektryka', 'Serwisant Urządzeń', 'Operator Maszyn');
+    } else {
+      suggestedAlternativeRoles.push('Specjalista ds. Operacyjnych', 'Młodszy Specjalista ds. Wdrożeń', 'Koordynator Projektu');
+    }
+  }
+
+  const summaryJustification =
+    medianScore >= 80
+      ? `Twoje CV uzyskało rynkowy konsensus na poziomie ${medianScore}%. Profil posiada wysokie nasycenie słowami kluczowymi, przejrzysty układ i jest w pełni czytelny dla ponad 85% systemów rekrutacyjnych.`
+      : medianScore >= 65
+      ? `Mediana dopasowania wynosi ${medianScore}%. Aplikacja przejdzie wstępne sito, jednak bardziej rygorystyczne filtry obniżą ocenę z powodu brakujących ${missingHardCount} pojęć lub małej liczby twardych liczb.`
+      : `Mediana konsensusu ${medianScore}% wskazuje na wysokie ryzyko odrzucenia. Powodem jest duża rozbieżność roli, brak bazowych narzędzi lub brak wymiernych wyników.`;
+
+  const globalBestPractices = [
+    {
+      title: '1. Zasada Kontekstu: Narzędzie + Działanie + Liczba',
+      badExample: '• Programowanie w Pythonie i bazy danych SQL.',
+      goodExample: '• Zaprojektowałem usługę w Pythonie (FastAPI) z bazą PostgreSQL, redukując czas odpowiedzi o 42% dla 10 tysięcy użytkowników.',
+      explanation: 'Systemy ATS oraz rekruterzy najwyżej punktują zdania zawierające konkretną technologię połączoną z mierzalnym rezultatem biznesowym.',
+    },
+    {
+      title: '2. Spójność Tytułu Stanowiska z Ofertą',
+      badExample: 'Nagłówek w CV: „Pasjonat Nowych Technologii” (w ofercie: Starszy Programista Java)',
+      goodExample: 'Nagłówek w CV: „Starszy Programista Java | Spring Boot & Cloud Architect”',
+      explanation: 'Filtry rekrutacyjne natychmiast porównują nagłówek z nazwą stanowiska. Brak zbieżności obniża ocenę w pierwszym etapie selekcji.',
+    },
+    {
+      title: '3. Tradycyjne i Jednoznaczne Nazwy Sekcji',
+      badExample: '„Moja Droga Życiowa”, „Czym Się Pasjonuję”, „Gdzie Działałem”',
+      goodExample: '„Doświadczenie Zawodowe”, „Umiejętności Techniczne”, „Wykształcenie”, „Uprawnienia i Certyfikaty”',
+      explanation: 'Automatyczne czytniki korzystają ze sztywnych słowników nagłówków. Nietypowe nazwy sekcji powodują pominięcie całych bloków tekstu.',
+    },
+    {
+      title: '4. Czysty Układ Jednokolumnowy bez Grafik i Pasków Postępu',
+      badExample: 'Paski biegłości (np. Python: 4/5 gwiazdek, React: pasek 80%), tabele wielokolumnowe zagnieżdżone w sobie.',
+      goodExample: 'Czysty tekst: „Python (poziom zaawansowany), React (3 lata doświadczenia komercyjnego)”, układ jednokolumnowy.',
+      explanation: 'Czytniki maszynowe nie potrafią zinterpretować graficznych pasków postępu — dla algorytmu oznacza to brak informacji o znajomości narzędzia.',
+    },
+    {
+      title: '5. Precyzja Dat i Chronologia (Brak Luk)',
+      badExample: '„Firma X w latach ubiegłych”, „2021 – 2022” (bez podania miesięcy)',
+      goodExample: '„03.2021 – 08.2023 (2 lata 6 mies.)”',
+      explanation: 'Parser oblicza łączny staż pracy na podstawie miesięcy. Brak miesięcy powoduje zaokrąglenie w dół lub flagę błędu.',
+    },
+    {
+      title: '6. Klauzula Zgody na Przetwarzanie Danych Osobowych (RODO)',
+      badExample: 'Brak klauzuli formalnej na dole dokumentu.',
+      goodExample: 'Aktualna formuła zgody na przetwarzanie danych osobowych w celach rekrutacyjnych.',
+      explanation: 'Niektóre polskie i europejskie systemy rekrutacyjne odrzucają dokumenty pozbawione wymaganej zgody prawnej.',
+    },
+  ];
+
+  return {
+    medianScore,
+    meanScore,
+    minScore,
+    maxScore,
+    consensusGrade,
+    summaryJustification,
+    careerFitAdvice: {
+      isRealisticFit,
+      verdict: careerVerdict,
+      actionablePlan: careerPlan,
+      suggestedAlternativeRoles,
+    },
+    engines,
+    globalBestPractices,
+  };
+}
+
+
 

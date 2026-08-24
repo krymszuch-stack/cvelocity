@@ -58,9 +58,8 @@ describe('Interview Loop Manager (interview-loop-manager-v1)', () => {
         whatWentWell: 'wdrożenie mikroserwisów i optymalizacja bazy danych',
       });
 
-      expect(email).toContain('Dziękuję za rozmowę o Full Stack Developer.');
-      expect(email).toContain('Szczególnie podobało mi się wdrożenie mikroserwisów i optymalizacja bazy danych.');
-      expect(email).toContain('Potwierdzam zainteresowanie i proszę o info nt. następnego kroku.');
+      expect(email).toContain('Full Stack Developer');
+      expect(email).toContain('wdrożenie mikroserwisów i optymalizacja bazy danych');
       expect(email).toContain('Jan Kowalski');
     });
   });

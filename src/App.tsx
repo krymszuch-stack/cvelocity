@@ -34,6 +34,7 @@ import { DrillModeModal } from './features/drill/DrillModeModal';
 
 // Lazy-loaded heavy views for fast initial bundle & LCP
 const JobMatcher = lazy(() => import('./features/matcher/JobMatcher').then((m) => ({ default: m.JobMatcher })));
+const AtsLabView = lazy(() => import('./features/ats/AtsLabView').then((m) => ({ default: m.AtsLabView })));
 const MasterVaultEditor = lazy(() => import('./features/vault/MasterVaultEditor').then((m) => ({ default: m.MasterVaultEditor })));
 const ProfilerSection = lazy(() => import('./features/profiler/ProfilerSection').then((m) => ({ default: m.ProfilerSection })));
 const CVParserModal = lazy(() => import('./features/parser/CVParserModal').then((m) => ({ default: m.CVParserModal })));
@@ -304,6 +305,11 @@ function MainApp() {
                 onUpdateVault={setVault}
                 onOpenAdvisor={handleOpenAdvisor}
               />
+            )}
+
+            {/* Tab: Laboratorium Audytu ATS 360° (Multi-Engine Consensus) */}
+            {activeTab === 'ats-lab' && (
+              <AtsLabView vault={vault} />
             )}
 
             {/* TRENUJ — przygotowanie do rozmowy */}

@@ -34,9 +34,9 @@ export function calculateAdvancedATSScore(vault: MasterVault, jobDescription: st
     };
   }
 
-  const lowerJd = jobDescription.toLowerCase();
-  const lowerTitle = (targetJobTitle || vault.personalInfo.title || '').toLowerCase();
-  const userTitle = (vault.personalInfo.title || '').toLowerCase();
+  const lowerJd = (jobDescription || '').toLowerCase();
+  const lowerTitle = (targetJobTitle || vault.personalInfo?.title || '').toLowerCase();
+  const userTitle = (vault.personalInfo?.title || '').toLowerCase();
 
   // 1. Hard Skills & Keyword Extraction
   const rawTokens = lowerJd.match(/\b[a-zA-Z0-9#+.-]{3,}\b/g) || [];
@@ -44,8 +44,8 @@ export function calculateAdvancedATSScore(vault: MasterVault, jobDescription: st
   const candidateKeywords = Array.from(new Set(rawTokens.filter((t: string) => !stopWords.has(t) && t.length > 2)));
 
   const vaultSkills = new Set([
-    ...vault.skillsMatrix.hardSkills.map((s) => s.toLowerCase()),
-    ...(vault.skillsMatrix.toolsAndTech || []).map((t) => t.toLowerCase()),
+    ...(vault.skillsMatrix?.hardSkills || []).map((s) => s.toLowerCase()),
+    ...(vault.skillsMatrix?.toolsAndTech || []).map((t) => t.toLowerCase()),
   ]);
 
   const matchedKeywords = candidateKeywords.filter((kw) => vaultSkills.has(kw));
@@ -74,7 +74,7 @@ export function calculateAdvancedATSScore(vault: MasterVault, jobDescription: st
   }
 
   // 4. Formatting & Slogan Purification Penalty (15% Weight)
-  const summaryFluff = eliminateSlogans(vault.personalInfo.summary || '').slogansRemoved.length;
+  const summaryFluff = eliminateSlogans(vault.personalInfo?.summary || '').slogansRemoved.length;
   const formattingScore = Math.max(50, 100 - summaryFluff * 10);
 
   // Overall Weighted Score Calculation

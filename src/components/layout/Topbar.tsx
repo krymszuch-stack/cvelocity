@@ -39,6 +39,7 @@ export interface TopbarProps {
 const TAB_NAMES: Record<NavTabId, string> = {
   home: 'Twój następny krok',
   pricing: 'Cennik i pakiety',
+  'ats-lab': 'Laboratorium Audytu ATS 360°',
   ...Object.fromEntries(NAV_SECTIONS.map((section) => [section.id, section.label])),
 } as Record<NavTabId, string>;
 

@@ -66,8 +66,12 @@ async function createUser(label) {
 
 async function cleanup() {
   for (const id of created) {
-    await admin.rpc('delete_user_data', { p_user: id }).catch(() => {});
-    await admin.auth.admin.deleteUser(id).catch(() => {});
+    try {
+      await admin.rpc('delete_user_data', { p_user: id });
+    } catch {}
+    try {
+      await admin.auth.admin.deleteUser(id);
+    } catch {}
   }
 }
 

@@ -1,15 +1,25 @@
 import { CoverLetter, MasterVault } from '../types';
 import { rankExperienceByRelevance, rankHighlightsByRelevance } from './relevanceRanking';
+import {
+  getCoverLetterSalutations,
+  getCoverLetterHookVariations,
+  getCoverLetterProofIntroductions,
+  getCoverLetterCtaVariations,
+  getCoverLetterSignOffs,
+  selectVariantIndex,
+} from './phrasingVariations';
 
 /**
  * Generates a concise, 3-section Anti-Template business cover letter with ZERO AI TOKENS,
  * synthesizing actual loaded/created CV data (MasterVault).
+ * Supports optional `variantIndex` for rotating openings, proof bridges, and CTAs without repetition.
  */
 export function generateAntiTemplateCoverLetter(
   targetRole: string,
   companyName: string,
   jobDescription: string,
-  vault: MasterVault
+  vault: MasterVault,
+  variantIndex?: number
 ): CoverLetter {
   const company = companyName || 'Państwa Firmie';
   const role = targetRole || 'oferowanym stanowisku';
@@ -32,16 +42,29 @@ export function generateAntiTemplateCoverLetter(
   });
   const topSkillsStr = rankedSkills.slice(0, 5).join(', ');
 
-  // 1. Hook (Haczyk) built dynamically from candidate profile
-  let hook = `Zwracam się z propozycją współpracy na stanowisku ${role} w firmie ${company}. `;
-  if (vault.personalInfo.summary && vault.personalInfo.summary.length > 20) {
-    hook += `Jako ${currentTitle}, ${vault.personalInfo.summary.slice(0, 180).trim()}... `;
-  } else {
-    hook += `Jako ${currentTitle} z doświadczeniem w pracy z technologiami takimi jak ${topSkillsStr || 'kluczowe rozwiązania branżowe'}, wnoszę sprawdzoną wiedzę praktyczną. `;
-  }
-  hook += `Z analizy Państwa ogłoszenia wynika, że poszukują Państwo kandydata gotowego do szybkiego dowożenia wyników i rozwiązywania wyzwań operacyjnych.`;
+  const seed = variantIndex ?? (name + role + company);
 
-  // 2. Proof (Dowód) - Pick real highlights from Master Vault history & projects
+  // 1. Nagłówek grzecznościowy (Salutation)
+  const salutations = getCoverLetterSalutations(company);
+  const salutationIdx = selectVariantIndex(typeof seed === 'number' ? seed : seed + '_salut', salutations.length);
+  const salutation = salutations[salutationIdx];
+
+  // 2. Hook (Haczyk) built dynamically from varied templates
+  const hookVariations = getCoverLetterHookVariations({
+    candidateName: name,
+    roleTitle: role,
+    companyName: company,
+    topSkills: topSkillsStr,
+    topMetric: vault.history?.[0]?.highlights?.[0]?.metric,
+  });
+
+  const hookIdx = selectVariantIndex(typeof seed === 'number' ? seed : seed + '_hook', hookVariations.length);
+  let hook = hookVariations[hookIdx];
+  if (vault.personalInfo.summary && vault.personalInfo.summary.length > 20 && hookIdx === 0 && variantIndex === undefined) {
+    hook = `Zwracam się z propozycją współpracy na stanowisku ${role} w firmie ${company}. Jako ${currentTitle}, ${vault.personalInfo.summary.slice(0, 180).trim()}... Z analizy Państwa ogłoszenia wynika, że poszukują Państwo kandydata gotowego do szybkiego dowożenia wyników i rozwiązywania wyzwań operacyjnych.`;
+  }
+
+  // 3. Proof (Dowód) - Pick real highlights from Master Vault history & projects
   const proofPoints: string[] = [];
 
   // Extract from experience history, most JD-relevant blocks and bullets first (0 tokens)
@@ -80,12 +103,24 @@ export function generateAntiTemplateCoverLetter(
     proofPoints.push(`• Wdrożyłem projekty produkcyjne dostosowane do specyficznych wymagań biznesowych.`);
   }
 
-  // 3. Call to Action (CTA)
+  // 4. Zdanie wprowadzające do dowodów (Proof Introduction)
+  const proofIntros = getCoverLetterProofIntroductions();
+  const proofIntroIdx = selectVariantIndex(typeof seed === 'number' ? seed : seed + '_intro', proofIntros.length);
+  const proofIntro = proofIntros[proofIntroIdx];
+
+  // 5. Call to Action (CTA) built dynamically from varied templates
+  const ctaVariations = getCoverLetterCtaVariations(company);
+  const ctaIdx = selectVariantIndex(typeof seed === 'number' ? seed : seed + '_cta', ctaVariations.length);
+  const callToAction = ctaVariations[ctaIdx];
+
+  // 6. Formuła pożegnania (Sign-off)
+  const signOffs = getCoverLetterSignOffs();
+  const signOffIdx = selectVariantIndex(typeof seed === 'number' ? seed : seed + '_sign', signOffs.length);
+  const signOff = signOffs[signOffIdx];
+
   const contactInfo = [vault.personalInfo.phone && `Tel: ${vault.personalInfo.phone}`, vault.personalInfo.email && `Email: ${vault.personalInfo.email}`].filter(Boolean).join(' | ');
 
-  const callToAction = `Chętnie omówię podczas rozmowy rekrutacyjnej, w jaki sposób moje dotychczasowe osiągnięcia oraz opanowane narzędzia bezpośrednio wspomogą realizację celów firmy ${company}. Zapraszam do kontaktu.`;
-
-  const fullText = `${hook}\n\nWybrane przykłady moich dotychczasowych rezultatów zawodowych:\n${proofPoints.join('\n')}\n\n${callToAction}\n\nZ poważaniem,\n${name}\n${contactInfo}`;
+  const fullText = `${salutation}\n\n${hook}\n\n${proofIntro}\n${proofPoints.join('\n')}\n\n${callToAction}\n\n${signOff}\n${name}\n${contactInfo}`;
 
   return {
     targetJobTitle: role,

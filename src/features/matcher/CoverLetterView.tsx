@@ -8,21 +8,43 @@ import {
   Zap,
   Target,
   Award,
+  RefreshCw,
 } from 'lucide-react';
-import { CoverLetter } from '../../types';
+import { CoverLetter, MasterVault, JobOffer } from '../../types';
+import { generateAntiTemplateCoverLetter } from '../../lib/coverLetterEngine';
 import { Card } from '../../components/ui/Card';
 import { Button } from '../../components/ui/Button';
 
 export interface CoverLetterViewProps {
   coverLetter: CoverLetter;
+  vault?: MasterVault;
+  jobOffer?: JobOffer;
   className?: string;
 }
 
 export const CoverLetterView: React.FC<CoverLetterViewProps> = ({
-  coverLetter,
+  coverLetter: initialCoverLetter,
+  vault,
+  jobOffer,
   className = '',
 }) => {
+  const [variantIndex, setVariantIndex] = useState(0);
   const [isCopied, setIsCopied] = useState(false);
+
+  const coverLetter =
+    vault && jobOffer
+      ? generateAntiTemplateCoverLetter(
+          jobOffer.title,
+          jobOffer.company,
+          jobOffer.description || jobOffer.rawDescription || '',
+          vault,
+          variantIndex
+        )
+      : initialCoverLetter;
+
+  const handleNextVariant = () => {
+    setVariantIndex((prev) => (prev + 1) % 8);
+  };
 
   const handleCopy = () => {
     navigator.clipboard.writeText(coverLetter.fullText);
@@ -43,16 +65,36 @@ export const CoverLetterView: React.FC<CoverLetterViewProps> = ({
             <Zap className="h-4 w-4" />
           </div>
           <div>
-            <h3 className="text-xs font-bold uppercase tracking-wider text-ink">
-              Anti-Template Cover Letter (0-Token Engine)
-            </h3>
+            <div className="flex items-center gap-2">
+              <h3 className="text-xs font-bold uppercase tracking-wider text-ink">
+                Anti-Template Cover Letter (0-Token Engine)
+              </h3>
+              {vault && jobOffer && (
+                <span className="rounded-full bg-brand-100 px-2 py-0.5 text-[10px] font-bold text-brand-700 dark:bg-brand-900/40 dark:text-brand-300">
+                  Styl #{variantIndex + 1}/8
+                </span>
+              )}
+            </div>
             <p className="text-[11px] text-muted">
-              Wygenerowany bez szablonowych fraz z bezpośrednim odniesieniem do wymagań oferty.
+              Wygenerowany w 100% lokalnie bez zużycia tokenów, ze zróżnicowaną bazą profesjonalnych zwrotów.
             </p>
           </div>
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
+          {vault && jobOffer && (
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              icon={RefreshCw}
+              onClick={handleNextVariant}
+              title="Wylosuj inny wariant stylistyczny (0 tokenów)"
+            >
+              Inny styl
+            </Button>
+          )}
+
           <Button
             type="button"
             variant="outline"

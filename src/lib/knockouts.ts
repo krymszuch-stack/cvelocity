@@ -298,20 +298,21 @@ export interface KnockoutReport {
 }
 
 /** Zbiera tekst vaultu tam, gdzie użytkownik mógł opisać uprawnienie własnymi słowami. */
-function collectVaultText(vault: MasterVault): string {
+function collectVaultText(vault: MasterVault | Partial<MasterVault> | undefined | null): string {
+  if (!vault) return '';
   const parts: string[] = [
-    vault.personalInfo.summary,
-    vault.personalInfo.title,
-    ...vault.skillsMatrix.hardSkills,
-    ...vault.skillsMatrix.toolsAndTech,
-    ...vault.skillsMatrix.certifications.flatMap((cert) => [cert.name, cert.issuer]),
-    ...vault.history.flatMap((exp) => [
-      exp.role,
-      exp.description ?? '',
-      ...exp.highlights.map((highlight) => highlight.text),
+    vault.personalInfo?.summary || '',
+    vault.personalInfo?.title || '',
+    ...(vault.skillsMatrix?.hardSkills ?? []),
+    ...(vault.skillsMatrix?.toolsAndTech ?? []),
+    ...(vault.skillsMatrix?.certifications ?? []).flatMap((cert) => [cert?.name || '', cert?.issuer || '']),
+    ...(vault.history ?? []).flatMap((exp) => [
+      exp?.role || '',
+      exp?.description ?? '',
+      ...(exp?.highlights ?? []).map((highlight) => typeof highlight === 'string' ? highlight : (highlight?.text || '')),
     ]),
-    ...vault.education.flatMap((edu) => [edu.degree, edu.fieldOfStudy, edu.description ?? '']),
-    ...(vault.profiler?.languages ?? []).map((lang) => `${lang.language} ${lang.level}`),
+    ...(vault.education ?? []).flatMap((edu) => [edu?.degree || '', edu?.fieldOfStudy || '', edu?.description ?? '']),
+    ...(vault.profiler?.languages ?? []).map((lang) => `${lang?.language || ''} ${lang?.level || ''}`),
   ];
 
   return parts.filter(Boolean).join(' \n ');
@@ -353,6 +354,54 @@ function detectRequirement(
 }
 
 /**
+ * Rozszerza zbiór posiadanych uprawnień o uprawnienia podrzędne implikowane przez hierarchię
+ * (np. prawo jazdy C+E implikuje kat. B i C, SEP dozorowy implikuje eksploatacyjny).
+ */
+function expandHeldLicensesWithHierarchy(heldLicenses: Set<string>): Set<string> {
+  const expanded = new Set(heldLicenses);
+
+  // Prawo jazdy: C/C+E implikuje B
+  if (
+    expanded.has('c_license') ||
+    expanded.has('driving_c_plus_e') ||
+    expanded.has('driving_ce') ||
+    expanded.has('driving_c')
+  ) {
+    expanded.add('b_license');
+    expanded.add('driving_b');
+    expanded.add('driving_license_b');
+  }
+
+  // SEP: powyżej 1kV / dozór implikuje do 1kV
+  if (
+    expanded.has('sep_above_1kv') ||
+    expanded.has('sep_15kv') ||
+    expanded.has('sep_g1_15kv') ||
+    expanded.has('sep_g1_d') ||
+    expanded.has('sep_g1')
+  ) {
+    expanded.add('sep_1kv');
+    expanded.add('sep_g1_e');
+  }
+
+  if (expanded.has('sep_g2_d')) {
+    expanded.add('sep_g2');
+  }
+
+  if (expanded.has('sep_g3_d')) {
+    expanded.add('sep_g3');
+  }
+
+  // UDT: nadrzędne kategorie wózków / suwnic
+  if (expanded.has('udt_i_wjo') || expanded.has('udt_crane')) {
+    expanded.add('udt_forklift');
+    expanded.add('udt_ii_wjo');
+  }
+
+  return expanded;
+}
+
+/**
  * Porównuje wymagania ogłoszenia z profilem kandydata.
  *
  * Wyłącznie lokalnie, bez sieci i bez modelu — dlatego ta funkcja może stać za
@@ -361,7 +410,8 @@ function detectRequirement(
 export function auditKnockouts(jobDescription: string, vault: MasterVault): KnockoutReport {
   const jdText = jobDescription ?? '';
   const vaultText = collectVaultText(vault);
-  const heldLicenses = new Set(vault.profiler?.licenses ?? []);
+  const rawLicenses = new Set(vault.profiler?.licenses ?? []);
+  const heldLicenses = expandHeldLicensesWithHierarchy(rawLicenses);
 
   const findings: KnockoutFinding[] = [];
 
@@ -404,3 +454,5 @@ export function findDanglingLicenseIds(): string[] {
     (id) => !isKnownLicenseId(id)
   );
 }
+
+export const evaluateKnockouts = auditKnockouts;

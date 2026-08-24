@@ -1,0 +1,492 @@
+import React, { useState, useMemo } from 'react';
+import { motion, AnimatePresence } from 'motion/react';
+import {
+  ShieldCheck,
+  Award,
+  AlertTriangle,
+  CheckCircle2,
+  XCircle,
+  HelpCircle,
+  Sparkles,
+  BookOpen,
+  Layers,
+  ChevronDown,
+  ChevronUp,
+  Compass,
+  ArrowRight,
+  Lightbulb,
+  Zap,
+} from 'lucide-react';
+import { MasterVault } from '../../types';
+import { simulateMultiEngineATS, AtsEngineResult } from '../../lib/atsSimulator';
+
+export interface AtsLabViewProps {
+  vault: MasterVault;
+  jobOfferText?: string;
+  targetRole?: string;
+}
+
+export const AtsLabView: React.FC<AtsLabViewProps> = ({
+  vault,
+  jobOfferText = '',
+  targetRole = '',
+}) => {
+  const [customJdText, setCustomJdText] = useState(jobOfferText);
+  const [customRole, setCustomRole] = useState(targetRole || vault.personalInfo?.title || '');
+  const [selectedEngineId, setSelectedEngineId] = useState<string | null>('konsensus_cvelocity');
+  const [openPracticeIdx, setOpenPracticeIdx] = useState<number | null>(0);
+
+  const consensus = useMemo(() => {
+    return simulateMultiEngineATS(vault, customJdText, customRole);
+  }, [vault, customJdText, customRole]);
+
+  const activeEngine = useMemo(() => {
+    return consensus.engines.find((e) => e.id === selectedEngineId) || consensus.engines[0];
+  }, [consensus.engines, selectedEngineId]);
+
+  const getStatusColor = (status: AtsEngineResult['status']) => {
+    switch (status) {
+      case 'OPTIMAL':
+        return {
+          bg: 'bg-emerald-500/10 dark:bg-emerald-500/15',
+          border: 'border-emerald-500/30',
+          text: 'text-emerald-700 dark:text-emerald-400',
+          label: 'Wzorowy',
+          badge: 'bg-emerald-500 text-white',
+        };
+      case 'ACCEPTABLE':
+        return {
+          bg: 'bg-blue-500/10 dark:bg-blue-500/15',
+          border: 'border-blue-500/30',
+          text: 'text-blue-700 dark:text-blue-400',
+          label: 'Akceptowalny',
+          badge: 'bg-blue-500 text-white',
+        };
+      case 'RISKY':
+        return {
+          bg: 'bg-amber-500/10 dark:bg-amber-500/15',
+          border: 'border-amber-500/30',
+          text: 'text-amber-700 dark:text-amber-400',
+          label: 'Ryzykowny',
+          badge: 'bg-amber-500 text-white',
+        };
+      case 'REJECTED':
+        return {
+          bg: 'bg-rose-500/10 dark:bg-rose-500/15',
+          border: 'border-rose-500/30',
+          text: 'text-rose-700 dark:text-rose-400',
+          label: 'Odrzucony',
+          badge: 'bg-rose-500 text-white',
+        };
+    }
+  };
+
+  return (
+    <div className="mx-auto max-w-7xl space-y-8 p-4 sm:p-6 lg:p-8 animate-fade-in">
+      {/* 1. Nagłówek i kontekst laboratorium */}
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+        <div>
+          <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-brand">
+            <Layers className="h-4 w-4" />
+            <span>Laboratorium Audytu Rekrutacyjnego</span>
+          </div>
+          <h1 className="mt-1 text-2xl sm:text-3xl font-extrabold tracking-tight text-ink">
+            Audyt ATS i Konsensus Rynkowy
+          </h1>
+          <p className="mt-1 text-sm text-ink-muted">
+            Sprawdź, jak 10 wyspecjalizowanych filtrów i silników weryfikacji w CVelocity ocenia Twoje CV pod kątem czytelności, słów kluczowych i wymagań formalnych.
+          </p>
+        </div>
+
+        <div className="flex flex-wrap items-center gap-2">
+          <span className="inline-flex items-center gap-1.5 rounded-full border border-emerald-500/20 bg-emerald-500/10 px-3 py-1 text-xs font-semibold text-emerald-600 dark:text-emerald-400">
+            <ShieldCheck className="h-3.5 w-3.5" /> 10 Silników Weryfikacji
+          </span>
+          <span className="inline-flex items-center gap-1.5 rounded-full border border-brand/20 bg-brand/10 px-3 py-1 text-xs font-semibold text-brand">
+            <Zap className="h-3.5 w-3.5" /> 0 Tokenów AI • Pełny Determinizm
+          </span>
+        </div>
+      </div>
+
+      {/* 2. Główny Panel: Mediana Konsensusu i Strategiczne Podsumowanie */}
+      <div className="relative overflow-hidden rounded-3xl border border-brand/20 bg-surface-raised/80 p-6 sm:p-8 shadow-card-glass backdrop-blur-xl">
+        <div className="absolute -right-16 -top-16 h-64 w-64 rounded-full bg-brand/10 blur-3xl pointer-events-none" />
+        <div className="absolute -left-16 -bottom-16 h-64 w-64 rounded-full bg-indigo-500/10 blur-3xl pointer-events-none" />
+
+        <div className="grid grid-cols-1 gap-8 lg:grid-cols-12 items-center">
+          {/* Radialny wskaźnik mediany */}
+          <div className="lg:col-span-4 flex flex-col items-center justify-center text-center p-4 rounded-2xl bg-surface/50 border border-ink/5">
+            <div className="relative flex items-center justify-center">
+              <svg className="h-44 w-44 -rotate-90 transform" viewBox="0 0 100 100">
+                <circle
+                  cx="50"
+                  cy="50"
+                  r="42"
+                  stroke="currentColor"
+                  strokeWidth="8"
+                  fill="transparent"
+                  className="text-surface-sunken"
+                />
+                <circle
+                  cx="50"
+                  cy="50"
+                  r="42"
+                  stroke="currentColor"
+                  strokeWidth="8"
+                  fill="transparent"
+                  strokeDasharray={264}
+                  strokeDashoffset={264 - (264 * consensus.medianScore) / 100}
+                  strokeLinecap="round"
+                  className="text-brand transition-all duration-1000 ease-out"
+                />
+              </svg>
+              <div className="absolute flex flex-col items-center justify-center">
+                <span className="text-4xl sm:text-5xl font-black tracking-tight text-ink font-mono">
+                  {consensus.medianScore}%
+                </span>
+                <span className="text-[11px] font-bold uppercase tracking-wider text-ink-muted mt-1">
+                  Mediana Rynkowa
+                </span>
+              </div>
+            </div>
+
+            <div className="mt-4 flex items-center gap-2">
+              <span className={`px-2.5 py-0.5 rounded-full text-xs font-extrabold ${
+                consensus.medianScore >= 80 ? 'bg-emerald-500 text-white' : consensus.medianScore >= 65 ? 'bg-blue-500 text-white' : 'bg-amber-500 text-white'
+              }`}>
+                {consensus.medianScore >= 80 ? 'Wysoka Gotowość Rynkowa' : consensus.medianScore >= 65 ? 'Stabilny Próg Przejścia' : 'Wymaga Uzupełnienia'}
+              </span>
+            </div>
+          </div>
+
+          {/* Opis narracyjny i statystyki */}
+          <div className="lg:col-span-8 space-y-5">
+            <div>
+              <h3 className="text-lg font-bold text-ink flex items-center gap-2">
+                <Sparkles className="h-5 w-5 text-brand" /> Uzasadnienie Oceny Systemowej
+              </h3>
+              <p className="mt-2 text-sm sm:text-base leading-relaxed text-ink-muted">
+                {consensus.summaryJustification}
+              </p>
+            </div>
+
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 pt-2">
+              <div className="p-3 rounded-xl bg-surface/60 border border-ink/5 text-center">
+                <span className="text-xs text-ink-faint block">Średnia Ocen</span>
+                <span className="text-xl font-bold font-mono text-ink mt-0.5 block">{consensus.meanScore}%</span>
+              </div>
+              <div className="p-3 rounded-xl bg-surface/60 border border-ink/5 text-center">
+                <span className="text-xs text-ink-faint block">Najniższa Ocena</span>
+                <span className="text-xl font-bold font-mono text-rose-500 mt-0.5 block">{consensus.minScore}%</span>
+              </div>
+              <div className="p-3 rounded-xl bg-surface/60 border border-ink/5 text-center">
+                <span className="text-xs text-ink-faint block">Najwyższa Ocena</span>
+                <span className="text-xl font-bold font-mono text-emerald-500 mt-0.5 block">{consensus.maxScore}%</span>
+              </div>
+              <div className="p-3 rounded-xl bg-surface/60 border border-ink/5 text-center">
+                <span className="text-xs text-ink-faint block">Liczba Silników</span>
+                <span className="text-xl font-bold font-mono text-brand mt-0.5 block">10 / 10</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* 3. Panel Realistycznej Oceny Predyspozycji i Ścieżek Alternatywnych */}
+      <div className={`p-6 rounded-3xl border ${
+        consensus.careerFitAdvice.isRealisticFit
+          ? 'border-emerald-500/20 bg-emerald-500/5'
+          : 'border-amber-500/25 bg-amber-500/5'
+      }`}>
+        <div className="flex items-start gap-4">
+          <div className={`p-3 rounded-2xl ${consensus.careerFitAdvice.isRealisticFit ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400' : 'bg-amber-500/10 text-amber-600 dark:text-amber-400'}`}>
+            <Compass className="h-6 w-6" />
+          </div>
+          <div className="space-y-2 flex-1">
+            <div className="flex items-center gap-2">
+              <h3 className="text-base font-bold text-ink">
+                Uczciwa Ocena Predyspozycji na to Stanowisko
+              </h3>
+              <span className={`px-2 py-0.5 rounded-full text-[10px] font-extrabold ${consensus.careerFitAdvice.isRealisticFit ? 'bg-emerald-500 text-white' : 'bg-amber-500 text-white'}`}>
+                {consensus.careerFitAdvice.isRealisticFit ? 'Dopasowanie Realne' : 'Rozbieżność Kompetencji'}
+              </span>
+            </div>
+            <p className="text-sm text-ink-muted leading-relaxed">
+              {consensus.careerFitAdvice.verdict}
+            </p>
+            <div className="p-3 rounded-xl bg-surface/80 border border-ink/5 text-xs text-ink">
+              <strong>Rekomendowany plan działania:</strong> {consensus.careerFitAdvice.actionablePlan}
+            </div>
+
+            {!consensus.careerFitAdvice.isRealisticFit && consensus.careerFitAdvice.suggestedAlternativeRoles.length > 0 && (
+              <div className="pt-2">
+                <span className="text-xs font-bold text-ink-muted block mb-1.5">
+                  Sugerowane role pokrewne o lepszym dopasowaniu do Twojego profilu:
+                </span>
+                <div className="flex flex-wrap gap-2">
+                  {consensus.careerFitAdvice.suggestedAlternativeRoles.map((roleName, rIdx) => (
+                    <span
+                      key={rIdx}
+                      className="inline-flex items-center gap-1.5 px-3 py-1 rounded-xl bg-surface border border-ink/10 text-xs font-semibold text-ink"
+                    >
+                      <ArrowRight className="h-3 w-3 text-brand" /> {roleName}
+                    </span>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+
+      {/* 4. Siatka 10 Krążków Silników Weryfikacji */}
+      <div className="space-y-4">
+        <div className="flex items-center justify-between">
+          <h2 className="text-xl font-bold text-ink flex items-center gap-2">
+            <Award className="h-5 w-5 text-brand" /> Oceny 10 Silników i Modułów CVelocity
+          </h2>
+          <span className="text-xs text-ink-faint hidden sm:inline">
+            Kliknij silnik, aby zobaczyć szczegółowy audyt i propozycje zmian
+          </span>
+        </div>
+
+        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-3.5">
+          {consensus.engines.map((engine) => {
+            const isSelected = engine.id === selectedEngineId;
+            const style = getStatusColor(engine.status);
+
+            return (
+              <motion.button
+                key={engine.id}
+                whileHover={{ scale: 1.02 }}
+                whileTap={{ scale: 0.98 }}
+                onClick={() => setSelectedEngineId(engine.id)}
+                className={`relative flex flex-col items-center justify-between p-4 rounded-2xl border text-center transition-all duration-200 ${
+                  isSelected
+                    ? 'border-brand ring-2 ring-brand/30 shadow-brand-glow bg-surface-raised'
+                    : 'border-ink/10 bg-surface/60 hover:bg-surface-raised/80'
+                }`}
+              >
+                {/* Score badge top */}
+                <div className="relative mb-2 flex items-center justify-center">
+                  <svg className="h-16 w-16 -rotate-90 transform" viewBox="0 0 60 60">
+                    <circle
+                      cx="30"
+                      cy="30"
+                      r="24"
+                      stroke="currentColor"
+                      strokeWidth="5"
+                      fill="transparent"
+                      className="text-surface-sunken"
+                    />
+                    <circle
+                      cx="30"
+                      cy="30"
+                      r="24"
+                      stroke="currentColor"
+                      strokeWidth="5"
+                      fill="transparent"
+                      strokeDasharray={150}
+                      strokeDashoffset={150 - (150 * engine.score) / 100}
+                      strokeLinecap="round"
+                      className={engine.score >= 80 ? 'text-emerald-500' : engine.score >= 65 ? 'text-blue-500' : 'text-amber-500'}
+                    />
+                  </svg>
+                  <span className="absolute text-sm font-black font-mono text-ink">
+                    {engine.score}%
+                  </span>
+                </div>
+
+                <div className="w-full">
+                  <div className="text-xs font-bold text-ink truncate" title={engine.name}>
+                    {engine.name}
+                  </div>
+                  <div className="text-[10px] text-ink-faint truncate" title={engine.component}>
+                    {engine.component}
+                  </div>
+                </div>
+
+                <div className="mt-2 w-full">
+                  <span className={`block w-full py-0.5 text-[9px] font-extrabold rounded-full ${style.badge}`}>
+                    {style.label}
+                  </span>
+                </div>
+              </motion.button>
+            );
+          })}
+        </div>
+      </div>
+
+      {/* 5. Karta Szczegółowego Audytu Wybranego Modułu */}
+      {activeEngine && (
+        <motion.div
+          key={activeEngine.id}
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="rounded-3xl border border-ink/10 bg-surface-raised p-6 sm:p-8 shadow-card-glass"
+        >
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 border-b border-ink/5 pb-5">
+            <div>
+              <div className="flex items-center gap-2">
+                <h3 className="text-xl font-bold text-ink">{activeEngine.name}</h3>
+                <span className="text-xs px-2.5 py-0.5 rounded-full bg-brand/10 text-brand font-semibold">
+                  {activeEngine.component}
+                </span>
+              </div>
+              <p className="text-xs text-ink-muted mt-1">
+                Kategoria weryfikacji: <strong className="text-ink">{activeEngine.category}</strong>
+              </p>
+            </div>
+
+            <div className="flex items-center gap-3">
+              <div className="text-right">
+                <span className="text-xs text-ink-faint block">Ocena tego modułu</span>
+                <span className="text-2xl font-black font-mono text-brand">{activeEngine.score}%</span>
+              </div>
+              <span className={`px-3 py-1 rounded-xl text-xs font-extrabold ${getStatusColor(activeEngine.status).badge}`}>
+                {getStatusColor(activeEngine.status).label}
+              </span>
+            </div>
+          </div>
+
+          <div className="mt-4 text-xs font-mono text-ink-muted bg-surface/50 p-2.5 rounded-xl border border-ink/5">
+            <strong>Kryteria i wagi oceniania:</strong> {activeEngine.weightsFocus}
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-6">
+            {/* Zalety */}
+            <div className="space-y-3 rounded-2xl bg-emerald-500/5 p-4 border border-emerald-500/15">
+              <h4 className="text-sm font-bold text-emerald-700 dark:text-emerald-400 flex items-center gap-1.5">
+                <CheckCircle2 className="h-4 w-4" /> Co zostało ocenione pozytywnie:
+              </h4>
+              <ul className="space-y-2 text-xs text-ink-muted">
+                {activeEngine.keyStrengths.map((str, idx) => (
+                  <li key={idx} className="flex items-start gap-2">
+                    <span className="text-emerald-500 font-bold mt-0.5">•</span>
+                    <span>{str}</span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+
+            {/* Kary i zastrzeżenia */}
+            <div className="space-y-3 rounded-2xl bg-amber-500/5 p-4 border border-amber-500/15">
+              <h4 className="text-sm font-bold text-amber-700 dark:text-amber-400 flex items-center gap-1.5">
+                <AlertTriangle className="h-4 w-4" /> Co obniżyło ocenę (Zastrzeżenia):
+              </h4>
+              {activeEngine.penaltiesAndFlags.length > 0 ? (
+                <ul className="space-y-2 text-xs text-ink-muted">
+                  {activeEngine.penaltiesAndFlags.map((flag, idx) => (
+                    <li key={idx} className="flex items-start gap-2 text-amber-800 dark:text-amber-300">
+                      <XCircle className="h-3.5 w-3.5 text-amber-500 shrink-0 mt-0.5" />
+                      <span>{flag}</span>
+                    </li>
+                  ))}
+                </ul>
+              ) : (
+                <p className="text-xs text-ink-muted">Brak zastrzeżeń — moduł nie naliczył żadnych kar punktowych.</p>
+              )}
+            </div>
+          </div>
+
+          {/* Konkretne propozycje zmian */}
+          {activeEngine.proposals && activeEngine.proposals.length > 0 && (
+            <div className="mt-6 p-4 rounded-2xl bg-surface/80 border border-brand/20 space-y-2">
+              <span className="text-xs font-bold text-brand flex items-center gap-1.5">
+                <Lightbulb className="h-4 w-4" /> Konkretne propozycje modyfikacji w CV:
+              </span>
+              <ul className="space-y-1.5 text-xs text-ink-muted pl-1">
+                {activeEngine.proposals.map((prop, pIdx) => (
+                  <li key={pIdx} className="flex items-start gap-2">
+                    <span className="text-brand font-bold">→</span>
+                    <span>{prop}</span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
+
+          <div className="mt-4 p-3.5 rounded-2xl bg-surface border border-ink/5 flex items-start gap-3">
+            <HelpCircle className="h-4 w-4 text-brand shrink-0 mt-0.5" />
+            <div>
+              <span className="text-xs font-bold text-ink block">Wskazówka:</span>
+              <p className="text-xs text-ink-muted mt-0.5 leading-relaxed">{activeEngine.recommendation}</p>
+            </div>
+          </div>
+        </motion.div>
+      )}
+
+      {/* 6. Przewodnik Inżynierii CV: 6 Złotych Zasad */}
+      <div className="space-y-4 pt-4 border-t border-ink/5">
+        <div>
+          <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-brand">
+            <BookOpen className="h-4 w-4" />
+            <span>Standardy Inżynierii CV</span>
+          </div>
+          <h2 className="mt-1 text-xl font-bold text-ink">
+            6 Zasad Tworzenia CV pod Systemy Rekrutacyjne i Rekruterów
+          </h2>
+          <p className="text-xs text-ink-muted">
+            Praktyczne przykłady „Źle vs Dobrze”, które uczą jak formułować doświadczenie i umiejętności, aby osiągnąć wysoki wynik bez sztucznego lania wody.
+          </p>
+        </div>
+
+        <div className="space-y-3">
+          {consensus.globalBestPractices.map((practice, idx) => {
+            const isOpen = openPracticeIdx === idx;
+
+            return (
+              <div
+                key={idx}
+                className="overflow-hidden rounded-2xl border border-ink/10 bg-surface/60 transition-colors"
+              >
+                <button
+                  onClick={() => setOpenPracticeIdx(isOpen ? null : idx)}
+                  className="flex w-full items-center justify-between p-4 text-left font-semibold text-sm text-ink hover:bg-surface-raised/50"
+                >
+                  <span className="flex items-center gap-2">
+                    <span className="flex h-6 w-6 items-center justify-center rounded-lg bg-brand/10 text-brand text-xs font-bold font-mono">
+                      {idx + 1}
+                    </span>
+                    {practice.title}
+                  </span>
+                  {isOpen ? <ChevronUp className="h-4 w-4 text-ink-muted" /> : <ChevronDown className="h-4 w-4 text-ink-muted" />}
+                </button>
+
+                <AnimatePresence>
+                  {isOpen && (
+                    <motion.div
+                      initial={{ height: 0, opacity: 0 }}
+                      animate={{ height: 'auto', opacity: 1 }}
+                      exit={{ height: 0, opacity: 0 }}
+                      className="border-t border-ink/5 px-4 pb-4 pt-3 text-xs space-y-3 bg-surface-raised/40"
+                    >
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                        <div className="p-3 rounded-xl bg-rose-500/5 border border-rose-500/15">
+                          <span className="text-[10px] font-extrabold uppercase tracking-wider text-rose-600 dark:text-rose-400 block mb-1">
+                            ❌ Źle (Odrzucane przez filtry):
+                          </span>
+                          <p className="text-ink-muted font-mono text-[11px] leading-relaxed">{practice.badExample}</p>
+                        </div>
+                        <div className="p-3 rounded-xl bg-emerald-500/5 border border-emerald-500/15">
+                          <span className="text-[10px] font-extrabold uppercase tracking-wider text-emerald-600 dark:text-emerald-400 block mb-1">
+                            ✅ Dobrze (Wysoka Ocena i Czytelność):
+                          </span>
+                          <p className="text-ink-muted font-mono text-[11px] leading-relaxed">{practice.goodExample}</p>
+                        </div>
+                      </div>
+
+                      <p className="text-xs text-ink-muted leading-relaxed italic bg-surface/50 p-2.5 rounded-xl border border-ink/5">
+                        💡 <strong>Dlaczego to ma znaczenie:</strong> {practice.explanation}
+                      </p>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+    </div>
+  );
+};

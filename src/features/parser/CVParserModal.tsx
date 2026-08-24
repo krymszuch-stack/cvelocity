@@ -15,6 +15,7 @@ import { motion, AnimatePresence } from 'motion/react';
 import { MasterVault } from '../../types';
 import { DropZone } from './DropZone';
 import { DiffView, MergeStrategies, SectionStrategy } from './DiffView';
+import { mergeUnique } from '../../lib/vaultImportMerge';
 import { extractTextFromAnyFile, parseTextToMasterVault, ParsedCVResult } from '../../lib/cvUniversalParser';
 import { Card } from '../../components/ui/Card';
 import { Button } from '../../components/ui/Button';
@@ -118,10 +119,10 @@ export const CVParserModal: React.FC<CVParserModalProps> = ({
   const handleApplyMerge = (strategies: MergeStrategies) => {
     if (!parsedResult) return;
 
-    const mergeList = <T,>(incoming: T[], existing: T[], strategy: SectionStrategy): T[] => {
+    const mergeList = <T,>(incoming: T[], existing: T[], strategy: SectionStrategy, keyFn: (item: T) => string): T[] => {
       if (strategy === 'keep') return existing;
       if (strategy === 'replace') return incoming;
-      return [...incoming, ...existing];
+      return mergeUnique(existing, incoming, keyFn);
     };
 
     const mergeSkills = (incoming: string[], existing: string[], strategy: SectionStrategy): string[] => {
@@ -154,9 +155,39 @@ export const CVParserModal: React.FC<CVParserModalProps> = ({
           currentVault.skillsMatrix?.softSkills || [],
           strategies.skills
         ),
+        toolsAndTech: mergeSkills(
+          parsedResult.toolsAndTech,
+          currentVault.skillsMatrix?.toolsAndTech || [],
+          strategies.skills
+        ),
+        certifications: mergeList(
+          parsedResult.certifications || [],
+          currentVault.skillsMatrix?.certifications || [],
+          strategies.skills,
+          (item) => (item.name || '').toLowerCase().trim()
+        ),
       },
-      history: mergeList(parsedResult.history || [], currentVault.history || [], strategies.experience),
-      education: mergeList(parsedResult.education || [], currentVault.education || [], strategies.education),
+      profiler: {
+        ...currentVault.profiler,
+        languages: parsedResult.languages && parsedResult.languages.length > 0
+          ? mergeUnique(currentVault.profiler?.languages || [], parsedResult.languages, (item) => (item.language || '').toLowerCase().trim())
+          : currentVault.profiler?.languages || [],
+      },
+      history: mergeList(
+        parsedResult.history || [],
+        currentVault.history || [],
+        strategies.experience,
+        (item) => ((item.company || '') + '|' + (item.role || '')).toLowerCase().trim()
+      ),
+      education: mergeList(
+        parsedResult.education || [],
+        currentVault.education || [],
+        strategies.education,
+        (item) => ((item.institution || '') + '|' + (item.degree || '')).toLowerCase().trim()
+      ),
+      projects: parsedResult.projects && parsedResult.projects.length > 0
+        ? mergeUnique(currentVault.projects || [], parsedResult.projects, (item) => (item.name || '').toLowerCase().trim())
+        : currentVault.projects || [],
     };
 
     onApplyParsedVault(payload);

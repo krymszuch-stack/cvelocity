@@ -60,38 +60,39 @@ function mergeStringSets(base: string[] = [], incoming: string[] = []): string[]
  * wynik w edytorze przed zapisem. Wszystko inne wyłącznie się dokłada.
  */
 export function mergeImportedVault(prev: MasterVault, parsed: Partial<MasterVault>): MasterVault {
+  const safePrev = prev || ({} as MasterVault);
   return {
-    ...prev,
+    ...safePrev,
     personalInfo: {
-      ...prev.personalInfo,
-      ...(parsed.personalInfo || {}),
+      ...(safePrev.personalInfo || {}),
+      ...(parsed?.personalInfo || {}),
     },
     skillsMatrix: {
-      ...prev.skillsMatrix,
-      hardSkills: mergeStringSets(prev.skillsMatrix?.hardSkills, parsed.skillsMatrix?.hardSkills),
-      softSkills: mergeStringSets(prev.skillsMatrix?.softSkills, parsed.skillsMatrix?.softSkills),
+      ...(safePrev.skillsMatrix || {}),
+      hardSkills: mergeStringSets(safePrev.skillsMatrix?.hardSkills, parsed?.skillsMatrix?.hardSkills),
+      softSkills: mergeStringSets(safePrev.skillsMatrix?.softSkills, parsed?.skillsMatrix?.softSkills),
       toolsAndTech: mergeStringSets(
-        prev.skillsMatrix?.toolsAndTech,
-        parsed.skillsMatrix?.toolsAndTech
+        safePrev.skillsMatrix?.toolsAndTech,
+        parsed?.skillsMatrix?.toolsAndTech
       ),
       certifications: mergeUnique(
-        prev.skillsMatrix?.certifications || [],
-        parsed.skillsMatrix?.certifications || [],
-        (item) => compositeKey(item.name)
+        safePrev.skillsMatrix?.certifications || [],
+        parsed?.skillsMatrix?.certifications || [],
+        (item) => compositeKey(item?.name)
       ),
     },
     profiler: {
-      ...prev.profiler,
-      languages: parsed.profiler?.languages || prev.profiler?.languages || [],
+      ...(safePrev.profiler || {}),
+      languages: parsed?.profiler?.languages || safePrev.profiler?.languages || [],
     },
-    history: mergeUnique(prev.history, parsed.history || [], (item) =>
-      compositeKey(item.company, item.role)
+    history: mergeUnique(safePrev.history || [], parsed?.history || [], (item) =>
+      compositeKey(item?.company, item?.role)
     ),
-    education: mergeUnique(prev.education, parsed.education || [], (item) =>
-      compositeKey(item.institution, item.degree)
+    education: mergeUnique(safePrev.education || [], parsed?.education || [], (item) =>
+      compositeKey(item?.institution, item?.degree)
     ),
-    projects: mergeUnique(prev.projects || [], parsed.projects || [], (item) =>
-      compositeKey(item.name)
+    projects: mergeUnique(safePrev.projects || [], parsed?.projects || [], (item) =>
+      compositeKey(item?.name)
     ),
     updatedAt: new Date().toISOString(),
   };

@@ -15,6 +15,11 @@ import {
   LinkedInRendererOutput,
   LinkedInExperienceItem,
 } from './types';
+import {
+  getPitchHookVariations,
+  getPitchCtaVariations,
+  selectVariantIndex,
+} from '../phrasingVariations';
 
 /**
  * Stała określająca maksymalną dopuszczalną rozbieżność czasu trwania (w latach).
@@ -142,6 +147,8 @@ export function extractClaimsFromVault(vault: MasterVault): Claim[] {
       // Główny claim pozycji
       const mainClaimId = `claim_exp_${exp.id}`;
       if (!claimsMap.has(mainClaimId) && !claimsMap.has(exp.id)) {
+        const firstHl = exp.highlights?.[0];
+        const firstMetric = typeof firstHl === 'object' ? firstHl?.metric : undefined;
         claimsMap.set(mainClaimId, {
           id: mainClaimId,
           sourceProject: exp.company || exp.role,
@@ -149,7 +156,7 @@ export function extractClaimsFromVault(vault: MasterVault): Claim[] {
             start: exp.startDate || '2020-01',
             end: exp.isCurrent ? 'Obecnie' : exp.endDate || '2022-01',
           },
-          metric: exp.highlights?.[0]?.metric,
+          metric: firstMetric,
           tags: Array.from(expTags),
         });
       }
@@ -157,8 +164,13 @@ export function extractClaimsFromVault(vault: MasterVault): Claim[] {
       // Claimy dla poszczególnych osiągnięć (highlights)
       if (Array.isArray(exp.highlights)) {
         exp.highlights.forEach((hl, idx) => {
-          const hlClaimId = hl.id || `claim_hl_${exp.id}_${idx}`;
+          const hlId = typeof hl === 'object' && hl !== null ? hl.id : undefined;
+          const hlClaimId = hlId || `claim_hl_${exp.id}_${idx}`;
           if (!claimsMap.has(hlClaimId)) {
+            const hlText = typeof hl === 'string' ? hl : (hl?.text || '');
+            const hlMetric = (typeof hl === 'object' && hl !== null ? hl.metric : undefined) || (hlText ? hlText.match(/\d+[%kKmM+xX]?/)?.[0] : undefined);
+            const hlKeywords = typeof hl === 'object' && hl !== null && Array.isArray(hl.keywords) ? hl.keywords : [];
+
             claimsMap.set(hlClaimId, {
               id: hlClaimId,
               sourceProject: `${exp.company} (${exp.role})`,
@@ -166,8 +178,8 @@ export function extractClaimsFromVault(vault: MasterVault): Claim[] {
                 start: exp.startDate || '2020-01',
                 end: exp.isCurrent ? 'Obecnie' : exp.endDate || '2022-01',
               },
-              metric: hl.metric || (hl.text.match(/\d+[%kKmM+xX]?/)?.[0]),
-              tags: Array.isArray(hl.keywords) ? hl.keywords : [],
+              metric: hlMetric,
+              tags: hlKeywords,
             });
           }
         });
@@ -490,7 +502,12 @@ export function validateConsistency(
  * RENDERER 1: CV Renderer
  * Pobiera dane wyłącznie z MasterVault na podstawie podanych `claimIds`.
  */
-export function renderCvFromClaims(vault: MasterVault, claimIds: string[]): CvRendererOutput {
+export function renderCvFromClaims(vault: MasterVault, claimIds?: string[]): CvRendererOutput {
+  const effectiveClaimIds =
+    claimIds && claimIds.length > 0
+      ? claimIds
+      : extractClaimsFromVault(vault).map((c) => c.id);
+
   const experiencesSection: CvRendererSection = {
     id: 'cv_experience',
     title: 'Doświadczenie Zawodowe (Zweryfikowane)',
@@ -503,7 +520,7 @@ export function renderCvFromClaims(vault: MasterVault, claimIds: string[]): CvRe
     items: [],
   };
 
-  for (const claimId of claimIds) {
+  for (const claimId of effectiveClaimIds) {
     const claim = getClaimById(vault, claimId);
     if (!claim) continue;
 
@@ -531,8 +548,8 @@ export function renderCvFromClaims(vault: MasterVault, claimIds: string[]): CvRe
   }
 
   return {
-    title: vault.personalInfo.title || 'Profil Kandydata',
-    candidateName: vault.personalInfo.fullName || 'Kandydat',
+    title: vault.personalInfo?.title || 'Profil Kandydata',
+    candidateName: vault.personalInfo?.fullName || 'Kandydat',
     sections: [experiencesSection, projectsSection].filter((s) => s.items.length > 0),
   };
 }
@@ -541,12 +558,17 @@ export function renderCvFromClaims(vault: MasterVault, claimIds: string[]): CvRe
  * RENDERER 2: HUD Renderer (Career & Competence Head-Up Display)
  * Pobiera dane z MasterVault przez `claimIds` i generuje wskaźniki telemetryczne profilu.
  */
-export function renderHudFromClaims(vault: MasterVault, claimIds: string[]): HudRendererOutput {
+export function renderHudFromClaims(vault: MasterVault, claimIds?: string[]): HudRendererOutput {
+  const effectiveClaimIds =
+    claimIds && claimIds.length > 0
+      ? claimIds
+      : extractClaimsFromVault(vault).map((c) => c.id);
+
   const verifiedMetrics: HudMetricItem[] = [];
   const skillCountMap = new Map<string, { count: number; claimIds: string[] }>();
   let totalYears = 0;
 
-  for (const claimId of claimIds) {
+  for (const claimId of effectiveClaimIds) {
     const claim = getClaimById(vault, claimId);
     if (!claim) continue;
 
@@ -585,11 +607,11 @@ export function renderHudFromClaims(vault: MasterVault, claimIds: string[]): Hud
     }))
     .sort((a, b) => b.count - a.count);
 
-  const validation = validateConsistency(vault, { claimIdsToCheck: claimIds });
+  const validation = validateConsistency(vault, { claimIdsToCheck: effectiveClaimIds });
   const consistencyScore = validation.isConsistent ? 100 : Math.max(20, 100 - validation.alerts.length * 25);
 
   return {
-    activeClaimsCount: claimIds.length,
+    activeClaimsCount: effectiveClaimIds.length,
     verifiedMetrics,
     skillsRadar,
     timelineCoverageYears: Math.round(totalYears * 10) / 10,
@@ -603,14 +625,20 @@ export function renderHudFromClaims(vault: MasterVault, claimIds: string[]): Hud
  */
 export function renderPitchFromClaims(
   vault: MasterVault,
-  claimIds: string[],
-  targetRole?: string
+  claimIds?: string[],
+  targetRole?: string,
+  variantIndex?: number
 ): PitchRendererOutput {
-  const coreStrengths: PitchStrengthItem[] = [];
-  const candidateName = vault.personalInfo.fullName || 'Kandydat';
-  const role = targetRole || vault.personalInfo.title || 'Specjalista';
+  const effectiveClaimIds =
+    claimIds && claimIds.length > 0
+      ? claimIds
+      : extractClaimsFromVault(vault).map((c) => c.id);
 
-  for (const claimId of claimIds) {
+  const coreStrengths: PitchStrengthItem[] = [];
+  const candidateName = vault.personalInfo?.fullName || 'Kandydat';
+  const role = targetRole || vault.personalInfo?.title || 'Specjalista';
+
+  for (const claimId of effectiveClaimIds) {
     const claim = getClaimById(vault, claimId);
     if (!claim) continue;
 
@@ -627,11 +655,25 @@ export function renderPitchFromClaims(
   }
 
   const topMetric = coreStrengths.find((s) => s.metric)?.metric;
-  const hook = `Dzień dobry, nazywam się ${candidateName}. Jako ${role} opieram swoje doświadczenie na ${coreStrengths.length} zweryfikowanych filarach projektowych${
-    topMetric ? `, w tym z udokumentowanym wynikiem ${topMetric}` : ''
-  }.`;
+  const allTags = Array.from(new Set(coreStrengths.flatMap((s) => s.tags)));
+  const topSkills = allTags.slice(0, 3).join(', ');
 
-  const callToAction = `Chętnie przedstawię szczegóły tych wdrożeń podczas rozmowy technicznej.`;
+  const hookCtx = {
+    candidateName,
+    roleTitle: role,
+    topSkills,
+    topMetric,
+    verifiedClaimsCount: coreStrengths.length,
+  };
+
+  const hookVariations = getPitchHookVariations(hookCtx);
+  const ctaVariations = getPitchCtaVariations(hookCtx);
+
+  const hookIdx = selectVariantIndex(variantIndex ?? candidateName + role, hookVariations.length);
+  const ctaIdx = selectVariantIndex(variantIndex ?? role + candidateName, ctaVariations.length);
+
+  const hook = hookVariations[hookIdx];
+  const callToAction = ctaVariations[ctaIdx];
 
   const elevatorPitchText = [
     hook,
@@ -653,9 +695,14 @@ export function renderPitchFromClaims(
  */
 export function renderLinkedInFromClaims(
   vault: MasterVault,
-  claimIds: string[]
+  claimIds?: string[]
 ): LinkedInRendererOutput {
-  const claims = claimIds
+  const effectiveClaimIds =
+    claimIds && claimIds.length > 0
+      ? claimIds
+      : extractClaimsFromVault(vault).map((c) => c.id);
+
+  const claims = effectiveClaimIds
     .map((id) => getClaimById(vault, id))
     .filter((c): c is Claim => Boolean(c));
   const candidateName = vault.personalInfo?.fullName || 'Kandydat';

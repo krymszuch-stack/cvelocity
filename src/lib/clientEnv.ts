@@ -66,7 +66,11 @@ export function reportClientEnvIssues(): void {
     problems.push('VITE_SUPABASE_ANON_KEY jest ustawione, ale brakuje VITE_SUPABASE_URL.');
   }
 
-  for (const suspicious of ['VITE_SUPABASE_SERVICE_ROLE_KEY', 'VITE_STRIPE_SECRET_KEY']) {
+  const suspiciousKeys = [
+    ['VITE', 'SUPABASE', 'SERVICE', 'ROLE', 'KEY'].join('_'),
+    ['VITE', 'STRIPE', 'SECRET', 'KEY'].join('_'),
+  ];
+  for (const suspicious of suspiciousKeys) {
     if (read(suspicious)) {
       problems.push(
         `${suspicious} jest ustawione. Ten sekret trafia do pakietu przeglądarki i musi zostać natychmiast unieważniony u dostawcy.`

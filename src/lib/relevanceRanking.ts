@@ -50,10 +50,11 @@ export interface ScoredHighlight<T extends HighlightMetric | string> {
  * Ties keep their original relative order (stable sort) so untouched bullets don't shuffle needlessly.
  */
 export function rankHighlightsByRelevance<T extends HighlightMetric | string>(
-  highlights: T[],
-  jdKeywords: string[]
+  highlights: T[] | undefined | null,
+  jdKeywords: string[] | undefined | null
 ): ScoredHighlight<T>[] {
-  const jdKeywordSet = toKeywordSet(jdKeywords);
+  if (!Array.isArray(highlights) || highlights.length === 0) return [];
+  const jdKeywordSet = toKeywordSet(Array.isArray(jdKeywords) ? jdKeywords : []);
   return highlights
     .map((highlight, originalIndex) => {
       const { score, matchedKeywords } = scoreTextAgainstKeywords(highlightText(highlight), jdKeywordSet);
@@ -76,13 +77,15 @@ export interface ScoredExperience {
  * Ties keep original order.
  */
 export function rankExperienceByRelevance(
-  history: WorkExperience[],
-  jdKeywords: string[],
+  history: WorkExperience[] | undefined | null,
+  jdKeywords: string[] | undefined | null,
   targetJobTitle: string = ''
 ): ScoredExperience[] {
-  const jdKeywordSet = toKeywordSet(jdKeywords);
+  if (!Array.isArray(history) || history.length === 0) return [];
+  const jdKeywordSet = toKeywordSet(Array.isArray(jdKeywords) ? jdKeywords : []);
 
   return history
+    .filter((exp): exp is WorkExperience => Boolean(exp && typeof exp === 'object'))
     .map((experience, originalIndex) => {
       const highlightScores = (experience.highlights || []).map((h) => scoreTextAgainstKeywords(highlightText(h), jdKeywordSet));
 
@@ -91,7 +94,7 @@ export function rankExperienceByRelevance(
         highlightScores.length > 0 ? highlightScores.reduce((sum, s) => sum + s.score, 0) / highlightScores.length : 0;
       const matchedKeywords = Array.from(new Set(highlightScores.flatMap((s) => s.matchedKeywords)));
 
-      const roleTitleScore = titleSimilarity(experience.role, targetJobTitle);
+      const roleTitleScore = titleSimilarity(experience.role || '', targetJobTitle);
       const recencyBonus = Math.max(0, 0.1 - originalIndex * 0.02);
 
       const score = bestHighlightScore * 0.5 + avgHighlightScore * 0.3 + roleTitleScore * 0.15 + recencyBonus;
@@ -104,9 +107,10 @@ export function rankExperienceByRelevance(
 
 /** Convenience helper: just the experience ids, in relevance order — for consumers that only need a sort key. */
 export function getRelevanceOrderedExperienceIds(
-  history: WorkExperience[],
-  jdKeywords: string[],
+  history: WorkExperience[] | undefined | null,
+  jdKeywords: string[] | undefined | null,
   targetJobTitle: string = ''
 ): string[] {
-  return rankExperienceByRelevance(history, jdKeywords, targetJobTitle).map((r) => r.experience.id);
+  if (!Array.isArray(history) || history.length === 0) return [];
+  return rankExperienceByRelevance(history, jdKeywords, targetJobTitle).map((s) => s.experience.id).filter(Boolean);
 }

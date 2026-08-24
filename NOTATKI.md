@@ -83,6 +83,12 @@ Format wpisu:
   - **Agent RRRR-MM-DD:** co zostało zrobione albo dlaczego zdecydowano inaczej. PR #NN.
 -->
 
+- ~~Wielowariantowe hooki, przywitania i eliminacja powtarzalności w generatorach (Pitch, Cover Letter, Follow-up).~~
+  - **Antigravity 2026-08-24:** stworzono moduł `phrasingVariations.ts` z bankiem dynamicznych hooków, wstępów i CTA dla autoprezentacji (1-liner, 30s, 90s), listu motywacyjnego, podziękowań follow-up oraz renderera `ConsistencyGuard`. Dodano testy w `phrasingVariations.test.ts`.
+
+- ~~Wykrywanie cyrylicy (CV z Ukrainy/Białorusi) i wymóg alfabetu łacińskiego w parserze CV.~~
+  - **Antigravity 2026-08-24:** dodano funkcję `detectCyrillicScript()` w `cvUniversalParser.ts`, pole `hasCyrillicScript` oraz `warnings` w `ParsedCVResult`, baner ostrzegawczy w `DiffView.tsx` informujący o konieczności ręcznego uzupełnienia/przetłumaczenia oraz dedykowany zestaw testów w `src/lib/__tests__/cv_parser_cyrillic.test.ts`.
+
 - ~~Słownik `interviewGlossaryDictionary.ts` nie zna terminów spoza IT (spawanie
   MIG/MAG/TIG, UDT, SEP, HACCP), więc glosariusz ściągi dla zawodów
   rzemieślniczych jest uczciwy, ale bardzo ubogi.~~

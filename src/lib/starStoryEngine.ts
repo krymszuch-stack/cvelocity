@@ -95,36 +95,43 @@ export function buildStarStoriesFromVault(vault: MasterVault): STARStory[] {
   const stories: STARStory[] = [];
 
   // 1. Z historii zatrudnienia
-  if (Array.isArray(vault.history)) {
+  if (Array.isArray(vault?.history)) {
     vault.history.forEach((exp) => {
-      if (Array.isArray(exp.highlights)) {
+      if (Array.isArray(exp?.highlights)) {
         exp.highlights.forEach((hl, hlIdx) => {
           const metrics: string[] = [];
-          if (hl.metric) {
-            metrics.push(hl.metric);
-          } else {
-            const digitMatch = hl.text.match(/\d+[%kKmM+xX]?/g);
+          const hlText = typeof hl === 'string' ? hl : (hl?.text || '');
+          const hlMetric = typeof hl === 'object' && hl !== null ? hl.metric : undefined;
+          const hlAction = typeof hl === 'object' && hl !== null ? hl.action : undefined;
+          const hlTarget = typeof hl === 'object' && hl !== null ? hl.target : undefined;
+          const hlTool = typeof hl === 'object' && hl !== null ? hl.tool : undefined;
+          const hlKeywords = typeof hl === 'object' && hl !== null && Array.isArray(hl.keywords) ? hl.keywords : [];
+
+          if (hlMetric) {
+            metrics.push(hlMetric);
+          } else if (hlText) {
+            const digitMatch = hlText.match(/\d+[%kKmM+xX]?/g);
             if (digitMatch) {
               metrics.push(...digitMatch);
             }
           }
 
-          const tags = Array.isArray(hl.keywords) && hl.keywords.length > 0
-            ? [...hl.keywords]
-            : [exp.role, exp.company];
+          const tags = hlKeywords.length > 0
+            ? [...hlKeywords]
+            : [exp.role || 'Specjalista', exp.company || 'Firma'];
 
           const story: STARStory = {
-            id: `star_exp_${exp.id}_${hlIdx}`,
-            title: `${exp.role} @ ${exp.company} — ${hl.action || 'Wdrożenie'} ${hl.target || 'Projektu'}`,
-            situation: `W firmie ${exp.company} na stanowisku ${exp.role} zidentyfikowano potrzebę optymalizacji w obszarze: ${hl.target || hl.text}.`,
-            task: `Moim zadaniem było ${hl.action ? `${hl.action.toLowerCase()} ${hl.target || ''}` : 'zrealizowanie kluczowego usprawnienia'} przy użyciu ${hl.tool || 'dedykowanych narzędzi'}.`,
-            action: `Zastosowałem ${hl.tool || 'odpowiednie technologie'} (${tags.slice(0, 3).join(', ')}), przeprowadzając analizę, projekt techniczny i bezpieczne wdrożenie.`,
-            result: hl.metric
-              ? `Osiągnięto wymierny rezultat: ${hl.metric}. Pełny opis: ${hl.text}`
-              : `Projekt zakończył się sukcesem: ${hl.text}`,
+            id: `star_exp_${exp.id || 'exp'}_${hlIdx}`,
+            title: `${exp.role || 'Specjalista'} @ ${exp.company || 'Firma'} — ${hlAction || 'Wdrożenie'} ${hlTarget || 'Projektu'}`,
+            situation: `W firmie ${exp.company || 'poprzedniej'} na stanowisku ${exp.role || 'specjalisty'} zidentyfikowano potrzebę optymalizacji w obszarze: ${hlTarget || hlText || 'procesów operacyjnych'}.`,
+            task: `Moim zadaniem było ${hlAction ? `${hlAction.toLowerCase()} ${hlTarget || ''}` : 'zrealizowanie kluczowego usprawnienia'} przy użyciu ${hlTool || 'dedykowanych narzędzi'}.`,
+            action: `Zastosowałem ${hlTool || 'odpowiednie technologie'} (${tags.slice(0, 3).join(', ')}), przeprowadzając analizę, projekt techniczny i bezpieczne wdrożenie.`,
+            result: hlMetric
+              ? `Osiągnięto wymierny rezultat: ${hlMetric}. Pełny opis: ${hlText}`
+              : `Projekt zakończył się sukcesem: ${hlText || 'osiągnięto założone cele projektowe'}`,
             metrics,
             tags,
-            projectId: exp.id,
+            projectId: exp.id || `exp_${hlIdx}`,
             durationSec: 90, // Domyślny czas prezentacji STAR = 90 sekund (1.5 minuty)
           };
 

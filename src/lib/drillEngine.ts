@@ -39,6 +39,11 @@ export interface DrillScorecard {
     assessment: 'HIGH_OWNERSHIP' | 'BALANCED' | 'DIFFUSED_OWNERSHIP';
     label: string;
   };
+  fillerWords?: {
+    totalCount: number;
+    detected: Array<{ word: string; count: number }>;
+    clarityScore: number;
+  };
   overallScore: number;
   suggestions: string[];
 }
@@ -109,10 +114,36 @@ export function getRandomDrillQuestion(
  * Heurystyczna analiza wypowiedzi pod kątem struktury STAR, metryk liczbowych i poczucia sprawczości (I vs We).
  */
 export function analyzeDrillResponse(
-  transcript: string,
+  transcript: string | undefined | null,
   _referenceNotes?: string
 ): DrillScorecard {
-  const text = transcript.trim();
+  const text = typeof transcript === 'string' ? transcript.trim() : String(transcript || '').trim();
+  if (!text) {
+    return {
+      structure: {
+        hasSituation: false,
+        hasTask: false,
+        hasAction: false,
+        hasResult: false,
+        detectedElementsCount: 0,
+        scorePercent: 0,
+      },
+      metrics: {
+        hasMetrics: false,
+        detectedMetrics: [],
+      },
+      ownership: {
+        iCount: 0,
+        weCount: 0,
+        ownershipPercent: 50,
+        assessment: 'BALANCED',
+        label: 'Brak danych do analizy sprawczości',
+      },
+      overallScore: 0,
+      suggestions: ['Wprowadź lub nagraj odpowiedź, aby otrzymać szczegółową analizę STAR.'],
+    };
+  }
+
   const lower = text.toLowerCase();
 
   // 1. STRUKTURA STAR
@@ -161,8 +192,34 @@ export function analyzeDrillResponse(
     }
   }
 
-  // 4. SUGESTIE ULEPSZEŃ
+  // 4. DETEKCJA SŁÓW WATY (Filler Words / Natręctwa językowe)
+  const fillerPatterns = [
+    { word: 'w sensie', regex: /\bw\s+sensie\b/gi },
+    { word: 'jakby', regex: /\bjakby\b/gi },
+    { word: 'po prostu', regex: /\bpo\s+prostu\b/gi },
+    { word: 'tak naprawdę', regex: /\btak\s+naprawdę\b/gi },
+    { word: 'generalnie', regex: /\bgeneralnie\b/gi },
+    { word: 'w sumie', regex: /\bw\s+sumie\b/gi },
+    { word: 'znaczy się', regex: /\bznaczy\s+się\b/gi },
+  ];
+
+  const detectedFillers: Array<{ word: string; count: number }> = [];
+  let totalFillerCount = 0;
+  for (const fp of fillerPatterns) {
+    const matches = text.match(fp.regex) || [];
+    if (matches.length > 0) {
+      detectedFillers.push({ word: fp.word, count: matches.length });
+      totalFillerCount += matches.length;
+    }
+  }
+  const clarityScore = Math.max(20, 100 - totalFillerCount * 15);
+
+  // 5. SUGESTIE ULEPSZEŃ
   const suggestions: string[] = [];
+
+  if (totalFillerCount >= 2) {
+    suggestions.push(`Wykryto słowa waty (${totalFillerCount}x: ${detectedFillers.map((f) => `„${f.word}”`).join(', ')}). Zadbaj o płynność bez natręctw językowych.`);
+  }
 
   if (!hasResult) {
     suggestions.push('Dodaj wyraźny Rezultat (R): Jaki był finalny efekt Twoich działań i korzyść dla projektu?');
@@ -184,10 +241,10 @@ export function analyzeDrillResponse(
     suggestions.push('Świetna odpowiedź! Zachowana pełna struktura STAR, twarde liczby i wysoka sprawczość.');
   }
 
-  // 5. CAŁKOWITY WYNIK (Wagi: Struktura 50%, Metryki 25%, Sprawczość 25%)
+  // 6. CAŁKOWITY WYNIK (Wagi: Struktura 40%, Metryki 25%, Sprawczość 20%, Czystość 15%)
   const metricsScore = hasMetrics ? 100 : 20;
   const ownershipScore = assessment === 'HIGH_OWNERSHIP' ? 100 : assessment === 'BALANCED' ? 85 : 40;
-  const overallScore = Math.round(structureScorePercent * 0.5 + metricsScore * 0.25 + ownershipScore * 0.25);
+  const overallScore = Math.round(structureScorePercent * 0.40 + metricsScore * 0.25 + ownershipScore * 0.20 + clarityScore * 0.15);
 
   return {
     structure: {
@@ -208,6 +265,11 @@ export function analyzeDrillResponse(
       ownershipPercent,
       assessment,
       label: ownershipLabel,
+    },
+    fillerWords: {
+      totalCount: totalFillerCount,
+      detected: detectedFillers,
+      clarityScore,
     },
     overallScore,
     suggestions,
