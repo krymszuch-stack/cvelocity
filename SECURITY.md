@@ -44,13 +44,17 @@ Warstwa serwerowa dla kont, trwałych danych i płatności (`BACKEND_MODE=cloud`
 
 To są rzeczy, które **nie** są chronione. Każda jest świadoma i każda ma przypisaną fazę naprawy.
 
-1. **Interfejs nie ma jeszcze logowania.** „Profil" to wpis w `localStorage` tej przeglądarki — bez hasła, bez konta (`src/lib/localProfile.ts`). Interfejs mówi to użytkownikowi wprost przy zakładaniu profilu. Serwerowa strona uwierzytelniania istnieje (`requireAuth`, migracje, polityki RLS), brakuje ekranów rejestracji i logowania przez Supabase Auth oraz przepięcia zapisu danych na API.
+1. **Brute-force na logowaniu ogranicza Supabase, nie my.** Logowanie idzie z przeglądarki wprost do GoTrue, więc omija limiter w `src/server/middleware/rateLimiter.ts` — ten chroni wyłącznie trasy Express. Obowiązują limity ustawione w panelu Supabase (*Authentication → Rate Limits*). Nasz limiter jest dodatkowo liczony per instancja procesu, więc przy skalowaniu poziomym i tak nie byłby twardą granicą.
+
+   Ochrona przed hasłami z wycieków (HaveIBeenPwned) jest w Supabase funkcją planu Pro. Realizuje ją zamiast tego funkcja brzegowa `supabase/functions/sprawdz-haslo`: przeglądarka liczy SHA-1 lokalnie i wysyła **pięć pierwszych znaków** skrótu, a porównanie wraca do przeglądarki. Ani hasło, ani jego pełny skrót nie opuszczają urządzenia. Przy niedostępnym HIBP rejestracja przechodzi — cudza awaria nie może blokować zakładania konta.
+
+   Polityka haseł (min. 12 znaków, klasy znaków, zakaz fragmentu adresu e-mail) jest w `src/lib/passwordPolicy.ts` i egzekwowana przed wysłaniem żądania. Komunikaty błędów nie zdradzają, czy dany adres ma konto (`src/lib/authErrors.ts`) — inaczej formularz logowania byłby narzędziem do sprawdzania, kto szuka pracy.
 
 2. **Dane są zapisywane czystym tekstem.** CV i profil leżą w `localStorage` bez szyfrowania. Wcześniejsza wersja zapisywała obok kopię „zaszyfrowaną" kluczem `'default_key'` zaszytym w kodzie aplikacji — przy modelu zagrożeń „XSS czyta `localStorage`" nie chroni to przed niczym, bo atakujący wykonujący skrypt na stronie odczyta ten klucz z tego samego pakietu. Usunęliśmy pozorne szyfrowanie zamiast utrzymywać wrażenie ochrony; od tej wersji nie ma już w kodzie także funkcji WebCrypto, które tę ochronę pozorowały, nie mając ani jednego wywołania. Realne szyfrowanie w spoczynku (kopertowe, z kluczem poza bazą) przychodzi razem z przeniesieniem danych na serwer.
 
-3. **Endpointy API nie wymagają uwierzytelnienia.** Dlatego funkcje AI bez ekranu w interfejsie zostały **zdjęte** z serwera — nieużywany endpoint wołający model to otwarte proxy opłacane przez właściciela projektu. Działa wyłącznie to, co ma odpowiednik w UI. Wystawiając usługę publicznie, ogranicz liczbę instancji i ustaw budżet z alertami u dostawcy.
+3. **Vault w chmurze zapisuje przeglądarka, nie serwer.** `src/lib/cloudVault.ts` rozmawia z tabelą `vaults` kluczem `anon`, a granicą jest **RLS**: polityki przepuszczają wyłącznie wiersz, w którym `auth.uid() = user_id` (`supabase/migrations/0001_init.sql`), co sprawdza `npm run test:rls`. Trasy `GET/PUT /api/vault` istnieją i robią to samo kluczem `service_role`, ale na dzisiejszym wdrożeniu są nieosiągalne — pod `cvelocity.oathcry.com` stoi sam frontend na Firebase Hosting, więc `/api/*` tam nie ma. Dwa kanały do jednej tabeli są świadome i opisane w komentarzu `cloudVault.ts`; różnią się wyłącznie tym, kto egzekwuje własność wiersza.
 
-4. **Do modelu trafia dziś wyłącznie treść ogłoszenia o pracę.** Jedyną trasą sięgającą Gemini jest `/api/parse-jd`; funkcje konsumujące profil kandydata (list motywacyjny, przeformułowanie punktorów, doradca) nie są wystawione jako endpointy, a modal doradcy nie wykonuje żadnego zapytania sieciowego. Żadne CV nie opuszcza więc przeglądarki.
+4. **Do modelu trafiają dwie rzeczy: treść ogłoszenia i profil kandydata.** Trasy sięgające Gemini to `/api/parse-jd` i `/api/generate-cheat-sheet`; **obie wymagają `requireAuth`** (`src/server/routes/ai.routes.ts`). Druga przyjmuje cały `MasterVault`, więc CV opuszcza przeglądarkę — po pseudonimizacji opisanej niżej. Pozostałe funkcje konsumujące profil (list motywacyjny, przeformułowanie punktorów, doradca) nadal nie są wystawione jako endpointy.
 
    Zanim te funkcje wrócą, granica modelu jest już zabezpieczona: `src/server/pseudonymize.ts` zamienia imię i nazwisko, e-mail, telefon, miasto i odnośniki na placeholdery, **`photoUrl` usuwa całkowicie** (wizerunek to art. 9 RODO), a bramka `assertNoPii` przerywa wysyłkę, gdyby jakakolwiek przyszła ścieżka ominęła pseudonimizację. Prawdziwe wartości wracają dopiero do wyniku pokazywanego użytkownikowi. Dowodzą tego testy uruchamiane na rzeczywistych ścieżkach `gemini.ts`, nie na samej funkcji pomocniczej (`src/server/__tests__/geminiBoundary.test.ts`).
 
@@ -58,11 +62,11 @@ To są rzeczy, które **nie** są chronione. Każda jest świadoma i każda ma p
 
 5. **Status subskrypcji jest w interfejsie nadal zapisywalny po stronie klienta.** Trzyma go `localStorage` (`src/store/useEntitlements.ts`), więc nie stanowi kontroli dostępu — jest etykietą i licznikiem, który ma reagować natychmiast, bez czekania na sieć. Sklep mówi to o sobie wprost w komentarzu na górze pliku.
 
-   Serwerowa strona tego już nie przyjmuje: `subscriptions` nie ma polityki zapisu dla użytkownika, a limit pobiera funkcja `consume_quota` w bazie. Ograniczenie zniknie z tej listy w chwili, w której trasy AI zaczną wymagać `requireAuth` — dziś jeszcze go nie wymagają (patrz pkt 3).
+   Serwerowa strona tego nie przyjmuje: `subscriptions` nie ma polityki zapisu dla użytkownika, a limit pobiera funkcja `consume_quota` w bazie. Warunek zdjęcia tego punktu z listy — trasy AI wymagające `requireAuth` — jest **już spełniony** (`ai.routes.ts`), więc etykieta w przeglądarce nie daje dostępu do niczego płatnego. Zostaje wyłącznie kosmetyka: interfejs potrafi przez chwilę pokazać status, którego serwer nie potwierdza.
 
 6. **Przycisk odblokowania demo istniał w buildzie produkcyjnym.** `StripeCheckoutModal` pokazywał „Symuluj natychmiastowe odblokowanie", które nadawało status Pro bez płatności, każdemu, kto wszedł na cennik bez skonfigurowanego klucza Stripe'a. Naprawione: przycisk jest za `import.meta.env.DEV`, więc znika z pakietu produkcyjnego. Odnotowane tutaj, bo dotyczyło wydanego kodu.
 
-7. **Brak kopii zapasowych i odtwarzania.** Wyczyszczenie danych przeglądarki kasuje wszystko bezpowrotnie. Po przejściu na konta źródłem kopii jest Supabase — plan Free ich **nie ma**, więc od pierwszego płacącego klienta plan Pro przestaje być opcjonalny (art. 32 RODO).
+7. **Brak kopii zapasowych i odtwarzania.** W trybie lokalnym wyczyszczenie danych przeglądarki kasuje wszystko bezpowrotnie — i interfejs mówi to wprost przy zakładaniu profilu. Konto w chmurze przenosi źródło kopii na Supabase, ale plan Free kopii **nie ma**, więc od pierwszego płacącego klienta plan Pro przestaje być opcjonalny (art. 32 RODO).
 
 ---
 

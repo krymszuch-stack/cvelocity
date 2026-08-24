@@ -20,6 +20,9 @@ export default tseslint.config(
       'node_modules/**',
       // Osobny projekt npm z własnym tsconfigiem i własnymi zależnościami.
       'semantic-work-graph/**',
+      // Funkcje brzegowe biegną na Deno: globalne `Deno`, importy `jsr:`
+      // i własne typy. Dla konfiguracji Node są nieparsowalne.
+      'supabase/functions/**',
       'scripts/**',
     ],
   },

@@ -8,6 +8,7 @@ import {
   FileText,
   LogIn,
   LogOut,
+  Trash2,
   ExternalLink,
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
@@ -53,7 +54,7 @@ export const Topbar: React.FC<TopbarProps> = ({
   className = '',
 }) => {
   const { isPro } = useEntitlements();
-  const { logout, user } = useAuth();
+  const { logout, user, mode, deleteAccount } = useAuth();
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
@@ -262,17 +263,48 @@ export const Topbar: React.FC<TopbarProps> = ({
 
                 <div className="border-t border-line/60 pt-1">
                   {isAuthenticated ? (
-                    <button
-                      type="button"
-                      onClick={() => {
-                        logout();
-                        setIsDropdownOpen(false);
-                      }}
-                      className="flex w-full items-center gap-2.5 rounded-xl px-2.5 py-2 text-danger-fg hover:bg-danger-soft transition-colors"
-                    >
-                      <LogOut className="h-3.5 w-3.5" />
-                      <span>Wyloguj</span>
-                    </button>
+                    <>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          void logout();
+                          setIsDropdownOpen(false);
+                        }}
+                        className="flex w-full items-center gap-2.5 rounded-xl px-2.5 py-2 text-ink hover:bg-brand-50 hover:text-brand-fg transition-colors"
+                      >
+                        <LogOut className="h-3.5 w-3.5 text-muted" />
+                        <span>{mode === 'cloud' ? 'Wyloguj się' : 'Zamknij profil'}</span>
+                      </button>
+
+                      {/*
+                        Usuwanie konta musi być osiągalne z interfejsu, a nie
+                        tylko istnieć w kodzie — bez tego „prawo do usunięcia"
+                        (RODO art. 17) jest deklaracją, nie funkcją. Podwójne
+                        potwierdzenie, bo operacja jest nieodwracalna.
+                      */}
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const pytanie =
+                            mode === 'cloud'
+                              ? 'Usunąć konto i wszystkie dane z serwera? Tej operacji nie da się cofnąć.'
+                              : 'Usunąć profil i wszystkie dane z tej przeglądarki? Tej operacji nie da się cofnąć.';
+                          if (!window.confirm(pytanie)) return;
+
+                          setIsDropdownOpen(false);
+                          void deleteAccount().then((wynik) => {
+                            showToast(
+                              wynik.ok ? 'Dane zostały usunięte' : 'Nie udało się usunąć konta',
+                              { variant: wynik.ok ? 'success' : 'error' }
+                            );
+                          });
+                        }}
+                        className="flex w-full items-center gap-2.5 rounded-xl px-2.5 py-2 text-danger-fg hover:bg-danger-soft transition-colors"
+                      >
+                        <Trash2 className="h-3.5 w-3.5" />
+                        <span>{mode === 'cloud' ? 'Usuń konto' : 'Usuń profil'}</span>
+                      </button>
+                    </>
                   ) : (
                     <button
                       type="button"
@@ -283,7 +315,7 @@ export const Topbar: React.FC<TopbarProps> = ({
                       className="flex w-full items-center gap-2.5 rounded-xl px-2.5 py-2 text-ink hover:bg-brand-50 hover:text-brand-fg transition-colors"
                     >
                       <LogIn className="h-3.5 w-3.5 text-muted" />
-                      <span>Załóż profil w tej przeglądarce</span>
+                      <span>Zaloguj się lub załóż konto</span>
                     </button>
                   )}
                 </div>

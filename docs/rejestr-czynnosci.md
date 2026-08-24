@@ -96,11 +96,42 @@
 
 ---
 
+## Czynność 6 — Prowadzenie kont użytkowników
+
+| Element | Opis |
+|---|---|
+| **Cel** | Umożliwienie zapisania CV poza urządzeniem, odzyskania go po wyczyszczeniu przeglądarki i pracy na kilku urządzeniach |
+| **Kategorie osób** | Osoby, które świadomie założyły konto. Tryb lokalny (bez konta) działa nadal i nie podlega tej czynności |
+| **Kategorie danych** | Adres e-mail, nazwa wyświetlana, skrót hasła (liczony i przechowywany przez Supabase Auth — administrator nigdy nie widzi hasła), znaczniki czasu logowania, treść Master Vaultu |
+| **Podstawa prawna** | Art. 6 ust. 1 lit. b — wykonanie usługi na żądanie osoby |
+| **Odbiorcy** | Supabase (hosting bazy i uwierzytelnianie), Resend (wysyłka wiadomości potwierdzających i resetu hasła) |
+| **Transfer poza EOG** | Baza w regionie `eu-central-1`. Wysyłka poczty — wg umowy z Resend |
+| **Termin usunięcia** | Natychmiast na żądanie. Przycisk „Usuń konto” wywołuje funkcję brzegową `usun-konto`, która kasuje dane funkcją `delete_user_data`, a następnie samo konto |
+| **Zabezpieczenia** | RLS na każdej tabeli — użytkownik sięga wyłącznie własnych wierszy; potwierdzanie adresu e-mail; polityka haseł min. 12 znaków; odrzucanie haseł obecnych w znanych wyciekach; komunikaty błędów nieujawniające, czy dany adres ma konto |
+| **Gdzie w kodzie** | `src/context/AuthContext.tsx`, `src/lib/cloudVault.ts`, `supabase/functions/usun-konto/` |
+
+---
+
+## Czynność 7 — Sprawdzanie hasła w bazie wycieków
+
+| Element | Opis |
+|---|---|
+| **Cel** | Odrzucenie hasła, które już wyciekło i figuruje w słownikach atakujących |
+| **Kategorie osób** | Osoby zakładające konto |
+| **Kategorie danych** | **Pięć pierwszych znaków skrótu SHA-1 hasła.** Ani hasło, ani jego pełny skrót nie opuszczają urządzenia — model k-anonimowości sprawia, że odpowiedź obejmuje setki haseł naraz |
+| **Podstawa prawna** | Art. 6 ust. 1 lit. f — prawnie uzasadniony interes (bezpieczeństwo kont) |
+| **Odbiorcy** | HaveIBeenPwned. **Zapytanie wychodzi z naszej funkcji brzegowej, nie z przeglądarki użytkownika** — HIBP nie widzi ani adresu IP osoby zakładającej konto, ani żadnego identyfikatora |
+| **Transfer poza EOG** | Tak — usługa poza EOG. Przekazywany jest wyłącznie pięcioznakowy prefiks skrótu, który nie identyfikuje ani osoby, ani hasła |
+| **Termin usunięcia** | Nie przechowujemy niczego; zapytanie jest jednorazowe i bezstanowe |
+| **Zabezpieczenia** | Walidacja formatu prefiksu, limit czasu 5 s, brak logowania treści. Przy niedostępności usługi rejestracja przechodzi (fail-open) |
+| **Gdzie w kodzie** | `supabase/functions/sprawdz-haslo/`, `src/lib/leakedPassword.ts` |
+
+---
+
 ## Czynności planowane — jeszcze nie wykonywane
 
 | Czynność | Wejdzie wraz z | Uwaga |
 |---|---|---|
-| Prowadzenie kont użytkowników | Wprowadzeniem Supabase Auth | Wymaga aktualizacji polityki prywatności **przed** uruchomieniem |
 | Przechowywanie CV na serwerze | Bazą danych | Wymaga szyfrowania kopertowego i odrębnej zgody |
 | Analiza CV przez model | Uruchomieniem funkcji AI dla profilu | Pseudonimizacji **nie da się** zastosować do samego parsowania CV, bo jego zadaniem jest wydobycie danych identyfikujących — ta ścieżka wymaga odrębnej, wyraźnej zgody |
 | Obsługa płatności | Stripe | Dane płatnicze przetwarza Stripe; administrator nie otrzymuje numerów kart |

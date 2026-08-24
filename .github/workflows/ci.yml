@@ -146,12 +146,20 @@ jobs:
   # określa, co trafia na hosting, więc wdrożenie z laptopa i to z CI dają ten
   # sam wynik.
   #
-  # Uwaga o zmiennych `VITE_`: kod czyta `VITE_API_URL`, `VITE_SUPABASE_*`
-  # i `VITE_STRIPE_PUBLISHABLE_KEY`. Żadna z nich nie jest tu ustawiana, bo nie
-  # ma ich wśród sekretów repozytorium — pakiet powstaje więc w trybie bez
-  # backendu, dokładnie tak jak wersja stojąca dziś pod tym adresem. Gdy backend
-  # ruszy, trzeba je dołożyć jako sekrety i przekazać do kroku wdrożenia;
-  # są wbudowywane podczas budowania, a nie odczytywane w czasie działania.
+  # Zmienne `VITE_` są **wbudowywane w pakiet podczas budowania**, a nie
+  # odczytywane w czasie działania — dlatego muszą być obecne tutaj, a nie
+  # w konfiguracji hostingu. Bez `VITE_SUPABASE_URL` i `VITE_SUPABASE_ANON_KEY`
+  # `clientEnv.backendConfigured` jest `false`, `getSupabaseBrowserClient()`
+  # zwraca `null` i logowanie nie ma jak zadziałać — pakiet powstaje w trybie
+  # wyłącznie lokalnym.
+  #
+  # Klucz `anon` jest publiczny z definicji: trafia do pakietu przeglądarki
+  # i chroni go RLS, a nie utajnienie. Klucz `service_role` nie ma tu wstępu
+  # i pilnuje tego osobny krok „Secrets Must Not Reach The Browser Bundle".
+  #
+  # Brak sekretów nie wywala wdrożenia — strona działa wtedy w trybie lokalnym,
+  # tak jak przed wprowadzeniem kont. To jest celowe: zepsuta konfiguracja ma
+  # odebrać jedną funkcję, a nie zdjąć całą aplikację.
   deploy-hosting:
     needs: build-and-test
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
@@ -187,6 +195,8 @@ jobs:
         env:
           FIREBASE_SERVICE_ACCOUNT_SCOPED: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_SKILLVAULT_99A72 }}
           FIREBASE_SERVICE_ACCOUNT_GENERIC: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
+          VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
+          VITE_SUPABASE_ANON_KEY: ${{ secrets.VITE_SUPABASE_ANON_KEY }}
         run: |
           FIREBASE_SERVICE_ACCOUNT="${FIREBASE_SERVICE_ACCOUNT_SCOPED:-$FIREBASE_SERVICE_ACCOUNT_GENERIC}"
 
