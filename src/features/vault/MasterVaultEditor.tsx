@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useMemo } from 'react';
 import {
   User,
   Briefcase,
@@ -30,6 +30,8 @@ import { Tabs } from '../../components/ui/Tabs';
 import { PageHeader } from '../../components/ui/PageHeader';
 import { ConsistencyLockBadge } from '../../components/consistency/ConsistencyLockBadge';
 import { showToast } from '../../store/useToastStore';
+import { useFieldSuggestions } from '../../hooks/useFieldSuggestions';
+import { bestSubRoleMatch } from '../../lib/specializationIndex';
 
 export interface MasterVaultEditorProps {
   vault: MasterVault;
@@ -55,6 +57,25 @@ export const MasterVaultEditor: React.FC<MasterVaultEditorProps> = ({
   className = '',
 }) => {
   const [viewMode, setViewMode] = useState<ViewMode>('stepper');
+
+  // Podpowiedzi liczone raz na cały edytor: każda sekcja dostaje gotową
+  // funkcję zamiast własnej kopii vaultu i listy aplikacji.
+  const suggest = useFieldSuggestions(vault);
+
+  /**
+   * Branża rozpoznana z profilu — wartość początkowa dla wyboru specjalizacji.
+   *
+   * `SpecializationPicker.initialSubRoleId` istniał od dawna i nikt go nie
+   * ustawiał, więc każdy zaczynał od dwóch pustych list rozwijanych, nawet mając
+   * wpisany tytuł zawodowy. To nadal wyłącznie **wartość początkowa**: obie listy
+   * zostają do zmiany, a żadna umiejętność nie wchodzi do profilu bez kliknięcia.
+   */
+  const detectedSubRoleId = useMemo(() => {
+    const signal = [vault.personalInfo.title, vault.history[0]?.role, vault.history[0]?.company]
+      .filter(Boolean)
+      .join(' ');
+    return signal.trim() ? bestSubRoleMatch(signal)?.subRole.id : undefined;
+  }, [vault.personalInfo.title, vault.history]);
   const [activeStep, setActiveStep] = useState(0);
   const [notification, setNotification] = useState<string | null>(null);
 
@@ -210,6 +231,7 @@ export const MasterVaultEditor: React.FC<MasterVaultEditorProps> = ({
                 <PersonalSection
                   data={vault.personalInfo}
                   onChange={(updated) => onChange({ ...vault, personalInfo: updated })}
+                  suggest={suggest}
                 />
               )}
 
@@ -218,11 +240,13 @@ export const MasterVaultEditor: React.FC<MasterVaultEditorProps> = ({
                   history={vault.history || []}
                   onChange={(updated) => onChange({ ...vault, history: updated })}
                   onOpenAdvisor={onOpenAdvisor}
+                  suggest={suggest}
                 />
               )}
 
               {activeStep === 2 && (
                 <SpecializationPicker
+                  initialSubRoleId={detectedSubRoleId}
                   skillsMatrix={vault.skillsMatrix}
                   onUpdateSkillsMatrix={(updated) => onChange({ ...vault, skillsMatrix: updated })}
                   className="mb-4"
@@ -231,6 +255,7 @@ export const MasterVaultEditor: React.FC<MasterVaultEditorProps> = ({
 
               {activeStep === 2 && (
                 <SkillsMatrix
+                  suggest={suggest}
                   skillsMatrix={vault.skillsMatrix}
                   languages={vault.profiler?.languages || []}
                   licenses={vault.profiler?.licenses || []}
@@ -304,20 +329,24 @@ export const MasterVaultEditor: React.FC<MasterVaultEditorProps> = ({
           <PersonalSection
             data={vault.personalInfo}
             onChange={(updated) => onChange({ ...vault, personalInfo: updated })}
+            suggest={suggest}
           />
 
           <ExperienceSection
             history={vault.history || []}
             onChange={(updated) => onChange({ ...vault, history: updated })}
             onOpenAdvisor={onOpenAdvisor}
+            suggest={suggest}
           />
 
           <SpecializationPicker
+            initialSubRoleId={detectedSubRoleId}
             skillsMatrix={vault.skillsMatrix}
             onUpdateSkillsMatrix={(updated) => onChange({ ...vault, skillsMatrix: updated })}
           />
 
           <SkillsMatrix
+            suggest={suggest}
             skillsMatrix={vault.skillsMatrix}
             languages={vault.profiler?.languages || []}
             licenses={vault.profiler?.licenses || []}
