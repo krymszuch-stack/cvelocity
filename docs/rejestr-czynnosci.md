@@ -75,6 +75,27 @@
 
 ---
 
+## Czynność 5 — Korpus podpowiedzi do formularzy *(schemat gotowy, przetwarzanie jeszcze nie rusza)*
+
+| Element | Opis |
+|---|---|
+| **Cel** | Podpowiadanie nazw umiejętności, narzędzi i uprawnień typowych dla danego stanowiska, na podstawie tego, co podali inni użytkownicy |
+| **Kategorie osób** | Użytkownicy, którzy wyrazili odrębną zgodę |
+| **Kategorie danych** | Wyłącznie **znormalizowane nazwy** umiejętności, narzędzi i uprawnień, powiązane ze znormalizowaną nazwą firmy i stanowiska oraz z identyfikatorem konta. **Nie trafia tu treść CV**: żadnych opisów obowiązków, osiągnięć, dat zatrudnienia, widełek ani nazwisk |
+| **Podstawa prawna** | Art. 6 ust. 1 lit. a — zgoda. Dobrowolna; jej brak nie ogranicza działania aplikacji |
+| **Odbiorcy** | Inni użytkownicy, wyłącznie w postaci **zagregowanej powyżej progu k ≥ 5 różnych osób**. Pojedynczy wkład nie jest widoczny dla nikogo poza jego autorem |
+| **Transfer poza EOG** | Nie występuje — baza w regionie `eu-central-1` |
+| **Termin usunięcia** | Do usunięcia przez użytkownika. Cofnięcie zgody i „usuń moje dane" kasują wkład, co może zbić wartość poniżej progu i usunąć ją z podpowiedzi |
+| **Zabezpieczenia** | RLS: właściciel widzi wyłącznie swoje wiersze, czytania cudzych nie ma w żadnej polityce. Jedyne wyjście z korpusu to funkcja `suggestion_corpus()` z progiem k-anonimowości wpisanym w zapytanie i odebranym prawem wykonania dla `anon` i `authenticated`. Zgody są dopisywane, nigdy nadpisywane — cofnięcie to osobny wiersz |
+| **Gdzie w kodzie** | `supabase/migrations/0003_pytania_i_korpus.sql`, `src/lib/formSuggestions.ts` |
+
+> **Stan na dziś:** tabele istnieją, ale nie ma ani jednej trasy zapisującej do
+> nich dane i nie ma logowania po stronie klienta. Przetwarzanie zaczyna się
+> dopiero z pierwszym wdrożeniem przepływu zgody — do tego czasu ten wpis
+> opisuje **przygotowany fundament**, nie czynność wykonywaną.
+
+---
+
 ## Czynności planowane — jeszcze nie wykonywane
 
 | Czynność | Wejdzie wraz z | Uwaga |
@@ -92,6 +113,8 @@
 Przy obecnym zakresie — dane zostają na urządzeniu użytkownika, brak profilowania, brak decyzji zautomatyzowanych — pełna DPIA nie jest wymagana.
 
 **Przesłanki, które ją wymuszą:** przechowywanie CV na serwerze w skali wielu użytkowników, przetwarzanie wizerunku (art. 9), albo jakakolwiek forma automatycznej oceny kandydata mająca skutki wobec niego.
+
+**Dlaczego korpus podpowiedzi (Czynność 5) tej przesłanki nie przekracza.** Nie przechowuje treści CV — wyłącznie znormalizowane nazwy umiejętności, bez opisów, dat i osiągnięć. Różnica jest celowa i jest jedynym powodem, dla którego schemat wygląda tak, a nie prościej: tabela z całym vaultem powiązanym z firmą byłaby „CV na serwerze w skali wielu użytkowników" i uruchomiłaby pełną DPIA. **Ta granica jest warunkiem, nie szczegółem implementacyjnym** — rozszerzenie korpusu o treść punktorów albo o daty wymaga DPIA przed wdrożeniem, nie po.
 
 **Ryzyko do odnotowania już teraz:** funkcja analizy przerw w zatrudnieniu (`gapAnalysis` w ocenie ATS) wylicza luki w historii zawodowej. Wnioskowanie z nich może pośrednio dotykać zdrowia lub macierzyństwa. Decyzja: wynik pozostaje **wyłącznie po stronie klienta i nie jest nigdzie zapisywany**.
 

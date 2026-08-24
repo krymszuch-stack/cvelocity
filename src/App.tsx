@@ -25,6 +25,7 @@ import { CommandPalette } from './components/CommandPalette';
 import { Skeleton } from './components/ui/Skeleton';
 import { HomeView } from './views/HomeView';
 import { NextActionCard } from './components/nextaction/NextActionCard';
+import { CvQuestionsCard } from './features/questions/CvQuestionsCard';
 import { SkillBridgeMatrixModal } from './components/bridge/SkillBridgeMatrixModal';
 import { ElevatorPitchModal } from './features/pitch/ElevatorPitchModal';
 import { DrillModeModal } from './features/drill/DrillModeModal';
@@ -202,6 +203,13 @@ function MainApp() {
           {activeTab === 'home' && (
             <div className="space-y-6">
               <NextActionCard action={nextAction} onNavigate={navigate} />
+              {/*
+                Pytania uzupełniające stoją pod „następnym krokiem", a nie
+                w osobnej zakładce: to ten sam ekran, na którym aplikacja mówi
+                „zrób teraz to", a zakładka, do której trzeba trafić samemu,
+                nie zostałaby odwiedzona. Karta znika sama, gdy nie ma o co pytać.
+              */}
+              <CvQuestionsCard vault={vault} onChange={setVault} />
               <HomeView
                 vault={vault}
                 onNavigate={navigate}

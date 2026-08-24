@@ -3,16 +3,25 @@ import { User, Mail, Phone, MapPin, Linkedin, Github, Globe, Briefcase } from 'l
 import { PersonalInfo } from '../../types';
 import { Card } from '../../components/ui/Card';
 import { Input, Textarea, Select } from '../../components/ui/Field';
+import { Combobox } from '../../components/ui/Combobox';
+import type { SuggestFn } from '../../hooks/useFieldSuggestions';
 
 export interface PersonalSectionProps {
   data: PersonalInfo;
   onChange: (updated: PersonalInfo) => void;
+  /**
+   * Podpowiedzi do pól tekstowych. Opcjonalne, bo ta sekcja bywa renderowana
+   * bez dostępu do całego vaultu — wtedy `Combobox` dostaje pustą listę
+   * i zachowuje się dokładnie jak zwykły `Input`.
+   */
+  suggest?: SuggestFn;
   className?: string;
 }
 
 export const PersonalSection: React.FC<PersonalSectionProps> = ({
   data,
   onChange,
+  suggest,
   className = '',
 }) => {
   const handleChange = (field: keyof PersonalInfo, value: string) => {
@@ -45,21 +54,23 @@ export const PersonalSection: React.FC<PersonalSectionProps> = ({
         />
 
         {/* Professional Title */}
-        <Input
+        <Combobox
           label="Tytuł Zawodowy"
           icon={Briefcase}
           value={data.title}
-          onChange={(e) => handleChange('title', e.target.value)}
+          onChange={(value) => handleChange('title', value)}
+          suggestions={suggest?.('jobTitle', data.title) ?? []}
           placeholder="np. Senior Frontend Architect"
           required
         />
 
         {/* Location */}
-        <Input
+        <Combobox
           label="Miasto / Lokalizacja"
           icon={MapPin}
           value={data.location}
-          onChange={(e) => handleChange('location', e.target.value)}
+          onChange={(value) => handleChange('location', value)}
+          suggestions={suggest?.('location', data.location) ?? []}
           placeholder="np. Warszawa, Polska"
         />
 

@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { Sparkles, Plus, Trash2, CheckCircle2, Tag, ArrowUpRight } from 'lucide-react';
+import React from 'react';
+import { Sparkles, Plus, Trash2, Tag } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { HighlightMetric } from '../../types';
 import { Button } from '../../components/ui/Button';
@@ -19,8 +19,6 @@ export const AchievementEditor: React.FC<AchievementEditorProps> = ({
   onOpenAdvisor,
   className = '',
 }) => {
-  const [optimizingId, setOptimizingId] = useState<string | null>(null);
-
   const handleAddHighlight = () => {
     const newHighlight: HighlightMetric = {
       id: `hl-${Date.now()}`,
@@ -58,30 +56,6 @@ export const AchievementEditor: React.FC<AchievementEditorProps> = ({
     onChange(highlights.filter((h) => h.id !== id));
   };
 
-  const handleOptimizeWithGemini = async (highlight: HighlightMetric) => {
-    if (!highlight.text.trim()) return;
-
-    setOptimizingId(highlight.id);
-
-    try {
-      // Simulate/call AI endpoint or local rule-based enhancement
-      await new Promise((resolve) => setTimeout(resolve, 800));
-
-      let optimizedText = highlight.text;
-      if (!optimizedText.includes('%') && !optimizedText.includes('zwiększ') && !optimizedText.includes('zoptymalizow')) {
-        optimizedText = `Zoptymalizowano architekturę rozwiązania: ${highlight.text}, co przyniosło 35% wzrost wydajności przetwarzania danych.`;
-      } else {
-        optimizedText = `Wdrożono i przeskalowano: ${highlight.text}`;
-      }
-
-      handleUpdateText(highlight.id, optimizedText);
-    } catch (err) {
-      console.error('Błąd optymalizacji AI:', err);
-    } finally {
-      setOptimizingId(null);
-    }
-  };
-
   return (
     <div className={`space-y-3.5 ${className}`}>
       <div className="flex items-center justify-between">
@@ -114,10 +88,7 @@ export const AchievementEditor: React.FC<AchievementEditorProps> = ({
               </p>
             </div>
           ) : (
-            highlights.map((hl, index) => {
-              const isOptimizing = optimizingId === hl.id;
-
-              return (
+            highlights.map((hl, index) => (
                 <motion.div
                   key={hl.id}
                   layout
@@ -163,23 +134,23 @@ export const AchievementEditor: React.FC<AchievementEditorProps> = ({
                       ))}
                     </div>
 
-                    <div className="flex items-center gap-2">
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="sm"
-                        icon={Sparkles}
-                        loading={isOptimizing}
-                        onClick={() => handleOptimizeWithGemini(hl)}
-                        className="text-brand-fg hover:bg-brand-50 text-[11px]"
-                      >
-                        {isOptimizing ? 'Optymalizowanie...' : 'Optymalizuj frazę (AI)'}
-                      </Button>
-                    </div>
+                    {/*
+                      Stał tu przycisk „Optymalizuj frazę (AI)", który nie wołał
+                      żadnego modelu: `setTimeout(800)` udający latencję, po czym
+                      do CV doklejane było zmyślone „35% wzrost wydajności
+                      przetwarzania danych". Metryki nie da się wyprodukować za
+                      użytkownika — można go o nią tylko zapytać, i robi to karta
+                      pytań uzupełniających (`src/lib/cvQuestionEngine.ts`).
+                    */}
+                    {!hl.metric?.trim() && hl.text.trim() && (
+                      <span className="inline-flex items-center gap-1.5 text-[11px] text-subtle">
+                        <Sparkles className="h-3 w-3" />
+                        Brakuje mierzalnego efektu — zapytamy o niego na ekranie startowym
+                      </span>
+                    )}
                   </div>
                 </motion.div>
-              );
-            })
+              ))
           )}
         </AnimatePresence>
       </div>

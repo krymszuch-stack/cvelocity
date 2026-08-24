@@ -13,6 +13,8 @@ import { WorkExperience, HighlightMetric } from '../../types';
 import { Card } from '../../components/ui/Card';
 import { Button } from '../../components/ui/Button';
 import { Input, Textarea } from '../../components/ui/Field';
+import { Combobox } from '../../components/ui/Combobox';
+import type { SuggestFn } from '../../hooks/useFieldSuggestions';
 import { Toggle } from '../../components/ui/Toggle';
 import { AchievementEditor } from './AchievementEditor';
 
@@ -20,6 +22,11 @@ export interface ExperienceSectionProps {
   history: WorkExperience[];
   onChange: (updated: WorkExperience[]) => void;
   onOpenAdvisor?: (initialQuestion?: string) => void;
+  /**
+   * Podpowiedzi do nazwy firmy i stanowiska. Opcjonalne — bez nich `Combobox`
+   * dostaje pustą listę i zachowuje się jak zwykły `Input`.
+   */
+  suggest?: SuggestFn;
   className?: string;
 }
 
@@ -27,6 +34,7 @@ export const ExperienceSection: React.FC<ExperienceSectionProps> = ({
   history,
   onChange,
   onOpenAdvisor,
+  suggest,
   className = '',
 }) => {
   const handleAddExperience = () => {
@@ -163,20 +171,22 @@ export const ExperienceSection: React.FC<ExperienceSectionProps> = ({
 
                 {/* Form Inputs */}
                 <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 md:grid-cols-3">
-                  <Input
+                  <Combobox
                     label="Nazwa Firmy / Organizacji"
                     icon={Building2}
                     value={item.company}
-                    onChange={(e) => handleUpdateExperience(item.id, 'company', e.target.value)}
+                    onChange={(value) => handleUpdateExperience(item.id, 'company', value)}
+                    suggestions={suggest?.('company', item.company) ?? []}
                     placeholder="np. Allegro, TechCorp"
                     required
                   />
 
-                  <Input
+                  <Combobox
                     label="Nazwa Stanowiska"
                     icon={Briefcase}
                     value={item.role}
-                    onChange={(e) => handleUpdateExperience(item.id, 'role', e.target.value)}
+                    onChange={(value) => handleUpdateExperience(item.id, 'role', value)}
+                    suggestions={suggest?.('jobTitle', item.role) ?? []}
                     placeholder="np. Senior Frontend Engineer"
                     required
                   />

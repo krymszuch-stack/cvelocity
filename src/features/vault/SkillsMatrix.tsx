@@ -18,6 +18,8 @@ import { SkillsMatrix as SkillsMatrixType, LanguageProficiency } from '../../typ
 import { Card } from '../../components/ui/Card';
 import { Button } from '../../components/ui/Button';
 import { Input, Select } from '../../components/ui/Field';
+import { Combobox } from '../../components/ui/Combobox';
+import type { SuggestFn } from '../../hooks/useFieldSuggestions';
 import { Chip } from '../../components/ui/Chip';
 import { ProgressBar } from '../../components/ui/ProgressBar';
 
@@ -28,6 +30,11 @@ export interface SkillsMatrixProps {
   onUpdateSkillsMatrix: (updated: SkillsMatrixType) => void;
   onUpdateLanguages: (updated: LanguageProficiency[]) => void;
   onUpdateLicenses: (updated: string[]) => void;
+  /**
+   * Podpowiedzi do pól chipowych. Opcjonalne — bez nich `Combobox` dostaje
+   * pustą listę i zachowuje się jak zwykły `Input`.
+   */
+  suggest?: SuggestFn;
   className?: string;
 }
 
@@ -59,6 +66,7 @@ export const SkillsMatrix: React.FC<SkillsMatrixProps> = ({
   onUpdateSkillsMatrix,
   onUpdateLanguages,
   onUpdateLicenses,
+  suggest,
   className = '',
 }) => {
   const [hardSkillInput, setHardSkillInput] = useState('');
@@ -67,15 +75,20 @@ export const SkillsMatrix: React.FC<SkillsMatrixProps> = ({
   const [newLangLevel, setNewLangLevel] = useState<LanguageProficiency['level']>('B2');
 
   // Add Hard Skill
-  const handleAddHardSkill = () => {
-    if (!hardSkillInput.trim()) return;
+  //
+  // Przyjmuje wartość, zamiast czytać wyłącznie stan pola: wybór podpowiedzi ma
+  // dodać chip od razu, a `setHardSkillInput` zadziałałoby dopiero w kolejnym
+  // renderze i dołożyłoby pustą wartość.
+  const handleAddHardSkill = (value: string = hardSkillInput) => {
+    const trimmed = value.trim();
+    if (!trimmed) return;
     const exists = (skillsMatrix.hardSkills || []).some(
-      (s) => s.toLowerCase() === hardSkillInput.trim().toLowerCase()
+      (s) => s.toLowerCase() === trimmed.toLowerCase()
     );
     if (!exists) {
       onUpdateSkillsMatrix({
         ...skillsMatrix,
-        hardSkills: [...(skillsMatrix.hardSkills || []), hardSkillInput.trim()],
+        hardSkills: [...(skillsMatrix.hardSkills || []), trimmed],
       });
     }
     setHardSkillInput('');
@@ -152,9 +165,13 @@ export const SkillsMatrix: React.FC<SkillsMatrixProps> = ({
         </div>
 
         <div className="flex gap-2">
-          <Input
+          <Combobox
             value={hardSkillInput}
-            onChange={(e) => setHardSkillInput(e.target.value)}
+            onChange={setHardSkillInput}
+            // Już dodane chipy odpadają z listy — podpowiadanie tego, co
+            // użytkownik ma na ekranie, jest samym szumem.
+            suggestions={suggest?.('hardSkill', hardSkillInput, skillsMatrix.hardSkills ?? []) ?? []}
+            onPick={(suggestion) => handleAddHardSkill(suggestion.value)}
             onKeyDown={(e) => {
               if (e.key === 'Enter') {
                 e.preventDefault();
@@ -169,7 +186,7 @@ export const SkillsMatrix: React.FC<SkillsMatrixProps> = ({
             variant="secondary"
             size="md"
             icon={Plus}
-            onClick={handleAddHardSkill}
+            onClick={() => handleAddHardSkill()}
           >
             Dodaj
           </Button>
