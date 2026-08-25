@@ -16,7 +16,7 @@ import {
 import { findSkillBridgeForGap, generateSkillBridges } from '../skillBridgeEngine';
 import { analyzeDrillResponse, getRandomDrillQuestion } from '../drillEngine';
 import { rankHighlightsByRelevance, rankExperienceByRelevance, getRelevanceOrderedExperienceIds } from '../relevanceRanking';
-import { calculateAdvancedATSScore } from '../atsScorer';
+import { buildAtsTelemetryReport } from '../atsScorer';
 import { evaluateKnockouts } from '../knockouts';
 import { buildStarStoriesFromVault } from '../starStoryEngine';
 import { mergeImportedVault } from '../vaultImportMerge';
@@ -92,11 +92,12 @@ describe('Adversarial Chaos & Hallucination Bombardment Test Suite', () => {
       expect(getRelevanceOrderedExperienceIds(null, null)).toEqual([]);
     });
 
-    it('1.5 ATS Scorer i Knockouts radzą sobie z pustym vaultem i pustym JD', () => {
+    it('1.5 ATS Telemetry i Knockouts radzą sobie z pustym vaultem i pustym JD', () => {
       const emptyVault = {} as MasterVault;
-      const ats = calculateAdvancedATSScore(emptyVault, '', '');
-      expect(ats.overallScore).toBeDefined();
-      expect(ats.overallScore).toBeGreaterThanOrEqual(0);
+      const telemetry = buildAtsTelemetryReport({ vault: emptyVault, jobDescription: '' });
+      expect(telemetry.overallScore).toBeDefined();
+      expect(telemetry.overallScore).toBeGreaterThanOrEqual(0);
+      expect(telemetry.systemVulnerabilities).toHaveLength(3);
 
       const ko = evaluateKnockouts('', emptyVault);
       expect(ko.findings).toBeDefined();

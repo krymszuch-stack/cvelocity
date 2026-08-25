@@ -19,6 +19,7 @@ import {
 } from 'lucide-react';
 import { MasterVault } from '../../types';
 import { simulateMultiEngineATS, AtsEngineResult } from '../../lib/atsSimulator';
+import { buildAtsTelemetryReport, STUFFING_DENSITY_THRESHOLD } from '../../lib/atsScorer';
 
 export interface AtsLabViewProps {
   vault: MasterVault;
@@ -39,6 +40,13 @@ export const AtsLabView: React.FC<AtsLabViewProps> = ({
   const consensus = useMemo(() => {
     return simulateMultiEngineATS(vault, customJdText, customRole);
   }, [vault, customJdText, customRole]);
+
+  // Raport śledczy: każdy wskaźnik da się wywieść z vaultu i ogłoszenia.
+  // Przeliczany razem z konsensusem — te same dane wejściowe, zero dodatkowego
+  // stanu do zsynchronizowania.
+  const telemetry = useMemo(() => {
+    return buildAtsTelemetryReport({ vault, jobDescription: customJdText });
+  }, [vault, customJdText]);
 
   const activeEngine = useMemo(() => {
     return consensus.engines.find((e) => e.id === selectedEngineId) || consensus.engines[0];
@@ -192,7 +200,209 @@ export const AtsLabView: React.FC<AtsLabViewProps> = ({
         </div>
       </div>
 
-      {/* 3. Panel Realistycznej Oceny Predyspozycji i Ścieżek Alternatywnych */}
+      {/* 3. Telemetria śledcza — matematyka pod spodem oceny */}
+      <div className="rounded-3xl border border-ink/10 bg-surface-raised/80 p-6 sm:p-8 shadow-card-glass backdrop-blur-xl">
+        <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <h3 className="text-lg font-bold text-ink flex items-center gap-2">
+              <Zap className="h-5 w-5 text-brand" /> Telemetria Śledcza — dowody, nie szacunek
+            </h3>
+            <p className="mt-1 text-sm text-ink-muted">
+              Każdy wskaźnik da się wywieść z Twojego profilu i treści ogłoszenia: pokrycie lematów po rdzeniach, sprawczość języka, parsowalność struktury i kary za twarde wymagania.
+            </p>
+          </div>
+          <div className="shrink-0 rounded-2xl bg-surface/60 border border-ink/5 px-5 py-3 text-center">
+            <span className="text-3xl font-black font-mono text-ink">{telemetry.overallScore}%</span>
+            <span className="block text-[11px] font-bold uppercase tracking-wider text-ink-faint">Wynik Telemetrii</span>
+          </div>
+        </div>
+
+        {/* Rozkład formuły */}
+        <div className="mt-6 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-5">
+          {([
+            ['Pokrycie lematów', '40%', telemetry.formulaBreakdown.hardSkillsScore],
+            ['Doświadczenie i metryki', '25%', telemetry.formulaBreakdown.experienceScore],
+            ['Struktura dokumentu', '20%', telemetry.formulaBreakdown.structureScore],
+            ['Sprawczość języka', '15%', telemetry.formulaBreakdown.actionVerbsScore],
+          ] as const).map(([label, weight, value]) => (
+            <div key={label} className="p-4 rounded-xl bg-surface/60 border border-ink/5">
+              <div className="flex items-center justify-between text-xs">
+                <span className="font-semibold text-ink-muted">{label}</span>
+                <span className="font-mono text-[10px] text-brand">waga {weight}</span>
+              </div>
+              <span className="mt-1 block text-2xl font-bold font-mono text-ink">{value}</span>
+              <div className="mt-2 h-1.5 rounded-full bg-surface-sunken overflow-hidden">
+                <div
+                  className="h-full rounded-full bg-brand transition-all duration-700"
+                  style={{ width: `${Math.max(0, Math.min(100, value))}%` }}
+                />
+              </div>
+            </div>
+          ))}
+          <div className={`p-4 rounded-xl border ${
+            telemetry.formulaBreakdown.knockoutPenalties > 0
+              ? 'bg-rose-500/5 border-rose-500/30'
+              : 'bg-surface/60 border-ink/5'
+          }`}>
+            <div className="flex items-center justify-between text-xs">
+              <span className="font-semibold text-ink-muted">Kary zerojedynkowe</span>
+              <span className="font-mono text-[10px] text-rose-500">−100 pkt max</span>
+            </div>
+            <span className={`mt-1 block text-2xl font-bold font-mono ${
+              telemetry.formulaBreakdown.knockoutPenalties > 0 ? 'text-rose-500' : 'text-emerald-500'
+            }`}>
+              −{telemetry.formulaBreakdown.knockoutPenalties}
+            </span>
+            <p className="mt-2 text-[11px] leading-snug text-ink-faint">
+              {telemetry.formulaBreakdown.knockoutPenalties === 0
+                ? 'Brak niespełnionych wymagań formalnych.'
+                : 'Niespełnione kryteria odrzucają profil niezależnie od reszty wyniku.'}
+            </p>
+          </div>
+        </div>
+
+        <div className="mt-6 grid grid-cols-1 gap-4 lg:grid-cols-2">
+          {/* Język */}
+          <div className="p-5 rounded-2xl bg-surface/60 border border-ink/5 space-y-3">
+            <h4 className="text-sm font-bold text-ink flex items-center gap-2">
+              <BookOpen className="h-4 w-4 text-brand" /> Telemetria językowa
+            </h4>
+            <div className="flex flex-wrap gap-x-6 gap-y-1 text-xs text-ink-muted">
+              <span>Tokens w profilu: <strong className="font-mono text-ink">{telemetry.linguisticTelemetry.totalExtractedTokens}</strong></span>
+              <span>Sprawczość (cz. dokonane): <strong className="font-mono text-ink">{Math.round(telemetry.linguisticTelemetry.actionVerbRatio * 100)}%</strong> zdań</span>
+            </div>
+
+            {telemetry.linguisticTelemetry.missingCriticalLemmas.length > 0 && (
+              <div>
+                <p className="text-xs font-semibold text-ink mb-1.5">Brakujące krytyczne lematy:</p>
+                <div className="flex flex-wrap gap-1.5">
+                  {telemetry.linguisticTelemetry.missingCriticalLemmas.map((lemma) => (
+                    <span key={lemma} className="inline-flex items-center gap-1 rounded-md bg-amber-500/10 border border-amber-500/20 px-2 py-0.5 text-[11px] font-semibold text-amber-600 dark:text-amber-400">
+                      <AlertTriangle className="h-3 w-3" /> {lemma}
+                    </span>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {telemetry.linguisticTelemetry.matchedLemmas.length > 0 && (
+              <div className="overflow-hidden rounded-lg border border-ink/5">
+                <table className="w-full text-left text-xs">
+                  <thead className="bg-surface-sunken/60 text-ink-faint">
+                    <tr>
+                      <th className="px-3 py-2 font-semibold">Lemat</th>
+                      <th className="px-2 py-2 font-semibold text-center">CV</th>
+                      <th className="px-2 py-2 font-semibold text-center">JD</th>
+                      <th className="px-3 py-2 font-semibold text-right">Gęstość</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {telemetry.linguisticTelemetry.matchedLemmas.slice(0, 6).map((lemma) => (
+                      <tr key={lemma.term} className="border-t border-ink/5">
+                        <td className="px-3 py-1.5 font-medium text-ink truncate max-w-[180px]" title={lemma.term}>
+                          {lemma.term}
+                          {lemma.densityRatio > STUFFING_DENSITY_THRESHOLD && (
+                            <span className="ml-1.5 rounded bg-rose-500/10 px-1 text-[10px] font-bold text-rose-500" title="Podejrzenie upychania słów kluczowych">stuffing?</span>
+                          )}
+                        </td>
+                        <td className="px-2 py-1.5 text-center font-mono text-ink-muted">{lemma.countInCv}</td>
+                        <td className="px-2 py-1.5 text-center font-mono text-ink-muted">{lemma.countInJd}</td>
+                        <td className="px-3 py-1.5 text-right font-mono text-ink">{lemma.densityRatio.toFixed(1)}x</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </div>
+
+          {/* Struktura */}
+          <div className="p-5 rounded-2xl bg-surface/60 border border-ink/5 space-y-3">
+            <h4 className="text-sm font-bold text-ink flex items-center gap-2">
+              <Layers className="h-4 w-4 text-brand" /> Parsowalność struktury
+            </h4>
+            <div className="grid grid-cols-2 gap-2.5">
+              <div className="p-3 rounded-lg bg-surface/80 border border-ink/5">
+                <p className="text-[11px] text-ink-faint">Kolejność czytania</p>
+                <p className={`mt-0.5 text-sm font-bold font-mono ${
+                  telemetry.structuralTelemetry.readingOrderIntegrity === 'STABLE' ? 'text-emerald-500' : 'text-rose-500'
+                }`}>
+                  {telemetry.structuralTelemetry.readingOrderIntegrity}
+                </p>
+              </div>
+              <div className="p-3 rounded-lg bg-surface/80 border border-ink/5">
+                <p className="text-[11px] text-ink-faint">Hierarchia nagłówków</p>
+                <p className={`mt-0.5 text-sm font-bold font-mono ${telemetry.structuralTelemetry.headingHierarchyValid ? 'text-emerald-500' : 'text-rose-500'}`}>
+                  {telemetry.structuralTelemetry.headingHierarchyValid ? 'VALID' : 'FLAT'}
+                </p>
+              </div>
+              <div className="p-3 rounded-lg bg-surface/80 border border-ink/5">
+                <p className="text-[11px] text-ink-faint">Tabele</p>
+                <p className={`mt-0.5 text-sm font-bold font-mono ${telemetry.structuralTelemetry.tableCount > 0 ? 'text-amber-500' : 'text-ink'}`}>
+                  {telemetry.structuralTelemetry.tableCount}
+                </p>
+              </div>
+              <div className="p-3 rounded-lg bg-surface/80 border border-ink/5">
+                <p className="text-[11px] text-ink-faint">Znaki nietypowe</p>
+                <p className="mt-0.5 text-sm font-bold font-mono text-ink">{telemetry.structuralTelemetry.unsupportedCharactersCount}</p>
+              </div>
+            </div>
+            <p className="text-[11px] leading-snug text-ink-faint">
+              Pomiar dotyczy dokumentu kanonicznego renderowanego z Twojego profilu — jego jednokolumnowy porządek jest stabilny z konstrukcji eksportu.
+            </p>
+          </div>
+        </div>
+
+        {/* Werdykty per system */}
+        <div className="mt-6 grid grid-cols-1 gap-4 md:grid-cols-3">
+          {telemetry.systemVulnerabilities.map((system) => (
+            <div key={system.systemId} className="p-5 rounded-2xl border border-ink/5 bg-surface/60 space-y-3">
+              <div className="flex items-start justify-between gap-2">
+                <div>
+                  <p className="text-sm font-bold text-ink">{system.systemId.replace('_', ' / ')}</p>
+                  <p className="text-[11px] text-ink-faint">{system.systemCategory}</p>
+                </div>
+                <span className={`rounded-full px-2 py-0.5 text-[10px] font-extrabold text-white ${
+                  system.passProbability >= 75 ? 'bg-emerald-500' : system.passProbability >= 50 ? 'bg-blue-500' : system.passProbability >= 30 ? 'bg-amber-500' : 'bg-rose-500'
+                }`}>
+                  {system.passProbability}%
+                </span>
+              </div>
+              <div className="h-1.5 rounded-full bg-surface-sunken overflow-hidden">
+                <div
+                  className={`h-full rounded-full transition-all duration-700 ${
+                    system.passProbability >= 75 ? 'bg-emerald-500' : system.passProbability >= 50 ? 'bg-blue-500' : system.passProbability >= 30 ? 'bg-amber-500' : 'bg-rose-500'
+                  }`}
+                  style={{ width: `${system.passProbability}%` }}
+                />
+              </div>
+
+              {system.criticalRisks.length > 0 && (
+                <ul className="space-y-1.5">
+                  {system.criticalRisks.map((risk) => (
+                    <li key={risk} className="flex items-start gap-1.5 text-[11px] leading-snug text-ink-muted">
+                      <AlertTriangle className="h-3 w-3 mt-0.5 shrink-0 text-amber-500" />
+                      <span>{risk}</span>
+                    </li>
+                  ))}
+                </ul>
+              )}
+              {system.complianceReasons.length > 0 && (
+                <ul className="space-y-1.5">
+                  {system.complianceReasons.map((reason) => (
+                    <li key={reason} className="flex items-start gap-1.5 text-[11px] leading-snug text-ink-muted">
+                      <CheckCircle2 className="h-3 w-3 mt-0.5 shrink-0 text-emerald-500" />
+                      <span>{reason}</span>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* 4. Panel Realistycznej Oceny Predyspozycji i Ścieżek Alternatywnych */}
       <div className={`p-6 rounded-3xl border ${
         consensus.careerFitAdvice.isRealisticFit
           ? 'border-emerald-500/20 bg-emerald-500/5'
