@@ -25,6 +25,13 @@ export interface ProfilerState {
   location: LocationPreferences;
   languages: LanguageProficiency[];
   licenses?: string[];
+  /**
+   * Zawód wybrany jawnie w wyborze specjalizacji — identyfikator podroli
+   * z `src/data/specializations.ts`. Opcjonalny, bo rozpoznanie z tytułu
+   * (`specializationIndex`) pozostaje wartością początkową dopóki użytkownik
+   * czegoś nie wybierze sam; po wyborze jego decyzja bije zgadywankę.
+   */
+  subRoleId?: string;
 }
 
 export interface PersonalInfo {
