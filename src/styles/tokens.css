@@ -48,6 +48,11 @@
   --color-violet: var(--violet);
   --color-violet-2: var(--violet-2);
 
+  /* Brand mark (sygnet CVelocity) — granat i pomarańcz z księgi znaku.
+     `ink` zmienia się z motywem: na jasnym tle to granat, w ciemnym biel. */
+  --color-mark-ink: var(--mark-ink);
+  --color-mark-accent: var(--mark-accent);
+
   /* Semantics */
   --color-success: var(--success);
   --color-success-fg: var(--success-fg);
@@ -123,6 +128,14 @@
      violet-500 measures 4.23:1 and misses AA, while this endpoint reaches 5.8:1.
      --violet itself stays lighter for decorative use (aurora, glows). */
   --brand-grad: linear-gradient(120deg, #5e6ad2 0%, #7c3aed 100%);
+
+  /* Brand mark (light): granat #1E3A5F i pomarańcz #F26440 prosto z księgi
+     znaku. Kafelek sygnetu ma własny gradient (granat → grafit), a poświata
+     jest pochodną akcentu. */
+  --mark-ink: #1E3A5F;
+  --mark-accent: #F26440;
+  --mark-tile-grad: linear-gradient(135deg, #1E3A5F 0%, #0F172A 100%);
+  --mark-glow: 0 0 12px rgba(242, 100, 64, 0.15);
 
   /* Semantics (Light) */
   --success: #16a34a;
@@ -219,6 +232,13 @@
   --violet: #a78bfa;
   --violet-2: #c4b5fd;
   --brand-grad: linear-gradient(120deg, #8b93e8 0%, #a78bfa 100%);
+
+  /* Brand mark (dark): granat kafelka zostaje — czyta się dobrze na ciemnym
+     tle; tekst sygnetu przechodzi na biel, akcent bez zmian. */
+  --mark-ink: #FFFFFF;
+  --mark-accent: #F26440;
+  --mark-tile-grad: linear-gradient(135deg, #1E3A5F 0%, #0F172A 100%);
+  --mark-glow: 0 0 12px rgba(242, 100, 64, 0.2);
 
   /* Semantics (Dark) */
   --success: #4ade80;
@@ -436,6 +456,17 @@
 
 .hover\:shadow-brand-glow-lg:hover {
   box-shadow: 0 4px 18px color-mix(in srgb, var(--violet) 45%, transparent);
+}
+
+/* Kafelek i poświata sygnetu CVelocity — patrz `--mark-*` wyżej oraz
+   `CVelocityLogo.tsx`. Osobne od brand-glow, bo pomarańcz akcentu świeci
+   inaczej niż fiolet rampy. */
+.bg-mark-tile {
+  background-image: var(--mark-tile-grad);
+}
+
+.shadow-mark-glow {
+  box-shadow: var(--mark-glow);
 }
 
 /* ============================================================
