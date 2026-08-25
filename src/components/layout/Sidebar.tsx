@@ -13,6 +13,7 @@ import {
   IconSparkles,
 } from '../ui/icons/ModernIcons';
 import { NavItem } from './NavItem';
+import { CVelocityLogo } from '../CVelocityLogo';
 import { NAV_SECTIONS, NavSectionId, NavTabId } from '../../lib/navigation';
 
 /**
@@ -74,26 +75,16 @@ export const Sidebar: React.FC<SidebarProps> = ({
               className="flex items-center gap-2.5 rounded-xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500/50"
               title="Ekran startowy — Twój następny krok"
             >
-              <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-brand-grad text-on-brand shadow-brand-glow">
-                <IconSparkles className="h-4 w-4" />
-              </div>
-              <div>
-                <span className="font-sans text-sm font-extrabold tracking-tight text-ink">
-                  CVELOCITY
-                </span>
-                <span className="ml-1.5 rounded-sm bg-brand-50 px-1 py-px font-mono text-[9px] font-bold text-brand-fg">
-                  v2.0
-                </span>
-              </div>
+              <CVelocityLogo />
             </button>
           ) : (
             <button
               type="button"
               onClick={() => onSelectTab('home')}
-              className="mx-auto flex h-8 w-8 items-center justify-center rounded-xl bg-brand-grad text-on-brand shadow-brand-glow focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500/50"
+              className="mx-auto rounded-xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500/50"
               title="Ekran startowy — Twój następny krok"
             >
-              <IconSparkles className="h-4 w-4" />
+              <CVelocityLogo collapsed showBadge={false} />
             </button>
           )}
 
