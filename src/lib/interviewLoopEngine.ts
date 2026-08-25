@@ -5,7 +5,7 @@ import {
   LiveNoteItem,
   PostCallDebrief,
 } from '../types';
-import { StorageKeys } from './storage';
+import { StorageKeys, readJson, writeJson } from './storage';
 import { getFollowUpEmailOpenings, selectVariantIndex } from './phrasingVariations';
 
 export const DEFAULT_PRE_CALL_CHECKLIST: Omit<PreCallChecklistItem, 'completed'>[] = [
@@ -197,36 +197,24 @@ export function generateFollowUpEmail(
  * Zapis i odczyt z pamięci lokalnej (StorageKeys.interviewLoops)
  */
 export function loadInterviewSessions(): InterviewLoopSession[] {
-  try {
-    const raw = localStorage.getItem(StorageKeys.interviewLoops);
-    if (!raw) return [];
-    const parsed = JSON.parse(raw);
-    return Array.isArray(parsed) ? parsed : [];
-  } catch {
-    return [];
-  }
+  const parsed = readJson<unknown>(StorageKeys.interviewLoops, []);
+  return Array.isArray(parsed) ? (parsed as InterviewLoopSession[]) : [];
 }
 
 export function saveInterviewSession(session: InterviewLoopSession): void {
-  try {
-    const existing = loadInterviewSessions();
-    const idx = existing.findIndex((s) => s.id === session.id);
-    const updated =
-      idx >= 0
-        ? existing.map((s, i) => (i === idx ? session : s))
-        : [session, ...existing];
-    localStorage.setItem(StorageKeys.interviewLoops, JSON.stringify(updated));
-  } catch {
-    // Ignoruj błędy zapisu
-  }
+  const existing = loadInterviewSessions();
+  const idx = existing.findIndex((s) => s.id === session.id);
+  const updated =
+    idx >= 0
+      ? existing.map((s, i) => (i === idx ? session : s))
+      : [session, ...existing];
+  writeJson(StorageKeys.interviewLoops, updated);
 }
 
 export function deleteInterviewSession(sessionId: string): void {
-  try {
-    const existing = loadInterviewSessions();
-    const filtered = existing.filter((s) => s.id !== sessionId);
-    localStorage.setItem(StorageKeys.interviewLoops, JSON.stringify(filtered));
-  } catch {
-    // Ignoruj błędy usuwania
-  }
+  const existing = loadInterviewSessions();
+  writeJson(
+    StorageKeys.interviewLoops,
+    existing.filter((s) => s.id !== sessionId)
+  );
 }

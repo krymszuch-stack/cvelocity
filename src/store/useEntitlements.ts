@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
-import { StorageKeys, readJson, writeJson } from '../lib/storage';
+import { StorageKeys, onAppStorageWiped, readJson, writeJson } from '../lib/storage';
 import { clientEnv } from '../lib/clientEnv';
 import { ApiError, api } from '../lib/apiClient';
 
@@ -77,6 +77,15 @@ function setState(updater: (prev: EntitlementsState) => EntitlementsState): void
   writeJson(StorageKeys.entitlementsCache, globalState);
   listeners.forEach((notify) => notify());
 }
+
+// Po „usuń moje dane" licznik wraca do stanu wyjściowego w pamięci, ale bez
+// natychmiastowego zapisu — klucz właśnie zniknął ze schowka, a odtworzenie go
+// tuż po wymazaniu byłoby pisaniem danej osobowej w tej samej operacji, która
+// miała ją usunąć. Zapis wróci dopiero przy realnej akcji użytkownika.
+onAppStorageWiped(() => {
+  globalState = freshState();
+  listeners.forEach((notify) => notify());
+});
 
 export function isProStatus(status: SubscriptionStatus): boolean {
   return status === 'active' || status === 'trialing';

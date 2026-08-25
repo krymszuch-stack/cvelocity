@@ -12,7 +12,7 @@ import { ParsedJobDescription } from './jdParser';
 import { rankExperienceByRelevance } from './relevanceRanking';
 import { lookupGlossaryDefinition, hasGlossaryDefinition } from '../data/interviewGlossaryDictionary';
 import { api, ApiError } from './apiClient';
-import { cheatSheetCacheKeyFor, readJson, writeJson } from './storage';
+import { StorageKeys, cheatSheetCacheKeyFor, readJson, removeRaw, writeJson } from './storage';
 
 /**
  * 0-Token local "skeleton" builder for the Interview Cheat Sheet — mirrors the
@@ -361,14 +361,56 @@ interface CachedEnrichmentEntry {
   cachedAt: string;
 }
 
-function readCachedEnrichment(hash: string): CheatSheetEnrichment | null {
+export function readCachedEnrichment(hash: string): CheatSheetEnrichment | null {
   const entry = readJson<CachedEnrichmentEntry | null>(cheatSheetCacheKeyFor(hash), null);
   return entry?.enrichment ?? null;
 }
 
-function writeCachedEnrichment(hash: string, enrichment: CheatSheetEnrichment): void {
+/**
+ * Cache ma twardy limit, bo klucz powstaje dla każdej nowej pary oferta+vault
+ * i bez sprzątania rósłby w nieskończoność — schowek przeglądarki ma wspólny
+ * limit z całą domeną, a wpisy z punktami STAR potrafią ważyć kilokrotność
+ * jednego rekordu. Po przekroczeniu limitu wypadają najstarsze wpisy: cache
+ * służy temu, kto wraca do świeżo przygotowywanej rozmowy, nie archiwum.
+ */
+const CHEATSHEET_CACHE_LIMIT = 20;
+
+function pruneCheatSheetCache(): void {
+  const prefix = `${StorageKeys.cheatSheetCache}:`;
+
+  const zbierz = (): Array<{ key: string; cachedAt: string }> => {
+    const wpis: Array<{ key: string; cachedAt: string }> = [];
+    for (let i = 0; i < localStorage.length; i++) {
+      const key = localStorage.key(i);
+      if (!key || !key.startsWith(prefix)) continue;
+      const entry = readJson<CachedEnrichmentEntry | null>(key, null);
+      if (entry) wpis.push({ key, cachedAt: entry.cachedAt ?? '' });
+    }
+    return wpis;
+  };
+
+  let entries = zbierz();
+  while (entries.length > CHEATSHEET_CACHE_LIMIT) {
+    // Najstarszy według cachedAt. Remisy rozstrzyga klucz: kilka wpisów może
+    // powstać w tej samej milisekundzie, a bez rozstrzygnięcia remisu wybór
+    // zależałby od kolejności iteracji schowka i potrafił wyrzucić wpis
+    // zapisany przed chwilą zamiast naprawdę najstarszego.
+    let najstarszy = entries[0];
+    for (const entry of entries.slice(1)) {
+      const starszy =
+        entry.cachedAt < najstarszy.cachedAt ||
+        (entry.cachedAt === najstarszy.cachedAt && entry.key < najstarszy.key);
+      if (starszy) najstarszy = entry;
+    }
+    removeRaw(najstarszy.key);
+    entries = entries.filter((entry) => entry !== najstarszy);
+  }
+}
+
+export function writeCachedEnrichment(hash: string, enrichment: CheatSheetEnrichment): void {
   const entry: CachedEnrichmentEntry = { hash, enrichment, cachedAt: new Date().toISOString() };
   writeJson(cheatSheetCacheKeyFor(hash), entry);
+  pruneCheatSheetCache();
 }
 
 /**

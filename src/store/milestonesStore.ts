@@ -1,4 +1,5 @@
 import { UxLiveState, UxMilestones, loadMilestones, reconcileMilestones, saveMilestones } from '../lib/uxMilestones';
+import { onAppStorageWiped } from '../lib/storage';
 
 /**
  * Kamienie milowe trzymane poza Reactem.
@@ -51,3 +52,11 @@ export function markShortcutsHintSeen(): void {
   saveMilestones(milestones);
   listeners.forEach((notify) => notify());
 }
+
+// Bez tego resetu pierwszy syncMilestones po „usuń moje dane" porównywałby się
+// z pamięcią sprzed wymazania i odzyskiwał kamienie milowe do schowka — razem
+// z odblokowanymi sekcjami, które miały zniknąć razem z profilem.
+onAppStorageWiped(() => {
+  milestones = loadMilestones();
+  listeners.forEach((notify) => notify());
+});

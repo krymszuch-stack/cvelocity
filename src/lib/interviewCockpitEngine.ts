@@ -7,7 +7,7 @@
  */
 
 import { MasterVault } from '../types';
-import { StorageKeys, readRaw, writeRaw } from './storage';
+import { StorageKeys, readJson, writeJson } from './storage';
 import { loadDrillHistory } from './drillEngine';
 
 export type CockpitSectionId =
@@ -311,30 +311,24 @@ export function getCockpitBadges(
  * Wczytuje stan postępów kokpitu z LocalStorage
  */
 export function loadCockpitProgress(): CockpitProgressState {
-  try {
-    const raw = readRaw(StorageKeys.cockpitProgress);
-    if (!raw) return { ...DEFAULT_PROGRESS };
-    const parsed = JSON.parse(raw);
-    return {
-      completedLessons: Array.isArray(parsed.completedLessons) ? parsed.completedLessons : [],
-      completedChallenges: Array.isArray(parsed.completedChallenges) ? parsed.completedChallenges : [],
-      notes: typeof parsed.notes === 'object' && parsed.notes !== null ? parsed.notes : {},
-      lastPracticeDate: parsed.lastPracticeDate,
-    };
-  } catch {
-    return { ...DEFAULT_PROGRESS };
-  }
+  const parsed = readJson<Partial<CockpitProgressState> | null>(StorageKeys.cockpitProgress, null);
+  if (!parsed) return { ...DEFAULT_PROGRESS };
+  return {
+    completedLessons: Array.isArray(parsed.completedLessons) ? parsed.completedLessons : [],
+    completedChallenges: Array.isArray(parsed.completedChallenges) ? parsed.completedChallenges : [],
+    notes: typeof parsed.notes === 'object' && parsed.notes !== null ? parsed.notes : {},
+    lastPracticeDate: parsed.lastPracticeDate,
+  };
 }
 
 /**
  * Zapisuje stan postępów kokpitu do LocalStorage
+ *
+ * `writeJson` połyka wyjątki (tryb prywatny, przepełniony limit), więc utrata
+ * zapisu nie wywraca interfejsu — to samo robił tu wcześniejszy własny try/catch.
  */
 export function saveCockpitProgress(progress: CockpitProgressState): void {
-  try {
-    writeRaw(StorageKeys.cockpitProgress, JSON.stringify(progress));
-  } catch {
-    // ignore
-  }
+  writeJson(StorageKeys.cockpitProgress, progress);
 }
 
 /**

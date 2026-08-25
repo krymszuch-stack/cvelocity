@@ -30,6 +30,12 @@ export interface SpecializationPickerProps {
   onUpdateSkillsMatrix: (updated: SkillsMatrixType) => void;
   /** Podrola wykryta wcześniej z ogłoszenia — użyta jako wartość początkowa. */
   initialSubRoleId?: string;
+  /**
+   * Zapisuje jawny wybór użytkownika (albo jego wyczyszczenie). Bez tego wybór
+   * branży żył tylko do wyjścia z widoku i każde kolejne wejście startowało
+   * od nowego zgadywania zamiast od decyzji, którą ta osoba już podjęła.
+   */
+  onSubRoleChange?: (subRoleId: string | undefined) => void;
   className?: string;
 }
 
@@ -46,6 +52,7 @@ export const SpecializationPicker: React.FC<SpecializationPickerProps> = ({
   skillsMatrix,
   onUpdateSkillsMatrix,
   initialSubRoleId,
+  onSubRoleChange,
   className = '',
 }) => {
   const sectors = getAllSectors();
@@ -134,6 +141,7 @@ export const SpecializationPicker: React.FC<SpecializationPickerProps> = ({
             setSectorId(event.target.value);
             // Podrola z poprzedniego sektora nie ma sensu w nowym.
             setSubRoleId('');
+            onSubRoleChange?.(undefined);
           }}
         />
 
@@ -148,7 +156,11 @@ export const SpecializationPicker: React.FC<SpecializationPickerProps> = ({
               label: subRole.title,
             })),
           ]}
-          onChange={(event) => setSubRoleId(event.target.value)}
+          onChange={(event) => {
+            const next = event.target.value || undefined;
+            setSubRoleId(event.target.value);
+            onSubRoleChange?.(next);
+          }}
         />
       </div>
 

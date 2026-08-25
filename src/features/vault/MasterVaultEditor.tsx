@@ -69,13 +69,26 @@ export const MasterVaultEditor: React.FC<MasterVaultEditorProps> = ({
    * ustawiał, więc każdy zaczynał od dwóch pustych list rozwijanych, nawet mając
    * wpisany tytuł zawodowy. To nadal wyłącznie **wartość początkowa**: obie listy
    * zostają do zmiany, a żadna umiejętność nie wchodzi do profilu bez kliknięcia.
+   *
+   * Jawny wybór użytkownika (`profiler.subRoleId`) bije rozpoznanie — zgadywanka
+   * służy dopóki decyzja nie została podjęta, nie po niej.
    */
   const detectedSubRoleId = useMemo(() => {
+    if (vault.profiler?.subRoleId) return vault.profiler.subRoleId;
     const signal = [vault.personalInfo.title, vault.history[0]?.role, vault.history[0]?.company]
       .filter(Boolean)
       .join(' ');
     return signal.trim() ? bestSubRoleMatch(signal)?.subRole.id : undefined;
-  }, [vault.personalInfo.title, vault.history]);
+  }, [vault.profiler?.subRoleId, vault.personalInfo.title, vault.history]);
+
+  /**
+   * Zapis wybranej podroli do vaultu. Bez niego wybór branży znikał razem z
+   * widokiem i kolejne wejście dostawało ponownie rozpoznanie z tekstu zamiast
+   * decyzji użytkownika.
+   */
+  const handleSubRoleChange = (subRoleId: string | undefined) => {
+    onChange({ ...vault, profiler: { ...vault.profiler, subRoleId } });
+  };
   const [activeStep, setActiveStep] = useState(0);
   const [notification, setNotification] = useState<string | null>(null);
 
@@ -249,6 +262,7 @@ export const MasterVaultEditor: React.FC<MasterVaultEditorProps> = ({
                   initialSubRoleId={detectedSubRoleId}
                   skillsMatrix={vault.skillsMatrix}
                   onUpdateSkillsMatrix={(updated) => onChange({ ...vault, skillsMatrix: updated })}
+                  onSubRoleChange={handleSubRoleChange}
                   className="mb-4"
                 />
               )}
@@ -343,6 +357,7 @@ export const MasterVaultEditor: React.FC<MasterVaultEditorProps> = ({
             initialSubRoleId={detectedSubRoleId}
             skillsMatrix={vault.skillsMatrix}
             onUpdateSkillsMatrix={(updated) => onChange({ ...vault, skillsMatrix: updated })}
+            onSubRoleChange={handleSubRoleChange}
           />
 
           <SkillsMatrix
