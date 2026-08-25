@@ -4,15 +4,15 @@ import { mergeImportedVault } from '../vaultImportMerge';
 import { createEmptyVault } from '../sampleVault';
 
 describe('Real CV Extraction and Master Vault Ingestion', () => {
-  const adrianCvText = `
-ADRIAN KOZIŃSKI
+  const sampleItCvText = `
+MAREK KOWALCZYK
 Wsparcie Klienta i IT · Administracja · Analiza Danych
-Kraków, Polska | +48 789 644 789 | adrian.kozinski.dev@gmail.com
-linkedin.com/in/adrian-koziński | oathcry.com | Dostępność: natychmiastowa
+Kraków, Polska | +48 501 234 567 | marek.kowalczyk.test@example.com
+linkedin.com/in/marek-kowalczyk | portfolio.example.com | Dostępność: natychmiastowa
 
 PROFIL ZAWODOWY
 Specjalista łączący obsługę klienta, wsparcie techniczne IT i administrację procesami. Technik informatyk z 
-kwalifikacjami E.12–E.14 (sprzęt komputerowy, sieci LAN, bazy danych) oraz absolwent filologii rosyjskiej. Praktyczne 
+kwalifikacjami E.12–E.14 (sprzęt komputerowy, sieci LAN, bazy danych) oraz absolwent filologii. Praktyczne 
 doświadczenie w pracy na pierwszej i drugiej linii wsparcia, obsłudze zgłoszeń w systemach ticketowych i CRM, 
 weryfikacji danych oraz monitorowaniu zgłoszeń fraudowych w środowisku bankowym objętym procedurami SLA. 
 Średnia ocena jakości obsługi klienta: 4,40/5. Dokładny, odporny na presję czasu, konsekwentny w dokumentowaniu 
@@ -71,12 +71,13 @@ INTERIA.PL Sp. z o.o. · Kraków
 rozwiązywanie problemów sprzętowych oraz programowych
 • Zaawansowane prace serwisowe: rozbudowa i naprawa laptopów, naprawa urządzeń peryferyjnych, klonowanie 
 dysków, odzyskiwanie danych
+• Prace infrastrukturalne: układanie i montaż okablowania sieciowego oraz przygotowanie stanowisk pracy pod 
+kątem technicznym
 
 WYKSZTAŁCENIE
-Filologia rosyjska, specjalność przekładoznawcza — licencjat 2020 – 2024
+Filologia, specjalność przekładoznawcza — licencjat 2020 – 2024
 Uniwersytet Pedagogiczny im. KEN · Kraków
-Praca dyplomowa obroniona na ocenę 5. Ukończony rok studiów drugiego stopnia. Kwalifikacje do wykonywania 
-tłumaczeń zwykłych (niepoświadczonych) ustnych i pisemnych.
+Praca dyplomowa obroniona na ocenę 5. Kwalifikacje do wykonywania tłumaczeń zwykłych ustnych i pisemnych.
 
 Technik informatyk — wykształcenie średnie techniczne 09.2016 – 04.2020
 Zespół Szkół Elektrycznych nr 2 · Kraków
@@ -91,18 +92,18 @@ rozwoju firmy
 
 JĘZYKI OBCE
 • Polski — język ojczysty
-• Rosyjski — C1 (zaawansowany, potwierdzony dyplomem filologii rosyjskiej)
+• Rosyjski — C1 (zaawansowany)
 • Angielski — C1 (zaawansowany; swobodna komunikacja ustna i pisemna, dokumentacja techniczna)
 • Hiszpański — A2 (podstawowy)
 `;
 
-  it('w 100% poprawnie parsuje pełne CV Adriana Kozińskiego do struktury Master Vault', () => {
-    const parsed = parseTextToMasterVault(adrianCvText);
+  it('w 100% poprawnie parsuje złożone CV techniczne do struktury Master Vault', () => {
+    const parsed = parseTextToMasterVault(sampleItCvText);
 
     // Personal Info
-    expect(parsed.personalInfo.fullName).toBe('ADRIAN KOZIŃSKI');
-    expect(parsed.personalInfo.email).toBe('adrian.kozinski.dev@gmail.com');
-    expect(parsed.personalInfo.phone).toBe('+48 789 644 789');
+    expect(parsed.personalInfo.fullName).toBe('MAREK KOWALCZYK');
+    expect(parsed.personalInfo.email).toBe('marek.kowalczyk.test@example.com');
+    expect(parsed.personalInfo.phone).toBe('+48 501 234 567');
     expect(parsed.personalInfo.location).toContain('Kraków');
     expect(parsed.personalInfo.summary).toContain('Specjalista łączący obsługę klienta');
 
@@ -146,8 +147,8 @@ JĘZYKI OBCE
       },
     });
 
-    expect(mergedVault.personalInfo.fullName).toBe('ADRIAN KOZIŃSKI');
-    expect(mergedVault.personalInfo.email).toBe('adrian.kozinski.dev@gmail.com');
+    expect(mergedVault.personalInfo.fullName).toBe('MAREK KOWALCZYK');
+    expect(mergedVault.personalInfo.email).toBe('marek.kowalczyk.test@example.com');
     expect(mergedVault.history.length).toBeGreaterThanOrEqual(4);
     expect(mergedVault.education.length).toBeGreaterThanOrEqual(1);
   });

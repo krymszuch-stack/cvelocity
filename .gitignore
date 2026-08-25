@@ -13,6 +13,9 @@ coverage/
 .env.production.local
 !.env.example
 
+# Temporary test files
+test_files/
+
 # OS metadata
 .DS_Store
 Thumbs.db
