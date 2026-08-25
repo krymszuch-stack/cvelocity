@@ -67,6 +67,7 @@ interface AuthContextType {
 
   signUpCloud: (email: string, password: string, displayName: string) => Promise<AuthActionResult>;
   signInCloud: (email: string, password: string) => Promise<AuthActionResult>;
+  signInWithGoogle: () => Promise<AuthActionResult>;
   requestPasswordReset: (email: string) => Promise<AuthActionResult>;
   resendConfirmation: (email: string) => Promise<AuthActionResult>;
 
@@ -210,6 +211,24 @@ export const AuthProvider: React.FC<{
     [supabase]
   );
 
+  const signInWithGoogle = useCallback(async (): Promise<AuthActionResult> => {
+    if (!supabase) return { ok: false, message: 'Konta w chmurze nie są tu skonfigurowane.' };
+
+    const { error } = await supabase.auth.signInWithOAuth({
+      provider: 'google',
+      options: {
+        redirectTo: redirectTarget(),
+        queryParams: {
+          access_type: 'offline',
+          prompt: 'select_account',
+        },
+      },
+    });
+
+    if (error) return { ok: false, message: authErrorMessage(error) };
+    return { ok: true, message: '' };
+  }, [supabase]);
+
   const requestPasswordReset = useCallback(
     async (email: string): Promise<AuthActionResult> => {
       if (!supabase) return { ok: false, message: 'Konta w chmurze nie są tu skonfigurowane.' };
@@ -338,6 +357,7 @@ export const AuthProvider: React.FC<{
       signInLocally,
       signUpCloud,
       signInCloud,
+      signInWithGoogle,
       requestPasswordReset,
       resendConfirmation,
       logout,
@@ -354,6 +374,7 @@ export const AuthProvider: React.FC<{
       signInLocally,
       signUpCloud,
       signInCloud,
+      signInWithGoogle,
       requestPasswordReset,
       resendConfirmation,
       logout,

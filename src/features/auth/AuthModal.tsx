@@ -43,11 +43,60 @@ const TYTULY: Record<Widok, string> = {
   lokalny: 'Profil na tym urządzeniu',
 };
 
+const GoogleIcon: React.FC<{ className?: string }> = ({ className = 'h-4 w-4' }) => (
+  <svg className={className} viewBox="0 0 24 24" aria-hidden="true">
+    <path
+      fill="#4285F4"
+      d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"
+    />
+    <path
+      fill="#34A853"
+      d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"
+    />
+    <path
+      fill="#FBBC05"
+      d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z"
+    />
+    <path
+      fill="#EA4335"
+      d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z"
+    />
+  </svg>
+);
+
+const GoogleButton: React.FC<{
+  onClick: () => void;
+  loading?: boolean;
+  text?: string;
+}> = ({ onClick, loading, text = 'Kontynuuj z Google' }) => (
+  <button
+    type="button"
+    onClick={onClick}
+    disabled={loading}
+    className="flex w-full items-center justify-center gap-3 rounded-xl border border-line bg-surface px-4 py-2.5 text-sm font-semibold text-ink shadow-xs transition hover:bg-elevated hover:border-ink/20 disabled:opacity-50 active:scale-[0.99]"
+  >
+    <GoogleIcon />
+    <span>{loading ? 'Łączenie z Google...' : text}</span>
+  </button>
+);
+
+const OrDivider: React.FC<{ text?: string }> = ({ text = 'lub' }) => (
+  <div className="relative my-3 flex items-center justify-center">
+    <div className="absolute inset-0 flex items-center">
+      <div className="w-full border-t border-line" />
+    </div>
+    <span className="relative bg-surface px-2 text-[10px] font-bold uppercase tracking-wider text-muted">
+      {text}
+    </span>
+  </div>
+);
+
 export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onSuccessVaultLoaded }) => {
   const {
     signInLocally,
     signUpCloud,
     signInCloud,
+    signInWithGoogle,
     requestPasswordReset,
     cloudAvailable,
   } = useAuth();
@@ -120,6 +169,17 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onSuccess
     },
     [email, haslo, signInCloud, zamknij]
   );
+
+  const zalogujGoogle = useCallback(async () => {
+    setBlad('');
+    setPracuje(true);
+    const wynik = await signInWithGoogle();
+    setPracuje(false);
+
+    if (!wynik.ok) {
+      setBlad(wynik.message);
+    }
+  }, [signInWithGoogle]);
 
   const zarejestruj = useCallback(
     async (e: React.FormEvent) => {
@@ -204,14 +264,21 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onSuccess
       {/* --- wybór trybu --- */}
       {widok === 'wybor' && (
         <div className="space-y-3">
+          {cloudAvailable && (
+            <>
+              <GoogleButton onClick={zalogujGoogle} loading={pracuje} text="Zaloguj się przez Google" />
+              <OrDivider text="lub wybierz metodę" />
+            </>
+          )}
+
           <button
             type="button"
             onClick={() => idzDo('logowanie')}
-            className="flex w-full items-start gap-3 rounded-xl border border-line bg-surface p-4 text-left hover:border-brand-400"
+            className="flex w-full items-start gap-3 rounded-xl border border-line bg-surface p-4 text-left hover:border-brand-400 transition"
           >
             <Cloud className="mt-0.5 h-5 w-5 shrink-0 text-brand-fg" />
             <span>
-              <span className="block text-sm font-bold text-ink">Konto w chmurze</span>
+              <span className="block text-sm font-bold text-ink">Konto w chmurze (E-mail i hasło)</span>
               <span className="mt-0.5 block text-xs text-muted">
                 CV przeżyje wyczyszczenie przeglądarki i wróci na innym urządzeniu.
               </span>
@@ -221,7 +288,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onSuccess
           <button
             type="button"
             onClick={() => idzDo('lokalny')}
-            className="flex w-full items-start gap-3 rounded-xl border border-line bg-surface p-4 text-left hover:border-brand-400"
+            className="flex w-full items-start gap-3 rounded-xl border border-line bg-surface p-4 text-left hover:border-brand-400 transition"
           >
             <HardDrive className="mt-0.5 h-5 w-5 shrink-0 text-muted" />
             <span>
@@ -236,91 +303,101 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onSuccess
 
       {/* --- logowanie --- */}
       {widok === 'logowanie' && (
-        <form onSubmit={zaloguj} className="space-y-4">
-          <Input
-            label="Adres e-mail"
-            type="email"
-            autoComplete="email"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            required
-            autoFocus
-          />
-          <Input
-            label="Hasło"
-            type="password"
-            autoComplete="current-password"
-            value={haslo}
-            onChange={(e) => setHaslo(e.target.value)}
-            required
-          />
-          <Button type="submit" variant="primary" loading={pracuje} className="w-full">
-            Zaloguj się
-          </Button>
+        <div className="space-y-4">
+          <GoogleButton onClick={zalogujGoogle} loading={pracuje} text="Kontynuuj z Google" />
+          <OrDivider text="lub e-mail i hasło" />
 
-          <div className="flex justify-between text-xs">
-            <button type="button" onClick={() => idzDo('rejestracja')} className="font-semibold text-brand-fg">
-              Załóż konto
-            </button>
-            <button type="button" onClick={() => idzDo('reset')} className="text-muted hover:text-ink">
-              Nie pamiętam hasła
-            </button>
-          </div>
-        </form>
+          <form onSubmit={zaloguj} className="space-y-4">
+            <Input
+              label="Adres e-mail"
+              type="email"
+              autoComplete="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              required
+              autoFocus
+            />
+            <Input
+              label="Hasło"
+              type="password"
+              autoComplete="current-password"
+              value={haslo}
+              onChange={(e) => setHaslo(e.target.value)}
+              required
+            />
+            <Button type="submit" variant="primary" loading={pracuje} className="w-full">
+              Zaloguj się
+            </Button>
+
+            <div className="flex justify-between text-xs">
+              <button type="button" onClick={() => idzDo('rejestracja')} className="font-semibold text-brand-fg">
+                Załóż konto
+              </button>
+              <button type="button" onClick={() => idzDo('reset')} className="text-muted hover:text-ink">
+                Nie pamiętam hasła
+              </button>
+            </div>
+          </form>
+        </div>
       )}
 
       {/* --- rejestracja --- */}
       {widok === 'rejestracja' && (
-        <form onSubmit={zarejestruj} className="space-y-4">
-          <Input
-            label="Jak się do Ciebie zwracać"
-            value={imie}
-            onChange={(e) => setImie(e.target.value)}
-            placeholder="np. Jan"
-            autoFocus
-          />
-          <Input
-            label="Adres e-mail"
-            type="email"
-            autoComplete="email"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            required
-          />
-          <div>
+        <div className="space-y-4">
+          <GoogleButton onClick={zalogujGoogle} loading={pracuje} text="Zarejestruj się przez Google" />
+          <OrDivider text="lub wypełnij formularz" />
+
+          <form onSubmit={zarejestruj} className="space-y-4">
             <Input
-              label="Hasło"
-              type="password"
-              autoComplete="new-password"
-              value={haslo}
-              onChange={(e) => setHaslo(e.target.value)}
-              hint="Co najmniej 12 znaków, mała i wielka litera oraz cyfra."
+              label="Jak się do Ciebie zwracać"
+              value={imie}
+              onChange={(e) => setImie(e.target.value)}
+              placeholder="np. Jan"
+              autoFocus
+            />
+            <Input
+              label="Adres e-mail"
+              type="email"
+              autoComplete="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
               required
             />
-            {haslo && (
-              <div className="mt-1.5 flex items-center gap-2">
-                <div className="h-1 flex-1 overflow-hidden rounded-full bg-sunken">
-                  <div
-                    className="h-full rounded-full bg-brand-600 transition-all"
-                    style={{ width: `${(sila / 4) * 100}%` }}
-                  />
+            <div>
+              <Input
+                label="Hasło"
+                type="password"
+                autoComplete="new-password"
+                value={haslo}
+                onChange={(e) => setHaslo(e.target.value)}
+                hint="Co najmniej 12 znaków, mała i wielka litera oraz cyfra."
+                required
+              />
+              {haslo && (
+                <div className="mt-1.5 flex items-center gap-2">
+                  <div className="h-1 flex-1 overflow-hidden rounded-full bg-sunken">
+                    <div
+                      className="h-full rounded-full bg-brand-600 transition-all"
+                      style={{ width: `${(sila / 4) * 100}%` }}
+                    />
+                  </div>
+                  <span className="font-mono text-[10px] text-subtle">{STRENGTH_LABELS[sila]}</span>
                 </div>
-                <span className="font-mono text-[10px] text-subtle">{STRENGTH_LABELS[sila]}</span>
-              </div>
-            )}
-          </div>
+              )}
+            </div>
 
-          <Button type="submit" variant="primary" loading={pracuje} className="w-full">
-            Załóż konto
-          </Button>
+            <Button type="submit" variant="primary" loading={pracuje} className="w-full">
+              Załóż konto
+            </Button>
 
-          <p className="text-center text-xs text-muted">
-            Masz już konto?{' '}
-            <button type="button" onClick={() => idzDo('logowanie')} className="font-semibold text-brand-fg">
-              Zaloguj się
-            </button>
-          </p>
-        </form>
+            <p className="text-center text-xs text-muted">
+              Masz już konto?{' '}
+              <button type="button" onClick={() => idzDo('logowanie')} className="font-semibold text-brand-fg">
+                Zaloguj się
+              </button>
+            </p>
+          </form>
+        </div>
       )}
 
       {/* --- reset hasła --- */}
