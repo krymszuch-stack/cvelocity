@@ -9,12 +9,14 @@ import {
   DrillAttemptRecord,
 } from '../drillEngine';
 import { MemoryStorage } from './helpers/memoryStorage';
+import { resetLastGoodCache } from '../storage';
 import { MockDrillMode, invokeMockDrillMode } from '../../skills/mock-drill-mode';
 import { ag } from '../../skills/liveHudSkill';
 
 describe('DrillEngine (Tryb Mock Drill Mode - mock-drill-mode-v1)', () => {
   beforeEach(() => {
     (globalThis as { localStorage?: unknown }).localStorage = new MemoryStorage();
+    resetLastGoodCache();
   });
 
   describe('Losowanie pytań rekrutacyjnych', () => {

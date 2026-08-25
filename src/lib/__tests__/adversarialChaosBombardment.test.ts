@@ -21,6 +21,9 @@ import { evaluateKnockouts } from '../knockouts';
 import { buildStarStoriesFromVault } from '../starStoryEngine';
 import { mergeImportedVault } from '../vaultImportMerge';
 import { buildGlossary, buildRedFlagsChecklist, buildLocalStarSeeds } from '../interviewCheatSheetEngine';
+import { normalizeDocumentText } from '../textNormalization';
+import { parseJobDescriptionLocal } from '../jdParser';
+import { createEmptyVault } from '../sampleVault';
 import { MasterVault } from '../../types';
 
 describe('Adversarial Chaos & Hallucination Bombardment Test Suite', () => {
@@ -325,6 +328,168 @@ describe('Adversarial Chaos & Hallucination Bombardment Test Suite', () => {
 
       const seeds = buildLocalStarSeeds(parsedJd, vaultWithManyExp);
       expect(seeds.length).toBeGreaterThan(0);
+    });
+  });
+
+  // ===========================================================================
+  // SEKCJA: Testy obciążeniowe i brzegowe (Lead QA Automation)
+  // ===========================================================================
+
+  describe('Obciążenie: ogromny Skarbiec (50 stanowisk, 250 osiągnięć, 400 technologii)', () => {
+    const buildHugeVault = (): MasterVault => {
+      const technologies = [
+        'React', 'TypeScript', 'Node.js', 'PostgreSQL', 'Docker', 'Kubernetes',
+        'Redis', 'Kafka', 'GraphQL', 'Terraform',
+      ];
+
+      return {
+        version: '1',
+        updatedAt: new Date().toISOString(),
+        profiler: { flags: ['OFFICE_IT'], experienceLevel: 'SENIOR', location: { city: 'Warszawa', radiusKm: 30, willingnessToTravel: false, hybridWork: true, remoteOnly: false }, languages: [], licenses: [] },
+        personalInfo: {
+          fullName: 'Marek Obciążeniowy',
+          email: 'marek@example.pl',
+          phone: '+48 600 000 000',
+          location: 'Warszawa',
+          title: 'Senior Full-Stack Engineer',
+          summary: 'Inżynier o szerokim doświadczeniu produktowym.',
+        },
+        skillsMatrix: {
+          hardSkills: Array.from({ length: 200 }, (_, i) => `Umiejętność twarda ${i + 1} (${technologies[i % technologies.length]})`),
+          softSkills: Array.from({ length: 20 }, (_, i) => `Kompetencja miękką ${i + 1}`),
+          toolsAndTech: Array.from({ length: 180 }, (_, i) => `Narzędzie ${i + 1} — ${technologies[i % technologies.length]}`),
+          certifications: [],
+        },
+        history: Array.from({ length: 50 }, (_, jobIdx) => ({
+          id: `job-${jobIdx + 1}`,
+          company: `Firma ${jobIdx + 1} Sp. z o.o.`,
+          role: `${jobIdx % 2 === 0 ? 'Frontend' : 'Backend'} Developer ${jobIdx + 1}`,
+          location: 'Warszawa',
+          startDate: `${2010 + Math.floor(jobIdx / 5)}-01-01`,
+          endDate: `${2010 + Math.floor(jobIdx / 5)}-12-31`,
+          isCurrent: false,
+          description: 'Rozwój i utrzymanie systemów produkcyjnych.',
+          highlights: Array.from({ length: 5 }, (_, hIdx) => ({
+            id: `job-${jobIdx + 1}-h${hIdx + 1}`,
+            text: `Zrealizowałem projekt ${hIdx + 1} w firmie ${jobIdx + 1}, integrując ${technologies[(jobIdx + hIdx) % technologies.length]} z istniejącym stackiem.`,
+            action: 'Zrealizowałem',
+            target: `projekt ${hIdx + 1}`,
+            tool: technologies[(jobIdx + hIdx) % technologies.length],
+            metric: `${((jobIdx * 5 + hIdx) % 40) + 5}%`,
+            keywords: [technologies[(jobIdx + hIdx) % technologies.length]],
+          })),
+        })),
+        education: [],
+        projects: [],
+      } as unknown as MasterVault;
+    };
+
+    it('ranking 50 stanowisk / 250 osiągnięć wykonuje się poniżej 15 ms (mediana z 10 przebiegów)', () => {
+      const vault = buildHugeVault();
+      const jdKeywords = ['React', 'Node.js', 'Docker', 'PostgreSQL', 'GraphQL'];
+
+      // Rozgrzewka JIT poza pomiarem — mierzymy ustabilizowany silnik,
+      // nie koszt pierwszego dotknięcia kodu.
+      getRelevanceOrderedExperienceIds(vault.history, jdKeywords, 'Full-Stack Engineer');
+      rankHighlightsByRelevance(vault.history[0].highlights, jdKeywords);
+
+      const czasy: number[] = [];
+      for (let i = 0; i < 10; i++) {
+        const start = performance.now();
+        getRelevanceOrderedExperienceIds(vault.history, jdKeywords, 'Full-Stack Engineer');
+        rankHighlightsByRelevance(
+          vault.history.flatMap((job) => job.highlights),
+          jdKeywords
+        );
+        czasy.push(performance.now() - start);
+      }
+
+      czasy.sort((a, b) => a - b);
+      const mediana = czasy[Math.floor(czasy.length / 2)];
+
+      console.log(`  Ogromny Skarbiec — mediana selekcji: ${mediana.toFixed(2)} ms (max: ${czasy[czasy.length - 1].toFixed(2)} ms)`);
+
+      // Twardy próg z zadania. Mediana, nie pojedynczy przebieg: jeden outlier
+      // od GC nie świadczy o złożoności silnika.
+      expect(mediana).toBeLessThan(15);
+    });
+  });
+
+  describe('Zniekształcone kodowanie: UTF-8, cyrylica, NBSP, zero-width space', () => {
+    it('normalizacja czyści niewidzialne znaki bez utraty polskich liter', () => {
+      // Zero-width space wewnątrz słowa (typowy śmieć z PDF) musi się skleić
+      // z powrotem w poprawny wyraz.
+      const zaśmiecone =
+        'Jan\u00A0Kowalski\u200B — Automatyk\uFEFF SEP\u00A0G3.\nDoświadczenie:\u200B zwi\u200Bększyłem wydajność o 30%.';
+
+      const wyczyszczone = normalizeDocumentText(zaśmiecone);
+
+      expect(wyczyszczone).not.toContain('\u00A0'); // NBSP
+      expect(wyczyszczone).not.toContain('\u200B'); // zero-width space
+      expect(wyczyszczone).not.toContain('\uFEFF'); // BOM
+
+      // Polskie znaki i sklejony wyraz przechodzą nietknięte — sedno regresji.
+      expect(wyczyszczone).toContain('Doświadczenie');
+      expect(wyczyszczone).toContain('zwiększyłem');
+      expect(wyczyszczone).toContain('wydajność');
+
+      // Treść biznesowa przetrwała.
+      expect(wyczyszczone).toContain('Automatyk SEP G3');
+      expect(wyczyszczone).toContain('30%');
+    });
+
+    it('cyrylicy nie zamienia się w krzaczki — detekcja działa na oczyszczonym tekście', () => {
+      const mieszane = 'Іван\u00A0Петренко — Spawacz\u200BTIG.\nDoświadczenie: stocz\u0456nia Gdańsk.';
+      const wyczyszczone = normalizeDocumentText(mieszane);
+
+      expect(wyczyszczone).toContain('Іван');
+      // Zero-width space jest usuwany, nie zamieniany na spację — słowa po
+      // obu stronach zostają rozpoznawalne osobno.
+      expect(wyczyszczone).toContain('Spawacz');
+      expect(wyczyszczone).toContain('TIG');
+      expect(wyczyszczone).not.toContain('\u200B');
+
+      const detection = detectCyrillicScript(wyczyszczone);
+      expect(detection.hasCyrillic).toBe(true);
+    });
+
+    it('parsowanie CV z pełnym chaosem kodowania kończy się strukturą, nie wyjątkiem', () => {
+      const chaos = '\uFEFFІван\u00A0Петренко\u200B\nTechnik\u00A0UTDT\uFEFF\n—\u200BDoświadczenie:\u00A05 lat\u200B warsztatu.';
+
+      const wynik = parseTextToMasterVault(normalizeDocumentText(chaos), 'TXT');
+      expect(wynik).toBeDefined();
+      expect(typeof wynik.personalInfo.fullName).toBe('string');
+    });
+  });
+
+  describe('Skrajne wartości ogłoszenia: 50 000 znaków i pusty tekst', () => {
+    const ogromneJd = ('Wymagania: JavaScript, React oraz praca zespołowa. '.repeat(1100)).slice(0, 50_000);
+
+    it('jdParser przyjmuje 50 000 znaków i zwraca spójny obiekt, nie wyjątek', () => {
+      const parsed = parseJobDescriptionLocal(ogromneJd);
+      expect(parsed).toBeDefined();
+      expect(Array.isArray(parsed.requiredHardSkills)).toBe(true);
+      expect(parsed.jobTitle.length).toBeGreaterThanOrEqual(0);
+    });
+
+    it('jdParser dla pustego ogłoszenia zwraca domyślną strukturę, nie TypeError', () => {
+      const parsed = parseJobDescriptionLocal('');
+      expect(parsed).toBeDefined();
+      expect(Array.isArray(parsed.requiredHardSkills)).toBe(true);
+    });
+
+    it('atsScorer dla 50 000 znaków zwraca raport w granicach 0–100', () => {
+      const vault = createEmptyVault('Jan Testowy');
+      const report = buildAtsTelemetryReport({ vault: vault as MasterVault, jobDescription: ogromneJd });
+      expect(report.overallScore).toBeGreaterThanOrEqual(0);
+      expect(report.overallScore).toBeLessThanOrEqual(100);
+    });
+
+    it('atsScorer dla pustego ogłoszenia nie rzuca i zwraca spójny raport', () => {
+      const vault = createEmptyVault('Jan Testowy');
+      const report = buildAtsTelemetryReport({ vault: vault as MasterVault, jobDescription: '' });
+      expect(report.formulaBreakdown.knockoutPenalties).toBe(0);
+      expect(report.systemVulnerabilities).toHaveLength(3);
     });
   });
 });

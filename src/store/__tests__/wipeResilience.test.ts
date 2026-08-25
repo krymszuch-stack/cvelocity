@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { MemoryStorage } from '../../lib/__tests__/helpers/memoryStorage';
-import { StorageKeys } from '../../lib/storage';
+import { StorageKeys, resetLastGoodCache } from '../../lib/storage';
 import { createEmptyVault } from '../../lib/sampleVault';
 import type { JobApplication } from '../../types';
 
@@ -9,6 +9,7 @@ beforeEach(() => {
   // Sklepy trzymają stan w zmiennych modułowych, więc każdy test dostaje
   // świeże rejestry modułów — inaczej dane przenikałyby między testami.
   vi.resetModules();
+  resetLastGoodCache();
 });
 
 const STARA_DATA = '2020-01-01T00:00:00.000Z';

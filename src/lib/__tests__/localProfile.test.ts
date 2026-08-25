@@ -9,11 +9,12 @@ import {
   ANONYMOUS_PROFILE_ID,
 } from '../localProfile';
 import { createEmptyVault } from '../sampleVault';
-import { StorageKeys, migrateLegacyKeys, vaultKeyFor } from '../storage';
+import { StorageKeys, migrateLegacyKeys, resetLastGoodCache, vaultKeyFor } from '../storage';
 import { MemoryStorage } from './helpers/memoryStorage';
 
 beforeEach(() => {
   (globalThis as { localStorage?: unknown }).localStorage = new MemoryStorage();
+  resetLastGoodCache();
 });
 
 describe('Profil lokalny', () => {

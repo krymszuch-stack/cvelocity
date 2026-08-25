@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useId } from 'react';
 import { X } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { useFocusTrap } from '../../hooks/useFocusTrap';
@@ -7,6 +7,11 @@ export interface ModalProps {
   isOpen: boolean;
   onClose: () => void;
   title?: string;
+  /**
+   * Tekst pomocniczy wiązany przez `aria-describedby` — czytniki ekranu
+   * odczytają go zaraz po tytule, zanim wejdą w treść.
+   */
+  description?: string;
   size?: 'sm' | 'md' | 'lg' | 'xl' | 'full';
   children: React.ReactNode;
   footer?: React.ReactNode;
@@ -17,12 +22,19 @@ export const Modal: React.FC<ModalProps> = ({
   isOpen,
   onClose,
   title,
+  description,
   size = 'md',
   children,
   footer,
   className = '',
 }) => {
   const modalRef = useFocusTrap<HTMLDivElement>(isOpen);
+
+  // Statyczne id („modal-title") kolidowałyby przy dwóch modalach naraz
+  // — np. parser CV otwarty ponad modalem autoryzacji. useId daje każdej
+  // instancji własną przestrzeń identyfikatorów.
+  const titleId = useId();
+  const descriptionId = useId();
 
   // Close on Escape key press
   useEffect(() => {
@@ -61,7 +73,9 @@ export const Modal: React.FC<ModalProps> = ({
             ref={modalRef}
             role="dialog"
             aria-modal="true"
-            aria-labelledby={title ? 'modal-title' : undefined}
+            aria-labelledby={title ? titleId : undefined}
+            aria-describedby={description ? descriptionId : undefined}
+            tabIndex={-1}
             initial={{ opacity: 0, scale: 0.97, y: 10 }}
             animate={{ opacity: 1, scale: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.97, y: 10 }}
@@ -72,7 +86,7 @@ export const Modal: React.FC<ModalProps> = ({
             <div className="mb-5 flex items-center justify-between border-b border-line pb-4">
               {title ? (
                 <h3
-                  id="modal-title"
+                  id={titleId}
                   className="text-base font-bold text-ink sm:text-lg"
                 >
                   {title}
@@ -91,6 +105,11 @@ export const Modal: React.FC<ModalProps> = ({
             </div>
 
             {/* Content Body */}
+            {description && (
+              <p id={descriptionId} className="-mt-2 mb-4 text-sm text-ink-muted">
+                {description}
+              </p>
+            )}
             <div>{children}</div>
 
             {/* Optional Footer */}

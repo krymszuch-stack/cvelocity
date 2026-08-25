@@ -9,12 +9,18 @@ import {
   writeJson,
   migrateLegacyKeys,
   onAppStorageWiped,
+  resetLastGoodCache,
+  fnv1a,
+  SCHEMA_VERSION,
   wipeAppStorage,
 } from '../storage';
 import { MemoryStorage } from './helpers/memoryStorage';
 
 beforeEach(() => {
   (globalThis as { localStorage?: unknown }).localStorage = new MemoryStorage();
+  // Mapa ostatnich poprawnych stanów jest modułowa i przeżyłaby podmianę
+  // atrapy schowka — bez resetu wyniki przenikałyby między testami.
+  resetLastGoodCache();
 });
 
 describe('storage.ts - warstwa schowka przeglądarki', () => {
@@ -58,11 +64,37 @@ describe('storage.ts - warstwa schowka przeglądarki', () => {
       expect(localStorage.getItem('circular-key')).toBeNull();
     });
 
-    it('zapisuje poprawny obiekt jako ciąg JSON', () => {
+    it('zapisuje obiekt w kopercie z sumą kontrolną, odczyt go odwraca', () => {
       const obj = { active: true, count: 5 };
       writeJson('test-json-key', obj);
 
-      expect(localStorage.getItem('test-json-key')).toBe(JSON.stringify(obj));
+      const raw = localStorage.getItem('test-json-key');
+      expect(raw).not.toBeNull();
+
+      const envelope = JSON.parse(raw!) as { cvel: number; crc: string; data: string };
+      expect(envelope.cvel).toBe(SCHEMA_VERSION);
+      // Suma kontrola liczy się z dokładnym stringiem danych w kopercie.
+      expect(envelope.crc).toBe(fnv1a(envelope.data));
+      expect(JSON.parse(envelope.data)).toEqual(obj);
+
+      // Odczyt przez API zwraca oryginalny kształt, nie kopertę.
+      expect(readJson('test-json-key', null)).toEqual(obj);
+    });
+
+    it('podmiana danych unieważnia sumę kontrolną — readJson reveruje do ostatniego dobrego stanu', () => {
+      writeJson('crc-key', { value: 42 });
+
+      const envelope = JSON.parse(localStorage.getItem('crc-key')!) as { data: string };
+      envelope.data = envelope.data.replace('42', '43'); // symulacja uszkodzenia/ucięcia
+      localStorage.setItem('crc-key', JSON.stringify(envelope));
+
+      // Pierwsza linia obrony: pamięć sesyjna ostatniego poprawnego stanu —
+      // aplikacja działa dalej na prawdziwych danych użytkownika.
+      expect(readJson<{ value: number } | null>('crc-key', null)).toEqual({ value: 42 });
+
+      // Bez pamięci sesyjnej (chłodny start z uszkodzonym plikiem) — fallback.
+      resetLastGoodCache();
+      expect(readJson<{ value: number } | null>('crc-key', null)).toBeNull();
     });
   });
 
