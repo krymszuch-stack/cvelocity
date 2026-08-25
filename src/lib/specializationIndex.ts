@@ -118,8 +118,24 @@ function toStems(phrase: string): string[] {
  */
 const MAX_SPECIFICITY = 4;
 
+/**
+ * Rdzenie fraz katalogu liczone **raz**.
+ *
+ * Frazy pochodzą ze statycznego katalogu `specializations.ts`, więc ich
+ * stemowanie nie może dać innego wyniku przy drugim podejściu. Bez tej pamięci
+ * każde wywołanie `matchSubRoles` stemowało od nowa kilkaset fraz — a funkcja
+ * leży na gorącej ścieżce podpowiedzi formularzy, gdzie biegnie przy każdym
+ * wpisanym znaku. Kluczem jest fraza z katalogu, nie tekst użytkownika, więc
+ * pamięć jest ograniczona rozmiarem katalogu.
+ */
+const phraseStemsCache = new Map<string, string[]>();
+
 function phraseSpecificity(phrase: string, textStems: Set<string>): number {
-  const stems = toStems(phrase);
+  let stems = phraseStemsCache.get(phrase);
+  if (!stems) {
+    stems = toStems(phrase);
+    phraseStemsCache.set(phrase, stems);
+  }
   if (stems.length === 0) return 0;
   if (!stems.every((stem) => textStems.has(stem))) return 0;
 
