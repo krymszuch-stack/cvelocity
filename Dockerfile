@@ -52,6 +52,21 @@ RUN npm ci --omit=dev --no-audit --no-fund && npm cache clean --force
 
 COPY --from=build /app/dist ./dist
 
+# Graf semantyczny (PoliMorf/ESCO) jako baza SQLite tylko-do-odczytu.
+#
+# Plik `work-graph.db` jest generowany (`npm run seed:import` w pakiecie
+# semantic-work-graph) i nie leży w repozytorium — kopiowanie całego katalogu
+# `data/` przenosi go do obrazu wtedy, gdy zdążył powstać przed buildem, a bez
+# niego obraz i tak się buduje (katalog niesie też seed i dokumenty).
+#
+# Warunek pakowania: przed buildem baza musi zostać zcheckpointowana i
+# przestawiona na `PRAGMA journal_mode = DELETE`. Tryb WAL jest trwały w
+# nagłówku pliku, a czytelnik bazy WAL tworzy obok siebie pliki `-wal`/`-shm`
+# — na systemie plików tylko-do-odczytu kontenera skończyło by się to błędem.
+# Odczyt otwiera `SqliteGraphRepository({ readonly: true })`, co dodatkowo
+# wymusza `query_only = ON` i `fileMustExist`.
+COPY --from=build /app/semantic-work-graph/data ./semantic-work-graph/data
+
 # Kontener nie ma powodu działać jako root. Obraz `node` ma gotowego
 # nieuprzywilejowanego użytkownika `node` (uid 1000).
 USER node

@@ -117,6 +117,34 @@ try {
     `zwrócono ${aliceReadsOwn.data?.length ?? 0} wierszy`
   );
 
+  console.log('\nIzolacja zapisu między kontami (UPDATE/DELETE):');
+
+  // Odczyt to połowa granicy. Polityka UPDATE bez `with check` albo DELETE
+  // bez polityki usuwania pozwoliłyby drugiej osobie zmazać cudze CV mimo
+  // braku możliwości jego zobaczenia.
+  const bobOverwrites = await bob.client
+    .from('vaults')
+    .update({ data: { sekret: 'Podmienione przez Boba' } })
+    .eq('user_id', alice.id);
+  const aliceAfterOverwrite = await admin
+    .from('vaults')
+    .select('data')
+    .eq('user_id', alice.id)
+    .maybeSingle();
+  check(
+    "Bob nie może nadpisać vaultu Alicji",
+    aliceAfterOverwrite.data?.data?.sekret === 'CV Alicji',
+    bobOverwrites.error ? `błąd: ${bobOverwrites.error.message}` : 'aktualizacja dotknęła wiersz'
+  );
+
+  const bobDeletes = await bob.client.from('vaults').delete().eq('user_id', alice.id);
+  const aliceCountAfterDelete = await admin.from('vaults').select('*', { count: 'exact', head: true }).eq('user_id', alice.id);
+  check(
+    'Bob nie może usunąć vaultu Alicji',
+    (aliceCountAfterDelete.count ?? 0) === 1,
+    bobDeletes.error ? `błąd: ${bobDeletes.error.message}` : `wierszy po próbie: ${aliceCountAfterDelete.count ?? 0}`
+  );
+
   console.log('\nOchrona statusu subskrypcji:');
 
   // Sedno sprawy: gdyby to przeszło, plan Pro byłby darmowy dla każdego, kto
@@ -154,6 +182,25 @@ try {
     'Piąte wywołanie przechodzi, szóste jest odrzucane',
     results.slice(0, 5).every((r) => r === true) && results[5] === false,
     `wyniki: ${results.join(', ')}`
+  );
+
+  console.log('\nWyścig o limit AI (blokada pesymistyczna):');
+
+  // Dziesięć równoległych rezerwacji z limitem 5. Bez `SELECT ... FOR UPDATE`
+  // w procedurze wszystkie dziesięć zdążyłoby odczytać licznik przed jakimkolwiek
+  // zapisem i każda przeszłaby — to jest dokładnie klasa wyścigu, którą test
+  // ma wyłapać, zanim trafi na produkcję.
+  const race = await Promise.all(
+    Array.from({ length: 10 }, () =>
+      admin.rpc('reserve_ai_quota', { p_user_id: alice.id, p_max_daily_uses: 5 })
+    )
+  );
+  const allowedCount = race.filter((r) => r.data?.allowed === true).length;
+  const deniedCount = race.filter((r) => r.data?.allowed === false).length;
+  check(
+    'Z 10 równoległych rezerwacji (limit 5) dokładnie 5 przechodzi',
+    allowedCount === 5 && deniedCount === 5,
+    `dopuszczono: ${allowedCount}, odrzucono: ${deniedCount}`
   );
 
   console.log('\nUsunięcie konta:');

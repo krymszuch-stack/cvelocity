@@ -78,33 +78,59 @@ const POS_PRIORITY_SQL = (column: string): string =>
     .join(' ') +
   ' ELSE 9 END';
 
+export interface GraphRepositoryOptions {
+  /**
+   * Tryb tylko do odczytu dla bezstanowych kontenerów.
+   *
+   * Kontener Cloud Run ma zapisywalny wyłącznie `/tmp`, a baza leży obok kodu
+   * w obrazie. Otwarcie read-write przy pierwszym zapytaniu próbowało stworzyć
+   * pliki `-wal`/`-shm` obok bazy i wywróciło by się na systemie plików tylko
+   * do odczytu, mimo że czytelnikowi zapis jest zbędny. `fileMustExist`
+   * dodatkowo zamienia cichy „pusta nowa baza" na jasny błąd konfiguracji —
+   * brakujący plik danych to błąd wdrożenia, nie stan do obsłużenia.
+   */
+  readonly?: boolean;
+}
+
 export class SqliteGraphRepository {
   private readonly db: Database.Database;
   private readonly statements = new Map<string, Database.Statement>();
 
-  constructor(dbPath: string = './data/swg.db') {
+  constructor(dbPath: string = './data/swg.db', options: GraphRepositoryOptions = {}) {
     const isMemory = dbPath === ':memory:' || dbPath.startsWith('file::memory:');
+    const readonlyMode = options.readonly === true;
 
     if (isMemory) {
       this.db = new Database(dbPath);
     } else {
       const resolvedPath = path.resolve(dbPath);
       const dir = path.dirname(resolvedPath);
-      if (!fs.existsSync(dir)) {
+      // W trybie odczytu katalog musi już istnieć razem z bazą; tworzenie go
+      // byłobym side-efektem zapisu, którego tu być nie ma.
+      if (!readonlyMode && !fs.existsSync(dir)) {
         fs.mkdirSync(dir, { recursive: true });
       }
-      this.db = new Database(resolvedPath);
+      this.db = new Database(resolvedPath, { readonly: readonlyMode, fileMustExist: readonlyMode });
     }
 
-    // Write-Ahead Logging: czytelnicy nie blokują pisarza, a masowy import
-    // słownika (miliony wierszy) nie przepisuje całej bazy przy każdej transakcji.
-    this.db.pragma('journal_mode = WAL');
-    // NORMAL: fsync tylko przy checkpointach WAL. Baza jest odtwarzalna
-    // (`npm run seed:lexicon`), więc pełna trwałość FULL to zbędny koszt.
-    this.db.pragma('synchronous = NORMAL');
-    this.db.pragma('foreign_keys = ON');
+    if (readonlyMode) {
+      // Podwójna zapora: sterownik nie otworzy pliku do zapisu, a silnik SQLite
+      // odrzuci każde polecenie modyfikujące — także te wykonane przez przypadkowy
+      // `getRawDb()` u konsumenta działającego na kopii produkcyjnej.
+      this.db.pragma('query_only = ON');
+    } else {
+      // Write-Ahead Logging: czytelnicy nie blokują pisarza, a masowy import
+      // słownika (miliony wierszy) nie przepisuje całej bazy przy każdej transakcji.
+      // W trybie odczytu pomijane celowo: przełączenie journal_mode to zapis,
+      // a pliki WAL i tak nie mają prawa powstać obok bazy z obrazu.
+      this.db.pragma('journal_mode = WAL');
+      // NORMAL: fsync tylko przy checkpointach WAL. Baza jest odtwarzalna
+      // (`npm run seed:lexicon`), więc pełna trwałość FULL to zbędny koszt.
+      this.db.pragma('synchronous = NORMAL');
+      this.db.pragma('foreign_keys = ON');
 
-    this.initDatabase();
+      this.initDatabase();
+    }
   }
 
   /** Zwraca aktualną wartość PRAGMA (wykorzystywane w testach konfiguracji). */

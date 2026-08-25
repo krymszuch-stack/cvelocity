@@ -18,3 +18,10 @@ dist
 *.log
 coverage
 semantic-work-graph
+
+# Graf semantyczny jest wykluczony w całości (node_modules podpakietu), ale
+# baza do odczytu w kontenerze musi wejsc do kontekstu builda — patrz
+# Dockerfile, etap runtime. Lokalne bazy testowe i pliki WAL nie maja tam
+# prawa wjsc.
+!semantic-work-graph/data
+semantic-work-graph/data/test_*.db*

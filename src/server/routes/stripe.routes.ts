@@ -99,6 +99,25 @@ async function handleEvent(event: Stripe.Event): Promise<void> {
         return;
       }
 
+      // Płatność jednorazowa to Karnet Aplikacyjny: dostęp liczymy z
+      // `profiles.plan_expires_at`, nie ze statusu subskrypcji. Procedura bazowa
+      // robi obie zmiany (przedłużenie + reset limitów AI) w jednej transakcji,
+      // więc awaria sieci w połowie nie zostawia konta z dłuższym planem i
+      // starym licznikiem — albo całość się dzieje, albo nic.
+      if (session.mode === 'payment') {
+        const days =
+          typeof session.metadata?.pass_days === 'string'
+            ? parseInt(session.metadata.pass_days, 10)
+            : 30;
+        const { error: passError } = await getSupabase().rpc('activate_application_pass', {
+          p_user_id: userId,
+          p_days: Number.isFinite(days) && days > 0 ? days : 30,
+        });
+        if (passError) {
+          throw new Error(`Nie udało się aktywować karnetu: ${passError.message}`);
+        }
+      }
+
       const { error } = await supabase.from('subscriptions').upsert(
         {
           user_id: userId,
@@ -108,7 +127,8 @@ async function handleEvent(event: Stripe.Event): Promise<void> {
           plan_id: session.metadata?.plan_id ?? null,
           // Płatność jednorazowa (szablon) nie tworzy subskrypcji, więc nie
           // podnosi statusu do `active` — inaczej kupno szablonu za 19 zł
-          // odblokowywałoby plan Pro.
+          // odblokowywałoby plan Pro. Dostęp jednorazowy egzekwuje
+          // `plan_expires_at`, a ten status opisuje wyłącznie cykliczne plany.
           status: session.mode === 'subscription' ? 'active' : 'free',
           updated_at: new Date().toISOString(),
         },
