@@ -88,14 +88,10 @@ export function signOutLocalProfile(): void {
 }
 
 export function loadProfileVault(profileId: string): MasterVault | null {
-  const raw = readRaw(vaultKeyFor(profileId));
-  if (raw === null) return null;
-
-  try {
-    return JSON.parse(raw) as MasterVault;
-  } catch {
-    return null;
-  }
+  // Przez readJson, nie surowy parse: dostaje kopertę z sumą kontrolną,
+  // migracje schematu i transakcyjny powrót do ostatniego poprawnego stanu,
+  // gdy odczyt wykaże uszkodzenie pliku profilu.
+  return readJson<MasterVault | null>(vaultKeyFor(profileId), null);
 }
 
 /**

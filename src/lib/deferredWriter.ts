@@ -18,7 +18,8 @@
  */
 
 /** Ile milisekund bezczynności czekamy przed zapisem. */
-export const PERSIST_DELAY_MS = 600;
+/** Opóźnienie utrwalania: 750 ms — poniżej progu zauważalności przerwy przy ciągłym pisaniu. */
+export const PERSIST_DELAY_MS = 750;
 
 export interface DeferredWriter<T> {
   /** Zgłasza nową wartość do zapisania i przesuwa termin zapisu. */
