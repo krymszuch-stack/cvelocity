@@ -3,6 +3,7 @@ import { FetchJdUrlRequest } from '../../types/api';
 import { safeFetchHtml, SafeFetchError, type SafeFetchResult } from '../net/safeFetch';
 import { urlFetchLimiter } from '../middleware/rateLimiter';
 import { extractJobPosting, MIN_USABLE_DESCRIPTION } from '../extract';
+import { detectPortal, looksLikeSpaSkeleton } from '../extract/spaDetector';
 import { getCachedExtraction, setCachedExtraction } from '../extract/cache';
 
 export const jobsRouter = Router();
@@ -66,6 +67,7 @@ jobsRouter.post(
             // Oba przypadki kończą się dla użytkownika tak samo: treść trzeba
             // wkleić ręcznie. Nie obchodzimy ani ochrony botów, ani robots.txt.
             requiresManualPaste: err.code === 'BOT_PROTECTED' || err.code === 'ROBOTS_DISALLOWED',
+            detectedPortal: detectPortal(url),
             error: err.message,
           });
         }
@@ -74,10 +76,17 @@ jobsRouter.post(
 
       const extraction = extractJobPosting(fetched.html);
 
-      if (extraction.job.description.length < MIN_USABLE_DESCRIPTION) {
+      // Szkielet SPA albo zbyt uboga treść to nie błąd serwera, tylko jasna
+      // informacja dla interfejsu: „ten portal wymaga wklejenia ręcznego".
+      // `detectedPortal` pozwala UI nazwać portal po imieniu zamiast ogólnika.
+      if (
+        extraction.job.description.length < MIN_USABLE_DESCRIPTION ||
+        looksLikeSpaSkeleton(fetched.html)
+      ) {
         return res.status(422).json({
           success: false,
           requiresManualPaste: true,
+          detectedPortal: detectPortal(fetched.finalUrl || url),
           error:
             'Pobrano stronę, ale nie udało się z niej odczytać treści ogłoszenia. Wklej treść oferty ręcznie.',
         });

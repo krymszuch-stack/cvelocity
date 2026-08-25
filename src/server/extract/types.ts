@@ -27,10 +27,10 @@ export interface ExtractedJob {
 }
 
 /**
- * Szczebel drabiny, który dostarczył dane. Szczeble 1–4 są deterministyczne
+ * Szczebel drabiny, który dostarczył dane. Wszystkie są deterministyczne
  * i darmowe; do modelu schodzimy dopiero, gdy wszystkie zawiodą.
  */
-export type ExtractionTier = 'json-ld' | 'open-graph' | 'main-content' | 'none';
+export type ExtractionTier = 'json-ld' | 'hydration' | 'open-graph' | 'main-content' | 'none';
 
 export interface ExtractionResult {
   job: ExtractedJob;
