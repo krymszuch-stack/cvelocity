@@ -264,3 +264,49 @@ button:focus-visible,
     scroll-behavior: auto !important;
   }
 }
+
+/* ============================================================
+   PRINT — arkusz A4 pod parser i drukarkę, nie pod ekran
+   ============================================================
+   Drukowane/PDF-owane jest wyłącznie ciało dokumentu. Cały chrome
+   aplikacji (nawigacja, pasek boczny, przyciski akcji) znika, a tekst
+   dostaje 100% kontrastu — szare odcienie giną na drukarkach laserowych
+   i przy OCR starszych systemów rekrutacyjnych.
+   ============================================================ */
+@media print {
+  @page {
+    size: A4;
+    margin: 15mm;
+  }
+
+  html,
+  body {
+    background: #ffffff !important;
+  }
+
+  /* Wymuszenie kontrastu: czerń na bieli niezależnie od motywu i tokenów. */
+  *,
+  *::before,
+  *::after {
+    color: #000000 !important;
+    box-shadow: none !important;
+    text-shadow: none !important;
+    background-image: none !important;
+  }
+
+  /* Chrome interfejsu nie ma czego szukać na papierze. */
+  nav,
+  aside,
+  button,
+  [role='button'],
+  .no-print {
+    display: none !important;
+  }
+
+  /* Karty doświadczenia i osiągnięć STAR: jeden wpis = jedna całość.
+     Łamanie wpisu między stronami czyta się jak dwie różne prace. */
+  .page-break-inside-avoid {
+    break-inside: avoid;
+    page-break-inside: avoid;
+  }
+}
