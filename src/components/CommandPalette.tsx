@@ -1,12 +1,19 @@
-import React, { useState, useEffect, useRef } from 'react';
+﻿import React, { useState, useEffect, useMemo } from 'react';
 import {
   Search,
   CornerDownLeft,
+  FileDown,
+  Printer,
+  Briefcase,
+  Wrench,
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { useAppStore } from '../store/useAppStore';
 import { useTheme } from '../providers/ThemeProvider';
-import { NavTabId } from './GlobalShell';
+import { useAuth } from '../context/AuthContext';
+import { useApplications } from '../store/useApplications';
+import { downloadNativeDocxCv } from '../lib/docxExporter';
+import { useFocusTrap } from '../hooks/useFocusTrap';
 
 import {
   IconHome,
@@ -25,11 +32,51 @@ import {
 interface CommandItem {
   id: string;
   label: string;
-  category: 'Nawigacja' | 'Narzędzia' | 'Ustawienia';
+  category: 'Nawigacja' | 'Narzędzia' | 'Ustawienia' | 'Oferty' | 'Umiejętności' | 'Eksport';
   icon: React.ElementType;
-  shortcut?: string;
+  hint?: string;
+  keywords?: string;
   action: () => void;
 }
+
+/**
+ * Fuzzy scoring: podsekwencja znaków zapytania w tekście, z bonusem za
+ * spójne trafienia obok siebie.
+ *
+ * Celowo proste i bez zależności: paleta ma działać natychmiast przy każdym
+ * naciśnięciu klawisza, a dopasowanie ma być przewidywalne dla człowieka —
+ * „prc" znajduje „Pipeline — aplikacje", ale nie losowy skrót liter w środku
+ * zdania, bo te dostają zerowy wynik kontekstowy.
+ */
+function fuzzyScore(query: string, text: string): number {
+  const q = query.toLowerCase();
+  const t = text.toLowerCase();
+  if (!q) return 1;
+
+  // Trafienie dosłowne fragmentu — najlepsza klasa.
+  const directIndex = t.indexOf(q);
+  if (directIndex !== -1) {
+    return 200 - directIndex;
+  }
+
+  let score = 0;
+  let textIndex = 0;
+  let streak = 0;
+
+  for (const char of q) {
+    const found = t.indexOf(char, textIndex);
+    if (found === -1) return 0;
+
+    streak = found === textIndex ? streak + 1 : 0;
+    score += 10 + streak * 4 - Math.min(5, found - textIndex);
+    textIndex = found + 1;
+  }
+
+  return score;
+}
+
+/** Statyczny identyfikator listboxa — paleta jest instancją singletonem w drzewie. */
+const LISTBOX_ID = 'cmdk-list';
 
 export const CommandPalette: React.FC = () => {
   const [isOpen, setIsOpen] = useState(false);
@@ -44,11 +91,13 @@ export const CommandPalette: React.FC = () => {
   } = useAppStore();
 
   const { theme, setTheme } = useTheme();
+  const { userVault } = useAuth();
+  const { applications } = useApplications();
 
   // Listen for Cmd+K / Ctrl+K
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
+      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'k') {
         e.preventDefault();
         setIsOpen((prev) => !prev);
       } else if (e.key === 'Escape' && isOpen) {
@@ -60,83 +109,159 @@ export const CommandPalette: React.FC = () => {
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [isOpen]);
 
-  const commands: CommandItem[] = [
-    {
-      id: 'nav-home',
-      label: 'Przejdź do: Twój następny krok',
-      category: 'Nawigacja',
-      icon: IconHome,
-      action: () => setActiveTab('home'),
-    },
-    {
-      id: 'nav-profil',
-      label: 'Przejdź do: Profil (dane, doświadczenie, import CV)',
-      category: 'Nawigacja',
-      icon: IconVault,
-      action: () => setActiveTab('profil'),
-    },
-    {
-      id: 'nav-aplikuj',
-      label: 'Przejdź do: Aplikuj (oferta, dopasowanie ATS, generator)',
-      category: 'Nawigacja',
-      icon: IconMatcher,
-      action: () => setActiveTab('aplikuj'),
-    },
-    {
-      id: 'nav-trenuj',
-      label: 'Przejdź do: Trenuj (przygotowanie do rozmowy)',
-      category: 'Nawigacja',
-      icon: IconBrain,
-      action: () => setActiveTab('trenuj'),
-    },
-    {
-      id: 'nav-pipeline',
-      label: 'Przejdź do: Pipeline (wysłane aplikacje i rozmowy)',
-      category: 'Nawigacja',
-      icon: IconApplications,
-      action: () => setActiveTab('pipeline'),
-    },
-    {
-      id: 'nav-pricing',
-      label: 'Przejdź do: Cennik & Pakiety Pro',
-      category: 'Nawigacja',
-      icon: IconPricing,
-      action: () => setActiveTab('pricing'),
-    },
-    {
-      id: 'act-advisor',
-      label: 'Otwórz Okienko Doradcy AI (Gemini Advisor)',
-      category: 'Narzędzia',
-      icon: IconSparkles,
-      action: () => setAdvisorOpen(true),
-    },
-    {
-      id: 'act-stats',
-      label: 'Pokaż Telemetrię i Zaoszczędzone Tokeny AI',
-      category: 'Narzędzia',
-      icon: IconZap,
-      action: () => setTokenModalOpen(true),
-    },
-    {
-      id: 'act-tokens',
-      label: 'Pokaż Paletę Tokenów Design System',
-      category: 'Narzędzia',
-      icon: IconPalette,
-      action: () => setDesignTokensOpen(true),
-    },
-    {
-      id: 'act-theme',
-      label: `Przełącz Motyw (Aktualny: ${theme === 'dark' ? 'Ciemny' : 'Jasny'})`,
-      category: 'Ustawienia',
-      icon: theme === 'dark' ? IconSun : IconMoon,
-      action: () => setTheme(theme === 'dark' ? 'light' : 'dark'),
-    },
-  ];
+  const commands: CommandItem[] = useMemo(() => {
+    const base: CommandItem[] = [
+      {
+        id: 'nav-home',
+        label: 'Przejdź do: Twój następny krok',
+        category: 'Nawigacja',
+        icon: IconHome,
+        action: () => setActiveTab('home'),
+      },
+      {
+        id: 'nav-profil',
+        label: 'Przejdź do: Profil (dane, doświadczenie, import CV)',
+        category: 'Nawigacja',
+        icon: IconVault,
+        keywords: 'skarbiec vault umiejętności doświadczenie edukacja',
+        action: () => setActiveTab('profil'),
+      },
+      {
+        id: 'nav-aplikuj',
+        label: 'Przejdź do: Aplikuj (oferta, dopasowanie ATS, generator)',
+        category: 'Nawigacja',
+        icon: IconMatcher,
+        keywords: 'oferta praca matcher ats cv list motywacyjny',
+        action: () => setActiveTab('aplikuj'),
+      },
+      {
+        id: 'nav-trenuj',
+        label: 'Przejdź do: Trenuj (przygotowanie do rozmowy)',
+        category: 'Nawigacja',
+        icon: IconBrain,
+        keywords: 'drill rozmowa trening pytania',
+        action: () => setActiveTab('trenuj'),
+      },
+      {
+        id: 'nav-pipeline',
+        label: 'Przejdź do: Pipeline (wysłane aplikacje i rozmowy)',
+        category: 'Nawigacja',
+        icon: IconApplications,
+        action: () => setActiveTab('pipeline'),
+      },
+      {
+        id: 'nav-pricing',
+        label: 'Przejdź do: Cennik & Pakiety Pro',
+        category: 'Nawigacja',
+        icon: IconPricing,
+        action: () => setActiveTab('pricing'),
+      },
+      {
+        id: 'act-advisor',
+        label: 'Otwórz Okienko Doradcy AI (Gemini Advisor)',
+        category: 'Narzędzia',
+        icon: IconSparkles,
+        action: () => setAdvisorOpen(true),
+      },
+      {
+        id: 'act-stats',
+        label: 'Pokaż Telemetrię i Zaoszczędzone Tokeny AI',
+        category: 'Narzędzia',
+        icon: IconZap,
+        action: () => setTokenModalOpen(true),
+      },
+      {
+        id: 'act-tokens',
+        label: 'Pokaż Paletę Tokenów Design System',
+        category: 'Narzędzia',
+        icon: IconPalette,
+        action: () => setDesignTokensOpen(true),
+      },
+      {
+        id: 'act-theme',
+        label: `Przełącz Motyw (Aktualny: ${theme === 'dark' ? 'Ciemny' : 'Jasny'})`,
+        category: 'Ustawienia',
+        icon: theme === 'dark' ? IconSun : IconMoon,
+        action: () => setTheme(theme === 'dark' ? 'light' : 'dark'),
+      },
+    ];
 
-  const filtered = commands.filter((c) =>
-    c.label.toLowerCase().includes(query.toLowerCase()) ||
-    c.category.toLowerCase().includes(query.toLowerCase())
-  );
+    // Eksport: realni konsumenci istniejących ścieżek eksportu.
+    if (userVault) {
+      base.push({
+        id: 'export-docx',
+        label: 'Eksport: CV do Word (.docx)',
+        category: 'Eksport',
+        icon: FileDown,
+        keywords: 'docx word eksport pobierz zapisz dokument',
+        action: () => {
+          void downloadNativeDocxCv(
+            userVault,
+            [],
+            userVault.personalInfo.title || '',
+            ''
+          );
+        },
+      });
+      base.push({
+        id: 'export-print',
+        label: 'Drukuj / Zapisz jako PDF',
+        category: 'Eksport',
+        icon: Printer,
+        keywords: 'pdf druk wydruk eksport papier',
+        action: () => window.print(),
+      });
+    }
+
+    // Aktywne oferty z Pipeline — po nazwie firmy trafi się szybciej niż przez menu.
+    for (const application of applications.slice(0, 8)) {
+      base.push({
+        id: `app-${application.id}`,
+        label: `Aplikacja: ${application.company} — ${application.position}`,
+        category: 'Oferty',
+        icon: Briefcase,
+        keywords: `${application.status} oferta`,
+        action: () => setActiveTab('pipeline'),
+      });
+    }
+
+    // Umiejętności ze Skarbca — wejście prosto w profil, gdzie można je edytować.
+    const skills = [
+      ...new Set(
+        [...(userVault?.skillsMatrix?.hardSkills ?? []), ...(userVault?.skillsMatrix?.toolsAndTech ?? [])].map(
+          (skill) => skill.trim()
+        )
+      ),
+    ]
+      .filter(Boolean)
+      .slice(0, 15);
+
+    for (const skill of skills) {
+      base.push({
+        id: `skill-${skill}`,
+        label: `Umiejętność ze Skarbca: ${skill}`,
+        category: 'Umiejętności',
+        icon: Wrench,
+        action: () => setActiveTab('profil'),
+      });
+    }
+
+    return base;
+  }, [theme, setTheme, setActiveTab, setAdvisorOpen, setTokenModalOpen, setDesignTokensOpen, userVault, applications]);
+
+  const filtered = useMemo(() => {
+    if (!query.trim()) return commands.slice(0, 20);
+
+    return commands
+      .map((command) => ({
+        command,
+        score: Math.max(fuzzyScore(query, command.label), fuzzyScore(query, `${command.category} ${command.keywords ?? ''}`) * 0.8),
+      }))
+      .filter((entry) => entry.score > 0)
+      .sort((a, b) => b.score - a.score)
+      .slice(0, 20)
+      .map((entry) => entry.command);
+  }, [commands, query]);
 
   useEffect(() => {
     setSelectedIndex(0);
@@ -161,6 +286,9 @@ export const CommandPalette: React.FC = () => {
     }
   };
 
+  const activeOptionId = filtered[selectedIndex] ? `${LISTBOX_ID}-opt-${filtered[selectedIndex].id}` : undefined;
+  const trapRef = useFocusTrap<HTMLDivElement>(isOpen);
+
   return (
     <AnimatePresence>
       {isOpen && (
@@ -176,6 +304,10 @@ export const CommandPalette: React.FC = () => {
 
           {/* Modal Container */}
           <motion.div
+            ref={trapRef}
+            role="dialog"
+            aria-modal="true"
+            aria-label="Paleta poleceń"
             initial={{ opacity: 0, scale: 0.96, y: -10 }}
             animate={{ opacity: 1, scale: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.96, y: -10 }}
@@ -191,7 +323,13 @@ export const CommandPalette: React.FC = () => {
                 value={query}
                 onChange={(e) => setQuery(e.target.value)}
                 onKeyDown={handleKeyDownList}
-                placeholder="Wpisz polecenie lub szukaj modułu (np. matcher, vault, doradca)..."
+                role="combobox"
+                aria-expanded="true"
+                aria-controls={LISTBOX_ID}
+                aria-autocomplete="list"
+                aria-activedescendant={activeOptionId}
+                aria-label="Szukaj poleceń, ofert i umiejętności"
+                placeholder="Wpisz polecenie, ofertę albo umiejętność..."
                 className="flex-1 bg-transparent text-sm text-ink placeholder:text-subtle focus:outline-none"
               />
               <span className="rounded-md border border-line bg-sunken px-1.5 py-0.5 font-mono text-[10px] text-muted">
@@ -202,11 +340,11 @@ export const CommandPalette: React.FC = () => {
             {/* Results List */}
             <div className="max-h-80 overflow-y-auto p-2">
               {filtered.length === 0 ? (
-                <div className="p-8 text-center text-xs text-muted">
+                <div className="p-8 text-center text-xs text-muted" role="status">
                   Nie znaleziono żadnych pasujących poleceń.
                 </div>
               ) : (
-                <div className="space-y-1">
+                <div className="space-y-1" role="listbox" id={LISTBOX_ID} aria-label="Wyniki wyszukiwania">
                   {filtered.map((item, idx) => {
                     const isSelected = idx === selectedIndex;
                     const Icon = item.icon;
@@ -215,6 +353,9 @@ export const CommandPalette: React.FC = () => {
                       <button
                         key={item.id}
                         type="button"
+                        id={`${LISTBOX_ID}-opt-${item.id}`}
+                        role="option"
+                        aria-selected={isSelected}
                         onClick={() => handleExecute(item)}
                         onMouseEnter={() => setSelectedIndex(idx)}
                         className={`flex w-full items-center justify-between rounded-xl px-3 py-2.5 text-left text-xs transition-colors focus-visible:outline-none ${
