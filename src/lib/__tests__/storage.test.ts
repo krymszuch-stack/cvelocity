@@ -8,6 +8,7 @@ import {
   readJson,
   writeJson,
   migrateLegacyKeys,
+  onAppStorageWiped,
   wipeAppStorage,
 } from '../storage';
 import { MemoryStorage } from './helpers/memoryStorage';
@@ -203,6 +204,24 @@ describe('storage.ts - warstwa schowka przeglądarki', () => {
       (globalThis as { localStorage?: unknown }).localStorage = undefined;
 
       expect(() => wipeAppStorage()).not.toThrow();
+    });
+
+    it('powiadamia subskrybentów dopiero po usunięciu kluczy', () => {
+      localStorage.setItem(StorageKeys.applications, '["a1"]');
+
+      const widziane: Array<string | null> = [];
+      const odpnij = onAppStorageWiped(() => {
+        // Subskrybent (sklep resetujący swoją kopię w pamięci) musi zobaczyć
+        // schowek po wymazaniu, nie przed.
+        widziane.push(localStorage.getItem(StorageKeys.applications));
+      });
+      try {
+        wipeAppStorage();
+      } finally {
+        odpnij();
+      }
+
+      expect(widziane).toEqual([null]);
     });
   });
 });

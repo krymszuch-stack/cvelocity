@@ -168,6 +168,26 @@ export function migrateLegacyKeys(): void {
 }
 
 /**
+ * Powiadomienia o wymazaniu danych.
+ *
+ * Sklepy modułowe trzymają kopie danych w pamięci między renderami. Samo
+ * usunięcie kluczy ze schowka nie czyści tych kopii, więc pierwsza zmiana po
+ * „usuń moje dane" odzyskiwała usuniętą listę do localStorage — dane wracały
+ * po operacji, która miała być nieodwracalna. Rejestr zna moment wymazania,
+ * więc to on rozsyła informację; sklep rejestruje reset zamiast każdy kolejny
+ * wywołujący pamiętać o ręcznym czyszczeniu.
+ */
+const wipeListeners = new Set<() => void>();
+
+/** Podpina reset pamięci pod `wipeAppStorage()`. Zwraca funkcję odpinającą. */
+export function onAppStorageWiped(listener: () => void): () => void {
+  wipeListeners.add(listener);
+  return () => {
+    wipeListeners.delete(listener);
+  };
+}
+
+/**
  * Usuwa z tej przeglądarki wszystkie dane aplikacji poza ustawieniami
  * interfejsu. Iteruje po prefiksach zamiast po liście kluczy, żeby dane zapisane
  * przez kod, który powstanie później, też zostały objęte.
@@ -183,4 +203,8 @@ export function wipeAppStorage(): void {
   }
 
   for (const key of doomed) removeRaw(key);
+
+  // Dopiero po faktycznym wymazaniu: subskrybent w callbacku musi widzieć stan
+  // po usunięciu, nie przed.
+  wipeListeners.forEach((notify) => notify());
 }

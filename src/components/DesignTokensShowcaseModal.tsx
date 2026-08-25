@@ -4,6 +4,7 @@ import { Modal } from './ui/Modal';
 import { Button } from './ui/Button';
 import { Chip } from './ui/Chip';
 import { Tabs } from './ui/Tabs';
+import { useTheme } from '../providers/ThemeProvider';
 
 interface DesignTokensShowcaseModalProps {
   isOpen: boolean;
@@ -17,24 +18,13 @@ export const DesignTokensShowcaseModal: React.FC<DesignTokensShowcaseModalProps>
   onClose,
 }) => {
   const [activeTab, setActiveTab] = useState<ShowcaseTab>('colors');
-  const [isDarkLocal, setIsDarkLocal] = useState(() => {
-    return document.documentElement.classList.contains('dark');
-  });
 
-  const toggleTheme = () => {
-    const nextDark = !isDarkLocal;
-    setIsDarkLocal(nextDark);
-    const root = document.documentElement;
-    if (nextDark) {
-      root.setAttribute('data-theme', 'dark');
-      root.classList.add('dark');
-      localStorage.setItem('cvelocity-theme', 'dark');
-    } else {
-      root.setAttribute('data-theme', 'light');
-      root.classList.remove('dark');
-      localStorage.setItem('cvelocity-theme', 'light');
-    }
-  };
+  // Motyw należy do ThemeProvider — ten modal nie może mieć własnej kopii stanu
+  // ani własnego zapisu do schowka. Druga kopia pisała po starym kluczu
+  // `cvelocity-theme` i rozjeżdżała się z przełącznikiem w pasku: jedno miejsce
+  // ustawiało ciemny, drugie czytało jasny, a po odświeżeniu wracał stan trzeci.
+  const { resolvedTheme, toggleTheme } = useTheme();
+  const isDark = resolvedTheme === 'dark';
 
   const tabs = [
     { id: 'colors' as ShowcaseTab, label: 'Paleta & Ramp Brand', icon: Palette },
@@ -83,10 +73,10 @@ export const DesignTokensShowcaseModal: React.FC<DesignTokensShowcaseModalProps>
           <Button
             variant="secondary"
             size="sm"
-            icon={isDarkLocal ? Sun : Moon}
+            icon={isDark ? Sun : Moon}
             onClick={toggleTheme}
           >
-            Motyw: {isDarkLocal ? 'Ciemny (Dark)' : 'Jasny (Light)'}
+            Motyw: {isDark ? 'Ciemny (Dark)' : 'Jasny (Light)'}
           </Button>
         </div>
 

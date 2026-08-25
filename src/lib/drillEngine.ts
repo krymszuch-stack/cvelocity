@@ -1,4 +1,4 @@
-import { StorageKeys } from './storage';
+import { StorageKeys, readJson, removeRaw, writeJson } from './storage';
 
 export interface DrillQuestion {
   id: string;
@@ -280,37 +280,20 @@ export function analyzeDrillResponse(
  * Odczytuje historię sesji treningowych z localStorage
  */
 export function loadDrillHistory(): DrillAttemptRecord[] {
-  try {
-    const raw = typeof localStorage !== 'undefined' ? localStorage.getItem(StorageKeys.drillHistory) : null;
-    return raw ? JSON.parse(raw) : [];
-  } catch {
-    return [];
-  }
+  return readJson<DrillAttemptRecord[]>(StorageKeys.drillHistory, []);
 }
 
 /**
  * Zapisuje próbę odpowiedzi w historii ćwiczeń (max 50 ostatnich prób)
  */
 export function saveDrillAttempt(attempt: DrillAttemptRecord): void {
-  try {
-    if (typeof localStorage === 'undefined') return;
-    const history = loadDrillHistory();
-    const updated = [attempt, ...history.filter((h) => h.id !== attempt.id)].slice(0, 50);
-    localStorage.setItem(StorageKeys.drillHistory, JSON.stringify(updated));
-  } catch {
-    // localStorage niedostępne
-  }
+  const updated = [attempt, ...loadDrillHistory().filter((h) => h.id !== attempt.id)].slice(0, 50);
+  writeJson(StorageKeys.drillHistory, updated);
 }
 
 /**
  * Czyści całą historię sesji treningowych
  */
 export function clearDrillHistory(): void {
-  try {
-    if (typeof localStorage !== 'undefined') {
-      localStorage.removeItem(StorageKeys.drillHistory);
-    }
-  } catch {
-    // ignore
-  }
+  removeRaw(StorageKeys.drillHistory);
 }

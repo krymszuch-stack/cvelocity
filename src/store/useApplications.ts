@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 import { ApplicationStatus, JobApplication } from '../types';
-import { StorageKeys, readJson, writeJson } from '../lib/storage';
+import { StorageKeys, onAppStorageWiped, readJson, writeJson } from '../lib/storage';
 
 /**
  * Aplikacje w Pipeline — jedno źródło prawdy dla całego interfejsu.
@@ -26,6 +26,16 @@ function commit(next: JobApplication[]): void {
   writeJson(StorageKeys.applications, next);
   listeners.forEach((notify) => notify());
 }
+
+// „Usuń moje dane" musi obejmować także tę kopię w pamięci. Bez resetu pierwszy
+// zapis po wymazaniu odtworzyłby w schowku pełną sprzed-usuwania listę — dane
+// wróciłyby mimo komunikatu o nieodwracalnym usunięciu. Reset czyści wyłącznie
+// pamięć: klucz właśnie zniknął, a ponowny zapis nastąpi dopiero przy nowej
+// akcji użytkownika.
+onAppStorageWiped(() => {
+  applications = [];
+  listeners.forEach((notify) => notify());
+});
 
 export function useApplications() {
   const [state, setState] = useState<JobApplication[]>(applications);
