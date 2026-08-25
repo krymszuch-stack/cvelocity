@@ -47,6 +47,7 @@ export const DocumentRenderer: React.FC<DocumentRendererProps> = ({
 }) => {
   const [activeTemplate, setActiveTemplate] = useState<TemplateId>('modern');
   const [selectedColor, setSelectedColor] = useState(COLOR_SWATCHES[0].hex);
+  const [zoom, setZoom] = useState<number>(1);
   const [isCopied, setIsCopied] = useState(false);
 
   const personal = vault.personalInfo;
@@ -155,12 +156,30 @@ ${education.map((e) => `${e.degree} - ${e.institution} (${e.startDate} - ${e.end
         </div>
       </div>
 
-      {/* A4 Sheet Container */}
-      <div className="overflow-x-auto p-2 sm:p-4 flex justify-center bg-sunken/40 rounded-3xl border border-line">
+      {/* A4 Sheet Container — zoom podglądu bez ruszania danych wydruku */}
+      <div className="overflow-x-auto p-2 sm:p-4 flex flex-col items-center gap-3 bg-sunken/40 rounded-3xl border border-line">
+        <div className="flex items-center gap-1.5 self-end" role="group" aria-label="Skala podglądu">
+          {([75, 90, 100] as const).map((z) => (
+            <button
+              key={z}
+              type="button"
+              aria-pressed={zoom === z}
+              onClick={() => setZoom(z)}
+              className={`rounded-lg px-2 py-0.5 font-mono text-[10px] font-bold transition-colors ${
+                zoom === z
+                  ? 'bg-brand-600 text-on-brand'
+                  : 'border border-line bg-surface text-muted hover:text-ink'
+              }`}
+            >
+              {z}%
+            </button>
+          ))}
+        </div>
+        <div className="w-full flex justify-center">
         <div
           id="cv-printable-document"
+          style={{ '--doc-accent': selectedColor, zoom } as React.CSSProperties}
           className="doc-paper relative min-h-[1050px] w-full max-w-[794px] rounded-2xl border border-line p-8 sm:p-12 shadow-floating space-y-6"
-          style={{ '--doc-accent': selectedColor } as React.CSSProperties}
         >
           {/* Header Section */}
           <div
@@ -327,6 +346,7 @@ ${education.map((e) => `${e.degree} - ${e.institution} (${e.startDate} - ${e.end
           <div className="border-t border-line/50 pt-4 text-[9px] text-subtle leading-tight">
             Wyrażam zgodę na przetwarzanie moich danych osobowych dla potrzeb niezbędnych do realizacji procesu rekrutacji zgodnie z Rozporządzeniem Parlamentu Europejskiego i Rady (UE) 2016/679 (RODO).
           </div>
+        </div>
         </div>
       </div>
     </div>

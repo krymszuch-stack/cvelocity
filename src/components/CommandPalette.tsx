@@ -338,7 +338,7 @@ export const CommandPalette: React.FC = () => {
             </div>
 
             {/* Results List */}
-            <div className="max-h-80 overflow-y-auto p-2">
+            <div className="scrollbar-thin max-h-80 overflow-y-auto p-2">
               {filtered.length === 0 ? (
                 <div className="p-8 text-center text-xs text-muted" role="status">
                   Nie znaleziono żadnych pasujących poleceń.

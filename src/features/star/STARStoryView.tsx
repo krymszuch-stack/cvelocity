@@ -10,6 +10,7 @@ import {
   CheckCircle2,
   Sliders,
   Keyboard,
+  BookOpen,
 } from 'lucide-react';
 import { MasterVault, STARStory } from '../../types';
 import {
@@ -20,6 +21,7 @@ import {
 } from '../../lib/starStoryEngine';
 import { StarTagCloud } from '../../components/star/StarTagCloud';
 import { STARStoryCard } from '../../components/star/STARStoryCard';
+import { EmptyState } from '../../components/ui/EmptyState';
 import { Card } from '../../components/ui/Card';
 import { Button } from '../../components/ui/Button';
 import { Chip } from '../../components/ui/Chip';
@@ -240,16 +242,28 @@ export const STARStoryView: React.FC<STARStoryViewProps> = ({
 
       {/* Lista Kart Historii STAR */}
       <div className="grid gap-4">
-        {filteredStories.map((story) => (
-          <STARStoryCard
-            key={story.id}
-            story={story}
-            isActiveInHud={slot3Story?.id === story.id}
-            onTagClick={handleToggleTag}
-            onAddTag={handleAddTagToStory}
-            onUpdateDuration={handleUpdateDuration}
+        {filteredStories.length === 0 ? (
+          <EmptyState
+            icon={searchQuery ? Search : BookOpen}
+            title={searchQuery ? 'Brak wyników dla tego filtra' : 'Brak historii STAR'}
+            description={
+              searchQuery
+                ? 'Żadna historia nie pasuje do wyszukiwanej frazy. Wyczyść pole, żeby zobaczyć wszystkie.'
+                : 'Historie zbudują się z osiągnięć w Twoim doświadczeniu — uzupełnij punktory w Profilu, a tu pojawią się gotowe opowieści STAR.'
+            }
           />
-        ))}
+        ) : (
+          filteredStories.map((story) => (
+            <STARStoryCard
+              key={story.id}
+              story={story}
+              isActiveInHud={slot3Story?.id === story.id}
+              onTagClick={handleToggleTag}
+              onAddTag={handleAddTagToStory}
+              onUpdateDuration={handleUpdateDuration}
+            />
+          ))
+        )}
       </div>
     </div>
   );

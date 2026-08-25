@@ -32,6 +32,8 @@ export const StorageKeys = {
   cockpitProgress: `${PREFIX}cockpit-progress`,
   uxMilestones: `${PREFIX}ux-milestones`,
   cvQuestionsSkipped: `${PREFIX}cv-questions-skipped`,
+  /** Szkice formularzy per widok — giną przy zamknięciu przeglądarki (sessionStorage-semantyka w LS). */
+  draftAtsLab: `${PREFIX}draft-ats-lab`,
 } as const;
 
 export type StorageKey = (typeof StorageKeys)[keyof typeof StorageKeys];

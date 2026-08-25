@@ -6,6 +6,21 @@
   --font-sans: 'Geist', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
   --font-mono: 'Geist Mono', ui-monospace, 'SF Mono', 'JetBrains Mono', Menlo, Consolas, monospace;
 
+  /* Czas animacji — cztery semantyki zamiast literałów rozrzuconych po plikach:
+     fast = hover/press, ui = rozwijania i przełączniki, state = zmiany stanu
+     (bary, tła), data = animacje liczb i ringów. */
+  --duration-fast: 150ms;
+  --duration-ui: 200ms;
+  --duration-state: 400ms;
+  --duration-data: 700ms;
+
+  /* Skala meta-tekstu: 11 px wyłącznie hinty/daty, 12 px etykiety i body-minor.
+     Wartości jako tokeny, żeby skala przestała zależeć od literałów text-[Npx]. */
+  --text-meta: 0.6875rem;
+  --text-meta--line-height: 1rem;
+  --text-label: 0.75rem;
+  --text-label--line-height: 1.125rem;
+
   /* Border Radii Tokens */
   --radius-sm: 0.5rem;    /* 8px */
   --radius-md: 0.75rem;   /* 12px */
@@ -467,6 +482,21 @@
 
 .shadow-mark-glow {
   box-shadow: var(--mark-glow);
+}
+
+/* Scrollbar list — cienki, w kolorze linii motywu; zero jasnych tracków
+   wbijających się w ciemny panel. */
+.scrollbar-thin {
+  scrollbar-width: thin;
+  scrollbar-color: var(--line-strong) transparent;
+}
+
+.no-scrollbar {
+  scrollbar-width: none;
+}
+
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
 }
 
 /* ============================================================
