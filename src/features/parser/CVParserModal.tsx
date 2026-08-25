@@ -140,6 +140,7 @@ export const CVParserModal: React.FC<CVParserModalProps> = ({
               ...(parsedResult.personalInfo.fullName ? { fullName: parsedResult.personalInfo.fullName } : {}),
               ...(parsedResult.personalInfo.title ? { title: parsedResult.personalInfo.title } : {}),
               ...(parsedResult.personalInfo.email ? { email: parsedResult.personalInfo.email } : {}),
+              ...(parsedResult.personalInfo.phone ? { phone: parsedResult.personalInfo.phone } : {}),
               ...(parsedResult.personalInfo.location ? { location: parsedResult.personalInfo.location } : {}),
               ...(parsedResult.personalInfo.summary ? { summary: parsedResult.personalInfo.summary } : {}),
             },

@@ -86,10 +86,52 @@ export async function extractTextFromAnyFile(file: File): Promise<{ text: string
     for (let i = 1; i <= pdf.numPages; i++) {
       const page = await pdf.getPage(i);
       const textContent = await page.getTextContent();
-      const pageItems = textContent.items
-        .map((item) => ('str' in item ? item.str : ''))
-        .join(' ');
-      pdfText += pageItems + '\n';
+
+      // Odtwarzamy podział na wiersze na podstawie pozycji Y elementów.
+      // PDF.js dzieli tekst na spany (TextItem) — każdy ma macierz transformacji
+      // [scaleX, skewY, skewX, scaleY, translateX, translateY].
+      // Elementy z tą samą pozycją Y (z tolerancją 2px) należą do jednego wiersza.
+      // Bez tego cała strona ląduje w jednym bloku tekstu i parser nie rozpoznaje sekcji.
+      interface PdfLineItem { y: number; x: number; str: string }
+      const items: PdfLineItem[] = [];
+      for (const item of textContent.items) {
+        if (!('str' in item) || !item.str) continue;
+        const tx = item.transform;
+        // transform = [scaleX, skewY, skewX, scaleY, translateX, translateY]
+        const x = tx ? tx[4] : 0;
+        const y = tx ? tx[5] : 0;
+        items.push({ y, x, str: item.str });
+      }
+
+      if (items.length === 0) continue;
+
+      // Grupowanie elementów w wiersze na podstawie pozycji Y (tolerancja 2px)
+      const LINE_Y_TOLERANCE = 2;
+      const lines: { y: number; fragments: PdfLineItem[] }[] = [];
+
+      for (const item of items) {
+        const existingLine = lines.find((l) => Math.abs(l.y - item.y) < LINE_Y_TOLERANCE);
+        if (existingLine) {
+          existingLine.fragments.push(item);
+        } else {
+          lines.push({ y: item.y, fragments: [item] });
+        }
+      }
+
+      // Sortowanie wierszy od góry do dołu (PDF ma oś Y odwróconą — wyższa wartość = wyżej)
+      lines.sort((a, b) => b.y - a.y);
+
+      for (const line of lines) {
+        // Sortowanie fragmentów w wierszu od lewej do prawej
+        line.fragments.sort((a, b) => a.x - b.x);
+        const lineText = line.fragments.map((f) => f.str).join(' ').trim();
+        if (lineText) {
+          pdfText += lineText + '\n';
+        }
+      }
+
+      // Separator między stronami
+      pdfText += '\n';
     }
     if (pdfText.trim().length < 20) {
       throw new Error(
@@ -383,7 +425,8 @@ const ROLE_KEYWORDS = new RegExp(
     'pracownik|asystent|lektor|sprzedawca|doradca|serwisant|tokarz|ślusarz|murarz|cieśla|' +
     'hydraulik|lekarz|pielęgniarka|księgowa|księgowy|grafik|architekt|lead|senior|junior|' +
     'mid|head|director|tester|qa|devops|administrator|brygadzista|mistrz|automatyk|laborant|' +
-    'stażysta|praktykant|handlowiec|spedytor|magazynier-kierowca|operator\\s+cnc|elektromonter|ślusarz\\s*-\\s*spawacz)\\b',
+    'stażysta|praktykant|handlowiec|spedytor|magazynier-kierowca|operator\\s+cnc|elektromonter|ślusarz\\s*-\\s*spawacz|' +
+    'inspektor|konserwator|audytor|dyspozytor|agent|wsparcie\\s+techniczne|it\\s+support|helpdesk|service\\s+desk)\\b',
   'i'
 );
 
@@ -391,16 +434,38 @@ const COMPANY_KEYWORDS = new RegExp(
   '\\b(?:sp\\.\\s*z\\s*o\\.o\\.|s\\.a\\.|gmbh|llc|inc\\.|sp\\.k\\.|p\\.h\\.u\\.|firma|zakład|' +
     'przedsiębiorstwo|agencja|centrum|grupa|group|solutions|tech|systems|logistics|studio|' +
     'polska|poland|szpital|urząd|politechnika|uniwersytet|biuro|fabryka|huta|kopalnia|spółka|' +
-    'fulfillment|softwarehouse|transport|fintech|dhl|amazon|abb)\\b',
+    'fulfillment|softwarehouse|transport|fintech|dhl|amazon|abb|bank|pekao|pko|santander|ing|mbank|auchan|interia|stocznia)\\b',
   'i'
 );
+
+export function isLocationLine(text: string): boolean {
+  if (!text) return false;
+  const t = text.toLowerCase().trim();
+  return (
+    // Mianownik (Kraków) + miejscownik (Krakowie) + inne formy gramatyczne
+    // Dlaczego: CV zawierają zarówno "Kraków" jak i "Szpital w Krakowie" czy "Lokalizacja: Kraków"
+    /^(?:kraków|krakow|krakowie|krakowa|warszawa|warszawie|warszawy|wrocław|wroclaw|wrocławiu|wrocławia|gdańsk|gdansk|gdańsku|gdańska|poznań|poznan|poznaniu|poznania|katowice|katowicach|katowic|łódź|lodz|łodzi|szczecin|szczecinie|szczecina|lublin|lublinie|lublina|bydgoszcz|bydgoszczy|białystok|białymstoku|białegostoku|gdynia|gdyni|częstochowa|częstochowie|częstochowy|radom|radomiu|radomia|toruń|toruniu|torunia|sosnowiec|sosnowcu|sosnowca|kielce|kielcach|kielc|rzeszów|rzeszowie|rzeszowa|gliwice|gliwicach|gliwic|zabrze|zabrzu|olsztyn|olsztynie|olsztyna|bielsko-biała|opole|opolu|opola|tychy|tychach|dąbrowa górnicza|dąbrowie górniczej|elbląg|elblągu|płock|płocku|tarnów|tarnowie|tarnowa|chorzów|chorzowie|koszalin|koszalinie|legnica|legnicy|mielec|mielcu|przemyśl|przemyślu|polska|poland|remote|zdalnie|hybrydowo|stacjonarnie)\b/i.test(t) ||
+    /(?:lokalizacja|miejscowość|adres|location|miejsce\s+zamieszkania):/i.test(t) ||
+    /\b\d{2}-\d{3}\b/.test(t) ||
+    /^(?:ul\.|al\.|os\.|pl\.)\s+[a-ząćęłńóśźż]/i.test(t)
+  );
+}
+
+export function extractLocationString(text: string): string {
+  if (!text) return '';
+  const parts = text.split(/\s*[·•|,]\s*|\s+[-–—]\s+/);
+  for (const p of parts) {
+    if (isLocationLine(p)) return p.trim();
+  }
+  return text.trim();
+}
 
 /**
  * Rozdziela linię lub fragment na Stanowisko i Firmę.
  */
 function disambiguateRoleAndCompany(text: string): { role: string; company: string } {
-  const cleaned = text.replace(DATE_RANGE_REGEX, '').replace(/[()|;,]+$/, '').trim();
-  const separators = /\s+[-–—]\s+|\s*\|\s*|\s+w\s+|\s+at\s+/i;
+  const cleaned = text.replace(DATE_RANGE_REGEX, '').replace(/[()|;,·•]+$/, '').trim();
+  const separators = /\s+[-–—]\s+|\s*[·•|]\s*|\s+w\s+|\s+at\s+/i;
   const parts = cleaned.split(separators).map((p) => p.trim()).filter(Boolean);
 
   if (parts.length === 0) return { role: '', company: '' };
@@ -419,14 +484,17 @@ function disambiguateRoleAndCompany(text: string): { role: string; company: stri
   const p2IsCompany = COMPANY_KEYWORDS.test(p2);
 
   if (p1IsRole && !p2IsRole) {
+    if (isLocationLine(p2)) {
+      return { role: p1, company: '' };
+    }
     return { role: p1, company: p2 };
   }
   if (p2IsRole && !p1IsRole) {
     return { role: p2, company: p1 };
   }
   if (p1IsCompany && !p2IsCompany) {
-    if (isLocationLine(p2) || /^(?:polsce|poland|warszawie|krakowie|poznaniu|wrocławiu|gdańsku|katowicach|łodzi|lublinie|szczecinie|rzeszowie|bydgoszczy|toruniu|kielcach|gliwicach|sosnowcu|częstochowie|radomiu|gdyni|białymstoku|opolu)$/i.test(p2)) {
-      return { company: cleaned, role: '' };
+    if (isLocationLine(p2)) {
+      return { company: p1, role: '' };
     }
     return { company: p1, role: p2 };
   }
@@ -460,7 +528,7 @@ function parseExperienceEntries(sectionLines: string[]): WorkExperience[] {
 
     const isBullet = /^[-•*►▪●–—+]\s*|^\d+\.\s+/.test(line);
     const dateRange = extractDateRange(line);
-    const hasEntrySeparator = /\s+[-–—]\s+|\s*\|\s*/.test(line);
+    const hasEntrySeparator = /\s+[-–—]\s+|\s*[·•|]\s*/.test(line);
 
     let startsNewBlock = false;
 
@@ -468,16 +536,18 @@ function parseExperienceEntries(sectionLines: string[]): WorkExperience[] {
       startsNewBlock = true;
     } else if (isBullet) {
       startsNewBlock = false;
-    } else if (currentBlock.bulletLines.length > 0) {
-      startsNewBlock = true;
     } else if (dateRange && currentBlock.dateRange) {
+      // Zakres dat w linii oznacza start nowego wpisu pracy
       startsNewBlock = true;
-    } else if (hasEntrySeparator && (ROLE_KEYWORDS.test(line) || COMPANY_KEYWORDS.test(line))) {
-      const currentHasRoleOrCompany = currentBlock.headerLines.some((hl) => {
-        const { role, company } = disambiguateRoleAndCompany(hl);
-        return Boolean(role || company);
-      });
-      if (currentHasRoleOrCompany && currentBlock.dateRange) {
+    } else if (
+      (ROLE_KEYWORDS.test(line) || COMPANY_KEYWORDS.test(line)) &&
+      !/^[a-ząćęłńóśźż]/.test(line) &&
+      line.length < 90 &&
+      !line.endsWith('.')
+    ) {
+      const currentHasRole = currentBlock.headerLines.some((hl) => disambiguateRoleAndCompany(hl).role);
+      const currentHasCompany = currentBlock.headerLines.some((hl) => disambiguateRoleAndCompany(hl).company);
+      if (currentBlock.bulletLines.length > 0 || (currentHasRole && currentHasCompany)) {
         startsNewBlock = true;
       }
     }
@@ -495,12 +565,15 @@ function parseExperienceEntries(sectionLines: string[]): WorkExperience[] {
 
     if (!currentBlock) continue;
 
-    if (dateRange && !currentBlock.dateRange) {
-      currentBlock.dateRange = dateRange;
-      currentBlock.headerLines.push(line);
-    } else if (isBullet) {
+    if (isBullet) {
       const cleanBullet = line.replace(/^[-•*►▪●–—+]\s*|^\d+\.\s+/, '').trim();
       if (cleanBullet) currentBlock.bulletLines.push(cleanBullet);
+    } else if (currentBlock.bulletLines.length > 0) {
+      // Zawinięta linia poprzedniego punktora
+      currentBlock.bulletLines[currentBlock.bulletLines.length - 1] += ' ' + line;
+    } else if (dateRange && !currentBlock.dateRange) {
+      currentBlock.dateRange = dateRange;
+      currentBlock.headerLines.push(line);
     } else if (hasEntrySeparator || ROLE_KEYWORDS.test(line) || COMPANY_KEYWORDS.test(line)) {
       currentBlock.headerLines.push(line);
     } else {
@@ -822,19 +895,6 @@ function parseSkillList(sectionLines: string[]): string[] {
   return Array.from(new Set(skills));
 }
 
-function isLocationLine(line: string): boolean {
-  return /(?:lokalizacja|miejscowość|adres|location|miejsce\s+zamieszkania):/i.test(line) ||
-    /\b(?:warszawa|kraków|krakow|wrocław|wroclaw|poznań|poznan|gdańsk|gdansk|katowice|łódź|lodz|szczecin|lublin|bydgoszcz|białystok|bialystok|gdynia|toruń|torun|rzeszów|rzeszow|kielce|gliwice|sosnowiec|radom|bielsko-biała|częstochowa|opole|zielona\s+góra|mielec|polska|poland)\b/i.test(line);
-}
-
-function extractLocationString(line: string): string {
-  const match = line.match(/(?:lokalizacja|miejscowość|adres|location|miejsce\s+zamieszkania):\s*([^\n,]+)/i);
-  if (match) return match[1].trim();
-
-  const cityMatch = line.match(/\b(?:warszawa|kraków|krakow|wrocław|wroclaw|poznań|poznan|gdańsk|gdansk|katowice|łódź|lodz|szczecin|lublin|bydgoszcz|białystok|bialystok|gdynia|toruń|torun|rzeszów|rzeszow|kielce|gliwice|sosnowiec|radom|bielsko-biała|częstochowa|opole|zielona\s+góra|mielec|polska|poland)\b/i);
-  return cityMatch ? cityMatch[0] : '';
-}
-
 /**
  * Uniwersalny leksykon słów kluczowych i narzędzi (IT, branże techniczne, zawody fizyczne, biurowe).
  */
@@ -1016,11 +1076,23 @@ export function parseTextToMasterVault(text: string | undefined | null, format: 
   const explicitLocMatch = clean.match(/(?:lokalizacja|miejscowość|adres|location|miejsce\s+zamieszkania):\s*([^\n,]+)/i);
   let location = explicitLocMatch ? explicitLocMatch[1].trim() : '';
   if (!location) {
+    // Szukamy nazwy miasta w częściach linii nagłówka rozdzielonych separatorami.
+    // Wiele CV ma format: "Telefon: ... | E-mail: ... | Kraków" — wtedy
+    // `isLocationLine` na pełnej linii zwraca false, ale na fragmencie "Kraków" — true.
     for (const hLine of headerLines) {
       if (isLocationLine(hLine)) {
         location = extractLocationString(hLine);
         break;
       }
+      const parts = hLine.split(/\s*[|·•]\s*|\s+[-–—]\s+/);
+      for (const part of parts) {
+        const trimmed = part.trim();
+        if (trimmed && isLocationLine(trimmed)) {
+          location = trimmed;
+          break;
+        }
+      }
+      if (location) break;
     }
   }
 
