@@ -279,6 +279,31 @@ button:focus-visible,
     margin: 15mm;
   }
 
+  /* Izolacja obszaru druku: klasyczny trik visibility — ukrywa WSZYSTKO
+     poza kartką CV (panele analityczne, toasty, chrome), nie ruszając layoutu
+     ekranowego. Kartka dostaje position absolute, żeby zająć pierwszą stronę. */
+  body * {
+    visibility: hidden;
+  }
+
+  #cv-printable-document,
+  #cv-printable-document * {
+    visibility: visible;
+  }
+
+  #cv-printable-document {
+    position: absolute;
+    inset: 0 auto auto 0;
+    width: 100%;
+    /* @page daje już 15 mm — padding ekranowy kartki zdjąć, inaczej margines
+       się dubluje i treść zaczyna się ~30 mm od brzegu papieru. */
+    padding: 0 !important;
+    border: none !important;
+    box-shadow: none !important;
+    border-radius: 0 !important;
+    min-height: auto !important;
+  }
+
   html,
   body {
     background: #ffffff !important;

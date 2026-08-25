@@ -53,7 +53,7 @@ export const NavItem: React.FC<NavItemProps> = ({
         isCollapsed ? 'justify-center px-2' : ''
       } ${
         isLocked
-          ? 'cursor-not-allowed text-subtle opacity-60'
+          ? 'cursor-not-allowed text-muted'
           : isActive
             ? 'text-brand-fg font-bold'
             : 'text-muted hover:bg-brand-500/5 hover:text-ink'

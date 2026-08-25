@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import {
   ShieldCheck,
@@ -20,6 +20,8 @@ import {
 import { MasterVault } from '../../types';
 import { simulateMultiEngineATS, AtsEngineResult } from '../../lib/atsSimulator';
 import { buildAtsTelemetryReport, STUFFING_DENSITY_THRESHOLD } from '../../lib/atsScorer';
+import { ScoreRing } from '../../components/ui/ScoreRing';
+import { StorageKeys, readJson, writeJson } from '../../lib/storage';
 
 export interface AtsLabViewProps {
   vault: MasterVault;
@@ -32,8 +34,21 @@ export const AtsLabView: React.FC<AtsLabViewProps> = ({
   jobOfferText = '',
   targetRole = '',
 }) => {
-  const [customJdText, setCustomJdText] = useState(jobOfferText);
-  const [customRole, setCustomRole] = useState(targetRole || vault.personalInfo?.title || '');
+  // Szkic ogłoszenia przeżywa zmianę zakładki: wcześniej useState gubił treść
+  // przy każdym unmountcie widoku, czyli dokładnie wtedy, gdy użytkownik chciał
+  // „podejrzeć profil i wrócić". Klucz jest w rejestrze storage — CRC i wipe
+  // obejmują go automatycznie.
+  const savedDraft = useMemo(
+    () => readJson<{ jd?: string; role?: string }>(StorageKeys.draftAtsLab, {}),
+    []
+  );
+  const [customJdText, setCustomJdText] = useState(jobOfferText || savedDraft.jd || '');
+  const [customRole, setCustomRole] = useState(targetRole || vault.personalInfo?.title || savedDraft.role || '');
+
+  useEffect(() => {
+    writeJson(StorageKeys.draftAtsLab, { jd: customJdText, role: customRole });
+  }, [customJdText, customRole]);
+
   const [selectedEngineId, setSelectedEngineId] = useState<string | null>('konsensus_cvelocity');
   const [openPracticeIdx, setOpenPracticeIdx] = useState<number | null>(0);
 
@@ -94,7 +109,7 @@ export const AtsLabView: React.FC<AtsLabViewProps> = ({
       {/* 1. Nagłówek i kontekst laboratorium */}
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-brand">
+          <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-brand-fg">
             <Layers className="h-4 w-4" />
             <span>Laboratorium Audytu Rekrutacyjnego</span>
           </div>
@@ -110,7 +125,7 @@ export const AtsLabView: React.FC<AtsLabViewProps> = ({
           <span className="inline-flex items-center gap-1.5 rounded-full border border-emerald-500/20 bg-emerald-500/10 px-3 py-1 text-xs font-semibold text-emerald-600 dark:text-emerald-400">
             <ShieldCheck className="h-3.5 w-3.5" /> 10 Silników Weryfikacji
           </span>
-          <span className="inline-flex items-center gap-1.5 rounded-full border border-brand/20 bg-brand/10 px-3 py-1 text-xs font-semibold text-brand">
+          <span className="inline-flex items-center gap-1.5 rounded-full border border-brand/20 bg-brand/10 px-3 py-1 text-xs font-semibold text-brand-fg">
             <Zap className="h-3.5 w-3.5" /> 0 Tokenów AI • Pełny Determinizm
           </span>
         </div>
@@ -122,41 +137,9 @@ export const AtsLabView: React.FC<AtsLabViewProps> = ({
         <div className="absolute -left-16 -bottom-16 h-64 w-64 rounded-full bg-indigo-500/10 blur-3xl pointer-events-none" />
 
         <div className="grid grid-cols-1 gap-8 lg:grid-cols-12 items-center">
-          {/* Radialny wskaźnik mediany */}
+          {/* Radialny wskaźnik mediany — ScoreRing, jedno źródło geometrii */}
           <div className="lg:col-span-4 flex flex-col items-center justify-center text-center p-4 rounded-2xl bg-surface/50 border border-ink/5">
-            <div className="relative flex items-center justify-center">
-              <svg className="h-44 w-44 -rotate-90 transform" viewBox="0 0 100 100">
-                <circle
-                  cx="50"
-                  cy="50"
-                  r="42"
-                  stroke="currentColor"
-                  strokeWidth="8"
-                  fill="transparent"
-                  className="text-surface-sunken"
-                />
-                <circle
-                  cx="50"
-                  cy="50"
-                  r="42"
-                  stroke="currentColor"
-                  strokeWidth="8"
-                  fill="transparent"
-                  strokeDasharray={264}
-                  strokeDashoffset={264 - (264 * consensus.medianScore) / 100}
-                  strokeLinecap="round"
-                  className="text-brand transition-all duration-1000 ease-out"
-                />
-              </svg>
-              <div className="absolute flex flex-col items-center justify-center">
-                <span className="text-4xl sm:text-5xl font-black tracking-tight text-ink font-mono">
-                  {consensus.medianScore}%
-                </span>
-                <span className="text-[11px] font-bold uppercase tracking-wider text-ink-muted mt-1">
-                  Mediana Rynkowa
-                </span>
-              </div>
-            </div>
+            <ScoreRing value={consensus.medianScore} label="Mediana Rynkowa" />
 
             <div className="mt-4 flex items-center gap-2">
               <span className={`px-2.5 py-0.5 rounded-full text-xs font-extrabold ${
@@ -171,7 +154,7 @@ export const AtsLabView: React.FC<AtsLabViewProps> = ({
           <div className="lg:col-span-8 space-y-5">
             <div>
               <h3 className="text-lg font-bold text-ink flex items-center gap-2">
-                <Sparkles className="h-5 w-5 text-brand" /> Uzasadnienie Oceny Systemowej
+                <Sparkles className="h-5 w-5 text-brand-fg" /> Uzasadnienie Oceny Systemowej
               </h3>
               <p className="mt-2 text-sm sm:text-base leading-relaxed text-ink-muted">
                 {consensus.summaryJustification}
@@ -193,7 +176,7 @@ export const AtsLabView: React.FC<AtsLabViewProps> = ({
               </div>
               <div className="p-3 rounded-xl bg-surface/60 border border-ink/5 text-center">
                 <span className="text-xs text-ink-faint block">Liczba Silników</span>
-                <span className="text-xl font-bold font-mono text-brand mt-0.5 block">10 / 10</span>
+                <span className="text-xl font-bold font-mono text-brand-fg mt-0.5 block">10 / 10</span>
               </div>
             </div>
           </div>
@@ -205,7 +188,7 @@ export const AtsLabView: React.FC<AtsLabViewProps> = ({
         <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
           <div>
             <h3 className="text-lg font-bold text-ink flex items-center gap-2">
-              <Zap className="h-5 w-5 text-brand" /> Telemetria Śledcza — dowody, nie szacunek
+              <Zap className="h-5 w-5 text-brand-fg" /> Telemetria Śledcza — dowody, nie szacunek
             </h3>
             <p className="mt-1 text-sm text-ink-muted">
               Każdy wskaźnik da się wywieść z Twojego profilu i treści ogłoszenia: pokrycie lematów po rdzeniach, sprawczość języka, parsowalność struktury i kary za twarde wymagania.
@@ -228,7 +211,7 @@ export const AtsLabView: React.FC<AtsLabViewProps> = ({
             <div key={label} className="p-4 rounded-xl bg-surface/60 border border-ink/5">
               <div className="flex items-center justify-between text-xs">
                 <span className="font-semibold text-ink-muted">{label}</span>
-                <span className="font-mono text-[10px] text-brand">waga {weight}</span>
+                <span className="font-mono text-[10px] text-brand-fg">waga {weight}</span>
               </div>
               <span className="mt-1 block text-2xl font-bold font-mono text-ink">{value}</span>
               <div className="mt-2 h-1.5 rounded-full bg-surface-sunken overflow-hidden">
@@ -265,7 +248,7 @@ export const AtsLabView: React.FC<AtsLabViewProps> = ({
           {/* Język */}
           <div className="p-5 rounded-2xl bg-surface/60 border border-ink/5 space-y-3">
             <h4 className="text-sm font-bold text-ink flex items-center gap-2">
-              <BookOpen className="h-4 w-4 text-brand" /> Telemetria językowa
+              <BookOpen className="h-4 w-4 text-brand-fg" /> Telemetria językowa
             </h4>
             <div className="flex flex-wrap gap-x-6 gap-y-1 text-xs text-ink-muted">
               <span>Tokens w profilu: <strong className="font-mono text-ink">{telemetry.linguisticTelemetry.totalExtractedTokens}</strong></span>
@@ -319,7 +302,7 @@ export const AtsLabView: React.FC<AtsLabViewProps> = ({
           {/* Struktura */}
           <div className="p-5 rounded-2xl bg-surface/60 border border-ink/5 space-y-3">
             <h4 className="text-sm font-bold text-ink flex items-center gap-2">
-              <Layers className="h-4 w-4 text-brand" /> Parsowalność struktury
+              <Layers className="h-4 w-4 text-brand-fg" /> Parsowalność struktury
             </h4>
             <div className="grid grid-cols-2 gap-2.5">
               <div className="p-3 rounded-lg bg-surface/80 border border-ink/5">
@@ -439,7 +422,7 @@ export const AtsLabView: React.FC<AtsLabViewProps> = ({
                       key={rIdx}
                       className="inline-flex items-center gap-1.5 px-3 py-1 rounded-xl bg-surface border border-ink/10 text-xs font-semibold text-ink"
                     >
-                      <ArrowRight className="h-3 w-3 text-brand" /> {roleName}
+                      <ArrowRight className="h-3 w-3 text-brand-fg" /> {roleName}
                     </span>
                   ))}
                 </div>
@@ -453,7 +436,7 @@ export const AtsLabView: React.FC<AtsLabViewProps> = ({
       <div className="space-y-4">
         <div className="flex items-center justify-between">
           <h2 className="text-xl font-bold text-ink flex items-center gap-2">
-            <Award className="h-5 w-5 text-brand" /> Oceny 10 Silników i Modułów CVelocity
+            <Award className="h-5 w-5 text-brand-fg" /> Oceny 10 Silników i Modułów CVelocity
           </h2>
           <span className="text-xs text-ink-faint hidden sm:inline">
             Kliknij silnik, aby zobaczyć szczegółowy audyt i propozycje zmian
@@ -539,7 +522,7 @@ export const AtsLabView: React.FC<AtsLabViewProps> = ({
             <div>
               <div className="flex items-center gap-2">
                 <h3 className="text-xl font-bold text-ink">{activeEngine.name}</h3>
-                <span className="text-xs px-2.5 py-0.5 rounded-full bg-brand/10 text-brand font-semibold">
+                <span className="text-xs px-2.5 py-0.5 rounded-full bg-brand/10 text-brand-fg font-semibold">
                   {activeEngine.component}
                 </span>
               </div>
@@ -551,7 +534,7 @@ export const AtsLabView: React.FC<AtsLabViewProps> = ({
             <div className="flex items-center gap-3">
               <div className="text-right">
                 <span className="text-xs text-ink-faint block">Ocena tego modułu</span>
-                <span className="text-2xl font-black font-mono text-brand">{activeEngine.score}%</span>
+                <span className="text-2xl font-black font-mono text-brand-fg">{activeEngine.score}%</span>
               </div>
               <span className={`px-3 py-1 rounded-xl text-xs font-extrabold ${getStatusColor(activeEngine.status).badge}`}>
                 {getStatusColor(activeEngine.status).label}
@@ -602,13 +585,13 @@ export const AtsLabView: React.FC<AtsLabViewProps> = ({
           {/* Konkretne propozycje zmian */}
           {activeEngine.proposals && activeEngine.proposals.length > 0 && (
             <div className="mt-6 p-4 rounded-2xl bg-surface/80 border border-brand/20 space-y-2">
-              <span className="text-xs font-bold text-brand flex items-center gap-1.5">
+              <span className="text-xs font-bold text-brand-fg flex items-center gap-1.5">
                 <Lightbulb className="h-4 w-4" /> Konkretne propozycje modyfikacji w CV:
               </span>
               <ul className="space-y-1.5 text-xs text-ink-muted pl-1">
                 {activeEngine.proposals.map((prop, pIdx) => (
                   <li key={pIdx} className="flex items-start gap-2">
-                    <span className="text-brand font-bold">→</span>
+                    <span className="text-brand-fg font-bold">→</span>
                     <span>{prop}</span>
                   </li>
                 ))}
@@ -617,7 +600,7 @@ export const AtsLabView: React.FC<AtsLabViewProps> = ({
           )}
 
           <div className="mt-4 p-3.5 rounded-2xl bg-surface border border-ink/5 flex items-start gap-3">
-            <HelpCircle className="h-4 w-4 text-brand shrink-0 mt-0.5" />
+            <HelpCircle className="h-4 w-4 text-brand-fg shrink-0 mt-0.5" />
             <div>
               <span className="text-xs font-bold text-ink block">Wskazówka:</span>
               <p className="text-xs text-ink-muted mt-0.5 leading-relaxed">{activeEngine.recommendation}</p>
@@ -629,7 +612,7 @@ export const AtsLabView: React.FC<AtsLabViewProps> = ({
       {/* 6. Przewodnik Inżynierii CV: 6 Złotych Zasad */}
       <div className="space-y-4 pt-4 border-t border-ink/5">
         <div>
-          <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-brand">
+          <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-brand-fg">
             <BookOpen className="h-4 w-4" />
             <span>Standardy Inżynierii CV</span>
           </div>
@@ -655,7 +638,7 @@ export const AtsLabView: React.FC<AtsLabViewProps> = ({
                   className="flex w-full items-center justify-between p-4 text-left font-semibold text-sm text-ink hover:bg-surface-raised/50"
                 >
                   <span className="flex items-center gap-2">
-                    <span className="flex h-6 w-6 items-center justify-center rounded-lg bg-brand/10 text-brand text-xs font-bold font-mono">
+                    <span className="flex h-6 w-6 items-center justify-center rounded-lg bg-brand/10 text-brand-fg text-xs font-bold font-mono">
                       {idx + 1}
                     </span>
                     {practice.title}

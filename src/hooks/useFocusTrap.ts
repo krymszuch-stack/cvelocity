@@ -36,6 +36,12 @@ export function useFocusTrap<T extends HTMLElement = HTMLElement>(
     previouslyFocusedRef.current =
       document.activeElement instanceof HTMLElement ? document.activeElement : null;
 
+    // Scroll-lock: tło nie przewija się spod modala (kółko myszy nad backdropem
+    // nie powinno ruszać strony). Restore w cleanup przywraca wcześniejszy stan,
+    // także wtedy, gdy modal zamknął inny modal — bez kradzieży wartości.
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+
     const container = containerRef.current;
     if (!container) return;
 
@@ -81,6 +87,7 @@ export function useFocusTrap<T extends HTMLElement = HTMLElement>(
       // Powrót do wywołującego — sedno dostępności modali.
       previouslyFocusedRef.current?.focus();
       previouslyFocusedRef.current = null;
+      document.body.style.overflow = previousOverflow;
     };
   }, [isActive]);
 
