@@ -17,6 +17,23 @@
 
 <!-- Dopisuj tutaj. Jeden punkt = jedna uwaga. -->
 
+- Karnet Aplikacyjny ma dziś stronę **zapisu** (webhook `mode=payment` →
+  `activate_application_pass`, migracja `0004`), ale **nie ma jeszcze strony
+  odczytu**: `getEntitlements` i `consume_quota` rozstrzygają wyłącznie po
+  `subscriptions.status`, więc kupiony karnet niczego użytkownikowi nie
+  odblokuje. Domknięcie wymaga decyzji produktowej, jak 30 wywołań AI ma się
+  liczyć wobec istniejącego dziennego resetu `user_quotas` — dlatego tego nie
+  zgadywałem w gałęzi. Przed włączeniem płatności trzeba też wpisać prawdziwy
+  `stripe_price_id` w wierszu planu `karnet`.
+  _(wpis od agenta — usuń, jeśli nieaktualny)_
+
+- Suita testowa podpakietu `semantic-work-graph` krzacza się przy teardównie na
+  Node 22/Windows natywnym błędem better-sqlite3 (`Assertion failed:
+  (env) != nullptr`) — odtworzone na czystym drzewie bez moich zmian, więc to
+  zastane. Testy jednostkowe przechodzą; wysypuje się samo zamykanie procesu.
+  Do diagnozy osobno (wersja better-sqlite3 vs Node ABI / pool vitest).
+  _(wpis od agenta — usuń, jeśli nieaktualny)_
+
 - `matchSubRoles` nie trafia w realistyczny tytuł zawodu fizycznego, a trafia
   w informatyczny — i to psuje więcej niż podpowiedzi. Marka figuruje
   w katalogu jako `'Junkers / Bosch'`, a `phraseSpecificity`
