@@ -269,7 +269,7 @@ ${education.map((e) => `${e.degree} - ${e.institution} (${e.startDate} - ${e.end
 
             <div className="space-y-4">
               {history.map((h) => (
-                <div key={h.id} className="space-y-1.5">
+                <div key={h.id} className="page-break-inside-avoid space-y-1.5">
                   <div className="flex items-baseline justify-between">
                     <span className="font-bold text-xs text-ink">{h.role} • <span style={{ color: selectedColor }}>{h.company}</span></span>
                     <span className="font-mono text-[10px] text-muted">

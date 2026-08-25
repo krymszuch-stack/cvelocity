@@ -43,7 +43,7 @@ export const STARStoryCard: React.FC<STARStoryCardProps> = ({
 
   return (
     <div
-      className={`rounded-2xl border transition-all ${
+      className={`page-break-inside-avoid rounded-2xl border transition-all ${
         isActiveInHud
           ? 'border-brand-500 bg-elevated shadow-floating ring-2 ring-brand-500/20'
           : 'border-line bg-elevated shadow-raised hover:border-line-strong'
