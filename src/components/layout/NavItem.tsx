@@ -52,13 +52,16 @@ export const NavItem: React.FC<NavItemProps> = ({
   const button = (
     <button
       type="button"
-      onClick={isLocked ? undefined : onClick}
-      disabled={isLocked}
+      onClick={onClick}
+      /* Zablokowana pozycja NIE jest disabled: klik ma przejść do
+         `navigate()` w App, który pokaże toast z powodem blokady. Wcześniejsze
+         `disabled + onClick={undefined}` ucinało jedyny kanał wyjaśnienia,
+         a tooltip nie istnieje na urządzeniach dotykowych. */
       className={`group relative flex w-full min-h-[2.5rem] items-center gap-3 rounded-xl px-3 py-2.5 text-label font-semibold transition-colors duration-[var(--duration-fast)] ease-out focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#F26440]/50 ${
         isCollapsed ? 'justify-center px-2' : ''
       } ${
         isLocked
-          ? 'cursor-not-allowed text-muted'
+          ? 'cursor-pointer text-muted hover:bg-brand-500/5'
           : `cursor-pointer ${
               isActive
                 ? 'text-brand-fg font-bold'

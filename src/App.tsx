@@ -30,10 +30,9 @@ import { NextActionCard } from './components/nextaction/NextActionCard';
 import { CvQuestionsCard } from './features/questions/CvQuestionsCard';
 import { fetchCloudVault, saveCloudVault } from './lib/cloudVault';
 import { resolveVaultOnSignIn } from './lib/vaultSync';
-import { SkillBridgeMatrixModal } from './components/bridge/SkillBridgeMatrixModal';
+import { AdvisorModalHost, preloadAdvisorModal } from './features/advisor/AdvisorModalHost';
 import { ElevatorPitchModal } from './features/pitch/ElevatorPitchModal';
 import { DrillModeModal } from './features/drill/DrillModeModal';
-import { AdvisorModalHost, preloadAdvisorModal } from './features/advisor/AdvisorModalHost';
 
 // Lazy-loaded heavy views for fast initial bundle & LCP
 const JobMatcher = lazy(() => import('./features/matcher/JobMatcher').then((m) => ({ default: m.JobMatcher })));
@@ -297,7 +296,9 @@ function MainApp() {
   // wcześniej wisiały w globalnej nawigacji razem ze skrótami Ctrl+B/P/D,
   // widoczne od pierwszej sekundy, choć dotyczą rozmowy, której nikt jeszcze
   // nie umówił. Zasobnik Rozmowy (HUD, pętla) mieszka teraz w Pipeline.
-  const [isSkillBridgeOpen, setSkillBridgeOpen] = useState(false);
+  // Modala Mostu Kompetencyjnego tu nie ma: jedynym żywym wejściem jest
+  // mapper słów kluczowych w APLIKUJ, który renderuje własną instancję
+  // z preselekcją brakującej umiejętności.
   const [isPitchOpen, setPitchOpen] = useState(false);
   const [isDrillOpen, setDrillOpen] = useState(false);
 
@@ -437,12 +438,6 @@ function MainApp() {
       />
 
       {/* Narzędzia treningowe — otwierane z Kokpitu w sekcji TRENUJ */}
-      <SkillBridgeMatrixModal
-        isOpen={isSkillBridgeOpen}
-        onClose={() => setSkillBridgeOpen(false)}
-        vault={vault}
-      />
-
       <ElevatorPitchModal
         isOpen={isPitchOpen}
         onClose={() => setPitchOpen(false)}

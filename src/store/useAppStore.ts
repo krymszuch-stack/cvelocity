@@ -21,6 +21,12 @@ interface AppStoreState {
   isAuthModalOpen: boolean;
   isDesignTokensOpen: boolean;
   advisorInitialQuestion?: string;
+  /**
+   * Aplikacja wskazana przez rekomendację „następnego kroku" — Pipeline
+   * podświetla jej wiersz. Stan przejściowy (nie persystowany): po chwili
+   * i tak znika, a zapisywanie podświetlenia nie ma sensu.
+   */
+  highlightedApplicationId?: string | null;
 }
 
 // In-memory global state subscribers for zero-dependency store
@@ -31,6 +37,7 @@ let globalState: AppStoreState = {
   isAuthModalOpen: false,
   isDesignTokensOpen: false,
   advisorInitialQuestion: undefined,
+  highlightedApplicationId: null,
 };
 
 /**
@@ -139,6 +146,10 @@ export function useAppStore() {
     setStoreState({ isDesignTokensOpen });
   }, []);
 
+  const setHighlightedApplicationId = useCallback((highlightedApplicationId: string | null) => {
+    setStoreState({ highlightedApplicationId });
+  }, []);
+
   return {
     ...state,
     setActiveTab,
@@ -147,5 +158,6 @@ export function useAppStore() {
     setAdvisorOpen,
     setAuthModalOpen,
     setDesignTokensOpen,
+    setHighlightedApplicationId,
   };
 }

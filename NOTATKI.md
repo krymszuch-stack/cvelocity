@@ -126,6 +126,16 @@
   przeniesienie `ParsedJobDescription` przez `JobOffer` albo obok niego.
   _(wpis od agenta — usuń, jeśli nieaktualny)_
 
+- Pozostałości po audycie UI/UX 2026-08-26, zweryfikowane w kodzie, celowo
+  nietknięte (aktywny obszar równoległej sesji): HUD (`ReactFloatingPanel.tsx`)
+  ma przycisk „Symuluj spotkanie Zoom" przełączający wyłącznie klasę CSS oraz
+  martwe sterowanie WPM (`setWpmSpeed` nigdy nie wołane); `DocumentRenderer`
+  oferuje szablon „Minimalny", który nie ma żadnych własnych stylów; tagi i czas
+  w `STARStoryView` żyją tylko w stanie sesji (komunikaty uczyniono uczciwymi,
+  ale trwała persystencja wymagałaby podania `onChangeVault`). Do domknięcia
+  razem z konsolidacją pitcha (Kokpit vs modal vs HUD).
+  _(wpis od agenta po audycie UI/UX)_
+
 ---
 
 ## ✅ Załatwione

@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import {
   Plus,
   Search,
@@ -15,6 +15,8 @@ import { motion } from 'motion/react';
 import { ApplicationModal } from './ApplicationModal';
 import { ApplicationStatus, JobApplication, MasterVault } from '../../types';
 import { useApplications } from '../../store/useApplications';
+import { useAppStore } from '../../store/useAppStore';
+import { showToast } from '../../store/useToastStore';
 import { InterviewPanel } from '../pipeline/InterviewPanel';
 import { TrackerTable } from './TrackerTable';
 import { StatTile } from '../../components/ui/StatTile';
@@ -57,6 +59,22 @@ export const ApplicationTracker: React.FC<ApplicationTrackerProps> = ({
 }) => {
   const { applications, saveApplication, removeApplication, patchApplication, setStatus } =
     useApplications();
+  const {
+    highlightedApplicationId,
+    setHighlightedApplicationId,
+  } = useAppStore();
+
+  // Rekomendacja „następnego kroku" wskazała tę aplikację — podświetl jej
+  // wiersz na chwilę po wejściu, żeby użytkownik nie szukał jej w tabeli.
+  // Podświetlenie gaśnie samo: to wskazówka, nie stan.
+  const [flashId, setFlashId] = useState<string | null>(null);
+  useEffect(() => {
+    if (!highlightedApplicationId) return;
+    setFlashId(highlightedApplicationId);
+    setHighlightedApplicationId(null);
+    const timer = setTimeout(() => setFlashId(null), 5000);
+    return () => clearTimeout(timer);
+  }, [highlightedApplicationId, setHighlightedApplicationId]);
 
   const [filterStatus, setFilterStatus] = useState<string>('ALL');
   const [searchQuery, setSearchQuery] = useState<string>('');
@@ -105,11 +123,18 @@ export const ApplicationTracker: React.FC<ApplicationTrackerProps> = ({
 
   const handleSaveApp = (app: JobApplication) => {
     saveApplication(app);
+    showToast('Pipeline zaktualizowany', {
+      message: `${app.company} — ${app.position} (${app.status}).`,
+    });
   };
 
   const handleDeleteApp = (id: string) => {
     if (confirm('Czy na pewno chcesz usunąć to zgłoszenie z pipeline?')) {
+      const removed = applications.find((entry) => entry.id === id);
       removeApplication(id);
+      showToast('Zgłoszenie usunięte', {
+        message: removed ? `${removed.company} — ${removed.position}.` : undefined,
+      });
     }
   };
 
@@ -122,6 +147,7 @@ export const ApplicationTracker: React.FC<ApplicationTrackerProps> = ({
     if (!notesApp) return;
     patchApplication(notesApp.id, { notes: currentNotes });
     setNotesApp(null);
+    showToast('Notatka zapisana', { message: `${notesApp.company} — ${notesApp.position}.` });
   };
 
   const filterButtons: Array<{ id: string; label: string; count: number }> = [
@@ -254,6 +280,7 @@ export const ApplicationTracker: React.FC<ApplicationTrackerProps> = ({
       {/* Main Table View */}
       <TrackerTable
         applications={filteredApps}
+        highlightApplicationId={flashId}
         onStatusChange={handleStatusChange}
         onEdit={(app) => {
           setEditingApp(app);

@@ -17,6 +17,11 @@ import { EmptyState } from '../../components/ui/EmptyState';
 
 export interface TrackerTableProps {
   applications: JobApplication[];
+  /**
+   * Wiersz do chwilowego podświetlenia — rekomendacja „następnego kroku"
+   * prowadzi tu prosto do konkretnej aplikacji.
+   */
+  highlightApplicationId?: string | null;
   onStatusChange: (id: string, newStatus: ApplicationStatus) => void;
   onEdit: (app: JobApplication) => void;
   onDelete: (id: string) => void;
@@ -26,6 +31,7 @@ export interface TrackerTableProps {
 
 export const TrackerTable: React.FC<TrackerTableProps> = ({
   applications,
+  highlightApplicationId = null,
   onStatusChange,
   onEdit,
   onDelete,
@@ -37,7 +43,7 @@ export const TrackerTable: React.FC<TrackerTableProps> = ({
       <EmptyState
         icon={Briefcase}
         title="Brak aplikacji w tej kategorii"
-        description="Nie znaleziono żadnych zgłoszeń odpowiadających wybranemu filtrowi. Dodaj nową aplikację ręcznie lub zaimportuj z modułu JobMatcher."
+        description="Nie znaleziono żadnych zgłoszeń odpowiadających wybranemu filtrowi. Dodaj aplikację przyciskiem powyżej albo zapisz dopasowaną ofertę z sekcji APLIKUJ."
         className={className}
       />
     );
@@ -60,6 +66,7 @@ export const TrackerTable: React.FC<TrackerTableProps> = ({
         <AnimatePresence mode="popLayout">
           {applications.map((app) => {
             const initial = app.company.charAt(0).toUpperCase();
+            const isHighlighted = app.id === highlightApplicationId;
 
             return (
               <motion.div
@@ -69,7 +76,11 @@ export const TrackerTable: React.FC<TrackerTableProps> = ({
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, scale: 0.95 }}
                 transition={{ duration: 0.2, ease: [0.19, 1, 0.22, 1] }}
-                className="group flex flex-col gap-3 rounded-2xl border border-line bg-surface p-4 shadow-xs transition-all duration-200 hover:border-brand-300 hover:bg-elevated hover:shadow-raised lg:grid lg:grid-cols-12 lg:items-center"
+                className={`group flex flex-col gap-3 rounded-2xl border p-4 shadow-xs transition-all duration-200 hover:border-brand-300 hover:bg-elevated hover:shadow-raised lg:grid lg:grid-cols-12 lg:items-center ${
+                  isHighlighted
+                    ? 'border-brand-500 bg-brand-50/60 ring-2 ring-brand-500/30'
+                    : 'border-line bg-surface'
+                }`}
               >
                 {/* 1. Company */}
                 <div className="col-span-3 flex items-center gap-3">

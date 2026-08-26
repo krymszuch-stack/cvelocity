@@ -66,11 +66,6 @@ export const InterviewCockpitView: React.FC<InterviewCockpitViewProps> = ({
   const [missingSkillInput, setMissingSkillInput] = useState('');
   const [customBridgeSkill, setCustomBridgeSkill] = useState('');
 
-  // Practice recorder simulator state
-  const [practicingQuestionId, setPracticingQuestionId] = useState<string | null>(null);
-  const [practiceTimer, setPracticeTimer] = useState(0);
-  const [isPracticeTimerActive, setIsPracticeTimerActive] = useState(false);
-
   // Checklists
   const [preCallItems, setPreCallItems] = useState<{ id: string; label: string; checked: boolean }[]>([
     { id: 'tech_check', label: 'Test mikrofonu, słuchawek i kamery (jakość dźwięku > jakość wideo)', checked: false },
@@ -108,17 +103,6 @@ export const InterviewCockpitView: React.FC<InterviewCockpitViewProps> = ({
     }
     return () => clearInterval(interval);
   }, [isPitchTimerRunning]);
-
-  // Practice timer interval
-  useEffect(() => {
-    let interval: NodeJS.Timeout;
-    if (isPracticeTimerActive) {
-      interval = setInterval(() => {
-        setPracticeTimer((prev) => prev + 1);
-      }, 1000);
-    }
-    return () => clearInterval(interval);
-  }, [isPracticeTimerActive]);
 
   const handleToggleLesson = (lessonId: string) => {
     const updated = toggleLessonCompletion(lessonId);
