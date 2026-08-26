@@ -94,7 +94,7 @@ export const LiveTrackerView: React.FC<LiveTrackerViewProps> = ({
                   <span>KROK {idx + 1}</span>
                   {isPassed && <CheckCircle2 className="h-3 w-3 text-success" />}
                 </div>
-                <div className="text-[11px] truncate mt-0.5">{meta.label.split(' ')[0]}</div>
+                <div className="text-[11px] truncate mt-0.5">{meta.shortLabel}</div>
               </button>
             );
           })}
@@ -198,7 +198,7 @@ export const LiveTrackerView: React.FC<LiveTrackerViewProps> = ({
                 </div>
                 <div className="flex items-center gap-1.5 shrink-0">
                   <span className="rounded bg-sunken px-1.5 py-0.5 font-mono text-[9px] text-muted">
-                    {note.stage}
+                    {STAGE_LABELS[note.stage].shortLabel}
                   </span>
                   {note.sentiment === 'POSITIVE' && (
                     <Smile className="h-3.5 w-3.5 text-success" />
@@ -224,7 +224,7 @@ export const LiveTrackerView: React.FC<LiveTrackerViewProps> = ({
             Koniec rozmowy?
           </span>
           <span className="text-[11px] text-muted">
-            Przejdź do natychmiastowego debriefu i wygeneruj mail z podziękowaniem (Follow-Up).
+            Przejdź do natychmiastowego debriefu i wygeneruj e-mail z podziękowaniem (Follow-Up).
           </span>
         </div>
 

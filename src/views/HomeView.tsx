@@ -256,7 +256,7 @@ export const HomeView: React.FC<HomeViewProps> = ({
       description: 'Zaimportuj plik PDF lub DOCX i połącz dane bez utraty wpisów.',
       icon: UploadCloud,
       tab: 'profil' as NavTabId,
-      badge: '1 darmowy/mc',
+      badge: `${FREE_MONTHLY_IMPORTS} darmowy/mc`,
       badgeColor: 'warning',
     },
     {

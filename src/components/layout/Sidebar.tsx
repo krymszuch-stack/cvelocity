@@ -177,7 +177,14 @@ export const Sidebar: React.FC<SidebarProps> = ({
                 {isAuthenticated ? userEmail : 'Logowanie / Konto'}
               </p>
               <p className="truncate font-mono text-[10px] text-muted">
-                {planStatus === 'active' ? 'Plan Pro • Active' : 'Plan Podstawowy'}
+                {/* `trialing` przewiduje typ i przychodzi ze Stripe, więc musi
+                    mieć własną etykietę — inaczej osoba na okresie próbnym
+                    widzi „Plan Podstawowy”, choć płaci za Pro po trialu. */}
+                {planStatus === 'active'
+                  ? 'Plan Pro aktywny'
+                  : planStatus === 'trialing'
+                  ? 'Plan Pro — okres próbny'
+                  : 'Plan Podstawowy'}
               </p>
             </div>
           )}

@@ -117,7 +117,7 @@ export const InterviewLoopModal: React.FC<InterviewLoopModalProps> = ({
             <div>
               <div className="flex items-center gap-2">
                 <h3 className="text-base font-extrabold text-ink tracking-tight font-mono">
-                  Interview Loop Manager (interview-loop-manager-v1)
+                  Interview Loop Manager
                 </h3>
                 <Chip variant="brand" size="sm">
                   Cykl 360°

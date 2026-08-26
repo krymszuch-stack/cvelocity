@@ -12,7 +12,7 @@ import { ProgressBar } from '../../components/ui/ProgressBar';
 import { Tabs } from '../../components/ui/Tabs';
 import { PageHeader } from '../../components/ui/PageHeader';
 import { PremiumBadge } from '../../components/ui/PremiumBadge';
-import { useEntitlements, FREE_MONTHLY_IMPORTS } from '../../store/useEntitlements';
+import { useEntitlements } from '../../store/useEntitlements';
 import { StripeCheckoutModal } from '../../components/payments/StripeCheckoutModal';
 import { showToast } from '../../store/useToastStore';
 
@@ -142,7 +142,7 @@ export const CVParserModal: React.FC<CVParserModalProps> = ({
       <PageHeader
         title="Wczytywanie & Scalanie Dokumentu CV"
         description="Zaimportuj dotychczasowe CV w dowolnym formacie (PDF, DOCX, TXT), a silnik automatycznie wyekstrahuje historię, umiejętności i dane kontaktowe do porównania z Master Vault."
-        badge="Universal Ingestion"
+        badge="Uniwersalny parser"
       />
 
       {!parsedResult ? (
@@ -167,9 +167,11 @@ export const CVParserModal: React.FC<CVParserModalProps> = ({
                 ) : usage.importUses > 0 ? (
                   <span>Pozostało darmowych importów pliku w tym miesiącu: <b className="text-ink">{usage.importUses}</b></span>
                 ) : (
+                  // Liczby nie powtarzamy w tekście — licznik obok już ją pokazuje
+                  // i jest jedynym źródłem prawdy (reguła 3); hardcod rozjeżdżał się
+                  // z realnym limitem przy każdej zmianie konfiguracji.
                   <span className="text-warning-fg font-bold">
-                    Wykorzystano miesięczny limit {FREE_MONTHLY_IMPORTS}{' '}
-                    {FREE_MONTHLY_IMPORTS === 1 ? 'pliku' : 'plików'} (Wklejanie tekstu nadal darmowe!)
+                    Wykorzystano miesięczny limit darmowych importów plików (Wklejanie tekstu nadal darmowe!)
                   </span>
                 )}
               </div>
@@ -249,6 +251,8 @@ export const CVParserModal: React.FC<CVParserModalProps> = ({
             price: '49 zł',
             period: '/ miesiąc brutto',
             recurring: true,
+            // Cykl musi być jawny — bez `interval` modal wpada w ogólny tekst o odnowieniu.
+            interval: 'month',
             trialDays: 30,
           }}
           onUnlocked={() => {

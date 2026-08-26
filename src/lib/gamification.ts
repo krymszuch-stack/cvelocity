@@ -19,7 +19,8 @@ export type XpEventId =
   | 'star_completed'
   | 'ats_high_score'
   | 'question_confirmed'
-  | 'salary_reported';
+  | 'salary_reported'
+  | 'challenge_completed';
 
 export interface XpEventDefinition {
   id: XpEventId;
@@ -35,6 +36,13 @@ export const XP_EVENTS: Record<XpEventId, XpEventDefinition> = {
   ats_high_score: { id: 'ats_high_score', points: 500, label: 'Wynik ATS 85+ na realnym CV' },
   question_confirmed: { id: 'question_confirmed', points: 100, label: 'Pytanie potwierdzone z rozmowy' },
   salary_reported: { id: 'salary_reported', points: 50, label: 'Widełki z ogłoszenia zgłoszone' },
+  // Chip w Kokpicie Rozmowy obiecywał „+50 XP”, a nic nie przyznawało punktów —
+  // nagroda bez mechanizmu to reguła 1 po stronie gamifikacji.
+  challenge_completed: {
+    id: 'challenge_completed',
+    points: 50,
+    label: 'Codzienne wyzwanie domknięte',
+  },
 };
 
 export interface LevelDefinition {
@@ -277,6 +285,7 @@ export function emptyGamificationState(): GamificationState {
       ats_high_score: 0,
       question_confirmed: 0,
       salary_reported: 0,
+      challenge_completed: 0,
     },
     unlockedAchievements: [],
   };

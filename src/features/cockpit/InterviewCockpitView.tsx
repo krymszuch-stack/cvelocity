@@ -32,6 +32,8 @@ import {
   CockpitProgressState,
 } from '../../lib/interviewCockpitEngine';
 import { loadDrillHistory } from '../../lib/drillEngine';
+import { grantXp } from '../../store/useGamificationStore';
+import { XP_EVENTS } from '../../lib/gamification';
 
 export interface InterviewCockpitViewProps {
   vault: MasterVault;
@@ -61,7 +63,7 @@ export const InterviewCockpitView: React.FC<InterviewCockpitViewProps> = ({
   const [pitchSeconds, setPitchSeconds] = useState(0);
 
   // Skill Bridge simulator state
-  const [missingSkillInput, setMissingSkillInput] = useState('AWS');
+  const [missingSkillInput, setMissingSkillInput] = useState('');
   const [customBridgeSkill, setCustomBridgeSkill] = useState('');
 
   // Practice recorder simulator state
@@ -73,7 +75,7 @@ export const InterviewCockpitView: React.FC<InterviewCockpitViewProps> = ({
   const [preCallItems, setPreCallItems] = useState<{ id: string; label: string; checked: boolean }[]>([
     { id: 'tech_check', label: 'Test mikrofonu, słuchawek i kamery (jakość dźwięku > jakość wideo)', checked: false },
     { id: 'pitch_ready', label: 'Przećwiczony 30-sekundowy Elevator Pitch z 1 twardą liczbą', checked: false },
-    { id: 'metrics_sheet', label: 'Otwarty Live HUD lub podgląd kluczowych liczb (+40% TPS, 0 awarii)', checked: false },
+    { id: 'metrics_sheet', label: 'Otwarty Live HUD lub podgląd kluczowych liczb (Twoje kluczowe liczby z ostatniego projektu)', checked: false },
     { id: 'red_flags_ready', label: 'Wybrane min. 2 pytania do zadania rekruterowi (Tech Debt, Proces)', checked: false },
     { id: 'env_ready', label: 'Woda pod ręką, wyciszone powiadomienia, zamknięte zbędne karty', checked: false },
   ]);
@@ -124,8 +126,15 @@ export const InterviewCockpitView: React.FC<InterviewCockpitViewProps> = ({
   };
 
   const handleToggleChallenge = (challengeId: string) => {
+    // Chip obiecywał „+50 XP”, a niczego nie przyznawał — punkty dostaje
+    // wyłącznie zaznaczenie wyzwania. Odznaczenie ich nie zabiera: cofnięcie
+    // kliknięcia nie jest „anulowaniem” faktu, że zadanie się wykonało.
+    const alreadyCompleted = progress.completedChallenges.includes(challengeId);
     const updated = toggleChallengeCompletion(challengeId);
     setProgress(updated);
+    if (!alreadyCompleted) {
+      grantXp('challenge_completed', challengeId);
+    }
   };
 
   const navTabs = [
@@ -175,7 +184,7 @@ export const InterviewCockpitView: React.FC<InterviewCockpitViewProps> = ({
               {readinessScore >= 80
                 ? '🏆 Stan: Pełna gotowość snajperska'
                 : readinessScore >= 50
-                ? '⚡ Stan: Dobre przygotowanie, doszlifuj bridge’e'
+                ? '⚡ Stan: Dobre przygotowanie, uzupełnij mosty kompetencyjne'
                 : '🎯 Stan: Uzupełnij metryki i przećwicz pitch'}
             </p>
           </div>
@@ -190,7 +199,9 @@ export const InterviewCockpitView: React.FC<InterviewCockpitViewProps> = ({
               </div>
               <div>
                 <h2 className="font-sans text-sm font-bold text-ink">Codzienne Wyzwanie</h2>
-                <p className="text-xs text-muted">+50 XP do dyscypliny</p>
+                {/* Kwota z XP_EVENTS, nie drugi literał — chip i przyznanie
+                    punktów nie mogą się rozjechać przy zmianie stawki. */}
+                <p className="text-xs text-muted">+{XP_EVENTS.challenge_completed.points} XP do dyscypliny</p>
               </div>
             </div>
             <span className="rounded-full bg-accent-soft px-2.5 py-0.5 font-mono text-xs font-bold text-accent-fg">
@@ -499,9 +510,14 @@ export const InterviewCockpitView: React.FC<InterviewCockpitViewProps> = ({
                     Most: {activeBridge.adjacentSkill}
                   </span>
                 </div>
-                <span className="font-mono text-xs font-bold text-brand-600">
-                  Czas wdrożenia: ~{activeBridge.learningCurveDays || 5} dni
-                </span>
+                {/* Czas renderowany tylko, gdy silnik go policzył: silnik ma
+                    własny default (7), a wpisanie tu drugiego (5) pokazywało
+                    liczbę, której nikt nie wyliczył (audyt treści §2.2). */}
+                {typeof activeBridge.learningCurveDays === 'number' && (
+                  <span className="font-mono text-xs font-bold text-brand-600">
+                    Czas wdrożenia: ~{activeBridge.learningCurveDays} dni
+                  </span>
+                )}
               </div>
 
               {/* Ready Script */}

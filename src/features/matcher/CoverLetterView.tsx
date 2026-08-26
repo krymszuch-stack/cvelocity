@@ -155,8 +155,11 @@ export const CoverLetterView: React.FC<CoverLetterViewProps> = ({
         </div>
       </div>
 
-      {/* Full Document Paper Container */}
-      <Card tone="raised" className="p-8 sm:p-12 space-y-6">
+      {/* Full Document Paper Container.
+          Własny identyfikator druku: CSS `@media print` odsłania wyłącznie
+          #cv-printable-document i #cover-letter-printable-document — bez tego
+          „Drukuj / PDF" na tej zakładce dawało pustą kartkę. */}
+      <Card tone="raised" id="cover-letter-printable-document" className="p-8 sm:p-12 space-y-6">
         <div className="border-b border-line pb-4">
           <h2 className="text-lg font-bold text-ink">
             Aplikacja na stanowisko: {coverLetter.targetJobTitle}

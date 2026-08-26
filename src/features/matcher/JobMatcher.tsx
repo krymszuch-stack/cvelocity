@@ -1,15 +1,8 @@
 import React, { useState } from 'react';
 import {
   Sparkles,
-  Zap,
-  CheckCircle2,
-  FileCheck,
-  Eye,
-  Sliders,
-  Briefcase,
-  Layers,
+  RefreshCw,
 } from 'lucide-react';
-import { motion, AnimatePresence } from 'motion/react';
 import {
   MasterVault,
   TailoredResume,
@@ -32,7 +25,6 @@ import { triggerConfetti } from '../../lib/confetti';
 import { grantXp } from '../../store/useGamificationStore';
 import { consumeAiLocally } from '../../store/useEntitlements';
 import { contributeJobIntel } from '../../lib/crowdsourceIntel';
-import { AtsSimulatorView } from './AtsSimulatorView';
 import { PageHeader } from '../../components/ui/PageHeader';
 import { Button } from '../../components/ui/Button';
 import { Modal } from '../../components/ui/Modal';
@@ -60,6 +52,9 @@ export const JobMatcher: React.FC<JobMatcherProps> = ({
   const [isFetchingUrl, setIsFetchingUrl] = useState(false);
   const [urlError, setUrlError] = useState<string | null>(null);
   const [parsedJd, setParsedJd] = useState<ParsedJobDescription | null>(null);
+  // Błąd dopasowania musiałby widzieć modal — wcześniej catch tylko logował,
+  // a modal czekał na wyniki w nieskończoność.
+  const [matchError, setMatchError] = useState<string | null>(null);
 
   // Preferencje dojazdu żyją w vaulcie, a nie w stanie widoku: kalkulator ma
   // pamiętać, jak daleko użytkownik mieszka, przy każdej kolejnej ofercie.
@@ -73,6 +68,7 @@ export const JobMatcher: React.FC<JobMatcherProps> = ({
   const handleMatchJob = async (job: JobOffer) => {
     setSelectedJob(job);
     setIsTailoring(true);
+    setMatchError(null);
     setIsAtsModalOpen(true);
 
     try {
@@ -128,6 +124,10 @@ export const JobMatcher: React.FC<JobMatcherProps> = ({
       setTailoredResume(tailored);
     } catch (err) {
       console.error('Błąd dopasowywania oferty:', err);
+      // Bez tego modal wisiał na spinnerze „Kalkulacja..." do zamknięcia ręcznego.
+      setMatchError(
+        'Nie udało się policzyć dopasowania dla tej oferty. Spróbuj ponownie albo uzupełnij profil w sekcji PROFIL.'
+      );
     } finally {
       setIsTailoring(false);
     }
@@ -267,7 +267,25 @@ export const JobMatcher: React.FC<JobMatcherProps> = ({
           size="xl"
         >
           <div className="space-y-6">
-            {atsResult && tailoredResume && coverLetter ? (
+            {matchError ? (
+              <div className="flex flex-col items-center justify-center gap-3 p-12 text-center">
+                <p className="max-w-md text-sm font-semibold text-danger-fg">{matchError}</p>
+                <div className="flex items-center gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    icon={RefreshCw}
+                    onClick={() => handleMatchJob(selectedJob)}
+                    disabled={isTailoring}
+                  >
+                    Spróbuj ponownie
+                  </Button>
+                  <Button variant="ghost" size="sm" onClick={() => setIsAtsModalOpen(false)}>
+                    Zamknij
+                  </Button>
+                </div>
+              </div>
+            ) : atsResult && tailoredResume && coverLetter ? (
               <RealtimeLivePreview
                 vault={vault}
                 jobOffer={selectedJob}

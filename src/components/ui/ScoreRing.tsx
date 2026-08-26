@@ -17,7 +17,7 @@ export interface ScoreRingProps {
   size?: number;
   /** Grubość pierścienia w jednostkach viewBox (100×100). */
   stroke?: number;
-  /** Etykieta pod liczbą, np. „Mediana Rynkowa". */
+  /** Etykieta pod liczbą, np. „Mediana filtrów". */
   label?: string;
   suffix?: string;
   className?: string;

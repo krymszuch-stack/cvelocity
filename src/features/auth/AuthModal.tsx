@@ -466,7 +466,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onSuccess
       {widok === 'reset' && (
         <form onSubmit={resetuj} className="space-y-4">
           <p className="text-sm text-muted">
-            Podaj adres, na który zakładałeś konto. Wyślemy link do ustawienia nowego hasła.
+            Podaj adres e-mail powiązany z kontem. Wyślemy link do ustawienia nowego hasła.
           </p>
           <Input
             label="Adres e-mail"
@@ -491,9 +491,12 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onSuccess
           <p className="text-sm text-ink">
             Jeśli ten adres ma u nas konto, wysłaliśmy na niego wiadomość.
           </p>
+          {/* Czas życia linku ustala konfiguracja Supabase, nie ten kod —
+              konkretna liczba godzin szybko przestałaby być prawdą. */}
           <p className="text-label text-muted">
-            Link działa przez godzinę. Sprawdź też folder ze spamem — wiadomości
-            od nowych nadawców czasem tam trafiają.
+            Link jest ważny ograniczony czas — jeśli wygaśnie, wygeneruj nowy.
+            Sprawdź też folder ze spamem — wiadomości od nowych nadawców czasem
+            tam trafiają.
           </p>
           <Button type="button" variant="secondary" onClick={zamknij} className="w-full">
             Rozumiem

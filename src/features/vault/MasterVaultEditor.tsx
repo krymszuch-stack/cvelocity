@@ -178,16 +178,13 @@ export const MasterVaultEditor: React.FC<MasterVaultEditorProps> = ({
       {/* Header with Mode Switcher & Actions */}
       <PageHeader
         title="Master Vault • Profil Główny Kandydata"
-        description="Pojedyncze źródło prawdy (Single Source of Truth) dla wszystkich Twoich kompetencji, doświadczeń i preferencji. Zmiany zapisują się automatycznie — lokalnie, a po zalogowaniu także w chmurze konta."
+        description="Jedyne źródło danych dokumentów: kompetencje, doświadczenie i preferencje. Zmiany zapisują się automatycznie — lokalnie, a po zalogowaniu także w chmurze konta."
         badge={
-          <div className="flex items-center gap-2">
-            <span>Core SSoT</span>
-            <ConsistencyLockBadge
-              isConsistent={consistency.isConsistent}
-              size="sm"
-              label="spójność potwierdzona"
-            />
-          </div>
+          <ConsistencyLockBadge
+            isConsistent={consistency.isConsistent}
+            size="sm"
+            label="spójność potwierdzona"
+          />
         }
         actions={
           <div className="flex flex-wrap items-center gap-2">

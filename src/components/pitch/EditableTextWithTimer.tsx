@@ -130,7 +130,7 @@ export const EditableTextWithTimer: React.FC<EditableTextWithTimerProps> = ({
                 : 'text-muted hover:text-ink'
             }`}
           >
-            ⚡ 1-Liner (~10s)
+            ⚡ Jedno zdanie (~10s)
           </button>
           <button
             type="button"
