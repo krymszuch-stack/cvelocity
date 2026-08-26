@@ -79,6 +79,10 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
+/** Jeden wspólny literał zamiast pięciu kopii — poprawka treści trafia w
+ *  jedno miejsce, a nie w tyle funkcji (reguła 3; audyt treści §5.8). */
+const CHMURA_NIESKONFIGUROWANA = 'Konta w chmurze nie są tu skonfigurowane.';
+
 /** Adres, na który wraca użytkownik po kliknięciu linku z maila. */
 function redirectTarget(): string {
   return `${window.location.origin}/`;
@@ -178,7 +182,7 @@ export const AuthProvider: React.FC<{
 
   const signUpCloud = useCallback(
     async (email: string, password: string, displayName: string): Promise<AuthActionResult> => {
-      if (!supabase) return { ok: false, message: 'Konta w chmurze nie są tu skonfigurowane.' };
+      if (!supabase) return { ok: false, message: CHMURA_NIESKONFIGUROWANA };
 
       const { data, error } = await supabase.auth.signUp({
         email,
@@ -202,7 +206,7 @@ export const AuthProvider: React.FC<{
 
   const signInCloud = useCallback(
     async (email: string, password: string): Promise<AuthActionResult> => {
-      if (!supabase) return { ok: false, message: 'Konta w chmurze nie są tu skonfigurowane.' };
+      if (!supabase) return { ok: false, message: CHMURA_NIESKONFIGUROWANA };
 
       const { error } = await supabase.auth.signInWithPassword({ email, password });
       if (error) return { ok: false, message: authErrorMessage(error) };
@@ -212,7 +216,7 @@ export const AuthProvider: React.FC<{
   );
 
   const signInWithGoogle = useCallback(async (): Promise<AuthActionResult> => {
-    if (!supabase) return { ok: false, message: 'Konta w chmurze nie są tu skonfigurowane.' };
+    if (!supabase) return { ok: false, message: CHMURA_NIESKONFIGUROWANA };
 
     const { error } = await supabase.auth.signInWithOAuth({
       provider: 'google',
@@ -231,7 +235,7 @@ export const AuthProvider: React.FC<{
 
   const requestPasswordReset = useCallback(
     async (email: string): Promise<AuthActionResult> => {
-      if (!supabase) return { ok: false, message: 'Konta w chmurze nie są tu skonfigurowane.' };
+      if (!supabase) return { ok: false, message: CHMURA_NIESKONFIGUROWANA };
 
       const { error } = await supabase.auth.resetPasswordForEmail(email, {
         redirectTo: redirectTarget(),
@@ -247,7 +251,7 @@ export const AuthProvider: React.FC<{
 
   const resendConfirmation = useCallback(
     async (email: string): Promise<AuthActionResult> => {
-      if (!supabase) return { ok: false, message: 'Konta w chmurze nie są tu skonfigurowane.' };
+      if (!supabase) return { ok: false, message: CHMURA_NIESKONFIGUROWANA };
 
       const { error } = await supabase.auth.resend({ type: 'signup', email });
       if (error) return { ok: false, message: authErrorMessage(error) };

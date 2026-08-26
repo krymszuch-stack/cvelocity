@@ -11,7 +11,8 @@ interface DesignTokensShowcaseModalProps {
   onClose: () => void;
 }
 
-type ShowcaseTab = 'colors' | 'typography' | 'radii' | 'shadows' | 'semantics';
+// 'shadows' było martwą wartością — żadna zakładka jej nie renderuje.
+type ShowcaseTab = 'colors' | 'typography' | 'radii' | 'semantics';
 
 export const DesignTokensShowcaseModal: React.FC<DesignTokensShowcaseModalProps> = ({
   isOpen,
@@ -66,7 +67,7 @@ export const DesignTokensShowcaseModal: React.FC<DesignTokensShowcaseModalProps>
           <div>
             <h4 className="text-sm font-bold text-ink">System Tokenów Projektowych v4</h4>
             <p className="text-xs text-muted">
-              Wszystkie wartości generowane dynamicznie z CSS custom properties z zerowym użyciem klas zabronionych.
+              Wartości czytane dynamicznie z custom properties — bez zaszywanych duplikatów.
             </p>
           </div>
 
@@ -174,11 +175,13 @@ export const DesignTokensShowcaseModal: React.FC<DesignTokensShowcaseModalProps>
 
               <div className="border-t border-line pt-4">
                 <span className="text-[10px] font-mono font-bold text-subtle uppercase">Geist Mono (Dane Techniczne, Ceny, SKU)</span>
+                {/* Próbki typograficzne bez wymyślonych liczb (reguła 1) —
+                    „98.4% ATS" i TOTP udawały pomiar i dane bezpieczeństwa. */}
                 <p className="font-mono text-sm font-bold text-brand-fg mt-1">
-                  SKU-2026-CV • 24 500 PLN B2B • 98.4% ATS MATCH • 2FA TOTP: 849 201
+                  Próbka znaków mono: 0123456789 • CVelocity • pl-PL
                 </p>
                 <p className="font-mono text-xs text-muted mt-1">
-                  0-Token Slot Filling • Response Time: 42ms • Cache Hit: true
+                  Próba tekstu technicznego • pl-PL
                 </p>
               </div>
             </div>
@@ -191,7 +194,7 @@ export const DesignTokensShowcaseModal: React.FC<DesignTokensShowcaseModalProps>
             <div className="rounded-2xl border border-success/30 bg-success-soft p-4">
               <span className="font-mono text-xs font-bold text-success-fg">SUCCESS (Sukces)</span>
               <p className="mt-1 text-xs text-success-fg">
-                Operacja zapisu Vault zakończona powodzeniem (100% ATS match).
+                Operacja zapisu zakończona powodzeniem.
               </p>
               <div className="mt-3">
                 <Chip variant="success" size="sm">Zgodny z ATS</Chip>

@@ -1,6 +1,7 @@
 import React from 'react';
 import { AlertTriangle, Clock, Zap, XCircle, Info } from 'lucide-react';
 import { ConsistencyAlert } from '../../lib/consistencyGuard';
+import { formatDecimalPl } from '../../lib/pluralFormat';
 
 export interface ConsistencyAlertBannerProps {
   alerts: ConsistencyAlert[];
@@ -54,21 +55,22 @@ export const ConsistencyAlertBanner: React.FC<ConsistencyAlertBannerProps> = ({
                   {alert.details.differenceYears !== undefined && (
                     <div className="flex items-center justify-between">
                       <span>Różnica w latach:</span>
+                      {/* Przecinek dziesiętny (pl-PL) zamiast kropki z `toFixed`. */}
                       <span className="font-bold text-warning-fg">
-                        {alert.details.differenceYears.toFixed(2)} lat (&gt; 0.5 roku)
+                        {formatDecimalPl(alert.details.differenceYears, 2)} lat (&gt; 0,5 roku)
                       </span>
                     </div>
                   )}
                   {alert.details.sourceDurationYears !== undefined && (
                     <div className="flex items-center justify-between">
                       <span>Czas w MasterVault:</span>
-                      <span>{alert.details.sourceDurationYears.toFixed(2)} lat</span>
+                      <span>{formatDecimalPl(alert.details.sourceDurationYears, 2)} lat</span>
                     </div>
                   )}
                   {alert.details.claimedDurationYears !== undefined && (
                     <div className="flex items-center justify-between">
                       <span>Czas w projekcji:</span>
-                      <span>{alert.details.claimedDurationYears.toFixed(2)} lat</span>
+                      <span>{formatDecimalPl(alert.details.claimedDurationYears, 2)} lat</span>
                     </div>
                   )}
                   {alert.details.claimedTags && alert.details.claimedTags.length > 0 && (

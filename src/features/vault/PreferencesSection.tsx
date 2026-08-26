@@ -1,6 +1,7 @@
 import React from 'react';
 import { Briefcase, DollarSign, MapPin, Globe, Compass, ShieldCheck } from 'lucide-react';
 import { ProfilerState, ExperienceLevel } from '../../types';
+import { SENIORITY_LEVELS } from '../../data/seniority';
 import { Card } from '../../components/ui/Card';
 import { Input, Select } from '../../components/ui/Field';
 import { Slider } from '../../components/ui/Slider';
@@ -18,12 +19,14 @@ export const PreferencesSection: React.FC<PreferencesSectionProps> = ({
   onChange,
   className = '',
 }) => {
-  const experienceOptions = [
-    { value: 'ENTRY', label: 'Junior (Entry)', description: 'Stanowiska startowe i juniorskie (0-2 lata)' },
-    { value: 'MID', label: 'Mid Specialist', description: 'Samodzielny specjalista z doświadczeniem komercyjnym (2-5 lat)' },
-    { value: 'SENIOR', label: 'Senior / Lead', description: 'Ekspert dziedzinowy, architektura, decyzje techniczne (5+ lat)' },
-    { value: 'PIVOT', label: 'Przebranżowienie', description: 'Zmiana profilu lub ścieżki specjalizacji' },
-  ];
+  // Poziomy z jednego źródła (`src/data/seniority.ts`) — wcześniej lista żyła
+  // tu lokalnie i rozjeżdżała się nazwami z kafelkami w ProfilerSection
+  // (reguła 3). Zakres doklejany jest tylko tam, gdzie istnieje.
+  const experienceOptions = SENIORITY_LEVELS.map((level) => ({
+    value: level.id,
+    label: level.label,
+    description: level.range ? `${level.description} (${level.range})` : level.description,
+  }));
 
   const handleUpdateLocation = (field: string, value: any) => {
     onChange({

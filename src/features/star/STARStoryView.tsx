@@ -131,6 +131,11 @@ export const STARStoryView: React.FC<STARStoryViewProps> = ({
     return filterStarStoriesByTags(stories, activeTags, searchQuery);
   }, [stories, activeTags, searchQuery]);
 
+  // Pierwsza metryka pierwszego wpisu doświadczenia — dokładnie tyle, ile
+  // naprawdę jest w danych. Wcześniejszy fallback „Zweryfikowane wdrożenia"
+  // udawał twardy wynik użytkownika, którego nie było (reguła 1).
+  const firstMetric = vault.history?.[0]?.highlights?.[0]?.metric;
+
   return (
     <div className={`space-y-6 ${className}`}>
       {/* INTEGRACJA Z HUD: PANEL SLOTÓW HUD (z podglądem Slotu 3 i skrótu Ctrl+3) */}
@@ -187,9 +192,17 @@ export const STARStoryView: React.FC<STARStoryViewProps> = ({
             <span className="font-mono text-[10px] font-extrabold text-muted uppercase tracking-wider block">
               Slot 2: Główna Metryka
             </span>
-            <span className="font-bold text-xs text-success-fg block truncate">
-              {vault.history?.[0]?.highlights?.[0]?.metric || 'Zweryfikowane wdrożenia'}
-            </span>
+            {firstMetric ? (
+              <span className="font-bold text-xs text-success-fg block truncate">
+                {firstMetric}
+              </span>
+            ) : (
+              // Empty-state zamiast zmyślonej metryki: slot mówi wprost, czego
+              // brakuje, i kieruje do miejsca, gdzie użytkownik ją uzupełni.
+              <span className="block truncate text-xs italic text-muted">
+                Dodaj twardą liczbę w Vault
+              </span>
+            )}
             <span className="text-[10px] font-mono text-subtle">
               {vault.history?.[0]?.company || 'Doświadczenie'}
             </span>

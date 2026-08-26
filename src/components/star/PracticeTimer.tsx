@@ -65,6 +65,15 @@ export const PracticeTimer: React.FC<PracticeTimerProps> = ({
 
   const pacing = getStagePacing(elapsedSec, targetDurationSec);
 
+  // Znaczniki faz na osi muszą wynikać z celu przychodzącego propem — stałe 18/32/68/90 s
+  // zakładały historię 90 s i kłamały na osi dla celów 60/120 s. Proporcje (22%/36%/75%)
+  // odpowiadają progom faz w getStagePacing.
+  const phaseMarkSec = {
+    t: Math.round(targetDurationSec * 0.22),
+    a: Math.round(targetDurationSec * 0.36),
+    r: Math.round(targetDurationSec * 0.75),
+  };
+
   return (
     <div className={`rounded-2xl border border-line bg-elevated p-4 shadow-raised space-y-3 ${className}`}>
       <div className="flex items-center justify-between">
@@ -104,10 +113,10 @@ export const PracticeTimer: React.FC<PracticeTimerProps> = ({
         {/* Znaczniki etapów S - T - A - R */}
         <div className="flex justify-between text-[9px] font-mono text-subtle px-1">
           <span>0s (S)</span>
-          <span>18s (T)</span>
-          <span>32s (A)</span>
-          <span>68s (R)</span>
-          <span>90s (Stop)</span>
+          <span>{phaseMarkSec.t}s (T)</span>
+          <span>{phaseMarkSec.a}s (A)</span>
+          <span>{phaseMarkSec.r}s (R)</span>
+          <span>{targetDurationSec}s (Stop)</span>
         </div>
       </div>
 

@@ -56,9 +56,6 @@ export const PostCallDebriefView: React.FC<PostCallDebriefViewProps> = ({
   const [topicsToClarify, setTopicsToClarify] = useState(
     session.postCallDebrief?.topicsToClarifyInFollowUp || ''
   );
-  const [salaryNotes, setSalaryNotes] = useState(
-    session.postCallDebrief?.salaryTimelineNotes || ''
-  );
 
   /**
    * Pytania faktycznie zadane na rozmowie.
@@ -112,7 +109,6 @@ export const PostCallDebriefView: React.FC<PostCallDebriefViewProps> = ({
       whatWentWell,
       trickyQuestions,
       topicsToClarifyInFollowUp: topicsToClarify,
-      salaryTimelineNotes: salaryNotes,
       generatedFollowUpEmail: generatedEmail,
       completedAt: new Date().toISOString(),
     };
@@ -138,8 +134,8 @@ export const PostCallDebriefView: React.FC<PostCallDebriefViewProps> = ({
     try {
       await navigator.clipboard.writeText(generatedEmail);
       setCopied(true);
-      showToast('Skopiowano treść maila do schowka', {
-        message: `Gotowy Follow-Up Email do ${session.companyName}`,
+      showToast('Skopiowano treść e-maila do schowka', {
+        message: `Gotowy follow-up e-mail do ${session.companyName}`,
         variant: 'success',
       });
       setTimeout(() => setCopied(false), 2000);
@@ -148,7 +144,7 @@ export const PostCallDebriefView: React.FC<PostCallDebriefViewProps> = ({
       // milczenie wyglądałoby jak skopiowanie. Użytkownik ma treść w polu
       // obok, więc wystarczy wskazać ręczną drogę.
       showToast('Nie udało się skopiować', {
-        message: 'Zaznacz treść maila w polu powyżej i skopiuj ją ręcznie.',
+        message: 'Zaznacz treść e-maila w polu powyżej i skopiuj ją ręcznie.',
         variant: 'error',
       });
     }
@@ -280,7 +276,7 @@ export const PostCallDebriefView: React.FC<PostCallDebriefViewProps> = ({
           <div className="flex items-center gap-2">
             <Mail className="h-4 w-4 text-brand-600" />
             <span className="font-mono text-xs font-bold text-ink uppercase tracking-wider">
-              Wygenerowany Follow-Up Email (Podziękowanie):
+              Wygenerowany Follow-up e-mail (Podziękowanie):
             </span>
           </div>
 
@@ -301,7 +297,7 @@ export const PostCallDebriefView: React.FC<PostCallDebriefViewProps> = ({
               icon={copied ? Check : Copy}
               onClick={handleCopyEmail}
             >
-              {copied ? 'Skopiowano!' : 'Kopiuj Mail'}
+              {copied ? 'Skopiowano!' : 'Kopiuj e-mail'}
             </Button>
           </div>
         </div>

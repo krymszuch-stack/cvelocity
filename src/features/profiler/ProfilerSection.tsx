@@ -11,6 +11,7 @@ import {
 } from 'lucide-react';
 import { motion } from 'motion/react';
 import { ProfilerState, ExperienceLevel } from '../../types';
+import { SENIORITY_LEVELS, seniorityLabel } from '../../data/seniority';
 import { LicenseGrid } from './LicenseGrid';
 import { CommuteMap } from './CommuteMap';
 import { StatTile } from '../../components/ui/StatTile';
@@ -22,13 +23,6 @@ export interface ProfilerSectionProps {
   onChange: (updated: ProfilerState) => void;
   className?: string;
 }
-
-const SENIORITY_LEVELS: Array<{ id: ExperienceLevel; label: string; desc: string }> = [
-  { id: 'ENTRY', label: 'Junior', desc: '0–2 lata doświadczenia' },
-  { id: 'MID', label: 'Mid Specialist', desc: '2–5 lat doświadczenia' },
-  { id: 'SENIOR', label: 'Senior', desc: '5+ lat doświadczenia' },
-  { id: 'PIVOT', label: 'Lead / Pivot', desc: 'Kierowanie / Zmiana branży' },
-];
 
 export const ProfilerSection: React.FC<ProfilerSectionProps> = ({
   profiler,
@@ -90,7 +84,10 @@ export const ProfilerSection: React.FC<ProfilerSectionProps> = ({
 
         <StatTile
           label="Poziom"
-          value={profiler.experienceLevel}
+          // Etykieta ze wspólnego źródła (`src/data/seniority.ts`) — kafelek
+          // pokazywał wcześniej surowy enum („ENTRY"/„PIVOT") zamiast nazwy,
+          // którą użytkownik widzi przy wyborze poziomu.
+          value={seniorityLabel(profiler.experienceLevel)}
           icon={Briefcase}
           subtext="Targetowany seniority tier"
         />
@@ -130,7 +127,7 @@ export const ProfilerSection: React.FC<ProfilerSectionProps> = ({
                     isSelected ? 'text-on-brand/80' : 'text-muted'
                   }`}
                 >
-                  {item.desc}
+                  {item.range ? `${item.range} doświadczenia` : item.description}
                 </span>
               </motion.button>
             );

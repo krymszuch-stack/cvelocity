@@ -53,7 +53,7 @@ export const SkillBridgeCard: React.FC<SkillBridgeCardProps> = ({
 
           <div className="flex items-center gap-1 text-brand-600 font-mono text-xs">
             <ArrowRight className="h-3.5 w-3.5" />
-            <span className="font-extrabold font-sans">Most (Bridge)</span>
+            <span className="font-extrabold font-sans">Most kompetencyjny</span>
             <ArrowRight className="h-3.5 w-3.5" />
           </div>
 
@@ -66,7 +66,8 @@ export const SkillBridgeCard: React.FC<SkillBridgeCardProps> = ({
 
         <div className="flex items-center gap-2">
           <Chip variant="brand" size="sm">
-            {bridge.confidenceScore}% Pewności Mostu
+            {/* To wynik heurystyki, nie zmierzona pewność — nazywamy go po imieniu. */}
+            Wskaźnik heurystyczny: {bridge.confidenceScore}%
           </Chip>
         </div>
       </div>
@@ -85,7 +86,7 @@ export const SkillBridgeCard: React.FC<SkillBridgeCardProps> = ({
       <div className="space-y-2">
         <div className="flex items-center justify-between">
           <span className="font-mono text-[11px] font-bold text-muted uppercase tracking-wider">
-            Sugerowana Odpowiedź na Rozmowie Rekrutacyjnej:
+            Sugerowana odpowiedź na pytanie rekrutacyjne:
           </span>
           <Button
             type="button"

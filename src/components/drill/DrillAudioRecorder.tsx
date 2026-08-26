@@ -140,7 +140,7 @@ export const DrillAudioRecorder: React.FC<DrillAudioRecorderProps> = ({
       {permissionError && (
         <div className="flex items-center gap-2 rounded-lg border border-warning/30 bg-warning-soft/30 p-2 text-xs text-warning-fg">
           <AlertCircle className="h-4 w-4 shrink-0" />
-          <span>{permissionError} (Użyj pola tekstowego poniżej).</span>
+          <span>{permissionError} (Przełącz się na tryb tekstowy, żeby wpisać odpowiedź).</span>
         </div>
       )}
 

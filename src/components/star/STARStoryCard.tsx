@@ -36,7 +36,8 @@ export const STARStoryCard: React.FC<STARStoryCardProps> = ({
 }) => {
   const [isTimerOpen, setIsTimerOpen] = useState(false);
 
-  // Lekkie NLP generujące brakujące sugestie tagów
+  // Sugestie tagów są regułowe (starStoryEngine) — żaden model językowy ich nie generuje,
+  // więc nie wolno ich etykietować jako NLP.
   const suggestedTags = React.useMemo(() => {
     return suggestTagsForSTARStory(story, story.tags);
   }, [story]);
@@ -162,12 +163,12 @@ export const STARStoryCard: React.FC<STARStoryCardProps> = ({
         )}
       </div>
 
-      {/* AUTO-TAG SUGGESTION BANNER (NLP Lightweight) */}
+      {/* AUTO-TAG SUGGESTION BANNER (regułowy) */}
       {suggestedTags.length > 0 && (
         <div className="flex flex-wrap items-center gap-2 rounded-xl border border-brand-500/20 bg-brand-500/5 p-2.5 text-xs">
           <span className="flex items-center gap-1 font-semibold text-brand-600 text-[11px]">
             <Sparkles className="h-3.5 w-3.5" />
-            <span>Sugerowane tagi (NLP):</span>
+            <span>Sugerowane tagi:</span>
           </span>
           <div className="flex flex-wrap gap-1">
             {suggestedTags.slice(0, 4).map((sugTag) => (

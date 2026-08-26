@@ -6,7 +6,6 @@ import {
   Plus,
   Zap,
   BookOpen,
-  Keyboard,
   Sliders,
   Layers,
 } from 'lucide-react';
@@ -45,10 +44,12 @@ export const SkillBridgeMatrixModal: React.FC<SkillBridgeMatrixModalProps> = ({
   missingSkillsList = [],
 }) => {
   const [query, setQuery] = useState(initialMissingSkill || '');
+  // Reguła 1: start z fabrykowanymi lukami ['Kafka','AWS','Kubernetes'] generował mosty
+  // dla luki, której nikt nie wpisał. Pusty stan ma już własny komunikat zachęty.
   const [activeMissingSkills, setActiveMissingSkills] = useState<string[]>(() => {
     if (initialMissingSkill) return [initialMissingSkill];
     if (missingSkillsList.length > 0) return missingSkillsList;
-    return ['Kafka', 'AWS', 'Kubernetes'];
+    return [];
   });
 
   const handleAddSkill = (skill: string) => {
@@ -87,14 +88,10 @@ export const SkillBridgeMatrixModal: React.FC<SkillBridgeMatrixModalProps> = ({
               <Sparkles className="h-5 w-5" />
             </div>
             <div>
-              <div className="flex items-center gap-2">
-                <h3 className="text-base font-extrabold text-ink tracking-tight font-mono">
-                  Skill Bridge Matrix (skill-bridge-matrix-v1)
-                </h3>
-                <span className="rounded bg-sunken px-2 py-0.5 font-mono text-[10px] font-bold text-muted flex items-center gap-1">
-                  <Keyboard className="h-3 w-3" /> Ctrl+B
-                </span>
-              </div>
+              {/* Sufiks „(skill-bridge-matrix-v1)" to identyfikator wewnętrzny — nie dla UI. */}
+              <h3 className="text-base font-extrabold text-ink tracking-tight font-mono">
+                Most Kompetencyjny
+              </h3>
               <p className="text-xs text-muted">
                 Zamienia luki technologiczne w przekonujące odpowiedzi oparte na ekwiwalencji pojęciowej i faktach z MasterVault.
               </p>
@@ -113,7 +110,7 @@ export const SkillBridgeMatrixModal: React.FC<SkillBridgeMatrixModalProps> = ({
         {/* Sekcja wprowadzania luki kompetencyjnej */}
         <div className="rounded-2xl border border-line bg-surface p-4 space-y-3">
           <span className="font-mono text-xs font-bold text-ink uppercase tracking-wider block">
-            Sprawdź obronę dla brakującej umiejętności:
+            Sprawdź, jak obronić brakującą umiejętność:
           </span>
 
           <div className="flex gap-2">
