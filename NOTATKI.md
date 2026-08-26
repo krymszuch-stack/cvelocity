@@ -17,6 +17,24 @@
 
 <!-- Dopisuj tutaj. Jeden punkt = jedna uwaga. -->
 
+- Eksport Lovable (`cvelocity_doimportu`) zawierał plik `.env.development` z
+  **prawdziwym kluczem publikowalnym Stripe (`pk_test_…`)**. Do repo go nie
+  wpuściłem, ale klucz krążył poza kontrolą wersji — jeśli ten projekt testowy
+  Stripe jest jeszcze żywy, rozważ użycie nowego klucza publishable w katalogu
+  testowym. Pliku nie ma w historii gita, więc rotacja to czysta ostrożność.
+  _(wpis od agenta po PR #101)_
+
+- Migracje `docs/migracje/0005–0007` (gamifikacja, ankieta, antyfarming) i
+  `docs/sql/0005_katalog_platnosci.sql` (tabela `template_entitlements`) są
+  **dokumentacją schematu, nie zastosowanymi migracjami** — trasy
+  `gamification.routes.ts` i `intel.routes.ts` zamontowane w `server.ts`
+  odpalą się dopiero w trybie chmurowym i przy braku tych tabel będą padać.
+  Pod Firebase Hosting (frontend-only) nie mają dziś odbiorcy, zgodnie z
+  opisem stanu w README. Decyzja: aplikować do Supabase przed włączeniem
+  backendu w chmurze.
+  _(wpis od agenta po PR #101)_
+
+
 - Karnet Aplikacyjny ma dziś stronę **zapisu** (webhook `mode=payment` →
   `activate_application_pass`, migracja `0004`), ale **nie ma jeszcze strony
   odczytu**: `getEntitlements` i `consume_quota` rozstrzygają wyłącznie po
