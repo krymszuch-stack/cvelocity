@@ -99,10 +99,10 @@ export const ProfilerSection: React.FC<ProfilerSectionProps> = ({
       {/* Seniority Level Pill Selector */}
       <Card tone="raised" className="space-y-3">
         <div>
-          <h3 className="text-xs font-bold uppercase tracking-wider text-muted">
+          <h3 className="text-label font-bold uppercase tracking-wider text-muted">
             Poziom Zaszeregowania (Seniority Tier)
           </h3>
-          <p className="text-[11px] text-subtle">
+          <p className="text-meta text-subtle">
             Wpływa na wagę doświadczenia wymaganego w ogłoszeniach o pracę.
           </p>
         </div>
@@ -118,7 +118,7 @@ export const ProfilerSection: React.FC<ProfilerSectionProps> = ({
                 onClick={() => handleSelectSeniority(item.id)}
                 whileHover={{ scale: 1.015 }}
                 whileTap={{ scale: 0.985 }}
-                className={`flex flex-col items-start rounded-2xl p-3 text-left transition-all duration-200 focus-visible:outline-none ${
+                className={`flex flex-col items-start rounded-2xl p-3 text-left cursor-pointer transition-colors duration-[var(--duration-state)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#F26440]/50 ${
                   isSelected
                     ? 'bg-brand-600 text-on-brand shadow-raised ring-2 ring-brand-500/20'
                     : 'border border-line bg-sunken text-ink hover:border-brand-300'

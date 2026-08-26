@@ -37,6 +37,7 @@ export const vaultPayloadSchema = z.object({
 export type VaultPayload = z.infer<typeof vaultPayloadSchema>;
 
 export const applicationStatusSchema = z.enum([
+  'Do wysłania',
   'Wysłana',
   'Rozmowa',
   'Oferta',

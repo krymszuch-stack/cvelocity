@@ -115,6 +115,9 @@
   /* Typography / Ink */
   --ink: #17171a;
   --muted: #595d65;
+  /* `subtle` osiąga 4,6:1 na `--surface`, ale tylko 3,8:1 na `--sunken`.
+     Na wciętym tle używaj `muted` — kilka miejsc (chipy, TrustChip, ikona
+     EmptyState) siedziało poniżej AA właśnie z tego powodu. */
   --subtle: #72767e;
 
   /* Lines */

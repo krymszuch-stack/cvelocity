@@ -22,7 +22,7 @@ export const EmptyState: React.FC<EmptyStateProps> = ({
       aria-live="polite"
       className={`flex flex-col items-center justify-center rounded-2xl border border-dashed border-line bg-surface/40 p-8 sm:p-12 text-center ${className}`}
     >
-      <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-sunken text-subtle mb-4 shadow-xs">
+      <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-sunken text-muted mb-4 shadow-xs">
         <Icon className="h-7 w-7" aria-hidden="true" />
       </div>
 

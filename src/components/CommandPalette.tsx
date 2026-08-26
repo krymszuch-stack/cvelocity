@@ -8,6 +8,7 @@ import {
   Wrench,
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
+import { preloadAdvisorModal } from '../features/advisor/AdvisorModalHost';
 import { useAppStore } from '../store/useAppStore';
 import { useTheme } from '../providers/ThemeProvider';
 import { useAuth } from '../context/AuthContext';
@@ -161,7 +162,10 @@ export const CommandPalette: React.FC = () => {
         label: 'Otwórz Okienko Doradcy AI (Gemini Advisor)',
         category: 'Narzędzia',
         icon: IconSparkles,
-        action: () => setAdvisorOpen(true),
+        action: () => {
+          void preloadAdvisorModal();
+          setAdvisorOpen(true);
+        },
       },
       {
         id: 'act-stats',

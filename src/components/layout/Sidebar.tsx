@@ -13,7 +13,9 @@ import {
   IconSparkles,
 } from '../ui/icons/ModernIcons';
 import { NavItem } from './NavItem';
+import { Tooltip } from '../ui/Tooltip';
 import { CVelocityLogo } from '../CVelocityLogo';
+import { LevelWidget } from '../gamification/LevelWidget';
 import { NAV_SECTIONS, NavSectionId, NavTabId } from '../../lib/navigation';
 
 /**
@@ -60,7 +62,10 @@ export const Sidebar: React.FC<SidebarProps> = ({
 }) => {
   return (
     <div
-      className={`flex h-full flex-col justify-between p-3.5 transition-all duration-300 ${
+      /* `transition-[width]`, nie `transition-all`: animujemy wyłącznie
+         szerokość kolumny. `transition-all` przy zwijaniu ruszało też paddingi
+         i kolory, przez co etykiety skakały w połowie klatek. */
+      className={`flex h-full flex-col justify-between overflow-hidden p-3.5 transition-[width] duration-[var(--duration-ui)] ease-out ${
         isCollapsed ? 'w-16' : 'w-64'
       } ${className}`}
     >
@@ -72,8 +77,8 @@ export const Sidebar: React.FC<SidebarProps> = ({
             <button
               type="button"
               onClick={() => onSelectTab('home')}
-              className="flex items-center gap-2.5 rounded-xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500/50"
-              title="Ekran startowy — Twój następny krok"
+              className="flex cursor-pointer items-center gap-2.5 rounded-xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#F26440]/50"
+              aria-label="Ekran startowy — Twój następny krok"
             >
               <CVelocityLogo />
             </button>
@@ -81,8 +86,8 @@ export const Sidebar: React.FC<SidebarProps> = ({
             <button
               type="button"
               onClick={() => onSelectTab('home')}
-              className="mx-auto rounded-xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500/50"
-              title="Ekran startowy — Twój następny krok"
+              className="mx-auto cursor-pointer rounded-xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#F26440]/50"
+              aria-label="Ekran startowy — Twój następny krok"
             >
               <CVelocityLogo collapsed showBadge={false} />
             </button>
@@ -92,13 +97,19 @@ export const Sidebar: React.FC<SidebarProps> = ({
             type="button"
             onClick={onToggleCollapse}
             aria-label={isCollapsed ? 'Rozwiń pasek boczny' : 'Zwiń pasek boczny'}
-            className="hidden lg:flex h-8 w-8 items-center justify-center rounded-lg text-muted transition-colors hover:bg-brand-500/10 hover:text-ink focus-visible:outline-none"
+            className="hidden lg:flex h-8 w-8 shrink-0 cursor-pointer items-center justify-center rounded-lg text-muted transition-colors duration-[var(--duration-fast)] ease-out hover:bg-brand-500/10 hover:text-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#F26440]/50"
           >
             {isCollapsed ? <PanelLeft className="h-4 w-4" /> : <PanelLeftClose className="h-4 w-4" />}
           </button>
         </div>
 
+        {/* Poziom kariery tuż pod logo: postęp ma być widoczny bez wchodzenia
+            w osobny ekran, inaczej gamifikacja istnieje tylko w momencie
+            przyznania punktów. */}
+        <LevelWidget isCollapsed={isCollapsed} />
+
         {/* Navigation Items Group */}
+
         {/* Cztery kroki jednej podróży zamiast ośmiu równorzędnych narzędzi.
             Kolejność jest kolejnością, w jakiej się ich używa, a nie listą
             posortowaną według ważności modułu. */}
@@ -137,12 +148,20 @@ export const Sidebar: React.FC<SidebarProps> = ({
         />
 
         {/* User Account Pill */}
-        <div
+        {/* Pigułka konta była `div`em z `onClick` — niedostępna z klawiatury
+            i niewidoczna dla czytnika jako akcja. Teraz jest przyciskiem,
+            a podpowiedź idzie przez `Tooltip`, nie przez natywny `title`. */}
+        <Tooltip
+          content={isAuthenticated ? userEmail : 'Zaloguj się'}
+          side={isCollapsed ? 'right' : 'top'}
+          className="w-full"
+        >
+        <button
+          type="button"
           onClick={onOpenAuthModal}
-          className={`flex cursor-pointer items-center gap-2.5 rounded-xl border border-line bg-surface p-2 transition-all hover:border-brand-500/30 hover:bg-brand-500/5 ${
+          className={`flex w-full min-h-[2.75rem] cursor-pointer items-center gap-2.5 rounded-xl border border-line bg-surface p-2 text-left transition-colors duration-[var(--duration-fast)] ease-out hover:border-brand-500/30 hover:bg-brand-500/5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#F26440]/50 ${
             isCollapsed ? 'justify-center' : ''
           }`}
-          title={isAuthenticated ? userEmail : 'Zaloguj się'}
         >
           <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-brand-50 text-brand-600">
             {isAuthenticated ? (
@@ -154,15 +173,16 @@ export const Sidebar: React.FC<SidebarProps> = ({
 
           {!isCollapsed && (
             <div className="min-w-0 flex-1">
-              <p className="truncate text-xs font-semibold text-ink">
+              <p className="truncate text-label font-semibold text-ink">
                 {isAuthenticated ? userEmail : 'Logowanie / Konto'}
               </p>
-              <p className="font-mono text-[10px] text-muted">
+              <p className="truncate font-mono text-[10px] text-muted">
                 {planStatus === 'active' ? 'Plan Pro • Active' : 'Plan Podstawowy'}
               </p>
             </div>
           )}
-        </div>
+        </button>
+        </Tooltip>
       </div>
     </div>
   );

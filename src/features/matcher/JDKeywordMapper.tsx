@@ -26,6 +26,7 @@ import {
   KeywordSuggestion,
 } from '../../lib/jdKeywordMapper';
 import { Card } from '../../components/ui/Card';
+import { EmptyState } from '../../components/ui/EmptyState';
 import { Button } from '../../components/ui/Button';
 import { Chip } from '../../components/ui/Chip';
 import { Textarea } from '../../components/ui/Field';
@@ -133,6 +134,16 @@ export const JDKeywordMapper: React.FC<JDKeywordMapperProps> = ({
           </div>
         )}
 
+        {/* Brak treści ogłoszenia — nie ma czego analizować */}
+        {!jdText.trim() && (
+          <EmptyState
+            icon={Tag}
+            title="Brak treści ogłoszenia do analizy"
+            description="Wklej treść ogłoszenia o pracę powyżej, aby zobaczyć pokrycie słów kluczowych w Twoim CV i MasterVault."
+            className="mt-2"
+          />
+        )}
+
         {/* GŁÓWNY HEATMAP BAR & WYNIKI DOPASOWANIA */}
         {keywords.length > 0 && (
           <div className="space-y-3 pt-2">
@@ -142,7 +153,7 @@ export const JDKeywordMapper: React.FC<JDKeywordMapperProps> = ({
                 <span className="text-lg font-black text-brand-600 font-mono">
                   {overallCvScore}%
                 </span>
-                <span className="text-muted font-mono text-[11px]">
+                <span className="text-muted font-mono text-meta">
                   ({counts.matchedInCv} / {counts.total} słów)
                 </span>
               </div>
@@ -169,7 +180,7 @@ export const JDKeywordMapper: React.FC<JDKeywordMapperProps> = ({
                 {counts.matchedInCv > 0 && (
                   <div
                     style={{ width: `${(counts.matchedInCv / counts.total) * 100}%` }}
-                    className="h-full rounded-l-full bg-success transition-all duration-500"
+                    className="h-full rounded-l-full bg-success transition-[width] duration-[var(--duration-state)]"
                     title={`Wyeksponowane w CV: ${counts.matchedInCv} słów (${Math.round((counts.matchedInCv / counts.total) * 100)}%)`}
                   />
                 )}
@@ -178,7 +189,7 @@ export const JDKeywordMapper: React.FC<JDKeywordMapperProps> = ({
                 {counts.inVaultNotCv > 0 && (
                   <div
                     style={{ width: `${(counts.inVaultNotCv / counts.total) * 100}%` }}
-                    className={`h-full bg-brand-500 transition-all duration-500 ${
+                    className={`h-full bg-brand-500 transition-[width] duration-[var(--duration-state)] ${
                       counts.matchedInCv === 0 ? 'rounded-l-full' : ''
                     } ${counts.missingInVault === 0 ? 'rounded-r-full' : ''}`}
                     title={`Dostępne w MasterVault (do dodania do CV): ${counts.inVaultNotCv} słów (${Math.round((counts.inVaultNotCv / counts.total) * 100)}%)`}
@@ -189,7 +200,7 @@ export const JDKeywordMapper: React.FC<JDKeywordMapperProps> = ({
                 {counts.missingInVault > 0 && (
                   <div
                     style={{ width: `${(counts.missingInVault / counts.total) * 100}%` }}
-                    className={`h-full bg-line-strong transition-all duration-500 ${
+                    className={`h-full bg-line-strong transition-[width] duration-[var(--duration-state)] ${
                       counts.matchedInCv === 0 && counts.inVaultNotCv === 0 ? 'rounded-l-full' : ''
                     } rounded-r-full`}
                     title={`Brak w profilu MasterVault: ${counts.missingInVault} słów (${Math.round((counts.missingInVault / counts.total) * 100)}%)`}
@@ -198,7 +209,7 @@ export const JDKeywordMapper: React.FC<JDKeywordMapperProps> = ({
               </div>
 
               {/* Legenda Heatmapy */}
-              <div className="flex flex-wrap items-center justify-between text-[11px] text-muted font-mono pt-1">
+              <div className="flex flex-wrap items-center justify-between text-meta text-muted font-mono pt-1">
                 <div className="flex items-center gap-4">
                   <span className="flex items-center gap-1.5">
                     <span className="h-2.5 w-2.5 rounded-full bg-success" />
@@ -222,7 +233,7 @@ export const JDKeywordMapper: React.FC<JDKeywordMapperProps> = ({
                 if (cat.total === 0) return null;
                 return (
                   <div key={cat.category} className="rounded-xl border border-line bg-surface p-3 space-y-1.5">
-                    <div className="flex items-baseline justify-between text-[11px]">
+                    <div className="flex items-baseline justify-between text-meta">
                       <span className="font-bold text-ink truncate">{cat.label}</span>
                       <span className="font-mono text-muted">{cat.matchedInCv}/{cat.total}</span>
                     </div>
@@ -249,7 +260,7 @@ export const JDKeywordMapper: React.FC<JDKeywordMapperProps> = ({
       {suggestions.length > 0 && (
         <div className="space-y-3">
           <div className="flex items-center justify-between">
-            <h4 className="text-xs font-extrabold uppercase tracking-wider text-muted font-mono flex items-center gap-1.5">
+            <h4 className="text-label font-extrabold uppercase tracking-wider text-muted font-mono flex items-center gap-1.5">
               <Sparkles className="h-4 w-4 text-brand-600" />
               <span>Sugestie Optymalizacji ({suggestions.length})</span>
             </h4>
@@ -315,7 +326,7 @@ export const JDKeywordMapper: React.FC<JDKeywordMapperProps> = ({
       {keywords.length > 0 && (
         <Card tone="flat" className="p-5 space-y-4">
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 border-b border-line pb-3">
-            <h4 className="text-xs font-extrabold uppercase tracking-wider text-ink font-mono">
+            <h4 className="text-label font-extrabold uppercase tracking-wider text-ink font-mono">
               Wykryte Słowa Kluczowe ({filteredKeywords.length})
             </h4>
 
@@ -327,7 +338,7 @@ export const JDKeywordMapper: React.FC<JDKeywordMapperProps> = ({
                 placeholder="Filtruj słowa..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full rounded-lg border border-line bg-surface py-1.5 pl-8 pr-3 text-xs font-mono text-ink placeholder:text-muted focus:border-brand-500 focus:outline-none"
+                className="w-full rounded-lg border border-line bg-surface py-1.5 pl-8 pr-3 text-xs font-mono text-ink placeholder:text-muted focus:border-brand-500 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#F26440]/50"
               />
             </div>
           </div>
@@ -337,7 +348,7 @@ export const JDKeywordMapper: React.FC<JDKeywordMapperProps> = ({
             <button
               type="button"
               onClick={() => setActiveStatus('ALL')}
-              className={`rounded-lg px-2.5 py-1 text-xs font-bold transition-colors ${
+              className={`cursor-pointer rounded-lg px-2.5 py-1 text-xs font-bold transition-colors duration-[var(--duration-fast)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#F26440]/50 ${
                 activeStatus === 'ALL'
                   ? 'bg-ink text-surface'
                   : 'bg-sunken text-muted hover:text-ink'
@@ -348,7 +359,7 @@ export const JDKeywordMapper: React.FC<JDKeywordMapperProps> = ({
             <button
               type="button"
               onClick={() => setActiveStatus('MATCHED_IN_CV')}
-              className={`rounded-lg px-2.5 py-1 text-xs font-bold transition-colors ${
+              className={`cursor-pointer rounded-lg px-2.5 py-1 text-xs font-bold transition-colors duration-[var(--duration-fast)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#F26440]/50 ${
                 activeStatus === 'MATCHED_IN_CV'
                   ? 'bg-success-soft text-success-fg border border-success/30'
                   : 'bg-sunken text-muted hover:text-ink'
@@ -359,7 +370,7 @@ export const JDKeywordMapper: React.FC<JDKeywordMapperProps> = ({
             <button
               type="button"
               onClick={() => setActiveStatus('IN_VAULT_NOT_IN_CV')}
-              className={`rounded-lg px-2.5 py-1 text-xs font-bold transition-colors ${
+              className={`cursor-pointer rounded-lg px-2.5 py-1 text-xs font-bold transition-colors duration-[var(--duration-fast)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#F26440]/50 ${
                 activeStatus === 'IN_VAULT_NOT_IN_CV'
                   ? 'bg-brand-50 text-brand-fg border border-brand-200'
                   : 'bg-sunken text-muted hover:text-ink'
@@ -370,7 +381,7 @@ export const JDKeywordMapper: React.FC<JDKeywordMapperProps> = ({
             <button
               type="button"
               onClick={() => setActiveStatus('MISSING_IN_VAULT')}
-              className={`rounded-lg px-2.5 py-1 text-xs font-bold transition-colors ${
+              className={`cursor-pointer rounded-lg px-2.5 py-1 text-xs font-bold transition-colors duration-[var(--duration-fast)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#F26440]/50 ${
                 activeStatus === 'MISSING_IN_VAULT'
                   ? 'bg-danger-soft text-danger-fg border border-danger/30'
                   : 'bg-sunken text-muted hover:text-ink'
@@ -381,6 +392,28 @@ export const JDKeywordMapper: React.FC<JDKeywordMapperProps> = ({
           </div>
 
           {/* Siatka słów kluczowych */}
+          {filteredKeywords.length === 0 ? (
+            <EmptyState
+              icon={Search}
+              title="Brak słów pasujących do filtra"
+              description="Żadne wykryte słowo kluczowe nie spełnia obecnego filtra kategorii, statusu lub wyszukiwanej frazy. Zmień kryteria, aby zobaczyć wyniki."
+              action={
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => {
+                    setActiveCategory('ALL');
+                    setActiveStatus('ALL');
+                    setSearchQuery('');
+                  }}
+                >
+                  Wyczyść filtry
+                </Button>
+              }
+              className="mt-2"
+            />
+          ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2.5 pt-2">
             {filteredKeywords.map((kw) => {
               const badge = statusBadges[kw.status];
@@ -413,7 +446,7 @@ export const JDKeywordMapper: React.FC<JDKeywordMapperProps> = ({
                       <button
                         type="button"
                         onClick={() => setBridgeSkillModal(kw.term)}
-                        className="mt-1 flex w-full items-center justify-center gap-1 rounded-lg border border-brand-500/30 bg-brand-500/10 py-1 font-mono text-[10px] font-bold text-brand-700 hover:bg-brand-500/20 transition-colors"
+                        className="cursor-pointer mt-1 flex w-full items-center justify-center gap-1 rounded-lg border border-brand-500/30 bg-brand-500/10 py-1 font-mono text-[10px] font-bold text-brand-700 hover:bg-brand-500/20 transition-colors duration-[var(--duration-fast)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#F26440]/50"
                       >
                         <Sparkles className="h-3 w-3" />
                         <span>Most Kompetencyjny (Ctrl+B)</span>
@@ -424,6 +457,7 @@ export const JDKeywordMapper: React.FC<JDKeywordMapperProps> = ({
               );
             })}
           </div>
+          )}
         </Card>
       )}
 

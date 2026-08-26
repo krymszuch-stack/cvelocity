@@ -19,11 +19,14 @@ import { Button } from '../../components/ui/Button';
 
 export interface CVWordBuilderProps {
   vault: MasterVault;
+  /** Treść dokumentu trafiła do schowka — patrz `DocumentRendererProps`. */
+  onExported?: () => void;
   className?: string;
 }
 
 export const CVWordBuilder: React.FC<CVWordBuilderProps> = ({
   vault,
+  onExported,
   className = '',
 }) => {
   const initialContent = `
@@ -55,6 +58,7 @@ ${vault.education.map((e) => `- ${e.degree}, ${e.fieldOfStudy} — ${e.instituti
 
   const handleCopy = () => {
     navigator.clipboard.writeText(documentContent);
+    onExported?.();
     setIsCopied(true);
     setTimeout(() => setIsCopied(false), 2000);
   };

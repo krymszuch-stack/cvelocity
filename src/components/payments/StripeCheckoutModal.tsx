@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { ShieldCheck, AlertCircle, CheckCircle2, Lock, Cloud } from 'lucide-react';
+import { ShieldCheck, AlertCircle, CheckCircle2, Lock, Cloud, Mail } from 'lucide-react';
 import { Modal } from '../ui/Modal';
 import { Button } from '../ui/Button';
 import { clientEnv } from '../../lib/clientEnv';
@@ -118,71 +118,85 @@ export const StripeCheckoutModal: React.FC<StripeCheckoutModalProps> = ({
     <>
       <Modal isOpen={isOpen} onClose={onClose} title={`Odblokuj: ${product.title}`} size="sm">
         <div className="space-y-5">
-          <div className="flex items-baseline gap-1.5 border-b border-line pb-3">
-            <span className="font-mono text-3xl font-bold text-ink">{product.price}</span>
-            <span className="text-xs text-subtle">{product.period}</span>
-            <span className="ml-auto rounded-full bg-brand-50 px-2.5 py-0.5 font-mono text-[10px] font-bold text-brand-fg">
-              Cena brutto (z VAT)
-            </span>
+          {/* Cena jest dominantą, okres i VAT to meta-informacja */}
+          <div className="border-b border-line pb-3">
+            <div className="flex items-baseline gap-1.5">
+              <span className="font-mono text-3xl font-bold text-ink">{product.price}</span>
+              <span className="text-meta text-subtle">{product.period}</span>
+            </div>
+            <div className="mt-1.5 flex flex-wrap items-center gap-1.5">
+              <span className="rounded-full bg-brand-50 px-2 py-0.5 font-mono text-[10px] font-bold text-brand-fg">
+                Cena brutto (z VAT)
+              </span>
+              <span className="rounded-full bg-surface px-2 py-0.5 font-mono text-[10px] font-bold text-muted">
+                {product.recurring ? 'Subskrypcja' : 'Płatność jednorazowa'}
+              </span>
+            </div>
           </div>
 
-          <div className="space-y-2 text-xs text-muted">
+          <div className="space-y-2 text-meta text-muted">
             <p>
               {product.recurring
-                ? 'Subskrypcja odnawialna miesięcznie. Możesz anulować w 2 kliknięciach w panelu Stripe Customer Portal.'
-                : 'Jednorazowa opłata bez żadnej subskrypcji ani ukrytych kosztów.'}
+                ? 'To subskrypcja, która odnawia się co miesiąc. Anulujesz w dowolnym momencie w 2 kliknięciach, w panelu Stripe Customer Portal — nic więcej Cię nie obciąży.'
+                : 'To jednorazowa opłata. Nie zakładamy żadnej subskrypcji i nie pobierzemy niczego więcej w przyszłości.'}
             </p>
             {product.trialDays && (
               <div className="flex items-center gap-2 rounded-xl bg-success-soft p-2.5 text-success-fg">
-                <CheckCircle2 className="h-4 w-4 shrink-0" />
+                <CheckCircle2 className="h-4 w-4 shrink-0" aria-hidden="true" />
                 <span>Zawiera {product.trialDays} dni bezpłatnego okresu próbnego (0 zł teraz).</span>
               </div>
             )}
           </div>
 
-          {errorMsg && (
-            <div className="flex items-center gap-2 rounded-xl bg-danger-soft p-3 text-xs text-danger-fg">
-              <AlertCircle className="h-4 w-4 shrink-0" />
-              <span>{errorMsg}</span>
-            </div>
-          )}
+          {/* Stały rozmiar kontenera błędu, żeby pojawienie się komunikatu nie przesuwało layoutu */}
+          <div className="min-h-[2.75rem]">
+            {errorMsg && (
+              <div
+                role="alert"
+                className="flex items-center gap-2 rounded-xl bg-danger-soft p-3 text-meta text-danger-fg"
+              >
+                <AlertCircle className="h-4 w-4 shrink-0" aria-hidden="true" />
+                <span>{errorMsg}</span>
+              </div>
+            )}
+          </div>
 
           <div className="space-y-3 pt-2">
             {!isCloudAccount && cloudAvailable ? (
-              /* Użytkownik lokalny / niezalogowany w chmurze */
-              <div className="rounded-2xl border border-line bg-surface p-4 space-y-3 shadow-xs">
+              /* Ścieżka „wymagane konto": jeden wyraźny kolejny krok, nie dwa równorzędne przyciski */
+              <div className="rounded-2xl border border-line bg-surface p-4 shadow-xs">
                 <div className="flex items-start gap-3">
                   <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-brand-50 text-brand-fg">
-                    <Cloud className="h-5 w-5" />
+                    <Cloud className="h-5 w-5" aria-hidden="true" />
                   </div>
-                  <div>
-                    <h4 className="text-xs font-bold text-ink">Wymagane konto w chmurze</h4>
-                    <p className="mt-0.5 text-[11px] text-muted leading-relaxed">
-                      Licencja i płatności są powiązane z Twoim kontem, co chroni Cię przed utratą subskrypcji po wyczyszczeniu przeglądarki. Twoje dotychczasowe CV zostanie automatycznie zachowane!
+                  <div className="min-w-0">
+                    <h4 className="text-label font-bold text-ink">Najpierw zaloguj się do konta</h4>
+                    <p className="mt-0.5 text-meta text-muted leading-relaxed">
+                      Licencja i płatność zostaną powiązane z Twoim kontem, więc nie stracisz dostępu po wyczyszczeniu przeglądarki. Twoje dotychczasowe CV zostanie zachowane.
                     </p>
                   </div>
                 </div>
 
-                <div className="space-y-2 pt-1">
+                <div className="mt-3 space-y-2">
                   <button
                     type="button"
                     onClick={handleGoogleAuth}
                     disabled={loading}
-                    className="flex w-full items-center justify-center gap-2.5 rounded-xl border border-line bg-surface px-4 py-2.5 text-xs font-bold text-ink shadow-xs transition hover:bg-elevated hover:border-ink/20 active:scale-[0.99]"
+                    aria-busy={loading || undefined}
+                    className="flex w-full cursor-pointer items-center justify-center gap-2.5 rounded-xl border border-line bg-surface px-4 py-2.5 text-label font-bold text-ink shadow-xs transition-colors hover:border-ink/20 hover:bg-elevated focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#F26440]/50 disabled:cursor-not-allowed disabled:opacity-50"
                   >
                     <GoogleIcon />
-                    <span>Zaloguj się przez Google i kontynuuj</span>
+                    <span>Zaloguj się przez Google</span>
                   </button>
 
-                  <Button
+                  <button
                     type="button"
-                    variant="secondary"
-                    size="sm"
-                    className="w-full text-xs"
                     onClick={() => setIsAuthModalOpen(true)}
+                    className="flex w-full cursor-pointer items-center justify-center gap-1.5 rounded-xl px-4 py-2 text-meta font-semibold text-muted transition-colors hover:text-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#F26440]/50"
                   >
-                    Użyj e-maila i hasła
-                  </Button>
+                    <Mail className="h-3.5 w-3.5" aria-hidden="true" />
+                    <span>albo użyj e-maila i hasła</span>
+                  </button>
                 </div>
               </div>
             ) : paymentsAvailable ? (
@@ -194,28 +208,34 @@ export const StripeCheckoutModal: React.FC<StripeCheckoutModalProps> = ({
                 loading={loading}
                 disabled={loading}
               >
-                {loading ? 'Łączenie z bramką płatności...' : 'Przejdź do bezpiecznej płatności'}
+                {loading ? 'Łączenie z bramką płatności…' : 'Przejdź do bezpiecznej płatności'}
               </Button>
             ) : (
-              <div className="flex gap-2 rounded-xl bg-warning-soft p-3 text-xs text-warning-fg">
-                <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />
+              <div className="flex min-h-[2.75rem] gap-2 rounded-xl bg-warning-soft p-3 text-meta text-warning-fg">
+                <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" aria-hidden="true" />
                 <span>
                   Płatności nie są jeszcze uruchomione w tej instalacji. Nic nie zostanie pobrane.
                 </span>
               </div>
             )}
 
-            {/* Odblokowanie testowe dla trybu deweloperskiego */}
+            {/* Odblokowanie testowe dla trybu deweloperskiego — wizualnie odsunięte od ścieżki produkcyjnej */}
             {import.meta.env.DEV && (
-              <Button variant="ghost" size="sm" className="w-full text-muted text-xs" onClick={handleDemoUnlock}>
-                Odblokuj lokalnie (tylko tryb deweloperski)
-              </Button>
+              <div className="rounded-lg border border-dashed border-line/70 pt-2 mt-1">
+                <button
+                  type="button"
+                  onClick={handleDemoUnlock}
+                  className="w-full cursor-pointer rounded-lg px-2 py-1.5 text-center font-mono text-[10px] font-bold uppercase tracking-wide text-subtle transition-colors hover:text-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#F26440]/50"
+                >
+                  Dev only: odblokuj lokalnie bez płatności
+                </button>
+              </div>
             )}
           </div>
 
-          <div className="flex items-center justify-center gap-2 border-t border-line/60 pt-3 text-[10px] text-subtle">
-            <ShieldCheck className="h-3.5 w-3.5 text-brand-600" />
-            <span>Płatność obsługuje Stripe. Dane karty nie trafiają na nasz serwer.</span>
+          <div className="flex items-center justify-center gap-2 border-t border-line/60 pt-3 text-meta text-subtle">
+            <ShieldCheck className="h-3.5 w-3.5 text-brand-600" aria-hidden="true" />
+            <span>Płatność obsługuje Stripe. Dane karty trafiają wyłącznie do Stripe, nigdy do naszej aplikacji.</span>
           </div>
         </div>
       </Modal>

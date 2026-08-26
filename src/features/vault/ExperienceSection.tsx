@@ -17,6 +17,7 @@ import { Combobox } from '../../components/ui/Combobox';
 import type { SuggestFn } from '../../hooks/useFieldSuggestions';
 import { Toggle } from '../../components/ui/Toggle';
 import { AchievementEditor } from './AchievementEditor';
+import { EmptyState } from '../../components/ui/EmptyState';
 
 export interface ExperienceSectionProps {
   history: WorkExperience[];
@@ -97,22 +98,16 @@ export const ExperienceSection: React.FC<ExperienceSectionProps> = ({
       <div className="space-y-6">
         <AnimatePresence mode="popLayout">
           {history.length === 0 ? (
-            <div className="rounded-2xl border border-dashed border-line bg-surface/50 p-8 text-center">
-              <Briefcase className="mx-auto h-8 w-8 text-subtle mb-2" />
-              <p className="text-xs font-semibold text-muted">
-                Brak dodanych pozycji doświadczenia zawodowego.
-              </p>
-              <Button
-                type="button"
-                variant="ghost"
-                size="sm"
-                icon={Plus}
-                onClick={handleAddExperience}
-                className="mt-3"
-              >
-                Dodaj pierwsze stanowisko
-              </Button>
-            </div>
+            <EmptyState
+              icon={Briefcase}
+              title="Brak dodanych stanowisk"
+              description="Dodaj przynajmniej jedno miejsce pracy z zakresem obowiązków i mierzalnymi osiągnięciami."
+              action={
+                <Button type="button" variant="secondary" size="sm" icon={Plus} onClick={handleAddExperience}>
+                  Dodaj pierwsze stanowisko
+                </Button>
+              }
+            />
           ) : (
             history.map((item, index) => (
               <motion.div
@@ -127,7 +122,7 @@ export const ExperienceSection: React.FC<ExperienceSectionProps> = ({
                 {/* Header & Reorder Controls */}
                 <div className="flex items-center justify-between border-b border-line pb-3">
                   <div className="flex items-center gap-2">
-                    <span className="flex h-6 w-6 items-center justify-center rounded-lg bg-brand-50 font-mono text-xs font-bold text-brand-fg">
+                    <span className="flex h-6 w-6 items-center justify-center rounded-lg bg-brand-50 font-mono text-label font-bold text-brand-fg">
                       {index + 1}
                     </span>
                     <span className="text-sm font-bold text-ink">
@@ -141,7 +136,7 @@ export const ExperienceSection: React.FC<ExperienceSectionProps> = ({
                       disabled={index === 0}
                       onClick={() => handleMove(index, 'up')}
                       aria-label="Przesuń wyżej"
-                      className="p-1 text-muted hover:text-ink disabled:opacity-30 disabled:cursor-not-allowed"
+                      className="cursor-pointer rounded-md p-1 text-muted transition-colors duration-[var(--duration-fast)] hover:text-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#F26440]/50 disabled:cursor-not-allowed disabled:opacity-30"
                     >
                       <ChevronUp className="h-4 w-4" />
                     </button>
@@ -150,7 +145,7 @@ export const ExperienceSection: React.FC<ExperienceSectionProps> = ({
                       disabled={index === history.length - 1}
                       onClick={() => handleMove(index, 'down')}
                       aria-label="Przesuń niżej"
-                      className="p-1 text-muted hover:text-ink disabled:opacity-30 disabled:cursor-not-allowed"
+                      className="cursor-pointer rounded-md p-1 text-muted transition-colors duration-[var(--duration-fast)] hover:text-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#F26440]/50 disabled:cursor-not-allowed disabled:opacity-30"
                     >
                       <ChevronDown className="h-4 w-4" />
                     </button>

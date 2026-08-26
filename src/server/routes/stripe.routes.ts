@@ -3,6 +3,7 @@ import type Stripe from 'stripe';
 import { loadConfig } from '../config';
 import { getStripe } from '../stripeClient';
 import { getSupabase } from '../supabase';
+import { priceIdForPlan, templatesUnlockedByPrice } from '../../lib/pricing';
 
 export const stripeWebhookRouter = Router();
 
@@ -99,36 +100,64 @@ async function handleEvent(event: Stripe.Event): Promise<void> {
         return;
       }
 
-      // Płatność jednorazowa to Karnet Aplikacyjny: dostęp liczymy z
-      // `profiles.plan_expires_at`, nie ze statusu subskrypcji. Procedura bazowa
-      // robi obie zmiany (przedłużenie + reset limitów AI) w jednej transakcji,
-      // więc awaria sieci w połowie nie zostawia konta z dłuższym planem i
-      // starym licznikiem — albo całość się dzieje, albo nic.
+      const planId = session.metadata?.plan_id ?? null;
+      const customerId = typeof session.customer === 'string' ? session.customer : null;
+
       if (session.mode === 'payment') {
-        const days =
-          typeof session.metadata?.pass_days === 'string'
-            ? parseInt(session.metadata.pass_days, 10)
-            : 30;
-        const { error: passError } = await getSupabase().rpc('activate_application_pass', {
-          p_user_id: userId,
-          p_days: Number.isFinite(days) && days > 0 ? days : 30,
-        });
-        if (passError) {
-          throw new Error(`Nie udało się aktywować karnetu: ${passError.message}`);
+        // Karnet Aplikacyjny: dostęp liczymy z `profiles.plan_expires_at`, nie
+        // ze statusu subskrypcji. Procedura bazowa robi obie zmiany
+        // (przedłużenie + reset limitów AI) w jednej transakcji, więc awaria
+        // sieci w połowie nie zostawia konta z dłuższym planem i starym
+        // licznikiem — albo całość się dzieje, albo nic.
+        if (planId === 'karnet') {
+          const days =
+            typeof session.metadata?.pass_days === 'string'
+              ? parseInt(session.metadata.pass_days, 10)
+              : 30;
+          const { error: passError } = await supabase.rpc('activate_application_pass', {
+            p_user_id: userId,
+            p_days: Number.isFinite(days) && days > 0 ? days : 30,
+          });
+          if (passError) {
+            throw new Error(`Nie udało się aktywować karnetu: ${passError.message}`);
+          }
         }
+
+        // Szablon kupiony jednorazowo zostaje na koncie na zawsze — dlatego
+        // osobna tabela, a nie status subskrypcji. Klucz główny
+        // (user_id, template_id) czyni z powtórki webhooka pustą operację.
+        const purchasedPriceId = session.metadata?.price_id ?? priceIdForPlan(planId) ?? '';
+        const templates = templatesUnlockedByPrice(purchasedPriceId);
+        if (templates.length > 0) {
+          const { error: templateError } = await supabase.from('template_entitlements').upsert(
+            templates.map((templateId) => ({
+              user_id: userId,
+              template_id: templateId,
+              price_id: purchasedPriceId,
+            })),
+            { onConflict: 'user_id,template_id' }
+          );
+          if (templateError) {
+            throw new Error(`Nie udało się przyznać szablonu: ${templateError.message}`);
+          }
+        }
+
+        // Płatność jednorazowa nie kończy tu obsługi: poniższy upsert ma
+        // zapisać klienta i plan. Status dostanie jednak `free`, bo dostęp
+        // jednorazowy egzekwuje wyłącznie `plan_expires_at` — podniesienie
+        // go tutaj otworzyłoby ścieżki czytające sam status.
       }
 
       const { error } = await supabase.from('subscriptions').upsert(
         {
           user_id: userId,
-          stripe_customer_id: typeof session.customer === 'string' ? session.customer : null,
+          stripe_customer_id: customerId,
           stripe_subscription_id:
             typeof session.subscription === 'string' ? session.subscription : null,
-          plan_id: session.metadata?.plan_id ?? null,
-          // Płatność jednorazowa (szablon) nie tworzy subskrypcji, więc nie
-          // podnosi statusu do `active` — inaczej kupno szablonu za 19 zł
-          // odblokowywałoby plan Pro. Dostęp jednorazowy egzekwuje
-          // `plan_expires_at`, a ten status opisuje wyłącznie cykliczne plany.
+          plan_id: planId,
+          // Aktywny status opisuje wyłącznie plany cykliczne. Jednorazowy zakup
+          // (karnet, szablon) musi zostać przy `free`: inaczej kupno szablonu
+          // za 19 zł odblokowałoby cały plan Pro na koncie z darmowym planem.
           status: session.mode === 'subscription' ? 'active' : 'free',
           updated_at: new Date().toISOString(),
         },

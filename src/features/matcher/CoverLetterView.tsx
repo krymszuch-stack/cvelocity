@@ -19,6 +19,8 @@ export interface CoverLetterViewProps {
   coverLetter: CoverLetter;
   vault?: MasterVault;
   jobOffer?: JobOffer;
+  /** List wyszedł z aplikacji — patrz `DocumentRendererProps`. */
+  onExported?: () => void;
   className?: string;
 }
 
@@ -26,6 +28,7 @@ export const CoverLetterView: React.FC<CoverLetterViewProps> = ({
   coverLetter: initialCoverLetter,
   vault,
   jobOffer,
+  onExported,
   className = '',
 }) => {
   const [variantIndex, setVariantIndex] = useState(0);
@@ -48,12 +51,14 @@ export const CoverLetterView: React.FC<CoverLetterViewProps> = ({
 
   const handleCopy = () => {
     navigator.clipboard.writeText(coverLetter.fullText);
+    onExported?.();
     setIsCopied(true);
     setTimeout(() => setIsCopied(false), 2000);
   };
 
   const handlePrint = () => {
     window.print();
+    onExported?.();
   };
 
   return (

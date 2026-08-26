@@ -77,7 +77,10 @@ async function postWebhook(
     const response = await fetch(`http://127.0.0.1:${port}/api/stripe-webhook`, {
       method: 'POST',
       headers: { 'stripe-signature': 't=1,v1=signature' },
-      body,
+      // Rzutowanie, bo typy DOM-owego `fetch` nie znają nodowego `Buffer`,
+      // a podpis Stripe'a liczy się z dokładnych bajtów — nie wolno tu
+      // konwertować bufora na string.
+      body: body as unknown as BodyInit,
     });
     return { status: response.status, json: await response.json() };
   } finally {

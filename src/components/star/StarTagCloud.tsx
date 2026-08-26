@@ -75,7 +75,7 @@ export const StarTagCloud: React.FC<StarTagCloudProps> = ({
               <span>{tag}</span>
               <span
                 className={`rounded-full px-1.5 py-0.2 text-[10px] font-bold ${
-                  isActive ? 'bg-white/20 text-on-brand' : 'bg-sunken text-subtle'
+                  isActive ? 'bg-white/20 text-on-brand' : 'bg-sunken text-muted'
                 }`}
               >
                 {count}

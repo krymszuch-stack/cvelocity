@@ -1,6 +1,7 @@
 import React from 'react';
 import { Lock, LucideIcon } from 'lucide-react';
 import { motion } from 'motion/react';
+import { Tooltip } from '../ui/Tooltip';
 
 export interface NavItemProps {
   icon: LucideIcon;
@@ -42,23 +43,28 @@ export const NavItem: React.FC<NavItemProps> = ({
 
   // Zablokowana pozycja zostaje przyciskiem, a nie zmienia się w `div`:
   // czytnik ekranu ma ją ogłosić razem z powodem, zamiast pominąć jak dekorację.
-  const title = isLocked ? lockedReason : isCollapsed ? label : hint;
+  //
+  // Podpowiedź idzie przez komponent `Tooltip`, nie przez natywny `title`:
+  // atrybut nie pokazuje się przy nawigacji Tab, a to jedyna droga, którą
+  // część użytkowników w ogóle dociera do tej informacji.
+  const tooltip = isLocked ? lockedReason : isCollapsed ? label : hint;
 
-  return (
+  const button = (
     <button
       type="button"
       onClick={isLocked ? undefined : onClick}
       disabled={isLocked}
-      className={`group relative flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-xs font-semibold transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500/50 ${
+      className={`group relative flex w-full min-h-[2.5rem] items-center gap-3 rounded-xl px-3 py-2.5 text-label font-semibold transition-colors duration-[var(--duration-fast)] ease-out focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#F26440]/50 ${
         isCollapsed ? 'justify-center px-2' : ''
       } ${
         isLocked
           ? 'cursor-not-allowed text-muted'
-          : isActive
-            ? 'text-brand-fg font-bold'
-            : 'text-muted hover:bg-brand-500/5 hover:text-ink'
+          : `cursor-pointer ${
+              isActive
+                ? 'text-brand-fg font-bold'
+                : 'text-muted hover:bg-brand-500/5 hover:text-ink'
+            }`
       } ${className}`}
-      title={title}
       aria-current={isActive ? 'page' : undefined}
       aria-disabled={isLocked || undefined}
     >
@@ -74,7 +80,7 @@ export const NavItem: React.FC<NavItemProps> = ({
       {/* Icon */}
       <span className="relative z-10 flex shrink-0 items-center justify-center">
         <Icon
-          className={`h-4 w-4 transition-transform duration-200 group-hover:scale-110 ${
+          className={`h-4 w-4 transition-transform duration-[var(--duration-fast)] ease-out group-hover:scale-110 ${
             isActive ? 'text-brand-600' : 'text-subtle group-hover:text-ink'
           }`}
         />
@@ -97,5 +103,11 @@ export const NavItem: React.FC<NavItemProps> = ({
         </div>
       )}
     </button>
+  );
+
+  return (
+    <Tooltip content={tooltip} side={isCollapsed ? 'right' : 'top'} className="w-full">
+      {button}
+    </Tooltip>
   );
 };

@@ -2,6 +2,7 @@ import React from 'react';
 import { Lightbulb } from 'lucide-react';
 import { IconSparkles } from './icons/ModernIcons';
 import { motion } from 'motion/react';
+import { preloadAdvisorModal } from '../../features/advisor/AdvisorModalHost';
 
 interface AdvisorButtonProps {
   onClick: () => void;
@@ -25,11 +26,14 @@ export const AdvisorButton: React.FC<AdvisorButtonProps> = ({
     <motion.button
       type="button"
       onClick={onClick}
+      // Chunk Doradcy pobieramy już przy najechaniu/fokusie — otwarcie jest wtedy natychmiastowe.
+      onMouseEnter={() => void preloadAdvisorModal()}
+      onFocus={() => void preloadAdvisorModal()}
       title={title}
       whileHover={{ scale: 1.03 }}
       whileTap={{ scale: 0.97 }}
       transition={{ duration: 0.18, ease: [0.19, 1, 0.22, 1] }}
-      className={`group flex items-center gap-2 rounded-xl border px-3 py-1.5 text-xs font-semibold shadow-sm transition-colors focus-visible:outline-none ${
+      className={`group flex cursor-pointer items-center gap-2 rounded-xl border px-3 py-1.5 text-xs font-semibold shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500/50 ${
         isBrand
           ? 'border-brand-200 bg-brand-50 text-brand-fg hover:bg-brand-100 hover:border-brand-500'
           : 'border-warning/30 bg-warning-soft text-warning-fg hover:bg-warning-soft/80'

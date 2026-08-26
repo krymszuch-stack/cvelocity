@@ -126,6 +126,7 @@ export const ApplicationTracker: React.FC<ApplicationTrackerProps> = ({
 
   const filterButtons: Array<{ id: string; label: string; count: number }> = [
     { id: 'ALL', label: 'Wszystkie', count: totalApps },
+    { id: 'Do wysłania', label: 'Do wysłania', count: applications.filter((a) => a.status === 'Do wysłania').length },
     { id: 'Wysłana', label: 'Wysłane', count: applications.filter((a) => a.status === 'Wysłana').length },
     { id: 'Rozmowa', label: 'Rozmowy', count: inInterviews },
     { id: 'Oferta', label: 'Oferty', count: offersReceived },
@@ -237,6 +238,7 @@ export const ApplicationTracker: React.FC<ApplicationTrackerProps> = ({
             />
 
             <select
+              aria-label="Sortowanie aplikacji"
               value={sortBy}
               onChange={(e) => setSortBy(e.target.value as any)}
               className="rounded-xl border border-line bg-sunken px-3 py-2 font-mono text-xs font-bold text-ink focus:outline-none focus:ring-2 focus:ring-brand-500/20"

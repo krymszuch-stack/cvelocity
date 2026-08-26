@@ -153,9 +153,9 @@ export const AtsLabView: React.FC<AtsLabViewProps> = ({
           {/* Opis narracyjny i statystyki */}
           <div className="lg:col-span-8 space-y-5">
             <div>
-              <h3 className="text-lg font-bold text-ink flex items-center gap-2">
+              <h2 className="text-lg font-bold text-ink flex items-center gap-2">
                 <Sparkles className="h-5 w-5 text-brand-fg" /> Uzasadnienie Oceny Systemowej
-              </h3>
+              </h2>
               <p className="mt-2 text-sm sm:text-base leading-relaxed text-ink-muted">
                 {consensus.summaryJustification}
               </p>
@@ -187,9 +187,9 @@ export const AtsLabView: React.FC<AtsLabViewProps> = ({
       <div className="rounded-3xl border border-ink/10 bg-surface-raised/80 p-6 sm:p-8 shadow-card-glass backdrop-blur-xl">
         <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
           <div>
-            <h3 className="text-lg font-bold text-ink flex items-center gap-2">
+            <h2 className="text-lg font-bold text-ink flex items-center gap-2">
               <Zap className="h-5 w-5 text-brand-fg" /> Telemetria Śledcza — dowody, nie szacunek
-            </h3>
+            </h2>
             <p className="mt-1 text-sm text-ink-muted">
               Każdy wskaźnik da się wywieść z Twojego profilu i treści ogłoszenia: pokrycie lematów po rdzeniach, sprawczość języka, parsowalność struktury i kary za twarde wymagania.
             </p>
@@ -397,9 +397,9 @@ export const AtsLabView: React.FC<AtsLabViewProps> = ({
           </div>
           <div className="space-y-2 flex-1">
             <div className="flex items-center gap-2">
-              <h3 className="text-base font-bold text-ink">
+              <h2 className="text-base font-bold text-ink">
                 Uczciwa Ocena Predyspozycji na to Stanowisko
-              </h3>
+              </h2>
               <span className={`px-2 py-0.5 rounded-full text-[10px] font-extrabold ${consensus.careerFitAdvice.isRealisticFit ? 'bg-emerald-500 text-white' : 'bg-amber-500 text-white'}`}>
                 {consensus.careerFitAdvice.isRealisticFit ? 'Dopasowanie Realne' : 'Rozbieżność Kompetencji'}
               </span>

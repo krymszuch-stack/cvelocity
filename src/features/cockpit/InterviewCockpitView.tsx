@@ -16,6 +16,7 @@ import { MasterVault } from '../../types';
 import { PageHeader } from '../../components/ui/PageHeader';
 import { Tabs } from '../../components/ui/Tabs';
 import { Button } from '../../components/ui/Button';
+import { EmptyState } from '../../components/ui/EmptyState';
 import { generateElevatorPitch } from '../../lib/elevatorPitchEngine';
 import { findOrGenerateBridge, getCommonSkillsList } from '../../lib/skillBridgeEngine';
 import {
@@ -151,7 +152,7 @@ export const InterviewCockpitView: React.FC<InterviewCockpitViewProps> = ({
                 <TrendingUp className="h-5 w-5" />
               </div>
               <div>
-                <h3 className="font-sans text-sm font-bold text-ink">Poziom Gotowości</h3>
+                <h2 className="font-sans text-sm font-bold text-ink">Poziom Gotowości</h2>
                 <p className="text-xs text-muted">Na bazie faktów z Vault i treningów</p>
               </div>
             </div>
@@ -163,11 +164,11 @@ export const InterviewCockpitView: React.FC<InterviewCockpitViewProps> = ({
           <div className="mt-4 space-y-2">
             <div className="h-2 w-full overflow-hidden rounded-full bg-sunken">
               <div
-                className="h-full rounded-full bg-brand-grad transition-all duration-500"
+                className="h-full rounded-full bg-brand-grad transition-[width] duration-[var(--duration-state)]"
                 style={{ width: `${readinessScore}%` }}
               />
             </div>
-            <p className="text-right text-[11px] font-medium text-muted">
+            <p className="text-right text-meta font-medium text-muted">
               {readinessScore >= 80
                 ? '🏆 Stan: Pełna gotowość snajperska'
                 : readinessScore >= 50
@@ -185,7 +186,7 @@ export const InterviewCockpitView: React.FC<InterviewCockpitViewProps> = ({
                 <Sparkles className="h-5 w-5" />
               </div>
               <div>
-                <h3 className="font-sans text-sm font-bold text-ink">Codzienne Wyzwanie</h3>
+                <h2 className="font-sans text-sm font-bold text-ink">Codzienne Wyzwanie</h2>
                 <p className="text-xs text-muted">+50 XP do dyscypliny</p>
               </div>
             </div>
@@ -199,7 +200,7 @@ export const InterviewCockpitView: React.FC<InterviewCockpitViewProps> = ({
               <p className="text-xs font-semibold text-ink">
                 {challenges[0]?.title}
               </p>
-              <p className="text-[11px] text-muted line-clamp-1">
+              <p className="text-meta text-muted line-clamp-1">
                 {challenges[0]?.description}
               </p>
             </div>
@@ -225,7 +226,7 @@ export const InterviewCockpitView: React.FC<InterviewCockpitViewProps> = ({
                 <Trophy className="h-5 w-5" />
               </div>
               <div>
-                <h3 className="font-sans text-sm font-bold text-ink">Narzędzia Live</h3>
+                <h2 className="font-sans text-sm font-bold text-ink">Narzędzia Live</h2>
                 <p className="text-xs text-muted">Ćwicz w symulatorze</p>
               </div>
             </div>
@@ -298,7 +299,7 @@ export const InterviewCockpitView: React.FC<InterviewCockpitViewProps> = ({
                 setPitchSeconds(0);
                 setIsPitchTimerRunning(false);
               }}
-              className={`rounded-xl px-3.5 py-2 text-xs font-semibold transition-all ${
+              className={`cursor-pointer rounded-xl px-3.5 py-2 text-label font-semibold transition-colors duration-[var(--duration-fast)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#F26440]/50 ${
                 pitchVariant === 'oneLiner'
                   ? 'bg-brand-600 text-white shadow-xs'
                   : 'border border-line bg-surface text-ink hover:border-brand-500'
@@ -313,7 +314,7 @@ export const InterviewCockpitView: React.FC<InterviewCockpitViewProps> = ({
                 setPitchSeconds(0);
                 setIsPitchTimerRunning(false);
               }}
-              className={`rounded-xl px-3.5 py-2 text-xs font-semibold transition-all ${
+              className={`cursor-pointer rounded-xl px-3.5 py-2 text-label font-semibold transition-colors duration-[var(--duration-fast)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#F26440]/50 ${
                 pitchVariant === 'thirtySeconds'
                   ? 'bg-brand-600 text-white shadow-xs'
                   : 'border border-line bg-surface text-ink hover:border-brand-500'
@@ -328,7 +329,7 @@ export const InterviewCockpitView: React.FC<InterviewCockpitViewProps> = ({
                 setPitchSeconds(0);
                 setIsPitchTimerRunning(false);
               }}
-              className={`rounded-xl px-3.5 py-2 text-xs font-semibold transition-all ${
+              className={`cursor-pointer rounded-xl px-3.5 py-2 text-label font-semibold transition-colors duration-[var(--duration-fast)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#F26440]/50 ${
                 pitchVariant === 'ninetySeconds'
                   ? 'bg-brand-600 text-white shadow-xs'
                   : 'border border-line bg-surface text-ink hover:border-brand-500'
@@ -378,9 +379,17 @@ export const InterviewCockpitView: React.FC<InterviewCockpitViewProps> = ({
             </div>
 
             {/* Script Text */}
-            <div className="p-4 rounded-xl bg-sunken text-sm md:text-base font-sans text-ink leading-relaxed whitespace-pre-wrap selection:bg-brand-500/20">
-              {currentPitchText || 'Brak danych w MasterVault do wygenerowania pitcha. Uzupełnij profil i doświadczenie.'}
-            </div>
+            {currentPitchText ? (
+              <div className="p-4 rounded-xl bg-sunken text-sm md:text-base font-sans text-ink leading-relaxed whitespace-pre-wrap selection:bg-brand-500/20">
+                {currentPitchText}
+              </div>
+            ) : (
+              <EmptyState
+                icon={Mic}
+                title="Brak danych do wygenerowania pitcha"
+                description="MasterVault nie ma jeszcze wystarczających informacji o Twoim profilu i doświadczeniu. Uzupełnij je, aby wygenerować spersonalizowany Elevator Pitch."
+              />
+            )}
 
             <div className="flex items-center justify-between pt-2">
               <div className="flex items-center gap-2 text-xs text-muted">
@@ -422,7 +431,7 @@ export const InterviewCockpitView: React.FC<InterviewCockpitViewProps> = ({
 
           {/* Quick Skill Selector */}
           <div className="rounded-2xl border border-line bg-surface p-5 shadow-xs space-y-4">
-            <label className="text-xs font-bold uppercase tracking-wider text-muted">
+            <label className="text-label font-bold uppercase tracking-wider text-muted">
               Wybierz lub wpisz brakującą technologię (o którą pyta rekruter):
             </label>
             <div className="flex flex-wrap gap-2">
@@ -431,7 +440,7 @@ export const InterviewCockpitView: React.FC<InterviewCockpitViewProps> = ({
                   key={sk}
                   type="button"
                   onClick={() => setMissingSkillInput(sk)}
-                  className={`rounded-lg px-3 py-1.5 text-xs font-semibold transition-colors ${
+                  className={`cursor-pointer rounded-lg px-3 py-1.5 text-label font-semibold transition-colors duration-[var(--duration-fast)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#F26440]/50 ${
                     missingSkillInput.toLowerCase() === sk.toLowerCase()
                       ? 'bg-brand-600 text-white'
                       : 'border border-line bg-sunken text-ink hover:border-brand-500'
@@ -485,7 +494,7 @@ export const InterviewCockpitView: React.FC<InterviewCockpitViewProps> = ({
 
               {/* Ready Script */}
               <div className="space-y-2">
-                <p className="text-xs font-bold uppercase tracking-wider text-muted">
+                <p className="text-label font-bold uppercase tracking-wider text-muted">
                   Gotowa riposta do wypowiedzenia na głos:
                 </p>
                 <div className="rounded-xl bg-sunken p-4 text-sm text-ink leading-relaxed font-sans border-l-4 border-brand-500">
@@ -547,9 +556,9 @@ export const InterviewCockpitView: React.FC<InterviewCockpitViewProps> = ({
                     <span className="rounded bg-brand-50 px-2 py-0.5 font-mono text-[10px] font-bold text-brand-fg">
                       {trap.topic}
                     </span>
-                    <h3 className="font-sans text-sm md:text-base font-bold text-ink mt-1">
+                    <h2 className="font-sans text-sm md:text-base font-bold text-ink mt-1">
                       {trap.recruiterQuestion}
-                    </h3>
+                    </h2>
                   </div>
                 </div>
 
@@ -569,7 +578,7 @@ export const InterviewCockpitView: React.FC<InterviewCockpitViewProps> = ({
                       <p className="text-xs md:text-sm text-ink leading-relaxed font-sans">
                         {v.script}
                       </p>
-                      <p className="text-[11px] text-muted italic">
+                      <p className="text-meta text-muted italic">
                         Dlaczego to działa: {v.rationale}
                       </p>
                     </div>
@@ -659,10 +668,10 @@ export const InterviewCockpitView: React.FC<InterviewCockpitViewProps> = ({
       {activeSection === 'tracker' && (
         <div className="space-y-6">
           <div className="rounded-2xl border border-line bg-surface p-6 shadow-xs space-y-5">
-            <h3 className="font-sans text-base font-bold text-ink flex items-center gap-2">
+            <h2 className="font-sans text-base font-bold text-ink flex items-center gap-2">
               <Clock className="h-5 w-5 text-brand-600" />
               Pre-Call Checklist (15 minut przed połączeniem)
-            </h3>
+            </h2>
 
             <div className="space-y-2">
               {preCallItems.map((item) => (
@@ -691,25 +700,27 @@ export const InterviewCockpitView: React.FC<InterviewCockpitViewProps> = ({
           {/* Drill Practice History Summary */}
           <div className="rounded-2xl border border-line bg-surface p-6 shadow-xs space-y-4">
             <div className="flex items-center justify-between">
-              <h3 className="font-sans text-sm font-bold text-ink">
+              <h2 className="font-sans text-sm font-bold text-ink">
                 Historia Treningów (Mock Drill Mode)
-              </h3>
+              </h2>
               <span className="text-xs text-muted">
                 Łącznie prób: <strong>{drillHistory.length}</strong>
               </span>
             </div>
 
             {drillHistory.length === 0 ? (
-              <div className="p-8 text-center rounded-xl bg-sunken text-xs text-muted">
-                Nie przeprowadzono jeszcze żadnego szybkiego treningu w Mock Drill Mode.
-                {onOpenDrill && (
-                  <div className="mt-3">
+              <EmptyState
+                icon={Trophy}
+                title="Brak historii treningów"
+                description="Nie przeprowadzono jeszcze żadnego szybkiego treningu w Mock Drill Mode. Wykonaj pierwszą 60-sekundową próbę, aby zobaczyć tu wyniki."
+                action={
+                  onOpenDrill ? (
                     <Button type="button" variant="primary" size="sm" onClick={onOpenDrill}>
                       Rozpocznij pierwszy trening (60s)
                     </Button>
-                  </div>
-                )}
-              </div>
+                  ) : undefined
+                }
+              />
             ) : (
               <div className="space-y-2">
                 {drillHistory.slice(0, 5).map((attempt) => (
@@ -719,7 +730,7 @@ export const InterviewCockpitView: React.FC<InterviewCockpitViewProps> = ({
                   >
                     <div>
                       <strong className="text-ink block">{attempt.questionText}</strong>
-                      <span className="text-muted text-[11px]">
+                      <span className="text-muted text-meta">
                         {new Date(attempt.recordedAt).toLocaleDateString('pl-PL')} • {attempt.durationSec}s
                       </span>
                     </div>
@@ -739,7 +750,7 @@ export const InterviewCockpitView: React.FC<InterviewCockpitViewProps> = ({
         <div className="flex items-center justify-between border-b border-line pb-3">
           <div className="flex items-center gap-2">
             <Trophy className="h-5 w-5 text-accent-fg" />
-            <h3 className="font-sans text-sm font-bold text-ink">Odznaczenia Taktyczne</h3>
+            <h2 className="font-sans text-sm font-bold text-ink">Odznaczenia Taktyczne</h2>
           </div>
           <span className="text-xs font-mono text-muted">
             Odblokowano: <strong className="text-ink">{badges.filter((b) => b.unlocked).length}/{badges.length}</strong>
@@ -750,7 +761,7 @@ export const InterviewCockpitView: React.FC<InterviewCockpitViewProps> = ({
           {badges.map((b) => (
             <div
               key={b.id}
-              className={`rounded-xl border p-3.5 text-center flex flex-col items-center justify-between transition-all ${
+              className={`rounded-xl border p-3.5 text-center flex flex-col items-center justify-between transition-colors duration-[var(--duration-state)] ${
                 b.unlocked
                   ? 'border-brand-500/30 bg-brand-50/40 dark:bg-brand-950/20 text-ink shadow-xs'
                   : 'border-line bg-sunken/50 text-muted opacity-60'

@@ -12,6 +12,7 @@ import { motion } from 'motion/react';
 import { JobOffer } from '../../types';
 import { Button } from '../../components/ui/Button';
 import { Chip } from '../../components/ui/Chip';
+import { noteApplyLinkOpened } from '../../store/usePendingApplication';
 
 export interface JobCardProps {
   job: JobOffer;
@@ -123,6 +124,17 @@ export const JobCard: React.FC<JobCardProps> = memo(({
             href={job.url}
             target="_blank"
             rel="noopener noreferrer"
+            onClick={() =>
+              /* Użytkownik idzie aplikować na portal. Pytanie wyskoczy dopiero,
+                 gdy wróci do karty — patrz `usePendingApplication`. */
+              noteApplyLinkOpened({
+                jobId: job.id,
+                company: job.company,
+                title: job.title,
+                sourceUrl: job.url,
+                salary: job.salary,
+              })
+            }
             className="inline-flex items-center gap-1.5 rounded-xl border border-line bg-surface px-2.5 py-1.5 text-xs font-semibold text-muted transition-colors hover:border-brand-300 hover:text-ink focus-visible:outline-none"
             title="Otwórz oryginalne ogłoszenie"
           >

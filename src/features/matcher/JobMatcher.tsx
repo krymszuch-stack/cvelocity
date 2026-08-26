@@ -23,10 +23,14 @@ import type { ParsedJobDescription } from '../../lib/jdParser';
 import { parseJobDescriptionResponse } from '../../lib/jdSchema';
 import { parseJobDescriptionLocal } from '../../lib/jdParser';
 import { JDInputModes } from './JDInputModes';
+import { JobFeasibilityAdvisor } from './JobFeasibilityAdvisor';
+import type { MobilityPreferences } from '../../lib/commuteCalculator';
 import { RealtimeLivePreview } from './RealtimeLivePreview';
 import { simulateAtsCheck } from '../../lib/atsSimulator';
 import { generateAntiTemplateCoverLetter } from '../../lib/coverLetterEngine';
 import { triggerConfetti } from '../../lib/confetti';
+import { grantXp } from '../../store/useGamificationStore';
+import { contributeJobIntel } from '../../lib/crowdsourceIntel';
 import { AtsSimulatorView } from './AtsSimulatorView';
 import { PageHeader } from '../../components/ui/PageHeader';
 import { Button } from '../../components/ui/Button';
@@ -56,6 +60,13 @@ export const JobMatcher: React.FC<JobMatcherProps> = ({
   const [atsResult, setAtsResult] = useState<AtsCheckResult | null>(null);
   const [isFetchingUrl, setIsFetchingUrl] = useState(false);
   const [urlError, setUrlError] = useState<string | null>(null);
+  const [parsedJd, setParsedJd] = useState<ParsedJobDescription | null>(null);
+
+  // Preferencje dojazdu żyją w vaulcie, a nie w stanie widoku: kalkulator ma
+  // pamiętać, jak daleko użytkownik mieszka, przy każdej kolejnej ofercie.
+  const handleMobilityChange = (mobilityPreferences: MobilityPreferences) => {
+    onUpdateVault?.({ ...vault, mobilityPreferences });
+  };
   const [isTailoring, setIsTailoring] = useState(false);
 
   const { saveApplication } = useApplications();
@@ -99,9 +110,17 @@ export const JobMatcher: React.FC<JobMatcherProps> = ({
       tailored.atsScore = ats.overallScore;
       setAtsResult(ats);
 
+      // Punkty za realny wynik symulatora, nie za samo kliknięcie. Próg jest
+      // w `XP_EVENTS`, tutaj zostaje wyłącznie warunek — gdyby nagradzać każde
+      // dopasowanie, licznik przestałby cokolwiek znaczyć.
+      if (ats.overallScore >= 85) {
+        grantXp('ats_high_score', `${job.company}|${job.title}`);
+      }
+
       if (ats.overallScore >= 90) {
         triggerConfetti({ count: 90, durationMs: 3000 });
       }
+
 
       // 3. Generate Anti-Template Cover Letter
       const cl = generateAntiTemplateCoverLetter(job.title, job.company, jdText, vault);
@@ -188,6 +207,17 @@ export const JobMatcher: React.FC<JobMatcherProps> = ({
         url,
         techStack: parsed.toolsAndTech?.length ? parsed.toolsAndTech : (fetched.skills ?? []),
       };
+
+      // Ogłoszenie zostało rozpoznane — to jest moment, w którym coś realnie
+      // powstało, więc tu idą punkty i tu idzie cegiełka do wspólnej bazy.
+      // Wysyłka jest anonimowa i „best effort": jej błąd nie może przerwać
+      // dopasowania, które użytkownik właśnie uruchomił.
+      // Dowód pracy: adres ogłoszenia jako cel (drugie wklejenie tego samego
+      // linku nic nie daje) i długość treści, bo trzy zdania to nie ogłoszenie.
+      grantXp('jd_ingested', url, { chars: (fetched.descriptionRaw ?? '').trim().length });
+      contributeJobIntel({ ...parsed, sourceUrl: url });
+      setParsedJd(parsed);
+
       handleMatchJob(job);
     } catch (err) {
       console.error('Błąd pobierania oferty z URL:', err);
@@ -213,6 +243,16 @@ export const JobMatcher: React.FC<JobMatcherProps> = ({
         urlError={urlError}
       />
 
+
+      {/* Kalkulator opłacalności — pokazuje się dopiero, gdy jest co liczyć. */}
+      {selectedJob && (
+        <JobFeasibilityAdvisor
+          offer={selectedJob}
+          parsed={parsedJd}
+          preferences={vault.mobilityPreferences}
+          onPreferencesChange={handleMobilityChange}
+        />
+      )}
 
       {/* ATS Simulator & Tailored Resume Modal */}
       {selectedJob && (

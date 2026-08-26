@@ -1,32 +1,27 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useCallback } from 'react';
 import {
   Sparkles,
   Send,
-  Bot,
   User,
-  Lightbulb,
-  HelpCircle,
-  Zap,
-  CheckCircle2,
+  RotateCcw,
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { Modal } from '../../components/ui/Modal';
 import { Button } from '../../components/ui/Button';
 
-import { MasterVault } from '../../types';
+import type { MasterVault } from '../../types';
+import {
+  clearAdvisorConversation,
+  readAdvisorConversation,
+  writeAdvisorConversation,
+  type AdvisorChatMessage,
+} from './advisorConversationCache';
 
 export interface GeminiAdvisorModalProps {
   isOpen: boolean;
   onClose: () => void;
   initialQuestion?: string;
   vault?: MasterVault;
-}
-
-interface ChatMessage {
-  id: string;
-  sender: 'ai' | 'user';
-  text: string;
-  timestamp: string;
 }
 
 const QUICK_PROMPTS = [
@@ -36,39 +31,36 @@ const QUICK_PROMPTS = [
   'Jakie są typowe błędy lematyzacji w języku polskim?',
 ];
 
+function createWelcomeMessage(): AdvisorChatMessage {
+  return {
+    id: 'm-init',
+    sender: 'ai',
+    text: 'Witaj! Jestem Twoim Doradcą Kariery i Ekspertem ds. Systemów ATS. Wyjaśnię Ci, dlaczego pewne sformułowania w CV zwiększają szanse na zaproszenie na rozmowę, jak unikać pułapek parserów rekrutacyjnych oraz jak skutecznie negocjować widełki finansowe. O co chciałbyś zapytać?',
+    timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+  };
+}
+
 export const GeminiAdvisorModal: React.FC<GeminiAdvisorModalProps> = ({
   isOpen,
   onClose,
   initialQuestion,
 }) => {
-  const [messages, setMessages] = useState<ChatMessage[]>([
-    {
-      id: 'm-init',
-      sender: 'ai',
-      text: 'Witaj! Jestem Twoim Doradcą Kariery i Ekspertem ds. Systemów ATS. Wyjaśnię Ci, dlaczego pewne sformułowania w CV zwiększają szanse na zaproszenie na rozmowę, jak unikać pułapek parserów rekrutacyjnych oraz jak skutecznie negocjować widełki finansowe. O co chciałbyś zapytać?',
-      timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-    },
-  ]);
+  const [initialCache] = useState(readAdvisorConversation);
+  const [messages, setMessages] = useState<AdvisorChatMessage[]>(() => {
+    const cached = initialCache.messages;
+    return cached.length > 0 ? cached : [createWelcomeMessage()];
+  });
 
-  const [inputVal, setInputVal] = useState('');
+  const [inputVal, setInputVal] = useState(() => initialCache.draft);
   const [isTyping, setIsTyping] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const handledInitialQuestionRef = useRef<string | undefined>(undefined);
 
-  useEffect(() => {
-    if (initialQuestion && isOpen) {
-      handleSend(initialQuestion);
-    }
-  }, [initialQuestion, isOpen]);
-
-  useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [messages, isTyping]);
-
-  const handleSend = (textToSend?: string) => {
+  const handleSend = useCallback((textToSend?: string) => {
     const query = textToSend || inputVal;
     if (!query.trim()) return;
 
-    const userMsg: ChatMessage = {
+    const userMsg: AdvisorChatMessage = {
       id: `m-${Date.now()}`,
       sender: 'user',
       text: query.trim(),
@@ -92,7 +84,7 @@ export const GeminiAdvisorModal: React.FC<GeminiAdvisorModalProps> = ({
         replyText = 'Dla stanowisk Senior / Lead liczy się wpływ na architekturę, mentoring i optymalizację kosztów chmury (FinOps). Zadbaj, aby w najnowszym stanowisku pojawiły się frazy: "Architektura modularna", "Code Review", "Projektowanie systemów rozproszonych" oraz "Wdrażanie standardów bezpieczeństwa".';
       }
 
-      const aiMsg: ChatMessage = {
+      const aiMsg: AdvisorChatMessage = {
         id: `m-${Date.now() + 1}`,
         sender: 'ai',
         text: replyText,
@@ -102,18 +94,59 @@ export const GeminiAdvisorModal: React.FC<GeminiAdvisorModalProps> = ({
       setMessages((prev) => [...prev, aiMsg]);
       setIsTyping(false);
     }, 700);
+  }, [inputVal]);
+
+  useEffect(() => {
+    writeAdvisorConversation(messages, inputVal);
+  }, [inputVal, messages]);
+
+  const handleNewConversation = () => {
+    clearAdvisorConversation();
+    setMessages([createWelcomeMessage()]);
+    setInputVal('');
+    setIsTyping(false);
+    handledInitialQuestionRef.current = undefined;
   };
+
+  useEffect(() => {
+    if (!isOpen) {
+      handledInitialQuestionRef.current = undefined;
+      return;
+    }
+
+    if (initialQuestion && handledInitialQuestionRef.current !== initialQuestion) {
+      handledInitialQuestionRef.current = initialQuestion;
+      handleSend(initialQuestion);
+    }
+  }, [handleSend, initialQuestion, isOpen]);
+
+  useEffect(() => {
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  }, [messages, isTyping]);
 
   return (
     <Modal
       isOpen={isOpen}
       onClose={onClose}
       title="Okienko Doradcy Kariery (Gemini Advisor)"
+      description="Rozmowa jest zachowywana tylko w tej sesji przeglądarki."
       size="lg"
     >
       <div className="flex flex-col h-[520px]">
+        <div className="flex justify-end pb-2">
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            icon={RotateCcw}
+            onClick={handleNewConversation}
+            className="cursor-pointer focus-visible:ring-2 focus-visible:ring-brand-500/50"
+          >
+            Nowa rozmowa
+          </Button>
+        </div>
         {/* Messages Scroll Area */}
-        <div className="flex-1 overflow-y-auto space-y-4 p-2 pr-3">
+        <div className="flex-1 overflow-y-auto space-y-4 p-2 pr-3" role="log" aria-live="polite" aria-label="Historia rozmowy z Doradcą AI">
           <AnimatePresence initial={false}>
             {messages.map((m) => (
               <motion.div
@@ -124,7 +157,7 @@ export const GeminiAdvisorModal: React.FC<GeminiAdvisorModalProps> = ({
               >
                 {m.sender === 'ai' && (
                   <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-brand-50 text-brand-600 border border-brand-200">
-                    <Sparkles className="h-4 w-4" />
+                    <Sparkles className="h-4 w-4" aria-hidden="true" />
                   </div>
                 )}
 
@@ -147,7 +180,7 @@ export const GeminiAdvisorModal: React.FC<GeminiAdvisorModalProps> = ({
 
                 {m.sender === 'user' && (
                   <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-elevated text-ink border border-line">
-                    <User className="h-4 w-4" />
+                    <User className="h-4 w-4" aria-hidden="true" />
                   </div>
                 )}
               </motion.div>
@@ -159,7 +192,7 @@ export const GeminiAdvisorModal: React.FC<GeminiAdvisorModalProps> = ({
                 animate={{ opacity: 1 }}
                 className="flex items-center gap-2 text-xs text-muted font-mono"
               >
-                <Sparkles className="h-4 w-4 animate-spin text-brand-600" />
+                <Sparkles className="h-4 w-4 animate-spin text-brand-600" aria-hidden="true" />
                 <span>Doradca analizuje i pisze odpowiedź...</span>
               </motion.div>
             )}
@@ -175,7 +208,7 @@ export const GeminiAdvisorModal: React.FC<GeminiAdvisorModalProps> = ({
                 key={i}
                 type="button"
                 onClick={() => handleSend(prompt)}
-                className="rounded-lg border border-line bg-surface px-2.5 py-1 text-[11px] font-medium text-muted transition-colors hover:border-brand-300 hover:text-ink focus-visible:outline-none"
+                className="cursor-pointer rounded-lg border border-line bg-surface px-2.5 py-1 text-[11px] font-medium text-muted transition-colors hover:border-brand-300 hover:text-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500/50"
               >
                 {prompt}
               </button>
@@ -191,6 +224,7 @@ export const GeminiAdvisorModal: React.FC<GeminiAdvisorModalProps> = ({
             onChange={(e) => setInputVal(e.target.value)}
             onKeyDown={(e) => e.key === 'Enter' && handleSend()}
             placeholder="Zadaj pytanie doradcy (np. jak uzasadnić przerwę w karierze)..."
+            aria-label="Pytanie do Doradcy AI"
             className="flex-1 rounded-2xl border border-line bg-sunken px-4 py-2.5 text-xs text-ink placeholder:text-subtle focus:border-brand-500/60 focus:outline-none focus:ring-2 focus:ring-brand-500/20"
           />
 

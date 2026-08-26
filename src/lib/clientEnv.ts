@@ -24,6 +24,8 @@ interface ClientEnv {
   supabaseUrl: string | null;
   supabaseAnonKey: string | null;
   stripePublishableKey: string | null;
+  /** Publiczny DSN klienta Sentry; brak wartości wyłącza monitoring. */
+  sentryDsn: string | null;
   /** `true`, gdy front ma z czym rozmawiać: adres i klucz publiczny Supabase. */
   backendConfigured: boolean;
 }
@@ -42,6 +44,7 @@ export const clientEnv: ClientEnv = {
   supabaseUrl,
   supabaseAnonKey,
   stripePublishableKey: read('VITE_STRIPE_PUBLISHABLE_KEY'),
+  sentryDsn: read('VITE_SENTRY_DSN'),
   backendConfigured: Boolean(supabaseUrl && supabaseAnonKey),
 };
 

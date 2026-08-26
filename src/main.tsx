@@ -4,6 +4,7 @@ import App from './App.tsx';
 import { migrateLegacyKeys } from './lib/storage.ts';
 import { reportClientEnvIssues } from './lib/clientEnv.ts';
 import { getSupabaseBrowserClient } from './lib/supabaseClient.ts';
+import { initializeErrorMonitoring } from './lib/errorMonitoring.ts';
 import './index.css';
 
 // Musi pójść przed pierwszym renderem: komponenty czytają swój stan
@@ -16,6 +17,7 @@ migrateLegacyKeys();
 // ścieżki użytkownika. Tylko ostrzeżenie i tylko w trybie deweloperskim —
 // praca bez backendu jest wspieranym sposobem pracy nad frontendem.
 reportClientEnvIssues();
+initializeErrorMonitoring();
 
 // Podnosi klienta Supabase, gdy konfiguracja jest kompletna, i podpina dostawcę
 // tokenu do `apiClient`. Bez konfiguracji zwraca null i nic się nie dzieje.
