@@ -22,7 +22,9 @@ export const EducationSection: React.FC<EducationSectionProps> = ({
     const newEntry: Education = {
       id: `edu-${Date.now()}`,
       institution: '',
-      degree: 'Inżynier',
+      // Puste pole zamiast prefabrykowanego „Inżynier": wymyślony stopień
+      // potrafił trafić do dokumentu, choć nikt go nie wpisał (reguła 1).
+      degree: '',
       fieldOfStudy: '',
       startDate: '',
       endDate: '',

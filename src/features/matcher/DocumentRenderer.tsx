@@ -31,11 +31,13 @@ export type TemplateId = 'modern' | 'minimal' | 'executive' | 'creative';
  * użytkownikowi polskiego interfejsu. Opis mówi, do czego szablon służy,
  * bo sama nazwa tego nie zdradza.
  */
+// Hinty obiecują wyłącznie to, co szablon faktycznie robi (kolor akcentu
+// i nagłówków) — wcześniejsze teksty reklamowały różnice, których nie było.
 const TEMPLATES: { id: TemplateId; label: string; hint: string }[] = [
-  { id: 'modern', label: 'Nowoczesny', hint: 'Domyślny. Kolorowy akcent, czytelne sekcje — pasuje do większości ofert.' },
-  { id: 'minimal', label: 'Minimalny', hint: 'Bez ozdobników, maksimum treści na stronie. Bezpieczny dla systemów ATS.' },
-  { id: 'executive', label: 'Menedżerski', hint: 'Poważna typografia, nacisk na zakres odpowiedzialności i wyniki.' },
-  { id: 'creative', label: 'Kreatywny', hint: 'Mocniejszy nagłówek i kolor. Do branż, gdzie forma jest częścią oceny.' },
+  { id: 'modern', label: 'Nowoczesny', hint: 'Czysty układ jednokolumnowy.' },
+  { id: 'minimal', label: 'Minimalny', hint: 'Maksimum treści na kartce.' },
+  { id: 'executive', label: 'Menedżerski', hint: 'Kolor nagłówków i pozioma linia marki.' },
+  { id: 'creative', label: 'Kreatywny', hint: 'Akcent kolorystyczny przy nagłówkach.' },
 ];
 
 export interface DocumentRendererProps {

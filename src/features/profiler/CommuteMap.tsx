@@ -76,7 +76,7 @@ export const CommuteMap: React.FC<CommuteMapProps> = ({
         <Toggle
           checked={location.relocationReady || false}
           onChange={(val) => handleUpdate('relocationReady', val)}
-          label="Jestem gotowy na przeprowadzkę (relokacja)"
+          label="Rozważam przeprowadzkę (relokacja)"
           description="Uwzględniaj oferty z budżetem relokacyjnym z innych miast i krajów"
         />
       </div>

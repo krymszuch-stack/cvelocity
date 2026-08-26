@@ -5,7 +5,6 @@ import {
   User,
   Search,
   CreditCard,
-  FileText,
   LogIn,
   LogOut,
   Trash2,
@@ -78,6 +77,17 @@ export const Topbar: React.FC<TopbarProps> = ({
   // Instalacja bez kluczy Stripe odpowie 501 i wtedy dopiero mówi o tym toast.
   const handleOpenCustomerPortal = async () => {
     setIsDropdownOpen(false);
+    // Endpoint wymaga sesji (token z konta w chmurze). Bez tego sprawdzenia
+    // niezalogowany dostawałby komunikat o błędzie serwera zamiast informacji,
+    // że najpierw trzeba się zalogować — ten sam wzór co `isCloudAccount`
+    // w `StripeCheckoutModal`.
+    if (!(mode === 'cloud' && !!user)) {
+      showToast('Panel subskrypcji', {
+        message: 'Panel subskrypcji jest dostępny po zalogowaniu na konto.',
+        variant: 'info',
+      });
+      return;
+    }
     try {
       const { url } = await api.post<{ url: string }>('/api/billing/portal-session', {});
       window.location.assign(url);
@@ -86,7 +96,7 @@ export const Topbar: React.FC<TopbarProps> = ({
         message:
           err instanceof ApiError
             ? err.message
-            : 'Nie udało się otworzyć panelu subskrypcji. Spróbuj ponownie za chwilę.',
+            : 'Nie udało się otworzyć panelu Stripe. Spróbuj ponownie.',
         variant: 'info',
       });
     }
@@ -127,7 +137,7 @@ export const Topbar: React.FC<TopbarProps> = ({
             window.dispatchEvent(new KeyboardEvent('keydown', { key: 'k', ctrlKey: true }));
           }}
           className="hidden sm:flex items-center gap-2 rounded-xl border border-line bg-elevated px-2.5 py-1.5 text-xs text-muted hover:border-line-strong hover:text-ink transition-colors"
-          title="Otwórz Command Palette (Cmd+K)"
+          title="Otwórz Command Palette (Ctrl+K)"
         >
           <Search className="h-3.5 w-3.5" />
           <span>Szukaj...</span>
@@ -146,8 +156,9 @@ export const Topbar: React.FC<TopbarProps> = ({
         {/* Advisor Button with Ping Indicator */}
         <AdvisorButton onClick={onOpenAdvisor} />
 
-        {/* Design Tokens Showcase Button */}
-        {onOpenDesignTokens && (
+        {/* Design Tokens Showcase — narzędzie deweloperskie, nie funkcja
+            produktu; w buildzie produkcyjnym przycisk w ogóle nie powstaje. */}
+        {import.meta.env.DEV && onOpenDesignTokens && (
           <motion.button
             type="button"
             onClick={onOpenDesignTokens}
@@ -254,23 +265,16 @@ export const Topbar: React.FC<TopbarProps> = ({
                     </button>
                   )}
 
+                  {/* Jedna pozycja menu, bo Customer Portal obsługuje i plan,
+                      i faktury — dwa wpisy wołały dokładnie tę samą trasę. */}
                   <button
                     type="button"
                     onClick={handleOpenCustomerPortal}
                     className="flex w-full items-center gap-2.5 rounded-xl px-2.5 py-2 text-ink hover:bg-brand-50 hover:text-brand-fg transition-colors"
                   >
                     <CreditCard className="h-3.5 w-3.5 text-muted" />
-                    <span>Zarządzaj subskrypcją</span>
+                    <span>Zarządzaj subskrypcją (Stripe Portal)</span>
                     <ExternalLink className="h-3 w-3 ml-auto text-subtle" />
-                  </button>
-
-                  <button
-                    type="button"
-                    onClick={handleOpenCustomerPortal}
-                    className="flex w-full items-center gap-2.5 rounded-xl px-2.5 py-2 text-ink hover:bg-brand-50 hover:text-brand-fg transition-colors"
-                  >
-                    <FileText className="h-3.5 w-3.5 text-muted" />
-                    <span>Faktury i rozliczenia</span>
                   </button>
                 </div>
 

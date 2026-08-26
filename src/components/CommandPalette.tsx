@@ -79,17 +79,21 @@ function fuzzyScore(query: string, text: string): number {
 /** Statyczny identyfikator listboxa — paleta jest instancją singletonem w drzewie. */
 const LISTBOX_ID = 'cmdk-list';
 
-export const CommandPalette: React.FC = () => {
+export interface CommandPaletteProps {
+  /**
+   * Jedyna droga zmiany zakładki z palety. Wcześniej komponent sięgał po
+   * `setActiveTab` i omijał blokady sekcji — jedyny strażnik odblokowań
+   * siedzi w `navigate()` w App.
+   */
+  onNavigate: (tab: string) => void;
+}
+
+export const CommandPalette: React.FC<CommandPaletteProps> = ({ onNavigate }) => {
   const [isOpen, setIsOpen] = useState(false);
   const [query, setQuery] = useState('');
   const [selectedIndex, setSelectedIndex] = useState(0);
 
-  const {
-    setActiveTab,
-    setAdvisorOpen,
-    setTokenModalOpen,
-    setDesignTokensOpen,
-  } = useAppStore();
+  const { setAdvisorOpen, setDesignTokensOpen } = useAppStore();
 
   const { theme, setTheme } = useTheme();
   const { userVault } = useAuth();
@@ -117,7 +121,7 @@ export const CommandPalette: React.FC = () => {
         label: 'Przejdź do: Twój następny krok',
         category: 'Nawigacja',
         icon: IconHome,
-        action: () => setActiveTab('home'),
+        action: () => onNavigate('home'),
       },
       {
         id: 'nav-profil',
@@ -125,7 +129,7 @@ export const CommandPalette: React.FC = () => {
         category: 'Nawigacja',
         icon: IconVault,
         keywords: 'skarbiec vault umiejętności doświadczenie edukacja',
-        action: () => setActiveTab('profil'),
+        action: () => onNavigate('profil'),
       },
       {
         id: 'nav-aplikuj',
@@ -133,7 +137,15 @@ export const CommandPalette: React.FC = () => {
         category: 'Nawigacja',
         icon: IconMatcher,
         keywords: 'oferta praca matcher ats cv list motywacyjny',
-        action: () => setActiveTab('aplikuj'),
+        action: () => onNavigate('aplikuj'),
+      },
+      {
+        id: 'nav-ats-lab',
+        label: 'Przejdź do: Laboratorium Audytu ATS 360°',
+        category: 'Nawigacja',
+        icon: IconZap,
+        keywords: 'ats lab audyt silniki telemetria konsensus',
+        action: () => onNavigate('ats-lab'),
       },
       {
         id: 'nav-trenuj',
@@ -141,25 +153,25 @@ export const CommandPalette: React.FC = () => {
         category: 'Nawigacja',
         icon: IconBrain,
         keywords: 'drill rozmowa trening pytania',
-        action: () => setActiveTab('trenuj'),
+        action: () => onNavigate('trenuj'),
       },
       {
         id: 'nav-pipeline',
         label: 'Przejdź do: Pipeline (wysłane aplikacje i rozmowy)',
         category: 'Nawigacja',
         icon: IconApplications,
-        action: () => setActiveTab('pipeline'),
+        action: () => onNavigate('pipeline'),
       },
       {
         id: 'nav-pricing',
         label: 'Przejdź do: Cennik & Pakiety Pro',
         category: 'Nawigacja',
         icon: IconPricing,
-        action: () => setActiveTab('pricing'),
+        action: () => onNavigate('pricing'),
       },
       {
         id: 'act-advisor',
-        label: 'Otwórz Okienko Doradcy AI (Gemini Advisor)',
+        label: 'Otwórz Okienko Doradcy Kariery',
         category: 'Narzędzia',
         icon: IconSparkles,
         action: () => {
@@ -167,20 +179,19 @@ export const CommandPalette: React.FC = () => {
           setAdvisorOpen(true);
         },
       },
-      {
-        id: 'act-stats',
-        label: 'Pokaż Telemetrię i Zaoszczędzone Tokeny AI',
-        category: 'Narzędzia',
-        icon: IconZap,
-        action: () => setTokenModalOpen(true),
-      },
-      {
-        id: 'act-tokens',
-        label: 'Pokaż Paletę Tokenów Design System',
-        category: 'Narzędzia',
-        icon: IconPalette,
-        action: () => setDesignTokensOpen(true),
-      },
+      // Paleta tokenów to narzędzie deweloperskie — w produkcji nie ma wejścia
+      // (przycisk w topbarze jest ogrodzony tym samym warunkiem).
+      ...(import.meta.env.DEV
+        ? [
+            {
+              id: 'act-tokens',
+              label: 'Pokaż Paletę Tokenów Design System',
+              category: 'Narzędzia' as const,
+              icon: IconPalette,
+              action: () => setDesignTokensOpen(true),
+            },
+          ]
+        : []),
       {
         id: 'act-theme',
         label: `Przełącz Motyw (Aktualny: ${theme === 'dark' ? 'Ciemny' : 'Jasny'})`,
@@ -225,7 +236,7 @@ export const CommandPalette: React.FC = () => {
         category: 'Oferty',
         icon: Briefcase,
         keywords: `${application.status} oferta`,
-        action: () => setActiveTab('pipeline'),
+        action: () => onNavigate('pipeline'),
       });
     }
 
@@ -246,12 +257,12 @@ export const CommandPalette: React.FC = () => {
         label: `Umiejętność ze Skarbca: ${skill}`,
         category: 'Umiejętności',
         icon: Wrench,
-        action: () => setActiveTab('profil'),
+        action: () => onNavigate('profil'),
       });
     }
 
     return base;
-  }, [theme, setTheme, setActiveTab, setAdvisorOpen, setTokenModalOpen, setDesignTokensOpen, userVault, applications]);
+  }, [theme, setTheme, onNavigate, setAdvisorOpen, setDesignTokensOpen, userVault, applications]);
 
   const filtered = useMemo(() => {
     if (!query.trim()) return commands.slice(0, 20);

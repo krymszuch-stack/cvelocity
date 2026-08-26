@@ -78,7 +78,7 @@ export const LicenseGrid: React.FC<LicenseGridProps> = ({
             onClick={() => setIsDense(!isDense)}
             className="text-xs"
           >
-            {isDense ? 'Widok standardowy' : 'Widok zwarty (Dense)'}
+            {isDense ? 'Widok standardowy' : 'Widok zwarty'}
           </Button>
         </div>
       </div>

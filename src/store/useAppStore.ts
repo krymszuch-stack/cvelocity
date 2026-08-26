@@ -18,7 +18,6 @@ interface AppStoreState {
   activeTab: NavTabId;
   sidebarCollapsed: boolean;
   isAdvisorOpen: boolean;
-  isTokenModalOpen: boolean;
   isAuthModalOpen: boolean;
   isDesignTokensOpen: boolean;
   advisorInitialQuestion?: string;
@@ -29,7 +28,6 @@ let globalState: AppStoreState = {
   activeTab: 'home',
   sidebarCollapsed: readInitialSidebarCollapsed(),
   isAdvisorOpen: false,
-  isTokenModalOpen: false,
   isAuthModalOpen: false,
   isDesignTokensOpen: false,
   advisorInitialQuestion: undefined,
@@ -133,10 +131,6 @@ export function useAppStore() {
     setStoreState({ isAdvisorOpen, advisorInitialQuestion });
   }, []);
 
-  const setTokenModalOpen = useCallback((isTokenModalOpen: boolean) => {
-    setStoreState({ isTokenModalOpen });
-  }, []);
-
   const setAuthModalOpen = useCallback((isAuthModalOpen: boolean) => {
     setStoreState({ isAuthModalOpen });
   }, []);
@@ -151,7 +145,6 @@ export function useAppStore() {
     toggleSidebar,
     setSidebarCollapsed,
     setAdvisorOpen,
-    setTokenModalOpen,
     setAuthModalOpen,
     setDesignTokensOpen,
   };

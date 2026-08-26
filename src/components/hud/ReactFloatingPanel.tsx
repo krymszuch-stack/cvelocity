@@ -170,11 +170,12 @@ export const ReactFloatingPanel: React.FC<ReactFloatingPanelProps> = ({
             <Zap className="h-3.5 w-3.5" />
           </div>
           <div className="flex items-center gap-1.5">
+            {/* Sufiks „(live-hud-v1)" to identyfikator wewnętrzny — nie dla UI. */}
             <span className="font-mono text-xs font-black tracking-wider text-ink">
-              LIVE HUD (live-hud-v1)
+              LIVE HUD
             </span>
             <span className="rounded bg-brand-500/10 px-1.5 py-0.2 font-mono text-[9px] font-bold text-brand-600 flex items-center gap-0.5">
-              <Lock className="h-2.5 w-2.5" /> 100% Vault
+              <Lock className="h-2.5 w-2.5" /> Dane z Vaultu
             </span>
           </div>
         </div>
@@ -184,7 +185,7 @@ export const ReactFloatingPanel: React.FC<ReactFloatingPanelProps> = ({
           <button
             type="button"
             onClick={() => setIsZoomSimulated(!isZoomSimulated)}
-            title="Symuluj aktywne spotkanie Zoom (onZoomStart)"
+            title="Podgląd panelu podczas spotkania (symulacja)"
             className={`rounded-lg p-1.5 transition-colors ${
               isZoomSimulated ? 'bg-error text-white animate-pulse' : 'text-muted hover:bg-surface hover:text-ink'
             }`}
@@ -271,10 +272,15 @@ export const ReactFloatingPanel: React.FC<ReactFloatingPanelProps> = ({
                 <span className="font-mono text-[9px] font-extrabold uppercase text-muted">
                   Kluczowy Elevator Pitch (30s)
                 </span>
+                {/* Reguła 1: brak podsumowania to uczciwy pusty stan. Syntetyczny pitch
+                    fabrykował kompetencje i wystawiał je jako „Kluczowy Pitch" podczas
+                    prawdziwej rozmowy — dokładnie klasa błędu usunięta z Trackera. */}
                 <p className="text-xs text-ink/90 font-sans leading-relaxed">
-                  {vault.personalInfo.summary
-                    ? vault.personalInfo.summary
-                    : `${vault.personalInfo.title} łączący ${[...(vault.skillsMatrix?.hardSkills || []), ...(vault.skillsMatrix?.toolsAndTech || [])].slice(0, 3).join(', ') || 'kompetencje techniczne'} z orientacją na wymierne wyniki biznesowe.`}
+                  {vault.personalInfo.summary || (
+                    <span className="italic text-muted">
+                      Brak pitcha — uzupełnij podsumowanie w Master Vault.
+                    </span>
+                  )}
                 </p>
               </div>
 
@@ -301,7 +307,7 @@ export const ReactFloatingPanel: React.FC<ReactFloatingPanelProps> = ({
                   <TrendingUp className="h-4 w-4 text-success-fg" />
                   <span className="font-bold text-xs text-ink">Zweryfikowane Liczby i Osiągnięcia</span>
                 </div>
-                <span className="text-[9px] font-mono font-bold text-success-fg">MasterVault Verified</span>
+                <span className="text-[9px] font-mono font-bold text-success-fg">Z Vaultu</span>
               </div>
 
               <div className="space-y-2 max-h-48 overflow-y-auto pr-1">
@@ -408,9 +414,10 @@ export const ReactFloatingPanel: React.FC<ReactFloatingPanelProps> = ({
                   </Button>
                 </div>
 
+                {/* Odczyt WPM usunięty: nie ma kontrolki zmiany tempa — parametr steruje
+                    wyłącznie prędkością auto-przewijania, więc liczba niczego nie opisywała.
+                    Rozmiar fontu zostaje, bo zmieniają go przyciski A-/A+. */}
                 <div className="flex items-center gap-2 text-[10px] font-mono text-muted">
-                  <span>{wpmSpeed} WPM</span>
-                  <span>•</span>
                   <span>{fontSize}px</span>
                 </div>
               </div>

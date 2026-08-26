@@ -1,8 +1,9 @@
-import React, { useState, useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Sidebar } from './Sidebar';
 import { Topbar } from './Topbar';
 import { MobileSidebar } from '../MobileSidebar';
 import { NavSectionId, NavTabId } from '../../lib/navigation';
+import { useAppStore } from '../../store/useAppStore';
 
 export interface ShellProps {
   children: React.ReactNode;
@@ -32,12 +33,10 @@ export const Shell: React.FC<ShellProps> = ({
   userEmail,
   planStatus = 'free',
 }) => {
-  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState<boolean>(() => {
-    if (typeof window !== 'undefined') {
-      return window.innerWidth >= 1024 && window.innerWidth < 1280;
-    }
-    return false;
-  });
+  // Zwinięcie paska żyje w useAppStore z persystencją — wcześniej Shell trzymał
+  // własny useState, a sklep miał martwe settery; preferencja ginęła co
+  // odświeżenie strony.
+  const { sidebarCollapsed: isSidebarCollapsed, toggleSidebar } = useAppStore();
 
   const [isMobileDrawerOpen, setIsMobileDrawerOpen] = useState(false);
 
@@ -76,7 +75,7 @@ export const Shell: React.FC<ShellProps> = ({
           activeTab={activeTab}
           onSelectTab={handleSelectTab}
           isCollapsed={isSidebarCollapsed}
-          onToggleCollapse={() => setIsSidebarCollapsed(!isSidebarCollapsed)}
+          onToggleCollapse={toggleSidebar}
           onOpenAdvisor={() => onOpenAdvisor()}
           onOpenAuthModal={onOpenAuthModal}
           unlockedSections={unlockedSections}

@@ -54,28 +54,42 @@ export const DEFAULT_PRE_CALL_CHECKLIST: Omit<PreCallChecklistItem, 'completed'>
   },
 ];
 
-export const STAGE_LABELS: Record<InterviewStage, { label: string; description: string }> = {
+/**
+ * `shortLabel` istnieje obok pełnego `label`, bo oś etapów w Live Trackerze
+ * mieści kilka znaków na kafelek — ucinanie pierwszego słowa pełnej nazwy
+ * dawało trzy identyczne kafelki „Pytania” (audyt treści §3.2).
+ */
+export const STAGE_LABELS: Record<
+  InterviewStage,
+  { shortLabel: string; label: string; description: string }
+> = {
   INTRO: {
+    shortLabel: 'Intro',
     label: 'Wstęp & Rozgrzewka (Intro)',
     description: 'Small talk, autoprezentacja (Elevator Pitch 30s) i przedstawienie agendy spotkania.',
   },
   TECHNICAL: {
+    shortLabel: 'Techniczne',
     label: 'Pytania Techniczne & Narzędzia',
     description: 'Weryfikacja twardych umiejętności, technologii, uprawnień i architektury.',
   },
   SYSTEM_DESIGN: {
+    shortLabel: 'Zadanie',
     label: 'System Design / Studia Przypadków',
     description: 'Projektowanie rozwiązania, analiza kompromisów technicznych i skalowalności.',
   },
   BEHAVIORAL: {
+    shortLabel: 'Behawioralne',
     label: 'Pytania Behawioralne (STAR)',
     description: 'Praca zespołowa, rozwiązywanie konfliktów, reakcja na awarie i trudne sytuacje.',
   },
   CANDIDATE_QA: {
+    shortLabel: 'Twoje pytania',
     label: 'Pytania Kandydata do Rekrutera',
     description: 'Zadawanie strategicznych pytań o zespół, architekturę, roadmapę i kulturę.',
   },
   WRAP_UP: {
+    shortLabel: 'Podsumowanie',
     label: 'Podsumowanie & Kolejne Kroki',
     description: 'Ustalenie timeline rekrutacji, widełek i terminu kolejnego kontaktu.',
   },

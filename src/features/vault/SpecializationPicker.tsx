@@ -2,7 +2,7 @@ import React, { useMemo, useState } from 'react';
 import { Briefcase, Plus, Check, Info } from 'lucide-react';
 import { Card } from '../../components/ui/Card';
 import { Select } from '../../components/ui/Field';
-import { SkillsMatrix as SkillsMatrixType } from '../../types';
+import { Certification, SkillsMatrix as SkillsMatrixType } from '../../types';
 import {
   getAllSectors,
   getSuggestionsForSubRole,
@@ -39,13 +39,12 @@ export interface SpecializationPickerProps {
   className?: string;
 }
 
-type SuggestionTarget = 'hardSkills' | 'toolsAndTech';
-
 interface SuggestionGroup {
   label: string;
   hint: string;
   items: string[];
-  target: SuggestionTarget;
+  /** Dokąd trafia kliknięcie. `certifications` to osobna kolekcja obiektów. */
+  target: 'hardSkills' | 'toolsAndTech' | 'certifications';
 }
 
 export const SpecializationPicker: React.FC<SpecializationPickerProps> = ({

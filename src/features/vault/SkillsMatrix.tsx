@@ -6,11 +6,15 @@ import {
   Globe,
   Award,
   ShieldCheck,
-  CheckCircle2,
   Car,
+  Truck,
   HardHat,
   Zap,
+  Flame,
   Sparkles,
+  Network,
+  Wind,
+  Sliders,
   X,
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
@@ -22,6 +26,7 @@ import { Combobox } from '../../components/ui/Combobox';
 import type { SuggestFn } from '../../hooks/useFieldSuggestions';
 import { Chip } from '../../components/ui/Chip';
 import { ProgressBar } from '../../components/ui/ProgressBar';
+import { ALL_LICENSES } from '../../data/licenses';
 
 export interface SkillsMatrixProps {
   skillsMatrix: SkillsMatrixType;
@@ -48,16 +53,35 @@ const CEFR_PROGRESS: Record<LanguageProficiency['level'], number> = {
   Native: 100,
 };
 
-const COMMON_LICENSES = [
-  { id: 'b_license', label: 'Prawo Jazdy Kat. B', icon: Car },
-  { id: 'udt_forklift', label: 'Uprawnienia UDT (Wózki)', icon: HardHat },
-  { id: 'sep_1kv', label: 'Uprawnienia SEP (do 1kV)', icon: Zap },
-  { id: 'sanepid', label: 'Badania Sanepid', icon: ShieldCheck },
-  { id: 'cloud_cert', label: 'Certyfikat AWS / GCP / Azure', icon: Award },
-  { id: 'scrum_master', label: 'Scrum Master (PSM / CSM)', icon: Sparkles },
-  { id: 'first_aid', label: 'Kurs Pierwszej Pomocy', icon: ShieldCheck },
-  { id: 'c_license', label: 'Prawo Jazdy Kat. C / C+E', icon: Car },
-];
+/**
+ * Ikony rozwiązywane po nazwie z katalogu — ten sam wzorzec co w
+ * `LicenseGrid`. Katalog (`src/data/licenses.ts`) jest modułem danych i
+ * świadomie nie wciąga `lucide-react`, więc widok tłumaczy `iconName`
+ * na komponent.
+ */
+const LICENSE_ICONS: Record<string, React.ElementType> = {
+  Car,
+  Truck,
+  HardHat,
+  Zap,
+  Flame,
+  ShieldCheck,
+  Award,
+  Sparkles,
+  Network,
+  Wind,
+  Sliders,
+};
+
+// Katalog uprawnień z jednego źródła (`src/data/licenses.ts`). Lokalna kopia
+// rozjeżdżała się etykietami z katalogiem silnika knock-outów, a pozycja
+// first_aid w ogóle nie istniała w katalogu — zaznaczona, nigdy nie trafiłaby
+// do kryteriów ofert (reguły 1 i 3).
+const COMMON_LICENSES = ALL_LICENSES.map((lic) => ({
+  id: lic.id,
+  label: lic.label,
+  icon: LICENSE_ICONS[lic.iconName] ?? ShieldCheck,
+}));
 
 export const SkillsMatrix: React.FC<SkillsMatrixProps> = ({
   skillsMatrix,
@@ -132,7 +156,9 @@ export const SkillsMatrix: React.FC<SkillsMatrixProps> = ({
       id: `lang-${Date.now()}`,
       language: newLangName.trim(),
       level: newLangLevel,
-      context: 'Komunikacja biznesowa i techniczna',
+      // Puste pole zamiast gotowca: fabrykowany kontekst wchodził do vaultu
+      // i dalej do CV jako treść, której nikt nie wpisał (reguła 1).
+      context: '',
     };
     onUpdateLanguages([...languages, newLang]);
     setNewLangName('');

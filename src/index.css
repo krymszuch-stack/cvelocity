@@ -281,17 +281,23 @@ button:focus-visible,
 
   /* Izolacja obszaru druku: klasyczny trik visibility — ukrywa WSZYSTKO
      poza kartką CV (panele analityczne, toasty, chrome), nie ruszając layoutu
-     ekranowego. Kartka dostaje position absolute, żeby zająć pierwszą stronę. */
+     ekranowego. Kartka dostaje position absolute, żeby zająć pierwszą stronę.
+     Drugi identyfikator to list motywacyjny: wcześniej drukował się jako pusta
+     strona, bo jedyny widoczny obszar (#cv-printable-document) istnieje tylko
+     w zakładce podglądu CV. */
   body * {
     visibility: hidden;
   }
 
   #cv-printable-document,
-  #cv-printable-document * {
+  #cv-printable-document *,
+  #cover-letter-printable-document,
+  #cover-letter-printable-document * {
     visibility: visible;
   }
 
-  #cv-printable-document {
+  #cv-printable-document,
+  #cover-letter-printable-document {
     position: absolute;
     inset: 0 auto auto 0;
     width: 100%;

@@ -13,7 +13,7 @@ import {
   saveProfileVault,
 } from './lib/localProfile';
 import { AuthProvider, useAuth } from './context/AuthContext';
-import { useEntitlements } from './store/useEntitlements';
+import { useEntitlements, isProStatus } from './store/useEntitlements';
 import { ThemeProvider } from './providers/ThemeProvider';
 import { ToastHost } from './components/ui/ToastHost';
 import { XpToastHost } from './components/gamification/XpToastHost';
@@ -97,7 +97,16 @@ function MainApp() {
    * wyczyszczenia schowka, a komentarz `refresh()` obiecywał wywołanie, którego
    * nikt nie wykonywał (reguła 5).
    */
-  const { refresh: refreshEntitlements } = useEntitlements();
+  const { refresh: refreshEntitlements, subscription } = useEntitlements();
+
+  // Jedno źródło statusu planu dla całej powłoki. Wcześniej topbar czytał
+  // useEntitlements, a stopka sidebara dostawała domyślne „free" — użytkownik
+  // Pro widział oba stany naraz.
+  const planStatus = isProStatus(subscription.status)
+    ? 'active'
+    : subscription.status === 'trialing'
+      ? 'trialing'
+      : 'free';
 
   useEffect(() => {
     if (mode !== 'cloud' || !user) return;
@@ -306,6 +315,7 @@ function MainApp() {
       lockReasons={unlocks.reasons}
       isAuthenticated={isAuthenticated}
       userEmail={user?.email}
+      planStatus={planStatus}
     >
       <AnimatePresence mode="wait">
         <motion.div
@@ -444,8 +454,10 @@ function MainApp() {
       {/* Ankieta po eksporcie: pyta o wysyłkę i sama prowadzi wpis w Pipeline */}
       <ApplicationFeedbackModal onNavigate={navigate} />
 
-      {/* Paleta poleceń (Cmd+K) — jedyny skrót globalny, jaki został */}
-      <CommandPalette />
+      {/* Paleta poleceń (Cmd+K) — jedyny skrót globalny, jaki został.
+          Dostaje `navigate`, nie `setActiveTab`: wcześniej omijała blokady
+          sekcji, bo jedyny strażnik odblokowań siedzi w `navigate`. */}
+      <CommandPalette onNavigate={navigate} />
     </GlobalShell>
   );
 }

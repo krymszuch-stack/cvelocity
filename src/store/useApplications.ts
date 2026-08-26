@@ -22,9 +22,25 @@ import { grantXp } from './useGamificationStore';
 let applications: JobApplication[] = readJson<JobApplication[]>(StorageKeys.applications, []);
 const listeners = new Set<() => void>();
 
+/**
+ * Jedna reguła dla wszystkich dróg zapisu: odrzucona aplikacja nie może
+ * dalej trzymać terminu rozmowy.
+ *
+ * Reguła siedzi w `commit`, a nie w poszczególnych handlerach, bo ścieżek
+ * zapisu jest kilka (status w wierszu, edycja w modalu, notatki) — wcześniej
+ * tylko jedna z nich czyściła `interviewAt` i ta sama zmiana statusu dawała
+ * różny wynik w zależności od tego, gdzie użytkownik kliknął.
+ */
+function withStatusRules(application: JobApplication): JobApplication {
+  if (application.status === 'Odrzucona' && application.interviewAt !== undefined) {
+    return { ...application, interviewAt: undefined };
+  }
+  return application;
+}
+
 function commit(next: JobApplication[]): void {
-  applications = next;
-  writeJson(StorageKeys.applications, next);
+  applications = next.map(withStatusRules);
+  writeJson(StorageKeys.applications, applications);
   listeners.forEach((notify) => notify());
 }
 
@@ -77,16 +93,12 @@ export function useApplications() {
   }, []);
 
   /**
-   * Zmiana statusu czyści termin rozmowy, gdy rekrutacja się kończy.
-   *
-   * Bez tego odrzucona aplikacja z wpisanym terminem dalej podpadałaby pod
-   * regułę „wyślij follow-up" i silnik doradzałby pisanie do firmy, która już
-   * odmówiła.
+   * Zmiana statusu przez wiersz tabeli. Reguła czyszczenia terminu rozmowy
+   * obowiązuje wspólnie dla każdej drogi zapisu — patrz `withStatusRules`.
    */
   const setStatus = useCallback(
     (id: string, status: ApplicationStatus) => {
-      const closing = status === 'Odrzucona';
-      patchApplication(id, closing ? { status, interviewAt: undefined } : { status });
+      patchApplication(id, { status });
     },
     [patchApplication]
   );

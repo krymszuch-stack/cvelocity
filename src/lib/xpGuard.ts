@@ -35,6 +35,9 @@ export const DAILY_EVENT_LIMITS: Record<XpEventId, number> = {
   ats_high_score: 3,
   question_confirmed: 5,
   salary_reported: 5,
+  // W kokpicie są dokładnie trzy codzienne wyzwania — więcej sztuk na dobę
+  // nie da się uczciwie wykonać.
+  challenge_completed: 3,
 };
 
 /** Dowód pracy wymagany przy zdarzeniu. Brak wpisu = wystarczy sam fakt. */

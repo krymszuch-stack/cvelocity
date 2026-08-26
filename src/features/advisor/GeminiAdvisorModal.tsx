@@ -35,7 +35,10 @@ function createWelcomeMessage(): AdvisorChatMessage {
   return {
     id: 'm-init',
     sender: 'ai',
-    text: 'Witaj! Jestem Twoim Doradcą Kariery i Ekspertem ds. Systemów ATS. Wyjaśnię Ci, dlaczego pewne sformułowania w CV zwiększają szanse na zaproszenie na rozmowę, jak unikać pułapek parserów rekrutacyjnych oraz jak skutecznie negocjować widełki finansowe. O co chciałbyś zapytać?',
+    // Modal nie woła żadnego modelu AI (odpowiedzi to reguły + `setTimeout`),
+    // więc powitanie nie może deklarować ekspertyzy AI — tylko to, czym jest
+    // i gdzie kończy się prywatność rozmowy (audyt treści §2.4).
+    text: 'Jestem doradcą regułowym CVelocity — odpowiadam na bazie sprawdzonych zasad rekrutacji. Nic z tej rozmowy nie opuszcza przeglądarki. O co chcesz zapytać?',
     timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
   };
 }
@@ -77,9 +80,12 @@ export const GeminiAdvisorModal: React.FC<GeminiAdvisorModalProps> = ({
 
       const qLower = query.toLowerCase();
       if (qLower.includes('star')) {
-        replyText = 'Metoda STAR (Situation, Task, Action, Result) to złoty standard. Zamiast pisać "odpowiedzialny za rozwój API", napisz: "Zoptymalizowałem zapytania SQL w PostgreSQL (Action), redukując czas odpowiedzi endpointów o 42% dla 150k użytkowników (Result)". Liczby natychmiast przyciągają uwagę rekrutera!';
+        // Wzorzec z miejscami do uzupełnienia zamiast gotowca z cudzymi
+        // liczbami („o 42% dla 150k użytkowników” namawiał do fabrykowania
+        // metryk — reguła 1; audyt treści §2.3).
+        replyText = 'Metoda STAR (Situation, Task, Action, Result) to złoty standard. Podawaj wyłącznie metryki, które obronisz na rozmowie. Zamiast pisać "odpowiedzialny za rozwój API", napisz: "Zoptymalizowałem zapytania SQL w PostgreSQL (Action), skracając czas X o [wpisz swoją realną liczbę]% (Result)".';
       } else if (qLower.includes('kolumn') || qLower.includes('pdf')) {
-        replyText = 'Parsery ATS (np. Workday, Taleo) czytają tekst od lewej do prawej. W układzie dwukolumnowym tekst z lewej i prawej kolumny potrafi się zlepić w jeden nieczytelny ciąg, co prowadzi do utraty punktów dopasowania. Szablon jednokolumnowy daje 100% gwarancji poprawnego odczytania.';
+        replyText = 'Parsery ATS (np. Workday, Taleo) czytają tekst od lewej do prawej. W układzie dwukolumnowym tekst z lewej i prawej kolumny potrafi się zlepić w jeden nieczytelny ciąg, co prowadzi do utraty punktów dopasowania. Jednokolumnowy układ to najbezpieczniejszy wybór dla parserów.';
       } else if (qLower.includes('senior')) {
         replyText = 'Dla stanowisk Senior / Lead liczy się wpływ na architekturę, mentoring i optymalizację kosztów chmury (FinOps). Zadbaj, aby w najnowszym stanowisku pojawiły się frazy: "Architektura modularna", "Code Review", "Projektowanie systemów rozproszonych" oraz "Wdrażanie standardów bezpieczeństwa".';
       }
@@ -128,7 +134,7 @@ export const GeminiAdvisorModal: React.FC<GeminiAdvisorModalProps> = ({
     <Modal
       isOpen={isOpen}
       onClose={onClose}
-      title="Okienko Doradcy Kariery (Gemini Advisor)"
+      title="Okienko Doradcy Kariery"
       description="Rozmowa jest zachowywana tylko w tej sesji przeglądarki."
       size="lg"
     >

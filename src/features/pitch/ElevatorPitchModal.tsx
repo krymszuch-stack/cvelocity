@@ -51,7 +51,7 @@ export const ElevatorPitchModal: React.FC<ElevatorPitchModalProps> = ({
             </div>
             <div>
               <h3 className="text-base font-extrabold text-ink tracking-tight font-mono">
-                Elevator Pitch Generator (elevator-pitch-gen-v1)
+                Elevator Pitch Generator
               </h3>
               <p className="text-xs text-muted">
                 3 precyzyjne warianty autoprezentacji oparte na faktach z MasterVault i mierzone w czasie rzeczywistym.

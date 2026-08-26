@@ -36,22 +36,20 @@ export interface DrillModeModalProps {
   isOpen: boolean;
   onClose: () => void;
   customQuestions?: DrillQuestion[];
-  initialQuestion?: DrillQuestion;
 }
 
 export const DrillModeModal: React.FC<DrillModeModalProps> = ({
   isOpen,
   onClose,
   customQuestions = DEFAULT_DRILL_QUESTIONS,
-  initialQuestion,
 }) => {
   const pool = customQuestions.length > 0 ? customQuestions : DEFAULT_DRILL_QUESTIONS;
 
   const [activeModeTab, setActiveModeTab] = useState<'PRACTICE' | 'HISTORY'>('PRACTICE');
   const [history, setHistory] = useState<DrillAttemptRecord[]>([]);
 
-  const [currentQuestion, setCurrentQuestion] = useState<DrillQuestion>(
-    () => initialQuestion || getRandomDrillQuestion(pool)
+  const [currentQuestion, setCurrentQuestion] = useState<DrillQuestion>(() =>
+    getRandomDrillQuestion(pool)
   );
 
   // Stan ćwiczenia: 'DRILL' (odliczanie i odpowiadanie) lub 'REVIEW' (scorecard i notatka)
@@ -76,6 +74,17 @@ export const DrillModeModal: React.FC<DrillModeModalProps> = ({
     }
   }, [isOpen, currentQuestion]);
 
+  // Najświeższy handleFinishDrill dla interwału. Efekt odliczania celowo NIE
+  // ma w zależnościach `responseText`: każde naciśnięcie klawisza rozwalało
+  // interval i restartowało odliczanie od nowa, więc ciągłe pisanie zatrzymywało
+  // zegar. Referencja daje interwałowi aktualny handler (i aktualny tekst)
+  // bez przerywania odliczania.
+  type FinishFn = () => void;
+  const finishRef = useRef<FinishFn | null>(null);
+  useEffect(() => {
+    finishRef.current = handleFinishDrill;
+  });
+
   // Odliczanie 60s
   useEffect(() => {
     if (isOpen && phase === 'DRILL' && isTimerRunning && activeModeTab === 'PRACTICE') {
@@ -85,7 +94,7 @@ export const DrillModeModal: React.FC<DrillModeModalProps> = ({
             clearInterval(timerRef.current!);
             setIsTimerRunning(false);
             // Automatyczne przejście do analizy po upływie 60s
-            handleFinishDrill();
+            finishRef.current?.();
             return 0;
           }
           return prev - 1;
@@ -98,7 +107,7 @@ export const DrillModeModal: React.FC<DrillModeModalProps> = ({
     return () => {
       if (timerRef.current) clearInterval(timerRef.current);
     };
-  }, [isOpen, phase, isTimerRunning, responseText, activeModeTab]);
+  }, [isOpen, phase, isTimerRunning, activeModeTab]);
 
   const handleNextRandomQuestion = () => {
     const nextQ = getRandomDrillQuestion(pool, currentQuestion.id);
@@ -154,14 +163,10 @@ export const DrillModeModal: React.FC<DrillModeModalProps> = ({
               <Target className="h-5 w-5" />
             </div>
             <div>
-              <div className="flex items-center gap-2">
-                <h3 className="text-base font-extrabold text-ink tracking-tight font-mono">
-                  Mock Drill Mode (mock-drill-mode-v1)
-                </h3>
-                <Chip variant="brand" size="sm">
-                  Cmd+D / Ctrl+D
-                </Chip>
-              </div>
+              {/* Sufiks „(mock-drill-mode-v1)" to identyfikator wewnętrzny — nie dla UI. */}
+              <h3 className="text-base font-extrabold text-ink tracking-tight font-mono">
+                Mock Drill Mode
+              </h3>
               <p className="text-xs text-muted">
                 Trening odpowiedzi w 60s • Ewaluacja STAR & Metryk • Historia prób
               </p>
@@ -274,7 +279,7 @@ export const DrillModeModal: React.FC<DrillModeModalProps> = ({
               <EmptyState
                 icon={Award}
                 title="Brak zapisanych prób w historii"
-                description="Nie wykonałeś jeszcze żadnego drillu. Uruchom tryb ćwiczeń i odpowiedz na pierwsze pytanie rekrutacyjne w 60 sekund."
+                description="Brak jeszcze prób treningowych. Uruchom tryb ćwiczeń i odpowiedz na pierwsze pytanie rekrutacyjne w 60 sekund."
                 action={
                   <Button
                     type="button"
@@ -282,7 +287,7 @@ export const DrillModeModal: React.FC<DrillModeModalProps> = ({
                     size="sm"
                     onClick={() => setActiveModeTab('PRACTICE')}
                   >
-                    Rozpocznij pierwszy drill
+                    Rozpocznij pierwszą próbę
                   </Button>
                 }
               />
@@ -395,11 +400,19 @@ export const DrillModeModal: React.FC<DrillModeModalProps> = ({
                   </span>
                 </div>
               ) : (
-                <DrillAudioRecorder
-                  onRecordingComplete={(_blob, _duration) => {
-                    // Opcjonalne powiadomienie o nagraniu
-                  }}
-                />
+                <div className="space-y-1.5">
+                  <DrillAudioRecorder
+                    onRecordingComplete={(_blob, _duration) => {
+                      // Opcjonalne powiadomienie o nagraniu
+                    }}
+                  />
+                  {/* Ocena (analyzeDrillResponse) liczy wyłącznie tekst odpowiedzi —
+                      nagranie nie wpływa na scorecard, więc mówimy to wprost,
+                      zamiast udawać funkcję, której nie ma. */}
+                  <p className="text-[10px] font-mono text-muted">
+                    Nagranie służy tylko Twojemu odsłuchowi — ocena liczy się z tekstu odpowiedzi.
+                  </p>
+                </div>
               )}
             </div>
 
@@ -438,6 +451,9 @@ export const DrillModeModal: React.FC<DrillModeModalProps> = ({
                   setPhase('DRILL');
                   setTimeLeftSec(currentQuestion.targetDurationSec || 60);
                   setIsTimerRunning(true);
+                  // Powtórka to nowa próba — stary transkrypt musiał zniknąć,
+                  // bo druga ocena liczyłaby się z odpowiedzią z pierwszej.
+                  setResponseText('');
                 }}
               >
                 Powtórz to samo pytanie
