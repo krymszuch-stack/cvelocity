@@ -92,7 +92,10 @@ export const ApplicationFeedbackModal: React.FC<ApplicationFeedbackModalProps> =
       // XP tylko przy potwierdzeniu wysyłki: aktualizacja na „Do wysłania"
       // opisuje nieudaną próbę, więc nagradzanie jej byłoby kłamstwem licznika.
       if (status === 'Wysłana' && existing.status !== 'Wysłana') {
-        grantXp('application_added');
+        // Cel jest konieczny: bez niego deduplikacja w `xpGuard` opada na
+        // znacznik czasu i to samo zgłoszenie punktowałoby wielokrotnie —
+        // wystarczy cofnąć status i potwierdzić wysyłkę ponownie.
+        grantXp('application_added', `${existing.company}|${existing.position}`);
       }
       return;
     }

@@ -10,7 +10,7 @@ import { ApiError, api } from '../lib/apiClient';
  * w `localStorage`, więc użytkownik może je sobie przestawić z konsoli
  * przeglądarki i zobaczyć etykietę „Pro". Nic z tego nie wynika: realne
  * uprawnienie sprawdza serwer przy każdym wywołaniu, w `src/server/quota.ts`,
- * na podstawie tabel `subscriptions` i `usage_counters`, których użytkownik nie
+ * na podstawie tabel `subscriptions` i `user_quotas`, których użytkownik nie
  * może zapisać (polityki RLS w `supabase/migrations/0001_init.sql`).
  *
  * Ten podział jest celowy. Licznik w interfejsie musi odpowiadać natychmiast,
@@ -30,27 +30,42 @@ export interface Subscription {
 export interface Usage {
   /** Pozostałe importy pliku w tym miesiącu. */
   importUses: number;
-  /** Pozostałe wywołania AI w tym miesiącu. */
+  /** Pozostałe **dzisiejsze** wywołania AI — dobowa rezerwa to to, co serwer faktycznie egzekwuje. */
   aiUses: number;
   monthKey: string;
+  /** Klucz doby licznika AI; zmiana znaczy „północy za nami, serwer już odliczył od nowa”. */
+  dayKey: string;
 }
 
 export interface EntitlementsState {
   subscription: Subscription;
   usage: Usage;
+  /** Karnet Aplikacyjny aktywny (`profiles.plan_expires_at` w przyszłości). */
+  hasActivePass: boolean;
   /** `server` znaczy: te liczby przyszły z `/api/me` i są prawdziwe. */
   source: 'local' | 'server';
 }
 
-const FREE_IMPORTS = 10;
+// Te same liczby, które trzyma plan `free` w bazie (`plans.import_quota`,
+// `FREE_DAILY_AI_USES` po stronie serwera). Podpowiedź startowa nie może być
+// hojniejsza niż realny limit — rozjazd 10 kontra 1 obiecał w interfejsie
+// dziewięć importów, których nigdy nie było.
+const FREE_IMPORTS = 1;
 const FREE_AI_USES = 5;
 
 const getMonthKey = () => new Date().toISOString().slice(0, 7);
+const getDayKey = () => new Date().toISOString().slice(0, 10);
 
 function freshState(): EntitlementsState {
   return {
     subscription: { status: 'free' },
-    usage: { importUses: FREE_IMPORTS, aiUses: FREE_AI_USES, monthKey: getMonthKey() },
+    usage: {
+      importUses: FREE_IMPORTS,
+      aiUses: FREE_AI_USES,
+      monthKey: getMonthKey(),
+      dayKey: getDayKey(),
+    },
+    hasActivePass: false,
     source: 'local',
   };
 }
@@ -59,14 +74,25 @@ function loadInitialState(): EntitlementsState {
   const saved = readJson<EntitlementsState | null>(StorageKeys.entitlementsCache, null);
   if (!saved?.usage || !saved.subscription) return freshState();
 
-  // Nowy miesiąc zeruje darmowe limity. Serwer liczy to samo po swojej stronie
-  // po `date_trunc('month', now())` — tutaj chodzi tylko o to, żeby licznik
-  // w interfejsie nie pokazywał zera do czasu pierwszej odpowiedzi z API.
-  if (saved.usage.monthKey !== getMonthKey()) {
-    return { ...saved, usage: { importUses: FREE_IMPORTS, aiUses: FREE_AI_USES, monthKey: getMonthKey() } };
+  // Serwer zeruje miesiąc po `date_trunc('month', now())`, a dobę po dacie UTC.
+  // Tutaj te same klucze pilnują tylko tego, żeby podpowiedź nie pokazywała
+  // zużytych sztuk do czasu pierwszej odpowiedzi z API po zmianie doby.
+  let usage = saved.usage;
+  if (usage.monthKey !== getMonthKey()) {
+    usage = { ...usage, importUses: FREE_IMPORTS, monthKey: getMonthKey() };
+  }
+  if (usage.dayKey !== getDayKey()) {
+    // Plan opłacony nie ma dobowego sufitu — serwer zwraca wtedy MAX_SAFE_INTEGER.
+    const paid = isProStatus(saved.subscription.status);
+    usage = {
+      ...usage,
+      aiUses: paid ? Number.MAX_SAFE_INTEGER : FREE_AI_USES,
+      dayKey: getDayKey(),
+    };
   }
 
-  return saved;
+  // Starsze wpisy ze schowka mogą nie znać pola karnetu — brak znaczy false.
+  return { ...saved, usage, hasActivePass: saved.hasActivePass === true };
 }
 
 let globalState: EntitlementsState = loadInitialState();
@@ -95,6 +121,26 @@ export function isProStatus(status: SubscriptionStatus): boolean {
 interface MeResponse {
   subscription: Subscription;
   usage: Usage;
+  hasActivePass?: boolean;
+}
+
+function consumeLocal(kind: 'ai' | 'import'): boolean {
+  if (isProStatus(globalState.subscription.status)) return true;
+
+  const field = kind === 'ai' ? 'aiUses' : 'importUses';
+  if (globalState.usage[field] <= 0) return false;
+
+  setState((prev) => ({ ...prev, usage: { ...prev.usage, [field]: prev.usage[field] - 1 } }));
+  return true;
+}
+
+/**
+ * Wersje dla modułów bez Reacta (silniki w `src/lib/`, które same wysyłają
+ * żądania AI). Ta sama logika co w hooku — dwie implementacje jednego
+ * licznika rozjechałyby się przy pierwszej zmianie (reguła 3).
+ */
+export function consumeAiLocally(): boolean {
+  return consumeLocal('ai');
 }
 
 export function useEntitlements() {
@@ -119,7 +165,12 @@ export function useEntitlements() {
 
     try {
       const me = await api.get<MeResponse>('/api/me');
-      setState(() => ({ subscription: me.subscription, usage: me.usage, source: 'server' }));
+      setState(() => ({
+        subscription: me.subscription,
+        usage: me.usage,
+        hasActivePass: me.hasActivePass === true,
+        source: 'server',
+      }));
     } catch (err) {
       // Niezalogowany użytkownik dostaje 401 i to jest normalny stan, nie awaria.
       if (err instanceof ApiError && err.isUnauthorized) {
@@ -136,21 +187,11 @@ export function useEntitlements() {
 
   /**
    * Zmniejsza licznik pokazywany w interfejsie i mówi, czy warto w ogóle
-   * wysyłać żądanie. `false` znaczy „pokaż cennik", nie „odmów dostępu" —
+   * wysyłać żądanie. `false` znaczy „pokaż cennik”, nie „odmów dostępu” —
    * odmawia serwer.
    */
-  const consumeLocally = useCallback((kind: 'ai' | 'import'): boolean => {
-    if (isProStatus(globalState.subscription.status)) return true;
-
-    const field = kind === 'ai' ? 'aiUses' : 'importUses';
-    if (globalState.usage[field] <= 0) return false;
-
-    setState((prev) => ({ ...prev, usage: { ...prev.usage, [field]: prev.usage[field] - 1 } }));
-    return true;
-  }, []);
-
-  const consumeAi = useCallback(() => consumeLocally('ai'), [consumeLocally]);
-  const consumeImport = useCallback(() => consumeLocally('import'), [consumeLocally]);
+  const consumeAi = useCallback(() => consumeLocal('ai'), []);
+  const consumeImport = useCallback(() => consumeLocal('import'), []);
 
   /**
    * Odblokowanie na potrzeby pracy nad interfejsem, bez przechodzenia przez
@@ -168,6 +209,9 @@ export function useEntitlements() {
     usage: state.usage,
     source: state.source,
     isPro,
+    // Karnet kupiony za pieniądze odblokowuje funkcje beta niezależnie od rangi
+    // XP — dokładnie tak, jak obiecuje Centrum Kariery.
+    hasActivePass: state.hasActivePass === true,
     refresh,
     consumeAi,
     consumeImport,

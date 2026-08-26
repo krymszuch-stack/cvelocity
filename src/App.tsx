@@ -14,6 +14,7 @@ import {
   saveProfileVault,
 } from './lib/localProfile';
 import { AuthProvider, useAuth } from './context/AuthContext';
+import { useEntitlements } from './store/useEntitlements';
 import { ThemeProvider } from './providers/ThemeProvider';
 import { ToastHost } from './components/ui/ToastHost';
 import { XpToastHost } from './components/gamification/XpToastHost';
@@ -88,6 +89,46 @@ function MainApp() {
   });
 
   const { applications } = useApplications();
+
+  /**
+   * Prawdziwe uprawnienia pobierane raz na sesję konta i po powrocie z bramki.
+   *
+   * Bez tego licznik w interfejsie żył wyłącznie z `localStorage`: kupiona
+   * subskrypcja potwierdzona webhookiem nie pojawiałaby się do ręcznego
+   * wyczyszczenia schowka, a komentarz `refresh()` obiecywał wywołanie, którego
+   * nikt nie wykonywał (reguła 5).
+   */
+  const { refresh: refreshEntitlements } = useEntitlements();
+
+  useEffect(() => {
+    if (mode !== 'cloud' || !user) return;
+    void refreshEntitlements();
+  }, [mode, user?.id, refreshEntitlements]);
+
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const checkout = params.get('checkout');
+    if (!checkout) return;
+
+    // Parametr znika z paska od razu, żeby odświeżenie strony nie odpalało
+    // komunikatu ponownie. Sam parametr niczego nie dowodzi — status potwierdza
+    // dopiero odpowiedź `/api/me`, więc to ona rozstrzyga, co pokażemy.
+    params.delete('checkout');
+    const rest = params.toString();
+    window.history.replaceState(
+      null,
+      '',
+      `${window.location.pathname}${rest ? `?${rest}` : ''}${window.location.hash}`
+    );
+
+    if (checkout === 'success') {
+      void refreshEntitlements();
+      showToast('Dziękujemy za zakup', {
+        message: 'Sprawdzamy status płatności — plan pojawi się na koncie po potwierdzeniu.',
+        variant: 'info',
+      });
+    }
+  }, [refreshEntitlements]);
 
   // Sync user vault when authenticated user changes
   useEffect(() => {
@@ -316,7 +357,6 @@ function MainApp() {
                 vault={vault}
                 onChangeVault={setVault}
                 onApplyParsedVault={handleApplyParsedVault}
-                onOpenAdvisor={handleOpenAdvisor}
                 renderEditor={(props) => <MasterVaultEditor {...props} />}
                 renderParser={(props) => <CVParserModal {...props} />}
                 renderProfiler={(props) => <ProfilerSection {...props} />}
@@ -328,7 +368,6 @@ function MainApp() {
               <JobMatcher
                 vault={vault}
                 onUpdateVault={setVault}
-                onOpenAdvisor={handleOpenAdvisor}
               />
             )}
 
