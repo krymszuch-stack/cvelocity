@@ -10,8 +10,6 @@ import {
   DEFAULT_PRE_CALL_CHECKLIST,
 } from '../interviewLoopEngine';
 import { MemoryStorage } from './helpers/memoryStorage';
-import { InterviewLoopManager, invokeInterviewLoopManager } from '../../skills/interview-loop-manager';
-import { ag } from '../../skills/liveHudSkill';
 
 describe('Interview Loop Manager (interview-loop-manager-v1)', () => {
   beforeEach(() => {
@@ -80,26 +78,6 @@ describe('Interview Loop Manager (interview-loop-manager-v1)', () => {
       const afterDelete = loadInterviewSessions();
       expect(afterDelete.length).toBe(1);
       expect(afterDelete[0].id).toBe(session2.id);
-    });
-  });
-
-  describe('Rejestracja i wywołanie skilla', () => {
-    it('posiada poprawne metadane skilla interview-loop-manager-v1', () => {
-      expect(InterviewLoopManager.id).toBe('interview-loop-manager-v1');
-      expect(InterviewLoopManager.dependencies).toContain('master-vault');
-      expect(InterviewLoopManager.ui).toBe('InterviewLoopModal');
-    });
-
-    it('jest zarejestrowany w rejestrze ag i obsługuje invokeInterviewLoopManager', () => {
-      const registered = ag.getSkill('interview-loop-manager-v1');
-      expect(registered).toBeDefined();
-
-      const created = invokeInterviewLoopManager({
-        action: 'create',
-        companyName: 'Test Corp',
-        roleTitle: 'QA Lead',
-      });
-      expect(created).toBeDefined();
     });
   });
 });

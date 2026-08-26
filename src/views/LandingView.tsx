@@ -291,7 +291,7 @@ const KANBAN: { col: string; cards: { firma: string; date: string; tone: string 
     ],
   },
   {
-    col: 'Screening',
+    col: 'Selekcja',
     cards: [{ firma: 'Gazoserwis Kraków', date: '14.08', tone: 'bg-[#38BDF8]/70' }],
   },
   {
@@ -367,7 +367,7 @@ export const LandingView: React.FC<LandingViewProps> = ({ onNavigate, atsSlot })
           <div>
             <span className="inline-flex items-center gap-2 rounded-lg border border-slate-800/80 bg-slate-900/60 px-3 py-1.5 font-mono text-[11px] uppercase tracking-[0.14em] text-slate-300 backdrop-blur-xl">
               <span className="h-1.5 w-1.5 rounded-full bg-[#F26440]" aria-hidden="true" />
-              v2.0 • Zero-Hallucination Engine
+              Bez konta • Dane lokalnie
             </span>
             <h1 className="mt-6 max-w-[18ch] text-balance text-[2.25rem] font-bold leading-none tracking-tight text-slate-50 sm:text-5xl lg:text-6xl">
               CV, które przejeżdża przez filtr ATS.
@@ -520,7 +520,7 @@ export const LandingView: React.FC<LandingViewProps> = ({ onNavigate, atsSlot })
               </div>
               <div className="mt-3 flex items-center justify-between font-mono text-[10px]">
                 <span className="text-slate-500">rynek · Twoja stawka</span>
-                <span className="text-emerald-300">Confidence: High</span>
+                <span className="text-emerald-300">Pewność: wysoka</span>
               </div>
             </div>
             <div className="mt-3 space-y-2">
@@ -658,7 +658,7 @@ export const LandingView: React.FC<LandingViewProps> = ({ onNavigate, atsSlot })
               {[
                 'Analiza ATS z wynikiem punktowym',
                 'Profil i podgląd A4 z wydrukiem',
-                'Szablon Nowoczesny i Minimalny',
+                'Szablony Modern i Minimal',
               ].map((t) => (
                 <li key={t} className="flex gap-2">
                   <span className="shrink-0 text-[#F26440]" aria-hidden="true">
@@ -681,7 +681,7 @@ export const LandingView: React.FC<LandingViewProps> = ({ onNavigate, atsSlot })
             className={`${SURFACE} relative flex flex-col border-[#F26440]/50 p-6 shadow-[0_0_30px_rgba(242,100,64,0.15)]`}
           >
             <span className="absolute -top-2.5 right-6 rounded-lg bg-[#F26440] px-2 py-0.5 font-mono text-[10px] uppercase tracking-[0.12em] text-white">
-              Najpopularniejszy
+              Rekomendowany
             </span>
             <span className="font-mono text-[11px] uppercase tracking-[0.16em] text-[#F26440]">
               Pro
@@ -693,9 +693,9 @@ export const LandingView: React.FC<LandingViewProps> = ({ onNavigate, atsSlot })
             <p className="mt-1 text-sm text-slate-400">39 zł przy rozliczeniu rocznym</p>
             <ul className="mb-6 mt-5 space-y-3 text-sm text-slate-200">
               {[
-                'Przepisanie doświadczenia metodą STAR',
-                'Kokpit Rozmowy i przygotowanie do negocjacji',
-                'Pełny pipeline aplikacji',
+                'Nielimitowany Instant-Import (PDF, DOCX)',
+                'Wsparcie AI przy lukach kompetencyjnych',
+                'Pełny dostęp do wszystkich szablonów A4',
                 'Szablony Executive i Creative',
               ].map((t) => (
                 <li key={t} className="flex gap-2">

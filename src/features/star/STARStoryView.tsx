@@ -98,14 +98,20 @@ export const STARStoryView: React.FC<STARStoryViewProps> = ({
         return s;
       })
     );
-    showToast('Dodano tag NLP', { message: `Przypisano „${newTag}” do historii STAR.` });
+    // Widok nie ma dostępu do zapisu vaultu — tag żyje w bieżącym podglądzie.
+    // Wcześniej toast twierdził „Dodano tag NLP", jakby trafił do profilu.
+    showToast('Tag dodany do podglądu', {
+      message: `„${newTag}" — na tę sesję; trwałe tagi edytuj w PROFIL.`,
+    });
   };
 
   const handleUpdateDuration = (storyId: string, durationSec: number) => {
     setStories((prev) =>
       prev.map((s) => (s.id === storyId ? { ...s, durationSec } : s))
     );
-    showToast('Zaktualizowano czas STAR', { message: `Zapisano czas próby: ${durationSec}s.` });
+    // Bez kłamstwa o zapisie: czas służy tu pomiarowi próby i XP, nie
+    // aktualizacji dokumentu.
+    showToast('Czas próby zmierzony', { message: `Wynik: ${durationSec}s.` });
 
     // Punkty za odbytą próbę, a nie za otwarcie ekranu: zmierzony czas jest
     // dowodem, że ktoś faktycznie opowiedział historię na głos.

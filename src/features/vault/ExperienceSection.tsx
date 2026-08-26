@@ -22,7 +22,6 @@ import { EmptyState } from '../../components/ui/EmptyState';
 export interface ExperienceSectionProps {
   history: WorkExperience[];
   onChange: (updated: WorkExperience[]) => void;
-  onOpenAdvisor?: (initialQuestion?: string) => void;
   /**
    * Podpowiedzi do nazwy firmy i stanowiska. Opcjonalne — bez nich `Combobox`
    * dostaje pustą listę i zachowuje się jak zwykły `Input`.
@@ -34,7 +33,6 @@ export interface ExperienceSectionProps {
 export const ExperienceSection: React.FC<ExperienceSectionProps> = ({
   history,
   onChange,
-  onOpenAdvisor,
   suggest,
   className = '',
 }) => {
@@ -227,7 +225,6 @@ export const ExperienceSection: React.FC<ExperienceSectionProps> = ({
                   <AchievementEditor
                     highlights={item.highlights || []}
                     onChange={(hl) => handleUpdateExperience(item.id, 'highlights', hl)}
-                    onOpenAdvisor={onOpenAdvisor}
                   />
                 </div>
               </motion.div>

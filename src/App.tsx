@@ -4,7 +4,6 @@ import { useDeferredPersist } from './hooks/useDeferredPersist';
 import { useUnlocks } from './hooks/useUnlocks';
 import { MasterVault } from './types';
 import { createEmptyVault } from './lib/sampleVault';
-import { mergeImportedVault } from './lib/vaultImportMerge';
 import { NavTabId, isNavSectionId, resolveTabId } from './lib/navigation';
 import { resolveNextAction } from './lib/nextAction';
 import {
@@ -271,8 +270,12 @@ function MainApp() {
     [setActiveTab, unlocks]
   );
 
-  const handleApplyParsedVault = (parsed: Partial<MasterVault>) => {
-    setVault((prev) => mergeImportedVault(prev, parsed));
+  // Parser CV dostaje tu kompletny vault po scaleniu ze strategiami z diffu
+  // (applyParsedCVToVault) — podstawiamy 1:1. Przepuszczanie tego jeszcze raz
+  // przez mergeImportedVault ignorowało wybór „zastąp", bo tamte scalanie
+  // zawsze dokłada wpisy.
+  const handleApplyVault = (imported: MasterVault) => {
+    setVault(imported);
   };
 
   const handleOpenAdvisor = (initialQuestion?: string) => {
@@ -356,7 +359,7 @@ function MainApp() {
               <ProfileSection
                 vault={vault}
                 onChangeVault={setVault}
-                onApplyParsedVault={handleApplyParsedVault}
+                onApplyVault={handleApplyVault}
                 renderEditor={(props) => <MasterVaultEditor {...props} />}
                 renderParser={(props) => <CVParserModal {...props} />}
                 renderProfiler={(props) => <ProfilerSection {...props} />}

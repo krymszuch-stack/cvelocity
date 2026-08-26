@@ -41,8 +41,10 @@ export const PricingCard: React.FC<PricingCardProps> = ({
       }`}
     >
       {isPopular && (
+        /* „Rekomendowany", nie „najczęściej wybierany" — rekomendacja to nasza decyzja,
+           a statystykę wyborów planów nie zbieramy, więc tamto sformułowanie było zmyślone. */
         <span className="bg-brand-grad shadow-brand-glow absolute -top-[11px] left-1/2 -translate-x-1/2 rounded-full px-3 py-[3px] text-[10.5px] font-bold tracking-[0.04em] text-on-brand">
-          Najczęściej wybierany
+          Rekomendowany
         </span>
       )}
 
@@ -81,7 +83,9 @@ export const PricingCard: React.FC<PricingCardProps> = ({
         disabled={disabled}
         aria-label={`${ctaLabel}: ${title}, ${price} ${period}`}
       >
-        {disabled ? 'Twój obecny plan' : ctaLabel}
+        {/* Etykieta zawsze z propsu — nadpisywanie jej stanem disabled ukrywało poprawny opis
+            stanu dla kart trwale nieaktywnych (plan Free wobec użytkownika Pro). */}
+        {ctaLabel}
       </Button>
     </div>
   );

@@ -53,6 +53,14 @@ export interface EntitlementsState {
 const FREE_IMPORTS = 1;
 const FREE_AI_USES = 5;
 
+/**
+ * Jedno źródło prawdy o darmowym limicie dla tekstów interfejsu (cennik,
+ * parser, ekran startowy). Wcześniej każda z tych kopii trzymała własną liczbę
+ * i rozjechała się z realnym limitem egzekwowanym tutaj.
+ */
+export const FREE_MONTHLY_IMPORTS = FREE_IMPORTS;
+export const FREE_DAILY_AI_USES = FREE_AI_USES;
+
 const getMonthKey = () => new Date().toISOString().slice(0, 7);
 const getDayKey = () => new Date().toISOString().slice(0, 10);
 

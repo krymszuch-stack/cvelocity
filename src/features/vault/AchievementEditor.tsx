@@ -10,14 +10,12 @@ import { EmptyState } from '../../components/ui/EmptyState';
 export interface AchievementEditorProps {
   highlights: HighlightMetric[];
   onChange: (updated: HighlightMetric[]) => void;
-  onOpenAdvisor?: (initialQuestion?: string) => void;
   className?: string;
 }
 
 export const AchievementEditor: React.FC<AchievementEditorProps> = ({
   highlights,
   onChange,
-  onOpenAdvisor,
   className = '',
 }) => {
   const handleAddHighlight = () => {

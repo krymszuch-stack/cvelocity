@@ -33,6 +33,8 @@ export interface StripeCheckoutProduct {
   price: string;
   period: string;
   recurring: boolean;
+  /** Cykl odnowienia subskrypcji; brak pola = opis ogólny (np. zakup jednorazowy). */
+  interval?: 'month' | 'year';
   trialDays?: number;
 }
 
@@ -78,6 +80,17 @@ export const StripeCheckoutModal: React.FC<StripeCheckoutModalProps> = ({
 
   const paymentsAvailable = clientEnv.backendConfigured;
   const isCloudAccount = mode === 'cloud' && !!user;
+
+  // Hardkod „odnawia się co miesiąc" kłamał przy rozliczeniu rocznym, więc częstotliwość
+  // przychodzi z produktu. Gdy jej brak — dotychczasowy opis ogólny, już bez obietnicy
+  // „w 2 kliknięciach", której klient nie potwierdza.
+  const renewalText = !product.recurring
+    ? 'To jednorazowa opłata. Nie zakładamy żadnej subskrypcji i nie pobierzemy niczego więcej w przyszłości.'
+    : product.interval === 'month'
+      ? 'Subskrypcja odnawia się co miesiąc. Anulujesz w panelu Stripe Customer Portal.'
+      : product.interval === 'year'
+        ? 'Subskrypcja odnawia się co roku. Anulujesz w panelu Stripe Customer Portal.'
+        : 'To subskrypcja, która odnawia się co miesiąc. Anulujesz w dowolnym momencie w panelu Stripe Customer Portal — nic więcej Cię nie obciąży.';
 
   const handleCheckout = async () => {
     setLoading(true);
@@ -126,7 +139,7 @@ export const StripeCheckoutModal: React.FC<StripeCheckoutModalProps> = ({
             </div>
             <div className="mt-1.5 flex flex-wrap items-center gap-1.5">
               <span className="rounded-full bg-brand-50 px-2 py-0.5 font-mono text-[10px] font-bold text-brand-fg">
-                Cena brutto (z VAT)
+                Cena brutto
               </span>
               <span className="rounded-full bg-surface px-2 py-0.5 font-mono text-[10px] font-bold text-muted">
                 {product.recurring ? 'Subskrypcja' : 'Płatność jednorazowa'}
@@ -135,11 +148,7 @@ export const StripeCheckoutModal: React.FC<StripeCheckoutModalProps> = ({
           </div>
 
           <div className="space-y-2 text-meta text-muted">
-            <p>
-              {product.recurring
-                ? 'To subskrypcja, która odnawia się co miesiąc. Anulujesz w dowolnym momencie w 2 kliknięciach, w panelu Stripe Customer Portal — nic więcej Cię nie obciąży.'
-                : 'To jednorazowa opłata. Nie zakładamy żadnej subskrypcji i nie pobierzemy niczego więcej w przyszłości.'}
-            </p>
+            <p>{renewalText}</p>
             {product.trialDays && (
               <div className="flex items-center gap-2 rounded-xl bg-success-soft p-2.5 text-success-fg">
                 <CheckCircle2 className="h-4 w-4 shrink-0" aria-hidden="true" />
@@ -172,7 +181,9 @@ export const StripeCheckoutModal: React.FC<StripeCheckoutModalProps> = ({
                   <div className="min-w-0">
                     <h4 className="text-label font-bold text-ink">Najpierw zaloguj się do konta</h4>
                     <p className="mt-0.5 text-meta text-muted leading-relaxed">
-                      Licencja i płatność zostaną powiązane z Twoim kontem, więc nie stracisz dostępu po wyczyszczeniu przeglądarki. Twoje dotychczasowe CV zostanie zachowane.
+                      {/* Prawda o localStorage: przed płatnością dane żyją w tej przeglądarce,
+                          więc nie obiecujemy przenoszenia, którego mechanizm jeszcze nie istnieje. */}
+                      Licencja i płatność zostaną powiązane z Twoim kontem, więc nie stracisz dostępu po wyczyszczeniu przeglądarki. Twoje dotychczasowe CV zostaje zapisane w tej przeglądarce.
                     </p>
                   </div>
                 </div>

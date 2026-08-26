@@ -235,8 +235,8 @@ export const JobMatcher: React.FC<JobMatcherProps> = ({
     <div className={`space-y-6 ${className}`}>
       <PageHeader
         title="Dopasowanie Ofert & Symulator ATS"
-        description="Wklej link do oferty lub jej treść — silnik CVELOCITY zweryfikuje Twoje CV przeciwko algorytmom ATS i wygeneruje spersonalizowane dokumenty aplikacyjne."
-        badge="Zero-Token Slot Engine"
+        description="Wklej link do oferty lub jej treść — symulator ATS sprawdzi pokrycie wymagań Twojego CV, a dokumenty aplikacyjne przygotujesz na tej podstawie."
+        badge="Analiza bez tokenów AI"
       />
 
       {/* Input Modes (Live / URL / Manual) */}
