@@ -40,6 +40,13 @@ export const StorageKeys = {
   draftAtsLab: `${PREFIX}draft-ats-lab`,
   /** Historia Doradcy tylko na czas bieżącej sesji przeglądarki. */
   advisorConversation: `${PREFIX}advisor-conversation`,
+  /**
+   * Bufor niedostarczonych zgłoszeń błędów (errorReporter). Treść jest
+   * zanonimizowana jeszcze przed zapisem — klucz trafia do tego rejestru nie dla
+   * prywatności (tej pilnuje sanityzer), tylko po to, żeby „usuń moje dane"
+   * obejmowało go jak każdy inny zapis aplikacji.
+   */
+  errorReportBuffer: `${PREFIX}error-report-buffer`,
 } as const;
 
 export type StorageKey = (typeof StorageKeys)[keyof typeof StorageKeys];

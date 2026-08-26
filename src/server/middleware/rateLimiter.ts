@@ -80,3 +80,15 @@ export const urlFetchLimiter = createRateLimiter({
   maxRequests: 30,
   message: 'Przekroczono limit pobierania ofert z adresu URL. Spróbuj ponownie za godzinę.',
 });
+
+/**
+ * Zgłoszenia błędów klienta. Limit ostrzejszy niż globalny, bo trasa jest bez
+ * uwierzytelnienia (awaria może dotyczyć samej sesji), a pętla awarii w jednej
+ * przeglądarce nie ma prawa zapełnić magazynu — klient dodatkowo throttluje po
+ * swojej stronie, to jest druga warstwa tej samej obrony.
+ */
+export const errorReportsLimiter = createRateLimiter({
+  windowMs: 60 * 1000,
+  maxRequests: 20,
+  message: 'Zbyt wiele zgłoszeń błędów. Wstrzymano przyjmowanie na chwilę.',
+});

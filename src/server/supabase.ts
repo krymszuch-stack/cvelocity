@@ -23,16 +23,26 @@ let cached: SupabaseClient | null = null;
 export function getSupabase(): SupabaseClient {
   if (cached) return cached;
 
-  const config = loadConfig();
+  // Narzędzia operacyjne (CLI zgłoszeń błędów, bramka wdrożeniowa w CI) wołają
+  // ten moduł poza procesem serwera i nie mają kompletu konfiguracji aplikacji
+  // — nie potrzebują GEMINI_API_KEY, żeby policzyć błędy w bazie. Fallback do
+  // surowych zmiennych dotyczy wyłącznie tej ścieżki: serwer zawsze przechodzi
+  // przez walidację `loadConfig()` przy starcie.
+  let url = process.env.SUPABASE_URL?.trim();
+  let key = process.env.SUPABASE_SERVICE_ROLE_KEY?.trim();
+  try {
+    const config = loadConfig();
+    url = config.SUPABASE_URL || url;
+    key = config.SUPABASE_SERVICE_ROLE_KEY || key;
+  } catch {
+    /* Ścieżka operacyjna — wystarczą zmienne środowiskowe. */
+  }
 
-  if (!config.SUPABASE_URL || !config.SUPABASE_SERVICE_ROLE_KEY) {
-    // Nie powinno się zdarzyć: `loadConfig()` przerywa start przy
-    // BACKEND_MODE=cloud bez tych kluczy. Zostaje jako bezpiecznik na wypadek
-    // wywołania z trybu `local`, gdzie ta ścieżka nie ma prawa się wykonać.
+  if (!url || !key) {
     throw new Error('Klient Supabase wymaga SUPABASE_URL i SUPABASE_SERVICE_ROLE_KEY.');
   }
 
-  cached = createClient(config.SUPABASE_URL, config.SUPABASE_SERVICE_ROLE_KEY, {
+  cached = createClient(url, key, {
     auth: {
       // Proces serwera nie ma "sesji użytkownika" ani miejsca, w którym miałby
       // ją trzymać. Każde żądanie przynosi własny token.
