@@ -234,8 +234,8 @@ export const JobMatcher: React.FC<JobMatcherProps> = ({
   return (
     <div className={`space-y-6 ${className}`}>
       <PageHeader
-        title="Dopasowanie Ofert & Symulator ATS"
-        description="Wklej link do oferty lub jej treść — symulator ATS sprawdzi pokrycie wymagań Twojego CV, a dokumenty aplikacyjne przygotujesz na tej podstawie."
+        title="Dopasowanie Ofert & Audyt ATS"
+        description="Wklej link do oferty lub jej treść — audyt ATS sprawdzi pokrycie wymagań Twojego CV, a dokumenty aplikacyjne przygotujesz na tej podstawie."
         badge="Analiza bez tokenów AI"
       />
 

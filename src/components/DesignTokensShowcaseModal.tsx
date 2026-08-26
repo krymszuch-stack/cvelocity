@@ -58,7 +58,7 @@ export const DesignTokensShowcaseModal: React.FC<DesignTokensShowcaseModalProps>
     <Modal
       isOpen={isOpen}
       onClose={onClose}
-      title="CVELOCITY Design Tokens Living Architecture"
+      title="Podgląd tokenów design systemu"
       size="xl"
     >
       <div className="space-y-6">
@@ -112,7 +112,7 @@ export const DesignTokensShowcaseModal: React.FC<DesignTokensShowcaseModalProps>
             {/* Complete Brand Ramp 50-950 */}
             <div>
               <span className="text-[11px] font-bold uppercase tracking-wider text-subtle">
-                Ramp Brand CVELOCITY (50 – 950)
+                Rampa marki CVelocity (50–950)
               </span>
               <div className="mt-2 grid grid-cols-2 gap-2 sm:grid-cols-4 md:grid-cols-6">
                 {brandRamp.map((b) => (

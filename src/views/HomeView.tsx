@@ -152,7 +152,7 @@ const CAREER_TIPS: CareerTip[] = [
         'Wykorzystaj dedykowaną sekcję "Podsumowanie Techniczne" na górze CV.',
       ],
       dosAndDonts: {
-        do: 'Używaj silnika CVELOCITY do precyzyjnego dopasowania słów kluczowych z ogłoszenia.',
+        do: 'Używaj silnika CVelocity do precyzyjnego dopasowania słów kluczowych z ogłoszenia.',
         dont: 'Nigdy nie ukrywaj białego tekstu w tle – nowoczesne parsery wykrywają to jako spam.',
       },
     },
@@ -175,7 +175,7 @@ interface HomeViewProps {
 const PRIVACY_POINTS = [
   {
     icon: MonitorSmartphone,
-    title: 'Ocena ATS liczy się lokalnie',
+    title: 'Audyt ATS liczy się lokalnie',
     body: 'Analiza CV i dopasowanie do oferty wykonują się w Twojej przeglądarce. Dokument nie jest nigdzie wysyłany.',
   },
   {
@@ -264,7 +264,7 @@ export const HomeView: React.FC<HomeViewProps> = ({
       description: 'Zarządzaj procesami rekrutacyjnymi, terminami rozmów i ofertami.',
       icon: Layers,
       tab: 'pipeline' as NavTabId,
-      badge: 'CRM Rejestr',
+      badge: 'Pipeline aplikacji',
       badgeColor: 'brand',
     },
   ];
@@ -343,7 +343,7 @@ export const HomeView: React.FC<HomeViewProps> = ({
         <div className="relative z-10 mx-auto flex max-w-3xl flex-col items-center gap-5">
           <div className="glass-panel inline-flex items-center gap-2 rounded-full px-3.5 py-1.5 font-mono text-xs font-semibold text-brand-fg">
             <Sparkles className="h-3.5 w-3.5 text-brand-500" />
-            CVELOCITY Career Hub • Edycja 2026
+            CVelocity Career Hub • Edycja 2026
           </div>
 
           {/* Nagłówek na dwóch wierszach: powitanie zwykłym atramentem, nazwa
@@ -682,7 +682,7 @@ export const HomeView: React.FC<HomeViewProps> = ({
               <div className="mb-6 flex items-start justify-between gap-4">
                 <div className="space-y-1">
                   <span className="inline-block rounded-md border border-brand-200 bg-brand-50 px-2.5 py-0.5 font-mono text-[11px] font-bold text-brand-fg">
-                    #{activeTipModal.category} • Baza Wiedzy CVELOCITY
+                    #{activeTipModal.category} • CVelocity Baza Wiedzy
                   </span>
                   <h2 className="text-xl font-bold tracking-tight text-ink sm:text-2xl">
                     {activeTipModal.title}

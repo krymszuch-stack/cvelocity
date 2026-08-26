@@ -36,7 +36,7 @@ export const DrillScorecardView: React.FC<DrillScorecardViewProps> = ({
           <div className="flex items-center gap-2">
             <Award className="h-5 w-5 text-brand-600" />
             <h4 className="text-sm font-extrabold text-ink uppercase tracking-wider font-mono">
-              Scorecard Odpowiedzi DrillMode
+              Karta wyniku — Mock Drill
             </h4>
           </div>
           <p className="text-xs text-muted">
@@ -79,7 +79,7 @@ export const DrillScorecardView: React.FC<DrillScorecardViewProps> = ({
               }`}
             >
               {structure.hasSituation ? <Check className="h-3 w-3" /> : <XCircle className="h-3 w-3" />}
-              <span>S (Situation)</span>
+              <span>S — Sytuacja</span>
             </div>
 
             <div
@@ -88,7 +88,7 @@ export const DrillScorecardView: React.FC<DrillScorecardViewProps> = ({
               }`}
             >
               {structure.hasTask ? <Check className="h-3 w-3" /> : <XCircle className="h-3 w-3" />}
-              <span>T (Task)</span>
+              <span>T — Zadanie</span>
             </div>
 
             <div
@@ -97,7 +97,7 @@ export const DrillScorecardView: React.FC<DrillScorecardViewProps> = ({
               }`}
             >
               {structure.hasAction ? <Check className="h-3 w-3" /> : <XCircle className="h-3 w-3" />}
-              <span>A (Action)</span>
+              <span>A — Działanie</span>
             </div>
 
             <div
@@ -106,7 +106,7 @@ export const DrillScorecardView: React.FC<DrillScorecardViewProps> = ({
               }`}
             >
               {structure.hasResult ? <Check className="h-3 w-3" /> : <XCircle className="h-3 w-3" />}
-              <span>R (Result)</span>
+              <span>R — Rezultat</span>
             </div>
           </div>
         </div>
@@ -190,7 +190,7 @@ export const DrillScorecardView: React.FC<DrillScorecardViewProps> = ({
           <div className="flex items-center gap-2 text-brand-700">
             <BookOpen className="h-4 w-4" />
             <h5 className="text-xs font-bold uppercase tracking-wider font-mono">
-              Twoja Notatka ze Ściągi Rekrutacyjnej (MasterVault Reference)
+              Twoja Notatka ze Ściągi Rekrutacyjnej (odniesienie: Master Vault)
             </h5>
           </div>
           <p className="text-xs text-ink/90 font-mono leading-relaxed pl-6">

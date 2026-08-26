@@ -165,7 +165,7 @@ export const DrillModeModal: React.FC<DrillModeModalProps> = ({
             <div>
               {/* Sufiks „(mock-drill-mode-v1)" to identyfikator wewnętrzny — nie dla UI. */}
               <h3 className="text-base font-extrabold text-ink tracking-tight font-mono">
-                Mock Drill Mode
+                Mock Drill
               </h3>
               <p className="text-xs text-muted">
                 Trening odpowiedzi w 60s • Ewaluacja STAR & Metryk • Historia prób

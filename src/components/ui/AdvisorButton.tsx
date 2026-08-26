@@ -15,8 +15,8 @@ interface AdvisorButtonProps {
 /** Współdzielony przycisk Doradcy AI — dostępny w Topbar i widokach */
 export const AdvisorButton: React.FC<AdvisorButtonProps> = ({
   onClick,
-  label = 'Doradca AI',
-  title = 'Zapytaj Doradcę AI',
+  label = 'Doradca Kariery',
+  title = 'Zapytaj Doradcę Kariery',
   className = '',
   variant = 'brand',
 }) => {

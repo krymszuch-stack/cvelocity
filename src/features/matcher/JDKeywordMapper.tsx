@@ -102,10 +102,10 @@ export const JDKeywordMapper: React.FC<JDKeywordMapperProps> = ({
             </div>
             <div>
               <h3 className="text-base font-extrabold text-ink tracking-tight">
-                JD Keyword Mapper
+                Mapper słów kluczowych
               </h3>
               <p className="text-xs text-muted">
-                Analiza pokrycia słów kluczowych ogłoszenia vs MasterVault i aktualne CV.
+                Analiza pokrycia słów kluczowych ogłoszenia względem Master Vaultu i aktualnego CV.
               </p>
             </div>
           </div>
@@ -449,7 +449,7 @@ export const JDKeywordMapper: React.FC<JDKeywordMapperProps> = ({
                         className="cursor-pointer mt-1 flex w-full items-center justify-center gap-1 rounded-lg border border-brand-500/30 bg-brand-500/10 py-1 font-mono text-[10px] font-bold text-brand-700 hover:bg-brand-500/20 transition-colors duration-[var(--duration-fast)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#F26440]/50"
                       >
                         <Sparkles className="h-3 w-3" />
-                        <span>Most Kompetencyjny</span>
+                        <span>Most kompetencyjny</span>
                       </button>
                     )}
                   </div>

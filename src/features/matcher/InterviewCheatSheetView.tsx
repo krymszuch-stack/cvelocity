@@ -224,8 +224,11 @@ export const InterviewCheatSheetView: React.FC<InterviewCheatSheetViewProps> = (
         </div>
         <div className="min-w-0 flex-1">
           <h3 className="text-xs font-bold uppercase tracking-wider text-ink">
-            Ściąga na Rozmowę Rekrutacyjną (Interview Cheat Sheet)
+            Ściąga na rozmowę rekrutacyjną
           </h3>
+          <p className="text-[10px] font-mono lowercase tracking-wide text-muted">
+            interview cheat sheet
+          </p>
           <p className="text-[11px] text-muted">
             Zbudowana lokalnie z Twojego Master Vaultu i treści oferty — bez zużycia tokenów.
           </p>
@@ -253,7 +256,7 @@ export const InterviewCheatSheetView: React.FC<InterviewCheatSheetViewProps> = (
             icon={Target}
             onClick={() => setIsDrillOpen(true)}
           >
-            Uruchom DrillMode 🎯
+            Uruchom Mock Drill 🎯
           </Button>
           <Chip variant={isEnriched ? 'brand' : 'neutral'} className="text-[10px] py-px">
             {isEnriched ? 'Wzbogacona przez AI' : 'Szkielet lokalny · 0 tokenów'}

@@ -40,7 +40,7 @@ export const AtsSimulatorView: React.FC<AtsSimulatorViewProps> = ({
           <ShieldCheck className="h-5 w-5" />
         </div>
         <div>
-          <h3 className="text-sm font-bold text-ink">Symulator ATS: Audyt Zgodności z Ofertą</h3>
+          <h3 className="text-sm font-bold text-ink">Audyt ATS: zgodność z ofertą</h3>
           <p className="text-xs text-muted">
             Ocena lematyczna z uwzględnieniem wag technologii twardych (3.0x), świeżości doświadczenia oraz struktury dokumentu.
           </p>

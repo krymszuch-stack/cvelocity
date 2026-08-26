@@ -141,7 +141,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
         {/* Quick Advisor Button */}
         <NavItem
           icon={IconSparkles as any}
-          label="Zapytaj Doradcę AI"
+          label="Zapytaj Doradcę Kariery"
           isCollapsed={isCollapsed}
           onClick={onOpenAdvisor}
           className="text-brand-fg hover:bg-brand-500/10"
@@ -184,7 +184,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
                   ? 'Plan Pro aktywny'
                   : planStatus === 'trialing'
                   ? 'Plan Pro — okres próbny'
-                  : 'Plan Podstawowy'}
+                  : 'Plan Free'}
               </p>
             </div>
           )}

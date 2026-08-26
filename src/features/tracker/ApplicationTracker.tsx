@@ -164,7 +164,7 @@ export const ApplicationTracker: React.FC<ApplicationTrackerProps> = ({
       <PageHeader
         title="Pipeline Aplikacji (Application Tracker)"
         description="Zarządzaj swoimi procesami rekrutacyjnymi w stylu Linear. Monitoruj etapy, notatki z rozmów i wskaźnik skuteczności aplikacji w czasie rzeczywistym."
-        badge="Live Recruitment CRM"
+        badge="Pipeline aplikacji"
         actions={
           <Button
             type="button"
