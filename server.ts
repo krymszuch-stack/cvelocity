@@ -17,6 +17,7 @@ import { applicationsRouter } from "./src/server/routes/applications.routes";
 import { billingRouter } from "./src/server/routes/billing.routes";
 import { gamificationRouter } from "./src/server/routes/gamification.routes";
 import { intelRouter } from "./src/server/routes/intel.routes";
+import { errorsRouter } from "./src/server/routes/errors.routes";
 import { stripeWebhookRouter } from "./src/server/routes/stripe.routes";
 import { errorHandler } from "./src/server/middleware/errorHandler";
 import { standardApiLimiter } from "./src/server/middleware/rateLimiter";
@@ -145,6 +146,9 @@ async function startServer() {
   // więc nie ma czego weryfikować, a wymaganie konta odcięłoby od korpusu
   // wszystkich pracujących w trybie lokalnym.
   app.use("/api", intelRouter);
+
+  // Zgłoszenia błędów klienta również bez `requireAuth` (uzasadnienie w trasie).
+  app.use("/api", errorsRouter);
 
   // Nieznana ścieżka pod /api kończy się czystym 404 w JSON-ie. Bez tego łapie ją
   // fallback SPA poniżej i odsyła index.html ze statusem 200 — klient wywołujący

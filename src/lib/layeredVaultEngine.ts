@@ -1,4 +1,14 @@
 import { MasterVault, LayeredFactItem, PreFlightCheckItem, ApplicationHistoryRecord } from '../types';
+import { reportClientError } from './errorReporter';
+
+/**
+ * Wspólna obsługa wyjątków generatorów CV: zgłoś zanonimizowane zdarzenie
+ * (`cv-export`) i przekaż wyjątek dalej. Zgłoszenie nie może zmieniać zachowania
+ * — interfejs obsługuje błąd tak jak dotąd, a operator dostaje ślad w bazie.
+ */
+function reportCvExportError(surface: string, error: unknown): void {
+  reportClientError({ kind: 'cv-export', surface, error });
+}
 
 /**
  * FILAR 1: Layered Fact Helper - Promotes per-job edit to MasterVault or keeps per-job override
@@ -111,37 +121,44 @@ export function generatePlainTextCvExport(
   targetRole: string,
   companyName: string
 ): string {
-  const lines: string[] = [];
+  try {
+    const lines: string[] = [];
 
-  lines.push(`==================================================`);
-  lines.push(`${vault.personalInfo.fullName.toUpperCase()}`);
-  lines.push(`${targetRole || vault.personalInfo.title} | ${companyName || ''}`);
-  lines.push(`E-mail: ${vault.personalInfo.email} | Tel: ${vault.personalInfo.phone} | ${vault.personalInfo.location}`);
-  lines.push(`LinkedIn: ${vault.personalInfo.linkedin || ''}`);
-  lines.push(`==================================================\n`);
+    lines.push(`==================================================`);
+    lines.push(`${vault.personalInfo.fullName.toUpperCase()}`);
+    lines.push(`${targetRole || vault.personalInfo.title} | ${companyName || ''}`);
+    lines.push(`E-mail: ${vault.personalInfo.email} | Tel: ${vault.personalInfo.phone} | ${vault.personalInfo.location}`);
+    lines.push(`LinkedIn: ${vault.personalInfo.linkedin || ''}`);
+    lines.push(`==================================================\n`);
 
-  lines.push(`--- PROFIL ZAWODOWY ---`);
-  lines.push(`${vault.personalInfo.summary}\n`);
+    lines.push(`--- PROFIL ZAWODOWY ---`);
+    lines.push(`${vault.personalInfo.summary}\n`);
 
-  lines.push(`--- DOŚWIADCZENIE ZAWODOWE ---`);
-  vault.history.forEach(exp => {
-    lines.push(`• ${exp.role.toUpperCase()} @ ${exp.company} (${exp.startDate} - ${exp.endDate})`);
-    const expFacts = layeredFacts.filter(f => f.experienceId === exp.id);
-    expFacts.forEach(f => {
-      lines.push(`   - ${f.userOverrideText || f.jobReframedText || f.baseText}`);
+    lines.push(`--- DOŚWIADCZENIE ZAWODOWE ---`);
+    vault.history.forEach(exp => {
+      lines.push(`• ${exp.role.toUpperCase()} @ ${exp.company} (${exp.startDate} - ${exp.endDate})`);
+      const expFacts = layeredFacts.filter(f => f.experienceId === exp.id);
+      expFacts.forEach(f => {
+        lines.push(`   - ${f.userOverrideText || f.jobReframedText || f.baseText}`);
+      });
+      lines.push(``);
     });
-    lines.push(``);
-  });
 
-  lines.push(`--- UMIEJĘTNOŚCI I NARZĘDZIA ---`);
-  lines.push(`Twarde: ${vault.skillsMatrix.hardSkills.join(', ')}`);
-  lines.push(`Narzędzia: ${vault.skillsMatrix.toolsAndTech.join(', ')}`);
-  lines.push(`Miękkie: ${vault.skillsMatrix.softSkills.join(', ')}\n`);
+    lines.push(`--- UMIEJĘTNOŚCI I NARZĘDZIA ---`);
+    lines.push(`Twarde: ${vault.skillsMatrix.hardSkills.join(', ')}`);
+    lines.push(`Narzędzia: ${vault.skillsMatrix.toolsAndTech.join(', ')}`);
+    lines.push(`Miękkie: ${vault.skillsMatrix.softSkills.join(', ')}\n`);
 
-  lines.push(`--- KLAUZULA RODO ---`);
-  lines.push(`Wyrażam zgodę na przetwarzanie moich danych osobowych dla potrzeb niezbędnych do realizacji procesu rekrutacji.`);
+    lines.push(`--- KLAUZULA RODO ---`);
+    lines.push(`Wyrażam zgodę na przetwarzanie moich danych osobowych dla potrzeb niezbędnych do realizacji procesu rekrutacji.`);
 
-  return lines.join('\n');
+    return lines.join('\n');
+  } catch (error) {
+    // Vault bez personalInfo/history wywraca tu dostępem do właściwości pustki;
+    // to klasyczny crash „generowania CV", który dotąd znikał bez śladu.
+    reportCvExportError('engine:plainText', error);
+    throw error;
+  }
 }
 
 /**
@@ -151,15 +168,20 @@ export function generateLinkedInReadyExport(
   vault: MasterVault,
   targetRole: string
 ): { headline: string; aboutSection: string; experienceBullets: Array<{ company: string; role: string; text: string }> } {
-  const headline = `${targetRole || vault.personalInfo.title} | ${vault.skillsMatrix.hardSkills.slice(0, 4).join(' • ')}`;
+  try {
+    const headline = `${targetRole || vault.personalInfo.title} | ${vault.skillsMatrix.hardSkills.slice(0, 4).join(' • ')}`;
 
-  const aboutSection = `${vault.personalInfo.summary}\n\nKluczowe kompetencje: ${vault.skillsMatrix.hardSkills.join(', ')}\nNarzędzia: ${vault.skillsMatrix.toolsAndTech.join(', ')}`;
+    const aboutSection = `${vault.personalInfo.summary}\n\nKluczowe kompetencje: ${vault.skillsMatrix.hardSkills.join(', ')}\nNarzędzia: ${vault.skillsMatrix.toolsAndTech.join(', ')}`;
 
-  const experienceBullets = vault.history.map(exp => ({
-    company: exp.company,
-    role: exp.role,
-    text: exp.highlights.map(h => `• ${h.text}`).join('\n')
-  }));
+    const experienceBullets = vault.history.map(exp => ({
+      company: exp.company,
+      role: exp.role,
+      text: exp.highlights.map(h => `• ${h.text}`).join('\n')
+    }));
 
-  return { headline, aboutSection, experienceBullets };
+    return { headline, aboutSection, experienceBullets };
+  } catch (error) {
+    reportCvExportError('engine:linkedin', error);
+    throw error;
+  }
 }

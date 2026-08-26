@@ -1,6 +1,7 @@
 import { Document, Packer, Paragraph, TextRun, HeadingLevel, AlignmentType, BorderStyle } from 'docx';
 import { saveAs } from 'file-saver';
 import { MasterVault, LayeredFactItem } from '../types';
+import { reportClientError } from './errorReporter';
 
 /**
  * Natywny eksport .docx pod parsery ATS (Workday, Taleo, Greenhouse).
@@ -341,13 +342,20 @@ export async function downloadNativeDocxCv(
   targetRole: string,
   companyName: string
 ): Promise<void> {
-  const doc = buildCvDocument(vault, layeredFacts, targetRole, companyName);
-  const blob = await Packer.toBlob(doc);
+  try {
+    const doc = buildCvDocument(vault, layeredFacts, targetRole, companyName);
+    const blob = await Packer.toBlob(doc);
 
-  const cleanName = (vault.personalInfo?.fullName || 'Kandydat').replace(/\s+/g, '_');
-  const cleanCompany = (companyName || 'Aplikacja').replace(/\s+/g, '_');
-  const cleanTitle = ((targetRole || vault.personalInfo?.title) || 'Stanowisko').replace(/\s+/g, '_');
-  const fileName = `CV_${cleanName}_${cleanCompany}_${cleanTitle}.docx`;
+    const cleanName = (vault.personalInfo?.fullName || 'Kandydat').replace(/\s+/g, '_');
+    const cleanCompany = (companyName || 'Aplikacja').replace(/\s+/g, '_');
+    const cleanTitle = ((targetRole || vault.personalInfo?.title) || 'Stanowisko').replace(/\s+/g, '_');
+    const fileName = `CV_${cleanName}_${cleanCompany}_${cleanTitle}.docx`;
 
-  saveAs(blob, fileName);
+    saveAs(blob, fileName);
+  } catch (error) {
+    // Zgłoszenie jest zanonimizowane (sanityzer) i nie zmienia zachowania dla
+    // wywołującego: wyjątek leci dalej, żeby interfejs mógł pokazać swój błąd.
+    reportClientError({ kind: 'cv-export', surface: 'docxExporter', error });
+    throw error;
+  }
 }

@@ -66,3 +66,48 @@ export const checkoutSessionSchema = z.object({
   priceId: z.string().trim().min(1).max(200),
 });
 export type CheckoutSessionInput = z.infer<typeof checkoutSessionSchema>;
+
+/**
+ * Zgłoszenie błędu klienta — kontrakt anonimizacji, nie tylko kształtu.
+ *
+ * Schemat odmawia wszystkiego, co mogłoby nieść daną osobową: brak pola na
+ * identyfikator użytkownika, treść wiadomości przycięta do 300 znaków po
+ * sanityzacji po stronie klienta, stos zredukowany do nazw funkcji i nazw plików
+ * (bez ścieżek absolutnych i argumentów). `strict()` jest tu częścią polityki
+ * prywatności: nieznanego pola nie da się przemycić „na zapas", bo całe
+ * zgłoszenie zostanie odrzucone zamiast po cichu przepuścić obce dane.
+ */
+export const clientErrorKindSchema = z.enum([
+  /** Wyjątek przy generowaniu/eksportowaniu dokumentu CV. */
+  'cv-export',
+  /** Wyjątek złapany przez granicę błędów Reacta. */
+  'ui-crash',
+  /** Nieobsłużony wyjątek (`window.error`) bez własnej obsługi. */
+  'uncaught',
+  /** Odrzucona obietnica bez `catch`. */
+  'unhandledrejection',
+]);
+
+export const clientErrorStackFrameSchema = z.object({
+  fn: z.string().max(80).optional(),
+  file: z.string().max(120).optional(),
+  line: z.number().int().nonnegative().optional(),
+});
+
+export const clientErrorEventSchema = z.strictObject({
+  fingerprint: z.string().regex(/^[0-9a-f]{16}$/),
+  kind: clientErrorKindSchema,
+  surface: z.string().min(1).max(60).regex(/^[A-Za-z0-9:_-]+$/),
+  message: z.string().min(1).max(300),
+  stack: z.array(clientErrorStackFrameSchema).max(5).optional(),
+  env: z.enum(['dev', 'prod']).optional(),
+  uaFamily: z.string().max(40).optional(),
+  viewportBucket: z.string().max(20).optional(),
+  occurredAt: z.iso.datetime(),
+});
+export type ClientErrorEvent = z.infer<typeof clientErrorEventSchema>;
+
+/** Partia wysyłana jednym żądaniem / jednym beaconem. */
+export const clientErrorBatchSchema = z.object({
+  events: z.array(clientErrorEventSchema).min(1).max(20),
+});

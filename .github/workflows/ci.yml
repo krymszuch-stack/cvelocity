@@ -120,6 +120,16 @@ jobs:
 
           kill $SERVER_PID
 
+      # Bramka błędów klienta przy każdym wdrożeniu (zadanie: „przy każdym
+      # wdrozeniu agent czy cli sprawdzi i zgłosi błąd"). Bez sekretów Supabase
+      # skrypt sam się wycofuje z komunikatem „pomijam", więc krok nigdy nie jest
+      # przyczyną czerwonego builda z powodu braku konfiguracji.
+      - name: Bramka otwartych błędów klienta
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+        run: npm run bledy:bramka
+
       - name: Secrets Must Not Reach The Browser Bundle
         run: |
           # Pozycja z checklisty w docs/SETUP.md, tutaj jako krok automatyczny —
