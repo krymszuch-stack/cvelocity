@@ -12,15 +12,6 @@ import { getSupabase } from './supabase';
 
 export type QuotaKind = 'ai' | 'import';
 
-/**
- * Dzienny sufit wywołań AI. Jedyna definicja w kodzie — czyta ją zarówno
- * egzekucja (`executeAiOperation`), jak i podgląd pozostałych sztuk
- * (`getEntitlements`). Rozdzielenie tych dwóch wartości sprawiłoby, że
- * interfejs pokazywałby inny limit niż ten, który faktycznie odsyła żądanie.
- */
-export const FREE_DAILY_AI_USES = 5;
-export const PRO_DAILY_AI_USES = 100;
-
 export class QuotaExceededError extends Error {
   readonly status = 402;
   /** `errorHandler` przepuszcza treść do klienta tylko przy `expose === true`. */
@@ -29,7 +20,7 @@ export class QuotaExceededError extends Error {
   constructor(kind: QuotaKind) {
     super(
       kind === 'ai'
-        ? 'Wyczerpane dzisiejsze wywołania AI. Limit odnowi się o północy.'
+        ? 'Wyczerpano darmowe wywołania AI w tym miesiącu.'
         : 'Wyczerpano darmowe importy pliku w tym miesiącu.'
     );
     this.name = 'QuotaExceededError';
@@ -60,13 +51,9 @@ export async function consumeQuota(userId: string, kind: QuotaKind): Promise<voi
 }
 
 export interface RemainingQuota {
-  /** Pozostałe **dzisiejsze** wywołania AI — tyle, ile realnie egzekwuje rezerwacja. */
   aiUses: number;
-  /** Pozostałe importy pliku w tym miesiącu (liczone w interfejsie, patrz niżej). */
   importUses: number;
   monthKey: string;
-  /** Klucz doby dla licznika AI — klient resetuje podpowiedź razem z serwerem. */
-  dayKey: string;
 }
 
 export interface Entitlements {
@@ -79,29 +66,6 @@ export interface Entitlements {
 }
 
 const monthKey = () => new Date().toISOString().slice(0, 7);
-const dayKey = () => new Date().toISOString().slice(0, 10);
-
-/**
- * Czy konto ma opłacony plan cykliczny.
- *
- * Tier wyprowadza się z bazy przy każdym wywołaniu, nigdy z parametru trasy —
- * zahardkodowany `'FREE'` w `ai.routes.ts` sprawiłby, że płacący Pro dostawałby
- * darmowy limit dzienny, a gałąź Pro była martwym kodem.
- */
-async function isPaidAccount(userId: string): Promise<boolean> {
-  const { data, error } = await getSupabase()
-    .from('subscriptions')
-    .select('status')
-    .eq('user_id', userId)
-    .maybeSingle();
-
-  if (error) {
-    throw new Error(`Nie udało się sprawdzić statusu subskrypcji: ${error.message}`);
-  }
-
-  const status = data?.status ?? 'free';
-  return status === 'active' || status === 'trialing';
-}
 
 /**
  * Zwraca stan uprawnień do pokazania w interfejsie: status subskrypcji oraz
@@ -111,9 +75,8 @@ async function isPaidAccount(userId: string): Promise<boolean> {
 export async function getEntitlements(userId: string): Promise<Entitlements> {
   const supabase = getSupabase();
   const currentMonth = monthKey();
-  const today = dayKey();
 
-  const [subscriptionResult, counterResult, freePlanResult, dailyQuotaResult] = await Promise.all([
+  const [subscriptionResult, counterResult, freePlanResult] = await Promise.all([
     supabase
       .from('subscriptions')
       .select('status, plan_id, current_period_end')
@@ -126,14 +89,6 @@ export async function getEntitlements(userId: string): Promise<Entitlements> {
       .eq('month_key', currentMonth)
       .maybeSingle(),
     supabase.from('plans').select('ai_quota, import_quota').eq('id', 'free').maybeSingle(),
-    // Rejestr dobowy jest źródłem prawdy o AI: to jego czyta `reserve_ai_quota`
-    // przy każdym żądaniu. Licznik miesięczny z `usage_counters` niczego nie
-    // egzekwuje, więc pokazywanie „pozostałych” z niego byłoby liczbą znikąd.
-    supabase
-      .from('user_quotas')
-      .select('ai_uses_count, daily_reset_date')
-      .eq('user_id', userId)
-      .maybeSingle(),
   ]);
 
   const status = (subscriptionResult.data?.status ?? 'free') as Entitlements['subscription']['status'];
@@ -141,16 +96,11 @@ export async function getEntitlements(userId: string): Promise<Entitlements> {
 
   // Limity planu darmowego czytamy z bazy, a nie ze stałej w kodzie — inaczej
   // zmiana cennika wymagałaby wdrożenia nowej wersji aplikacji.
+  const aiQuota = freePlanResult.data?.ai_quota ?? 0;
   const importQuota = freePlanResult.data?.import_quota ?? 0;
 
+  const usedAi = counterResult.data?.ai_uses ?? 0;
   const usedImports = counterResult.data?.import_uses ?? 0;
-
-  // Licznik z poprzedniej doby nie znaczy „zużyte dziś” — rezerwa resetuje
-  // się w `reserve_ai_quota`, tutaj czytamy tylko ten sam dzień.
-  const usedTodayAi =
-    dailyQuotaResult.data && dailyQuotaResult.data.daily_reset_date === today
-      ? (dailyQuotaResult.data.ai_uses_count ?? 0)
-      : 0;
 
   return {
     subscription: {
@@ -159,14 +109,11 @@ export async function getEntitlements(userId: string): Promise<Entitlements> {
       currentPeriodEnd: subscriptionResult.data?.current_period_end ?? undefined,
     },
     usage: {
-      // Plan opłacony nie ma limitu dobowego. `Infinity` nie przechodzi
+      // Plan opłacony nie ma limitu miesięcznego. `Infinity` nie przechodzi
       // przez JSON (staje się `null`), więc interfejs i tak pyta o `isPro`.
-      aiUses: isPaid
-        ? Number.MAX_SAFE_INTEGER
-        : Math.max(0, FREE_DAILY_AI_USES - usedTodayAi),
+      aiUses: isPaid ? Number.MAX_SAFE_INTEGER : Math.max(0, aiQuota - usedAi),
       importUses: isPaid ? Number.MAX_SAFE_INTEGER : Math.max(0, importQuota - usedImports),
       monthKey: currentMonth,
-      dayKey: today,
     },
   };
 }
@@ -213,18 +160,14 @@ export async function refundAiQuota(userId: string): Promise<void> {
 /**
  * Wykonuje potok wywołania AI z pre-flight rezerwacją pesymistyczną,
  * wykonaniem zadania LLM, księgowaniem tokenów i automatyczną refundacją w razie awarii.
- *
- * Limit dobowy wynika ze statusu subskrypcji odczytanego tutaj — wołający nie
- * ma jak go podstawić, więc żaden plan „na sztywno” w trasie nie zepśnie płacącego
- * użytkownika do darmowego sufitu.
  */
 export async function executeAiOperation<T>(
   userId: string,
+  tier: string,
   context: string,
   runAiTask: () => Promise<AiTaskResult<T>>
 ): Promise<T> {
-  const paid = await isPaidAccount(userId);
-  const maxUses = paid ? PRO_DAILY_AI_USES : FREE_DAILY_AI_USES;
+  const maxUses = tier === 'PRO' || tier === 'active' || tier === 'trialing' ? 100 : 5;
 
   const reservation = await reserveAiQuota(userId, maxUses);
   if (!reservation.allowed) {

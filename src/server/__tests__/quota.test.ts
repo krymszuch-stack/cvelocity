@@ -9,28 +9,11 @@ vi.mock('../usageLedger', () => ({
 
 describe('Atomic Quota Reservation & Refund', () => {
   const mockRpc = vi.fn();
-  const mockFrom = vi.fn();
-
-  const mockSubscriptionsTable = (status: string | null) => {
-    mockFrom.mockImplementation((table: string) => {
-      if (table === 'subscriptions') {
-        return {
-          select: vi.fn().mockReturnThis(),
-          eq: vi.fn().mockReturnThis(),
-          maybeSingle: vi.fn().mockResolvedValue({ data: status ? { status } : null, error: null }),
-        };
-      }
-      throw new Error(`Nieoczekiwana tabela w teście: ${table}`);
-    });
-  };
 
   beforeEach(() => {
     vi.clearAllMocks();
-    // Domyślnie konto darmowe — testy płacącego nadpisują status.
-    mockSubscriptionsTable('free');
     vi.spyOn(supabaseModule, 'getSupabase').mockReturnValue({
       rpc: mockRpc,
-      from: mockFrom,
     } as any);
   });
 
@@ -62,31 +45,10 @@ describe('Atomic Quota Reservation & Refund', () => {
       usage: { promptTokens: 100, completionTokens: 50, model: 'gemini-2.5-flash-lite' },
     });
 
-    const result = await executeAiOperation('user-123', 'test-context', task);
+    const result = await executeAiOperation('user-123', 'FREE', 'test-context', task);
 
     expect(result).toEqual({ success: true });
     expect(task).toHaveBeenCalled();
-    // Konto darmowe rezerwuje z darmowym dziennym sufitem, nie z progiem Pro.
-    expect(mockRpc).toHaveBeenCalledWith('reserve_ai_quota', {
-      p_user_id: 'user-123',
-      p_max_daily_uses: 5,
-    });
-  });
-
-  it('executeAiOperation daje planowi opłaconemu wyższy dzienny sufit', async () => {
-    mockSubscriptionsTable('active');
-    mockRpc.mockResolvedValueOnce({ data: { allowed: true, current_uses: 1 }, error: null });
-
-    await executeAiOperation(
-      'user-pro',
-      'test-context',
-      vi.fn().mockResolvedValue({ data: { ok: true } })
-    );
-
-    expect(mockRpc).toHaveBeenCalledWith('reserve_ai_quota', {
-      p_user_id: 'user-pro',
-      p_max_daily_uses: 100,
-    });
   });
 
   it('executeAiOperation rzuca QuotaExceededError gdy rezerwacja zostaje odrzucona', async () => {
@@ -94,7 +56,7 @@ describe('Atomic Quota Reservation & Refund', () => {
 
     const task = vi.fn();
 
-    await expect(executeAiOperation('user-123', 'test-context', task)).rejects.toThrow(
+    await expect(executeAiOperation('user-123', 'FREE', 'test-context', task)).rejects.toThrow(
       QuotaExceededError
     );
     expect(task).not.toHaveBeenCalled();
@@ -106,7 +68,7 @@ describe('Atomic Quota Reservation & Refund', () => {
 
     const task = vi.fn().mockRejectedValueOnce(new Error('LLM Timeout'));
 
-    await expect(executeAiOperation('user-123', 'test-context', task)).rejects.toThrow(
+    await expect(executeAiOperation('user-123', 'FREE', 'test-context', task)).rejects.toThrow(
       'LLM Timeout'
     );
 

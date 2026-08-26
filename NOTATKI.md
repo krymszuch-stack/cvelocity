@@ -17,32 +17,6 @@
 
 <!-- Dopisuj tutaj. Jeden punkt = jedna uwaga. -->
 
-- `GET /api/gamification` (`gamification.routes.ts`) nie ma ani jednego
-  wywołania w kliencie — sklep wysyła tylko `PUT`. Trasa powstała pod
-  synchronizację poziomu między urządzeniami, ale reguła „kto wygrywa, gdy
-  schowek i konto się różnią" nigdy nie zapadła (ostatni zapis? większe XP?
-  wybór użytkownika?). Bez tej decyzji podpięcie odczytu mogłoby nadpisywać
-  lokalny postęp pustym kontem. Do decyzji przed implementacją synchronizacji.
-  _(wpis od agenta)_
-
-- Zniżki za rangę (−15%/−30% z `LEVEL_PRIVILEGES`) nalicza teraz serwer przy
-  tworzeniu sesji checkout (kupony Stripe `ranga-15`/`ranga-30`, twórczone przy
-  pierwszym użyciu). Odczyt XP idzie z tabeli `user_gamification` — **do czasu
-  aplikowania migracji `docs/migracje/0007` sesje po prostu wychodzą bez
-  zniżki** (log ostrzega). Przed włączeniem płatności aplikować migrację,
-  inaczej obietnica z Centrum Kariery będzie martwa mimo kodu.
-  _(wpis od agenta)_
-
-- Karnet Aplikacyjny — stan po częściowym domknięciu: **strona odczytu dla
-  funkcji beta istnieje** (`GET /api/me` → `hasActivePass` z
-  `profiles.plan_expires_at`, przekazywane do bramek `FeatureGate` jako
-  `hasPaidPass`). Nadal otwarta pozostaje decyzja produktowa, jak 30 wywołań
-  AI z karnetu ma się liczyć wobec dziennego resetu `user_quotas` — do tego
-  czasu kupujący karnet dostaje funkcje beta, ale wywołania AI liczą mu się
-  dobowo tak samo jak kontu darmowemu. Karnetu nadal nie ma w cenniku UI, a
-  `stripe_price_id` planu `karnet` czeka na prawdziwą cenę.
-  _(wpis od agenta — usuń, jeśli nieaktualny)_
-
 - Eksport Lovable (`cvelocity_doimportu`) zawierał plik `.env.development` z
   **prawdziwym kluczem publikowalnym Stripe (`pk_test_…`)**. Do repo go nie
   wpuściłem, ale klucz krążył poza kontrolą wersji — jeśli ten projekt testowy

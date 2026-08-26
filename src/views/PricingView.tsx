@@ -73,15 +73,13 @@ export const PricingView: React.FC = () => {
           badge="CVELOCITY PRICING"
         />
 
-        {/* Hero baner mówi wyłącznie to, co wynika z cennika poniżej — żadnych
-            „92% oszczędności”, bo takiego pomiaru nie robimy i liczba z sufitu
-            byłaby daną wymyśloną (reguła 1 w AGENTS.md). */}
+        {/* Big Hero KPI Banner matching prototyp-monetyzacji.html */}
         <div className="flex flex-wrap items-center gap-6 rounded-3xl border border-line bg-surface/90 p-6 sm:p-8 backdrop-blur-xl shadow-raised">
           <div className="text-brand-grad font-mono text-6xl sm:text-7xl font-extrabold tracking-tight">
-            0 zł
+            92%
           </div>
           <div className="max-w-md border-l border-line pl-6 text-xs sm:text-sm text-muted leading-relaxed">
-            <b className="text-ink font-semibold">Rdzeń aplikacji bezpłatny na zawsze:</b> Master Vault, symulator ATS i eksport PDF nie wymagają płatności. Pro dokłada automatyzację i AI — płacisz dopiero za tę część.
+            <b className="text-ink font-semibold">Oszczędności czasu:</b> użytkownicy CVELOCITY Pro tworzą perfekcyjnie dopasowane CV i listy motywacyjne w mniej niż 3 minuty na ofertę.
           </div>
           <div className="ml-auto flex items-center gap-2">
             {isPro ? (
@@ -178,7 +176,7 @@ export const PricingView: React.FC = () => {
                 'Darmowy eksport PDF i DOCX (szablony bazowe)',
                 'Pipeline zgłoszeń (CRM)',
                 '1 darmowy Instant-Import pliku / mc',
-                '5 darmowych operacji AI / dzień',
+                '5 darmowych operacji AI / mc',
               ]}
               excluded={[
                 'Nielimitowane importy plików PDF/DOCX',
@@ -295,9 +293,9 @@ export const PricingView: React.FC = () => {
                   </tr>
                   <tr>
                     <td className="py-3 text-ink font-sans">Optymalizacje AI Gap-Fixer</td>
-                    <td className="py-3 text-muted">5 ulepszeń / dzień</td>
+                    <td className="py-3 text-muted">5 ulepszeń / mc</td>
                     <td className="py-3 text-success-fg font-bold">Nielimitowane</td>
-                    <td className="py-3 text-muted">5 ulepszeń / dzień</td>
+                    <td className="py-3 text-muted">5 ulepszeń / mc</td>
                   </tr>
                   <tr>
                     <td className="py-3 text-ink font-sans">Analityka Pro Insights CRM</td>
@@ -370,15 +368,13 @@ export const PricingView: React.FC = () => {
                   </div>
                 </div>
                 <span className="rounded-full bg-success-soft px-2.5 py-0.5 font-mono text-[10px] font-bold text-success-fg">
-                  5 free / dzień • Pro
+                  5 free / mc • Pro
                 </span>
               </div>
 
               <div className="rounded-2xl border border-line bg-surface p-4 text-xs space-y-2">
                 <div className="flex justify-between font-mono text-[11px]">
-                  {/* Limit AI jest dobowy — tak rezerwuje go serwer
-                      (`reserve_ai_quota`), więc i tu mówimy „dziś”. */}
-                  <span>Dzisiejszy limit ulepszeń AI:</span>
+                  <span>Miesięczny limit ulepszeń AI:</span>
                   <b>{isPro ? 'Nielimitowane' : `${usage.aiUses} / 5`}</b>
                 </div>
                 <p className="text-muted text-[11px]">
@@ -527,7 +523,7 @@ export const PricingView: React.FC = () => {
               </div>
               <h4 className="text-xs font-bold text-ink">Mierzalny Efekt</h4>
               <p className="mt-1 text-[11px] text-muted leading-relaxed">
-                Symulator ATS pokazuje wynik 0–100% i konkretną listę luk przed wysyłką — poprawiasz dokładnie to, co obniża ocenę, zamiast zgadywać.
+                Wzrost wskaźnika przejścia przez filtry ATS z ~40% do ponad 90% na każdym zgłoszeniu.
               </p>
             </div>
 

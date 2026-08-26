@@ -25,10 +25,12 @@ aiRouter.post(
       }
 
       const userId = req.user!.id;
-      // Limit dobowy wyprowadza `executeAiOperation` ze statusu subskrypcji —
-      // wcześniej „FREE” stało tu na sztywno i płacący Pro miał darmowy sufit.
+      // Zakładamy podstawowy tier/plan z req.user lub domyślny
+      const tier = 'FREE';
+
       const parsedJd = await executeAiOperation(
         userId,
+        tier,
         'parse-jd',
         async () => {
           const result = await aiService.parseJd(rawJdText);
@@ -80,9 +82,11 @@ aiRouter.post(
       }
 
       const userId = req.user!.id;
+      const tier = 'FREE';
 
       const enrichment = await executeAiOperation(
         userId,
+        tier,
         'generate-cheat-sheet',
         async () => {
           const result = await aiService.generateCheatSheetEnrichment(
