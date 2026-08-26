@@ -20,9 +20,21 @@ meRouter.get('/me', requireAuth, async (req: Request, res: Response, next: NextF
     const supabase = getSupabase();
 
     const [profileResult, entitlements] = await Promise.all([
-      supabase.from('profiles').select('display_name, created_at').eq('id', userId).maybeSingle(),
+      supabase
+        .from('profiles')
+        .select('display_name, created_at, plan_expires_at')
+        .eq('id', userId)
+        .maybeSingle(),
       getEntitlements(userId),
     ]);
+
+    // Karnet Aplikacyjny żyje na `profiles.plan_expires_at`, poza statusem
+    // subskrypcji — jednorazowy zakup nie może wyglądać jak plan cykliczny.
+    // Bez tego pola kupiony karnet niczego nie rozstrzygałby mimo poprawnego
+    // zapisu z webhooka.
+    const expiresAt = profileResult.data?.plan_expires_at;
+    const hasActivePass =
+      typeof expiresAt === 'string' && new Date(expiresAt).getTime() > Date.now();
 
     res.json({
       success: true,
@@ -33,6 +45,7 @@ meRouter.get('/me', requireAuth, async (req: Request, res: Response, next: NextF
         createdAt: profileResult.data?.created_at ?? null,
       },
       ...entitlements,
+      hasActivePass,
     });
   } catch (err) {
     next(err);

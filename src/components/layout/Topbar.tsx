@@ -17,6 +17,7 @@ import { AdvisorButton } from '../ui/AdvisorButton';
 import { NAV_SECTIONS, NavTabId } from '../../lib/navigation';
 import { useEntitlements } from '../../store/useEntitlements';
 import { useAuth } from '../../context/AuthContext';
+import { api, ApiError } from '../../lib/apiClient';
 import { showToast } from '../../store/useToastStore';
 
 export interface TopbarProps {
@@ -72,12 +73,23 @@ export const Topbar: React.FC<TopbarProps> = ({
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
-  const handleOpenCustomerPortal = () => {
-    showToast('Panel klienta Stripe', {
-      message: 'Zarządzanie subskrypcją i faktury będą dostępne po podłączeniu kluczy Stripe.',
-      variant: 'info',
-    });
+  // Trasa istnieje od dawna (`POST /api/billing/portal-session`) — przycisk
+  // wcześniej tylko o niej opowiadał, zamiast ją wywoływać (reguła 5).
+  // Instalacja bez kluczy Stripe odpowie 501 i wtedy dopiero mówi o tym toast.
+  const handleOpenCustomerPortal = async () => {
     setIsDropdownOpen(false);
+    try {
+      const { url } = await api.post<{ url: string }>('/api/billing/portal-session', {});
+      window.location.assign(url);
+    } catch (err) {
+      showToast('Panel klienta Stripe', {
+        message:
+          err instanceof ApiError
+            ? err.message
+            : 'Nie udało się otworzyć panelu subskrypcji. Spróbuj ponownie za chwilę.',
+        variant: 'info',
+      });
+    }
   };
 
   return (

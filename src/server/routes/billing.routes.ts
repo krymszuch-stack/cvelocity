@@ -5,6 +5,7 @@ import { checkoutSessionSchema, type CheckoutSessionInput } from '../../types/co
 import { loadConfig } from '../config';
 import { getStripe } from '../stripeClient';
 import { getSupabase } from '../supabase';
+import { levelForXp, privilegesForLevel } from '../../lib/gamification';
 
 export const billingRouter = Router();
 
@@ -50,6 +51,58 @@ async function resolveCustomerId(userId: string, email?: string): Promise<string
 }
 
 /**
+ * Zniżka za rangę — ta sama definicja poziomu, której używa interfejs
+ * (`src/lib/gamification.ts`). Centrum Kariery obiecuje „zniżka nalicza się
+ * w kasie”, więc kasa musi ją znać; obietnica bez egzekucji byłaby dokładnie
+ * tą kontrolą wyłącznie w przeglądarce, przed którą przestrzega reguła 2.
+ */
+async function levelDiscountPercent(userId: string): Promise<number | null> {
+  try {
+    const { data, error } = await getSupabase()
+      .from('user_gamification')
+      .select('xp')
+      .eq('user_id', userId)
+      .maybeSingle();
+
+    if (error) throw new Error(error.message);
+    // Brak wiersza = nowe konto na poziomie 1 = brak zniżki. To normalny stan.
+    if (!data || typeof data.xp !== 'number') return null;
+
+    return privilegesForLevel(levelForXp(data.xp).level).discountPercent;
+  } catch (err) {
+    // Migracja `user_gamification` (docs/migracje/0007) może jeszcze nie być
+    // aplikowana. Zakup nie może przez to się wysypać — wychodzi bez zniżki,
+    // a ostrzeżenie zostaje w logu po stronie operatora.
+    console.warn('[billing] Nie udało się odczytać rangi użytkownika — sesja bez zniżki:', err);
+    return null;
+  }
+}
+
+/**
+ * Kupon Stripe dla zniżki procentowej, tworzony przy pierwszym użyciu.
+ *
+ * Deterministyczne `id` (`ranga-15`, `ranga-30`) czyni tworzenie idempotentnym:
+ * powtórny `create` z tym samym identyfikatorem kończy się błędem istnienia
+ * wiersza i wtedy po prostu używamy tego, który już jest. Kupony są jednorazowe
+ * (`duration: 'once'`), bo zniżka ma dotyczyć konkretnej transakcji, nie
+ * całej przyszłości subskrypcji.
+ */
+async function ensureLevelCouponId(percentOff: number): Promise<string> {
+  const couponId = `ranga-${percentOff}`;
+  try {
+    await getStripe().coupons.create({
+      id: couponId,
+      percent_off: percentOff,
+      duration: 'once',
+      name: `Zniżka za rangę −${percentOff}%`,
+    });
+  } catch {
+    // „Coupon already exists” jest tu oczekiwaną ścieżką, nie awarią.
+  }
+  return couponId;
+}
+
+/**
  * POST /api/billing/checkout-session
  *
  * Tworzy sesję płatności po stronie serwera i zwraca adres bramki. Przeglądarka
@@ -86,10 +139,19 @@ billingRouter.post(
       const customerId = await resolveCustomerId(userId, req.user!.email);
       const isRecurring = plan.interval !== 'one_time';
 
+      // Zniżka z rangi liczona przed utworzeniem sesji, żeby trafiła do
+      // podpisanego przez Stripe podsumowania — klient nie ma tu nic do
+      // powiedzenia, bo procent przychodzi z serwera, nie z żądania.
+      const discountPercent = await levelDiscountPercent(userId);
+      const discounts = discountPercent
+        ? [{ coupon: await ensureLevelCouponId(discountPercent) }]
+        : [];
+
       const session = await getStripe().checkout.sessions.create({
         customer: customerId,
         mode: isRecurring ? 'subscription' : 'payment',
         line_items: [{ price: plan.stripe_price_id, quantity: 1 }],
+        ...(discounts.length > 0 ? { discounts } : {}),
         success_url: `${config.APP_URL}/?checkout=success`,
         cancel_url: `${config.APP_URL}/?checkout=cancelled`,
         // Powtarzane w dwóch miejscach celowo: `checkout.session.completed`
