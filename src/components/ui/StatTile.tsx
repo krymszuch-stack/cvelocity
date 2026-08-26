@@ -1,6 +1,7 @@
 import React from 'react';
 import { LucideIcon, TrendingUp, TrendingDown } from 'lucide-react';
 import { motion } from 'motion/react';
+import { AnimatedNumber } from './AnimatedNumber';
 
 export interface StatTileProps {
   label: string;
@@ -40,9 +41,20 @@ export const StatTile: React.FC<StatTileProps> = ({
       </div>
 
       <div className="mt-2 flex items-baseline gap-2">
-        <span className="font-mono text-2xl font-black text-ink tracking-tight">
-          {value}
-        </span>
+        {/* Wartość liczbowa dostaje count-up (wzorzec „Count Up" — kafle KPI
+            w trackerze i profilerze), tekstowa zostaje jak była. tabular-nums
+            jest tu obowiązkowy: bez niego każda klatka odliczania drgała
+            szerokością, bo „1" zajmuje mniej miejsca niż „8". */}
+        {typeof value === 'number' ? (
+          <AnimatedNumber
+            value={value}
+            className="font-mono text-2xl font-black text-ink tracking-tight tabular-nums"
+          />
+        ) : (
+          <span className="font-mono text-2xl font-black text-ink tracking-tight">
+            {value}
+          </span>
+        )}
 
         {trend && (
           <span

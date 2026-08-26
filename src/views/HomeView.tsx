@@ -25,6 +25,7 @@ import {
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { Card } from '../components/ui/Card';
+import { AnimatedNumber } from '../components/ui/AnimatedNumber';
 import { TrustRow } from '../components/ui/TrustChip';
 import { QuickAtsCheck } from '../features/quickcheck/QuickAtsCheck';
 import { WelcomeWizard } from '../features/onboarding/WelcomeWizard';
@@ -435,9 +436,11 @@ export const HomeView: React.FC<HomeViewProps> = ({
             <div className="flex h-9 w-9 items-center justify-center rounded-xl border border-brand-500/20 bg-brand-500/10 text-brand-500">
               <Icon className="h-4 w-4" />
             </div>
-            {/* Liczba cyframi o stałej szerokości: przy przeliczaniu wartości
-                kafel nie drga, bo „1" zajmuje tyle samo miejsca co „8". */}
-            <div className="mt-3 font-mono text-3xl font-bold tabular-nums text-ink">{value}</div>
+            {/* Licznik count-up + cyfry o stałej szerokości: przy przeliczaniu
+                wartości kafel nie drga, bo „1" zajmuje tyle samo miejsca co „8". */}
+            <div className="mt-3 font-mono text-3xl font-bold tabular-nums text-ink">
+              <AnimatedNumber value={value} />
+            </div>
             <div className="mt-1 text-xs font-medium text-muted">{label}</div>
             <p className="mt-0.5 text-[11px] text-subtle">{caption}</p>
           </Card>
@@ -469,6 +472,7 @@ export const HomeView: React.FC<HomeViewProps> = ({
               <Card
                 variant="elevated"
                 hoverEffect
+                spotlight
                 className="group relative flex h-full flex-col justify-between p-5"
               >
                 <div>
