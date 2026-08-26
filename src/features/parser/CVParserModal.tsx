@@ -247,7 +247,7 @@ export const CVParserModal: React.FC<CVParserModalProps> = ({
           onClose={() => setIsCheckoutOpen(false)}
           product={{
             sku: 'price_cvelocity_pro_monthly',
-            title: 'CVELOCITY Pro (Nielimitowany Instant-Import)',
+            title: 'CVelocity Pro (Nielimitowany Instant-Import)',
             price: '49 zł',
             period: '/ miesiąc brutto',
             recurring: true,

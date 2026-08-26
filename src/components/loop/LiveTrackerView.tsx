@@ -224,7 +224,7 @@ export const LiveTrackerView: React.FC<LiveTrackerViewProps> = ({
             Koniec rozmowy?
           </span>
           <span className="text-[11px] text-muted">
-            Przejdź do natychmiastowego debriefu i wygeneruj e-mail z podziękowaniem (Follow-Up).
+            Przejdź do natychmiastowego debriefu i wygeneruj e-mail z podziękowaniem (follow-up).
           </span>
         </div>
 

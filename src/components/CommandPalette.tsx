@@ -128,7 +128,7 @@ export const CommandPalette: React.FC<CommandPaletteProps> = ({ onNavigate }) =>
         label: 'Przejdź do: Profil (dane, doświadczenie, import CV)',
         category: 'Nawigacja',
         icon: IconVault,
-        keywords: 'skarbiec vault umiejętności doświadczenie edukacja',
+        keywords: 'master vault umiejętności doświadczenie edukacja',
         action: () => onNavigate('profil'),
       },
       {
@@ -254,7 +254,7 @@ export const CommandPalette: React.FC<CommandPaletteProps> = ({ onNavigate }) =>
     for (const skill of skills) {
       base.push({
         id: `skill-${skill}`,
-        label: `Umiejętność ze Skarbca: ${skill}`,
+        label: `Umiejętność z Master Vault: ${skill}`,
         category: 'Umiejętności',
         icon: Wrench,
         action: () => onNavigate('profil'),

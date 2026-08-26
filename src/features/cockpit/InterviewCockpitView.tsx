@@ -123,7 +123,7 @@ export const InterviewCockpitView: React.FC<InterviewCockpitViewProps> = ({
 
   const navTabs = [
     { id: 'pitch' as CockpitSectionId, label: '1. Elevator Pitch', icon: Mic },
-    { id: 'bridging' as CockpitSectionId, label: '2. Skill Bridging', icon: Zap },
+    { id: 'bridging' as CockpitSectionId, label: '2. Most kompetencyjny', icon: Zap },
     { id: 'traps' as CockpitSectionId, label: '3. Trudne Pytania & Stawki', icon: ShieldCheck },
     { id: 'questions' as CockpitSectionId, label: '4. Twoje Pytania (Red Flags)', icon: AlertTriangle },
     { id: 'tracker' as CockpitSectionId, label: '5. Live Tracker & Pamiętnik', icon: Clock },
@@ -426,10 +426,10 @@ export const InterviewCockpitView: React.FC<InterviewCockpitViewProps> = ({
               </div>
               <div>
                 <h4 className="font-sans text-sm font-bold text-ink">
-                  Taktyka 2: Jak odpowiadać na luki w CV? (Skill Bridging)
+                  Taktyka 2: Jak odpowiadać na luki w CV? (Most kompetencyjny)
                 </h4>
                 <p className="mt-1 text-xs text-muted leading-relaxed">
-                  Rekruter pyta o technologię X, której nie znasz? <strong>Nigdy nie zgaduj ani nie udawaj.</strong> Zamiast tego zastosuj most transferowy:
+                  Rekruter pyta o technologię X, której nie znasz? <strong>Nigdy nie zgaduj ani nie udawaj.</strong> Zamiast tego zastosuj most kompetencyjny:
                   uczciwie przyznaj brak X, wykaż ekwiwalencję pojęciową z narzędziem Y, wskaż dowód wdrożenia z MasterVault i podaj realistyczny czas adaptacji (np. 3-5 dni).
                 </p>
               </div>
@@ -476,7 +476,7 @@ export const InterviewCockpitView: React.FC<InterviewCockpitViewProps> = ({
                   }
                 }}
               >
-                Generuj Most
+                Generuj most
               </Button>
             </div>
           </div>
@@ -713,7 +713,7 @@ export const InterviewCockpitView: React.FC<InterviewCockpitViewProps> = ({
           <div className="rounded-2xl border border-line bg-surface p-6 shadow-xs space-y-4">
             <div className="flex items-center justify-between">
               <h2 className="font-sans text-sm font-bold text-ink">
-                Historia Treningów (Mock Drill Mode)
+                Historia treningów (Mock Drill)
               </h2>
               <span className="text-xs text-muted">
                 Łącznie prób: <strong>{drillHistory.length}</strong>
@@ -724,7 +724,7 @@ export const InterviewCockpitView: React.FC<InterviewCockpitViewProps> = ({
               <EmptyState
                 icon={Trophy}
                 title="Brak historii treningów"
-                description="Nie przeprowadzono jeszcze żadnego szybkiego treningu w Mock Drill Mode. Wykonaj pierwszą 60-sekundową próbę, aby zobaczyć tu wyniki."
+                description="Nie przeprowadzono jeszcze żadnego szybkiego treningu w Mock Drill. Wykonaj pierwszą 60-sekundową próbę, aby zobaczyć tu wyniki."
                 action={
                   onOpenDrill ? (
                     <Button type="button" variant="primary" size="sm" onClick={onOpenDrill}>

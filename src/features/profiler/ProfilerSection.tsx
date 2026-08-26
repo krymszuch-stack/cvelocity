@@ -55,7 +55,7 @@ export const ProfilerSection: React.FC<ProfilerSectionProps> = ({
     <div className={`space-y-6 ${className}`}>
       <PageHeader
         title="Filtry, Uprawnienia & Dealbreakery"
-        description="Skonfiguruj twarde kryteria selekcji ofert. Silnik dopasowania CVELOCITY automatycznie odrzuca ogłoszenia niespełniające Twoich progów minimalnych."
+        description="Skonfiguruj twarde kryteria selekcji ofert. Silnik dopasowania CVelocity automatycznie odrzuca ogłoszenia niespełniające Twoich progów minimalnych."
         badge="ATS Guardrails"
       />
 

@@ -426,7 +426,7 @@ export const LandingView: React.FC<LandingViewProps> = ({ onNavigate, atsSlot })
             onClick={() => onNavigate('aplikuj')}
             className={`${SURFACE} group cursor-pointer p-6 text-left md:col-span-2 ${FOCUS_RING}`}
           >
-            <BentoHeader label="Analiza ATS" note="przykład" />
+            <BentoHeader label="Audyt ATS" note="przykład" />
             <div className="mt-5 flex items-end justify-between">
               <div>
                 <div className="font-mono text-5xl font-bold leading-none text-slate-50">
@@ -656,7 +656,7 @@ export const LandingView: React.FC<LandingViewProps> = ({ onNavigate, atsSlot })
             <p className="mt-1 text-sm text-slate-400">bez karty, bez limitu czasu</p>
             <ul className="mb-6 mt-5 space-y-3 text-sm text-slate-200">
               {[
-                'Analiza ATS z wynikiem punktowym',
+                'Audyt ATS z wynikiem punktowym',
                 'Profil i podgląd A4 z wydrukiem',
                 'Szablony Modern i Minimal',
               ].map((t) => (

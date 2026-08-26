@@ -152,7 +152,7 @@ export const GeminiAdvisorModal: React.FC<GeminiAdvisorModalProps> = ({
           </Button>
         </div>
         {/* Messages Scroll Area */}
-        <div className="flex-1 overflow-y-auto space-y-4 p-2 pr-3" role="log" aria-live="polite" aria-label="Historia rozmowy z Doradcą AI">
+        <div className="flex-1 overflow-y-auto space-y-4 p-2 pr-3" role="log" aria-live="polite" aria-label="Historia rozmowy z Doradcą Kariery">
           <AnimatePresence initial={false}>
             {messages.map((m) => (
               <motion.div
@@ -230,7 +230,7 @@ export const GeminiAdvisorModal: React.FC<GeminiAdvisorModalProps> = ({
             onChange={(e) => setInputVal(e.target.value)}
             onKeyDown={(e) => e.key === 'Enter' && handleSend()}
             placeholder="Zadaj pytanie doradcy (np. jak uzasadnić przerwę w karierze)..."
-            aria-label="Pytanie do Doradcy AI"
+            aria-label="Pytanie do Doradcy Kariery"
             className="flex-1 rounded-2xl border border-line bg-sunken px-4 py-2.5 text-xs text-ink placeholder:text-subtle focus:border-brand-500/60 focus:outline-none focus:ring-2 focus:ring-brand-500/20"
           />
 

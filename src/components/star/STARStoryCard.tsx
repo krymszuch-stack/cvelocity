@@ -100,7 +100,7 @@ export const STARStoryCard: React.FC<STARStoryCardProps> = ({
         {/* S (Situation) */}
         <div className="rounded-xl border border-line/70 bg-surface p-3 space-y-1">
           <span className="font-mono text-[10px] font-extrabold text-muted uppercase tracking-wider block">
-            S (Situation • Kontekst)
+            S — Sytuacja
           </span>
           <p className="text-xs text-ink/90 leading-relaxed">{story.situation}</p>
         </div>
@@ -108,7 +108,7 @@ export const STARStoryCard: React.FC<STARStoryCardProps> = ({
         {/* T (Task) */}
         <div className="rounded-xl border border-line/70 bg-surface p-3 space-y-1">
           <span className="font-mono text-[10px] font-extrabold text-brand-600 uppercase tracking-wider block">
-            T (Task • Wyzwanie)
+            T — Zadanie
           </span>
           <p className="text-xs text-ink/90 leading-relaxed">{story.task}</p>
         </div>
@@ -116,7 +116,7 @@ export const STARStoryCard: React.FC<STARStoryCardProps> = ({
         {/* A (Action) */}
         <div className="rounded-xl border border-line/70 bg-surface p-3 space-y-1">
           <span className="font-mono text-[10px] font-extrabold text-brand-700 uppercase tracking-wider block">
-            A (Action • Działanie)
+            A — Działanie
           </span>
           <p className="text-xs text-ink/90 leading-relaxed">{story.action}</p>
         </div>
@@ -124,7 +124,7 @@ export const STARStoryCard: React.FC<STARStoryCardProps> = ({
         {/* R (Result) */}
         <div className="rounded-xl border border-success/30 bg-success-soft/40 p-3 space-y-1">
           <span className="font-mono text-[10px] font-extrabold text-success-fg uppercase tracking-wider block">
-            R (Result • Rezultat)
+            R — Rezultat
           </span>
           <p className="text-xs font-semibold text-success-fg leading-relaxed">{story.result}</p>
         </div>

@@ -123,7 +123,7 @@ export const Topbar: React.FC<TopbarProps> = ({
 
         <div className="flex items-center gap-2">
           <span className="rounded-lg border border-line bg-elevated px-2.5 py-1 font-mono text-xs font-semibold text-ink">
-            {TAB_NAMES[activeTab] || 'CVELOCITY'}
+            {TAB_NAMES[activeTab] || 'CVelocity'}
           </span>
         </div>
       </div>
@@ -242,7 +242,7 @@ export const Topbar: React.FC<TopbarProps> = ({
                         isPro ? 'bg-brand-50 text-brand-fg border border-brand-200' : 'bg-sunken text-muted'
                       }`}
                     >
-                      Plan: {isPro ? 'CVELOCITY Pro' : 'CVELOCITY Free'}
+                      Plan: {isPro ? 'CVelocity Pro' : 'CVelocity Free'}
                     </span>
                   </div>
                 </div>

@@ -72,7 +72,7 @@ export const CoverLetterView: React.FC<CoverLetterViewProps> = ({
           <div>
             <div className="flex items-center gap-2">
               <h3 className="text-xs font-bold uppercase tracking-wider text-ink">
-                Anti-Template Cover Letter (0-Token Engine)
+                List motywacyjny bez szablonu (0 tokenów)
               </h3>
               {vault && jobOffer && (
                 <span className="rounded-full bg-brand-100 px-2 py-0.5 text-[10px] font-bold text-brand-700 dark:bg-brand-900/40 dark:text-brand-300">

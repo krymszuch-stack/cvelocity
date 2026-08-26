@@ -45,7 +45,7 @@ export const PricingView: React.FC = () => {
   const handleOpenProCheckout = () => {
     setSelectedProduct({
       sku: billingCycle === 'monthly' ? 'price_cvelocity_pro_monthly' : 'price_cvelocity_pro_annual',
-      title: billingCycle === 'monthly' ? 'CVELOCITY Pro (Miesięczny)' : 'CVELOCITY Pro (Roczny -20%)',
+      title: billingCycle === 'monthly' ? 'CVelocity Pro (Miesięczny)' : 'CVelocity Pro (Roczny -20%)',
       price: billingCycle === 'monthly' ? '49 zł' : '39 zł',
       period: '/ miesiąc brutto',
       recurring: true,
@@ -72,7 +72,7 @@ export const PricingView: React.FC = () => {
       <div className="space-y-4">
         <PageHeader
           title="Przejrzysty Cennik & Monetyzacja Win-Win"
-          description="Rdzeń aplikacji (edycja CV, audytor ATS, eksport PDF) jest w 100% bezpłatny. Płacisz wyłącznie za zaoszczędzony czas, automatyzację i zaawansowane funkcje AI."
+          description="Rdzeń aplikacji (edycja CV, audyt ATS, eksport PDF) jest w 100% bezpłatny. Płacisz wyłącznie za zaoszczędzony czas, automatyzację i zaawansowane funkcje AI."
           badge="CVELOCITY PRICING"
         />
 
@@ -109,7 +109,7 @@ export const PricingView: React.FC = () => {
                 icon={IconSparkles as any}
                 onClick={handleOpenProCheckout}
               >
-                Wypróbuj Pro przez 30 dni
+                Rozpocznij 30 dni za darmo
               </Button>
             )}
           </div>
@@ -179,7 +179,7 @@ export const PricingView: React.FC = () => {
           <div className="grid grid-cols-1 gap-6 md:grid-cols-3">
             {/* FREE PLAN */}
             <PricingCard
-              title="CVELOCITY Free"
+              title="CVelocity Free"
               price="0"
               currency="zł"
               period="/ na zawsze"
@@ -187,9 +187,9 @@ export const PricingView: React.FC = () => {
               features={[
                 'Pełny edytor Master Vault',
                 'Ręczny parser i wklejanie tekstu CV',
-                'Symulator ATS & Score Ring 0-100%',
+                'Audyt ATS & Score Ring 0–100%',
                 'Darmowy eksport PDF i DOCX (szablony bazowe)',
-                'Pipeline zgłoszeń (CRM)',
+                'Pipeline aplikacji',
                 // Liczby z useEntitlements — te same, które egzekwuje licznik;
                 // wcześniej tu siedziała osobna kopia i rozjeżdżała się z nią.
                 `${FREE_MONTHLY_IMPORTS} darmowy Instant-Import pliku / mc`,
@@ -198,19 +198,19 @@ export const PricingView: React.FC = () => {
               excluded={[
                 'Nielimitowane importy plików PDF/DOCX',
                 'Nielimitowany asystent AI Gap-Fixer',
-                'Szablony Executive & Creative',
+                'Szablony Executive i Creative',
                 'Analityka Pro Insights',
               ]}
               // Brak ścieżki downgrade — karta jest nieaktywna bezwarunkowo; etykieta opisuje
               // stan planu, a kliknięcie celowo nic nie robi.
               disabled={true}
-              ctaLabel={!isPro ? 'Twój obecny plan' : 'Plan Podstawowy'}
+              ctaLabel={!isPro ? 'Twój obecny plan' : 'plan Free'}
               onSelect={() => {}}
             />
 
             {/* PRO PLAN */}
             <PricingCard
-              title="CVELOCITY Pro"
+              title="CVelocity Pro"
               price={billingCycle === 'monthly' ? '49' : '39'}
               currency="zł"
               period="/ miesiąc brutto"
@@ -245,7 +245,7 @@ export const PricingView: React.FC = () => {
               description="Dla osób poszukujących wyłącznie unikalnego szablonu wizualnego bez abonamentu."
               features={[
                 'Dożywotni dostęp do wybranego szablonu',
-                'Szablony Executive / Creative',
+                'Szablony Executive i Creative',
                 'Edycja WYSIWYG w czasie rzeczywistym',
                 'Eksport PDF & DOCX w wysokiej rozdzielczości',
                 'Brak subskrypcji i cyklicznych opłat',
@@ -301,7 +301,7 @@ export const PricingView: React.FC = () => {
                   </tr>
                   <tr>
                     <td className="py-3 text-ink font-sans">Eksport PDF / DOCX</td>
-                    <td className="py-3 text-success-fg">Darmowy (Modern/Minimal)</td>
+                    <td className="py-3 text-success-fg">Darmowy (Modern i Minimal)</td>
                     <td className="py-3 text-success-fg">Wszystkie szablony</td>
                     <td className="py-3 text-success-fg">Zakupiony szablon</td>
                   </tr>
@@ -318,7 +318,7 @@ export const PricingView: React.FC = () => {
                     <td className="py-3 text-muted">5 ulepszeń / dzień</td>
                   </tr>
                   <tr>
-                    <td className="py-3 text-ink font-sans">Analityka Pro Insights CRM</td>
+                    <td className="py-3 text-ink font-sans">Analityka Pro Insights</td>
                     <td className="py-3 text-muted">Podstawowa</td>
                     <td className="py-3 text-success-fg font-bold">Planowana (trendy, prognozy)</td>
                     <td className="py-3 text-muted">Podstawowa</td>
@@ -425,7 +425,7 @@ export const PricingView: React.FC = () => {
                   </div>
                   <div>
                     <h3 className="text-sm font-bold text-ink">3. Marketplace Szablonów A4</h3>
-                    <p className="text-xs text-muted">Modern/Minimal free • Executive/Creative 19 zł</p>
+                    <p className="text-xs text-muted">Modern i Minimal free • Executive i Creative 19 zł</p>
                   </div>
                 </div>
                 <span className="rounded-full bg-sunken px-2.5 py-0.5 font-mono text-[10px] font-bold text-muted">
@@ -435,11 +435,11 @@ export const PricingView: React.FC = () => {
 
               <div className="grid grid-cols-2 gap-2 text-center text-xs font-mono">
                 <div className="rounded-xl border border-line bg-surface p-3">
-                  <span className="text-success-fg font-bold">Modern & Minimal</span>
+                  <span className="text-success-fg font-bold">Modern i Minimal</span>
                   <div className="text-[10px] text-muted">0 zł na zawsze</div>
                 </div>
                 <div className="rounded-xl border border-line bg-surface p-3">
-                  <span className="text-brand-fg font-bold">Executive & Creative</span>
+                  <span className="text-brand-fg font-bold">Executive i Creative</span>
                   <div className="text-[10px] text-muted">19 zł / sztuka</div>
                 </div>
               </div>
@@ -464,12 +464,12 @@ export const PricingView: React.FC = () => {
                     <IconRadar className="h-5 w-5" />
                   </div>
                   <div>
-                    <h3 className="text-sm font-bold text-ink">4. Pro Insights CRM</h3>
+                    <h3 className="text-sm font-bold text-ink">4. Pro Insights</h3>
                     <p className="text-xs text-muted">Trendy odpowiedzi rekruterów i analityka</p>
                   </div>
                 </div>
                 <span className="rounded-full bg-brand-50 px-2.5 py-0.5 font-mono text-[10px] font-bold text-brand-fg">
-                  Trial 30 dni
+                  30 dni za darmo
                 </span>
               </div>
 
@@ -511,13 +511,13 @@ export const PricingView: React.FC = () => {
               </LockCover>
 
               <div className="flex items-center justify-between text-xs">
-                <span className="text-muted">Okres próbny: <b>30 dni za 0 zł</b></span>
+                <span className="text-muted">Okres próbny: <b>30 dni za darmo</b></span>
                 <Button
                   variant="secondary"
                   size="sm"
                   onClick={handleOpenProCheckout}
                 >
-                  Aktywuj trial
+                  Zobacz plan Pro
                 </Button>
               </div>
             </div>
@@ -551,7 +551,7 @@ export const PricingView: React.FC = () => {
               </div>
               <h4 className="text-xs font-bold text-ink">Mierzalny Efekt</h4>
               <p className="mt-1 text-[11px] text-muted leading-relaxed">
-                Symulator ATS pokazuje wynik 0–100% i konkretną listę luk przed wysyłką — poprawiasz dokładnie to, co obniża ocenę, zamiast zgadywać.
+                Audyt ATS pokazuje wynik 0–100% i konkretną listę luk przed wysyłką — poprawiasz dokładnie to, co obniża ocenę, zamiast zgadywać.
               </p>
             </div>
 

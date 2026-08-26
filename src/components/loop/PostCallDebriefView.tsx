@@ -135,7 +135,7 @@ export const PostCallDebriefView: React.FC<PostCallDebriefViewProps> = ({
       await navigator.clipboard.writeText(generatedEmail);
       setCopied(true);
       showToast('Skopiowano treść e-maila do schowka', {
-        message: `Gotowy follow-up e-mail do ${session.companyName}`,
+        message: `Gotowy e-mail follow-up do ${session.companyName}`,
         variant: 'success',
       });
       setTimeout(() => setCopied(false), 2000);
@@ -200,7 +200,7 @@ export const PostCallDebriefView: React.FC<PostCallDebriefViewProps> = ({
 
         <div className="rounded-2xl border border-line bg-elevated p-4 space-y-2">
           <label className="font-mono text-xs font-bold text-ink uppercase tracking-wider block">
-            Temat do doprecyzowania w Follow-up:
+            Temat do doprecyzowania w follow-up:
           </label>
           <input
             type="text"
@@ -276,7 +276,7 @@ export const PostCallDebriefView: React.FC<PostCallDebriefViewProps> = ({
           <div className="flex items-center gap-2">
             <Mail className="h-4 w-4 text-brand-600" />
             <span className="font-mono text-xs font-bold text-ink uppercase tracking-wider">
-              Wygenerowany Follow-up e-mail (Podziękowanie):
+              Wygenerowany e-mail follow-up (Podziękowanie):
             </span>
           </div>
 

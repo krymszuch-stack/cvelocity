@@ -363,28 +363,28 @@ export const ReactFloatingPanel: React.FC<ReactFloatingPanelProps> = ({
               >
                 <div>
                   <span className="font-mono text-[9px] font-extrabold uppercase text-muted block">
-                    [S] Situation
+                    S — Sytuacja
                   </span>
                   <p className="text-ink/90">{currentStory.situation}</p>
                 </div>
 
                 <div>
                   <span className="font-mono text-[9px] font-extrabold uppercase text-brand-600 block">
-                    [T] Task
+                    T — Zadanie
                   </span>
                   <p className="text-ink/90">{currentStory.task}</p>
                 </div>
 
                 <div>
                   <span className="font-mono text-[9px] font-extrabold uppercase text-brand-700 block">
-                    [A] Action
+                    A — Działanie
                   </span>
                   <p className="text-ink/90">{currentStory.action}</p>
                 </div>
 
                 <div className="rounded-lg bg-success-soft/50 p-2 border border-success/30">
                   <span className="font-mono text-[9px] font-extrabold uppercase text-success-fg block">
-                    [R] Result & Metryki
+                    R — Rezultat
                   </span>
                   <p className="font-semibold text-success-fg">{currentStory.result}</p>
                 </div>

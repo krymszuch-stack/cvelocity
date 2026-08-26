@@ -135,7 +135,7 @@ export const InterviewPanel: React.FC<InterviewPanelProps> = ({
       <div className="flex flex-wrap items-baseline justify-between gap-2">
         <div>
           <p className="font-mono text-[11px] font-bold uppercase tracking-[0.18em] text-brand-fg">
-            Zasobnik Rozmowy
+            Live Tracker
           </p>
           <h3 className="mt-1 text-base font-black tracking-tight text-ink">
             {selected.position} • {selected.company}
