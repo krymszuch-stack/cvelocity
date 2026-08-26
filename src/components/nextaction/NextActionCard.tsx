@@ -13,6 +13,7 @@ import {
 import { NextAction, NextActionType } from '../../lib/nextAction';
 import { NavTabId } from '../../lib/navigation';
 import { Button } from '../ui/Button';
+import { useAppStore } from '../../store/useAppStore';
 
 /**
  * Jedna karta z jedną rekomendacją — oś narracji całego interfejsu.
@@ -52,6 +53,14 @@ const ICONS: Record<NextActionType, React.ElementType> = {
  */
 const URGENT: ReadonlySet<NextActionType> = new Set(['pre_call_brief', 'send_followup']);
 
+/** Generyczne „Przejdź" nie mówiło, dokąd kliknięcie zawiedzie użytkownika. */
+const TAB_LABELS: Partial<Record<NavTabId, string>> = {
+  profil: 'Profil',
+  aplikuj: 'Aplikuj',
+  trenuj: 'Trenuj',
+  pipeline: 'Pipeline',
+};
+
 export const NextActionCard: React.FC<NextActionCardProps> = ({
   action,
   onNavigate,
@@ -59,6 +68,16 @@ export const NextActionCard: React.FC<NextActionCardProps> = ({
 }) => {
   const Icon = ICONS[action.actionType];
   const isUrgent = URGENT.has(action.actionType);
+  const { setHighlightedApplicationId } = useAppStore();
+
+  const handleGo = () => {
+    // Rekomendacja wskazuje konkretną aplikację — przekaż ją dalej, żeby
+    // Pipeline podświetlił właściwy wiersz, a nie tylko otworzył zakładkę.
+    if (action.deepLink.applicationId) {
+      setHighlightedApplicationId(action.deepLink.applicationId);
+    }
+    onNavigate(action.deepLink.tab);
+  };
 
   return (
     <motion.section
@@ -106,10 +125,12 @@ export const NextActionCard: React.FC<NextActionCardProps> = ({
           variant="primary"
           icon={ArrowRight}
           iconPosition="right"
-          onClick={() => onNavigate(action.deepLink.tab)}
+          onClick={handleGo}
           className="shrink-0"
         >
-          Przejdź
+          {TAB_LABELS[action.deepLink.tab]
+            ? `Przejdź do ${TAB_LABELS[action.deepLink.tab]}`
+            : 'Przejdź'}
         </Button>
       </div>
     </motion.section>

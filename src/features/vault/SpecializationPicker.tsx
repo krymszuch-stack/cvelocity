@@ -90,7 +90,10 @@ export const SpecializationPicker: React.FC<SpecializationPickerProps> = ({
         label: 'Typowe uprawnienia w tym zawodzie',
         hint: 'Wpisz wyłącznie te, które posiadasz — to są dane weryfikowalne.',
         items: suggestions.certifications,
-        target: 'hardSkills',
+        // Certyfikaty lądują w kolekcji certyfikatów, nie w umiejętnościach
+        // twardych: knock-outy i kryteria formalne czytają certifications,
+        // więc wpis w hardSkills nigdy nie zaspokoiłby wymogu „posiadam SEP".
+        target: 'certifications',
       },
     ];
 
@@ -102,12 +105,30 @@ export const SpecializationPicker: React.FC<SpecializationPickerProps> = ({
       ...skillsMatrix.hardSkills,
       ...skillsMatrix.toolsAndTech,
       ...skillsMatrix.softSkills,
+      ...skillsMatrix.certifications.map((cert) => cert.name),
     ];
     return new Set(all.map((entry) => entry.toLowerCase().trim()));
   }, [skillsMatrix]);
 
-  const addSuggestion = (value: string, target: SuggestionTarget) => {
-    if (alreadyAdded.has(value.toLowerCase().trim())) return;
+  const addSuggestion = (value: string, target: SuggestionGroup['target']) => {
+    const key = value.toLowerCase().trim();
+    if (alreadyAdded.has(key)) return;
+
+    if (target === 'certifications') {
+      // Identyfikator wynika z nazwy, nie z zegara: duplikaty i tak blokuje
+      // `alreadyAdded` (klucz = nazwa), więc deterministyczne id jest bezpieczne,
+      // a funkcja pozostaje czysta dla reguły impure-render.
+      const entry: Certification = {
+        id: `cert-${key.replace(/\s+/g, '-')}`,
+        name: value,
+        issuer: '',
+      };
+      onUpdateSkillsMatrix({
+        ...skillsMatrix,
+        certifications: [...skillsMatrix.certifications, entry],
+      });
+      return;
+    }
 
     onUpdateSkillsMatrix({
       ...skillsMatrix,
