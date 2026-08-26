@@ -21,11 +21,18 @@ export type PitchVariant = '1-liner' | '30s' | '90s';
 
 export interface EditableTextWithTimerProps {
   pitchData: ElevatorPitchOutput;
+  /**
+   * Czy tekst powstał z danych użytkownika (metryki/podsumowanie/umiejętności),
+   * czy z szablonów zastępczych. Decyduje o plakietce proweniencji — bez tego
+   * „100% Vault Verified" świeciło też przy pustym profilu.
+   */
+  verifiedFromVault?: boolean;
   className?: string;
 }
 
 export const EditableTextWithTimer: React.FC<EditableTextWithTimerProps> = ({
   pitchData,
+  verifiedFromVault = true,
   className = '',
 }) => {
   const [activeVariant, setActiveVariant] = useState<PitchVariant>('30s');
@@ -100,7 +107,12 @@ export const EditableTextWithTimer: React.FC<EditableTextWithTimerProps> = ({
       });
       setTimeout(() => setCopied(false), 2000);
     } catch {
-      // Fallback
+      // Schowek potrafi odmówić (uprawnienia, http, ukryta karta) — milczenie
+      // wyglądałoby jak skopiowanie.
+      showToast('Nie udało się skopiować', {
+        message: 'Zaznacz tekst pitcha i skopiuj go ręcznie.',
+        variant: 'error',
+      });
     }
   };
 
@@ -145,10 +157,16 @@ export const EditableTextWithTimer: React.FC<EditableTextWithTimerProps> = ({
         </div>
 
         <div className="flex items-center gap-2">
-          <Chip variant="brand" size="sm">
-            <ShieldCheck className="h-3 w-3 mr-1" />
-            100% Vault Verified
-          </Chip>
+          {verifiedFromVault ? (
+            <Chip variant="brand" size="sm">
+              <ShieldCheck className="h-3 w-3 mr-1" />
+              Na bazie Twojego MasterVault
+            </Chip>
+          ) : (
+            <Chip variant="neutral" size="sm">
+              Szablon zastępczy — uzupełnij profil, aby spersonalizować
+            </Chip>
+          )}
         </div>
       </div>
 

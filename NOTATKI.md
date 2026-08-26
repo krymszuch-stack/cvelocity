@@ -102,13 +102,6 @@
   samego zadania.
   _(wpis od agenta — usuń, jeśli nieaktualny)_
 
-- Martwy łańcuch propa `onOpenAdvisor`: `ExperienceSection` (`:22, :29, :225`)
-  przyjmuje go i przekazuje do `AchievementEditor`, gdzie jest destrukturyzowany
-  (`:19`) i **nigdy nieużyty**. Nie usunąłem przy okazji usuwania fałszywego
-  przycisku „AI", bo skasowanie propa kaskaduje w górę przez dwa komponenty
-  i ich wywołania — to osobna, mechaniczna zmiana (reguła 5).
-  _(wpis od agenta — usuń, jeśli nieaktualny)_
-
 - Silnik „następnego kroku" (`src/lib/nextAction.ts`) liczy się w przeglądarce,
   choć raport strategiczny przewiduje dla niego endpoint `GET /api/next-action`.
   Powód jest w kodzie, nie w wygodzie: `AuthContext` zakłada wyłącznie profil
@@ -143,6 +136,22 @@ Format wpisu:
 - ~~Treść uwagi~~
   - **Agent RRRR-MM-DD:** co zostało zrobione albo dlaczego zdecydowano inaczej. PR #NN.
 -->
+
+- ~~Martwy łańcuch propa `onOpenAdvisor`: `ExperienceSection` przyjmuje go i
+  przekazuje do `AchievementEditor`, gdzie jest destrukturyzowany i nigdy
+  nieużyty.~~
+  - **opencode 2026-08-26:** zdjęty cały martwy odcinek — prop usunięty z
+    `AchievementEditor`, `ExperienceSection`, `MasterVaultEditor`,
+    `ProfileSection` (razem z typem `renderEditor`) i `JobMatcher`, wraz z
+    miejscami przekazania w `App.tsx`. Żywe konsumenty (`Shell` → `Topbar`,
+    `Sidebar`, `HomeView`) zostawiono nietknięte. Przy okazji sprzątania
+    placeholderów usunięto też debugowy `debugDocx.test.ts`, nieużywany
+    `public/oathcry-logo.png`, szkielet symulacji walidatora z
+    `ConsistencyGuardView` oraz katalog `src/skills/` (importowany wyłącznie
+    przez testy) razem z testami czysto skillowymi; testy silników
+    (`drillEngine`, `elevatorPitchEngine`, `interviewLoopEngine`,
+    `skillBridgeEngine`, `consistencyGuard`) zachowały pokrycie po odcięciu
+    bloków rejestracji skilli.
 
 - ~~Wielowariantowe hooki, przywitania i eliminacja powtarzalności w generatorach (Pitch, Cover Letter, Follow-up).~~
   - **Antigravity 2026-08-24:** stworzono moduł `phrasingVariations.ts` z bankiem dynamicznych hooków, wstępów i CTA dla autoprezentacji (1-liner, 30s, 90s), listu motywacyjnego, podziękowań follow-up oraz renderera `ConsistencyGuard`. Dodano testy w `phrasingVariations.test.ts`.

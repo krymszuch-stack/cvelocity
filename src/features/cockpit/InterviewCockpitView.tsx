@@ -17,7 +17,7 @@ import { PageHeader } from '../../components/ui/PageHeader';
 import { Tabs } from '../../components/ui/Tabs';
 import { Button } from '../../components/ui/Button';
 import { EmptyState } from '../../components/ui/EmptyState';
-import { generateElevatorPitch } from '../../lib/elevatorPitchEngine';
+import { generateElevatorPitch, hasVaultEvidence } from '../../lib/elevatorPitchEngine';
 import { findOrGenerateBridge, getCommonSkillsList } from '../../lib/skillBridgeEngine';
 import {
   CockpitSectionId,
@@ -79,6 +79,9 @@ export const InterviewCockpitView: React.FC<InterviewCockpitViewProps> = ({
   ]);
 
   const pitchData = generateElevatorPitch(vault);
+  // Etykieta proweniencji: generator zawsze zwraca tekst, więc bez tego
+  // sprawdzenia obiecywał fakty nawet przy pustym profilu (reguła 1).
+  const pitchFromVault = hasVaultEvidence(vault);
   const currentPitchText = pitchData[pitchVariant] || '';
   const wordCount = currentPitchText.trim().split(/\s+/).filter(Boolean).length;
   const estimatedSeconds = Math.round((wordCount / 130) * 60);
@@ -393,8 +396,17 @@ export const InterviewCockpitView: React.FC<InterviewCockpitViewProps> = ({
 
             <div className="flex items-center justify-between pt-2">
               <div className="flex items-center gap-2 text-xs text-muted">
-                <ShieldCheck className="h-4 w-4 text-success-fg" />
-                <span>Wygenerowano w 100% z faktów i metryk MasterVault</span>
+                {pitchFromVault ? (
+                  <>
+                    <ShieldCheck className="h-4 w-4 text-success-fg" />
+                    <span>Wygenerowano z faktów i metryk MasterVault</span>
+                  </>
+                ) : (
+                  <>
+                    <AlertTriangle className="h-4 w-4 text-warning-fg" />
+                    <span>Szablon zastępczy — uzupełnij profil w PROFIL, aby spersonalizować</span>
+                  </>
+                )}
               </div>
               <Button
                 type="button"

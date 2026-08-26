@@ -30,7 +30,7 @@ export const DealbreakerList: React.FC<DealbreakerListProps> = ({
           Krytyczne Braki & Dealbreakery ({missingItems.length})
         </h4>
         <span className="font-mono text-[10px] text-muted">
-          Wpływają na wstępną selekcję parsera
+          Trafiają na listę braków przy analizie oferty
         </span>
       </div>
 
@@ -38,7 +38,7 @@ export const DealbreakerList: React.FC<DealbreakerListProps> = ({
         <div className="flex items-center gap-3 rounded-2xl border border-success/30 bg-success-soft p-4 text-xs font-semibold text-success-fg">
           <CheckCircle2 className="h-5 w-5 shrink-0" />
           <span>
-            Wspaniale! Twój profil w Master Vault zawiera wszystkie kluczowe wymagania twarde i formalne z tego ogłoszenia.
+            Wspaniale! Twój profil w Master Vault zawiera wszystkie kluczowe wymagania twarde z tego ogłoszenia.
           </span>
         </div>
       ) : (

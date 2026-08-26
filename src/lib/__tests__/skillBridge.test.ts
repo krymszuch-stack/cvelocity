@@ -5,8 +5,6 @@ import {
 } from '../skillBridgeEngine';
 import { MasterVault } from '../../types';
 import { createEmptyVault } from '../sampleVault';
-import { SkillBridgeMatrix, invokeSkillBridgeMatrix } from '../../skills/skill-bridge-matrix';
-import { ag } from '../../skills/liveHudSkill';
 
 describe('Skill Bridge Matrix Engine (skill-bridge-matrix-v1)', () => {
   const createMockVault = (): MasterVault => {
@@ -84,24 +82,6 @@ describe('Skill Bridge Matrix Engine (skill-bridge-matrix-v1)', () => {
       expect(bridges.some((b) => b.missingSkill === 'Kafka')).toBe(true);
       expect(bridges.some((b) => b.missingSkill === 'AWS')).toBe(true);
       expect(bridges.some((b) => b.missingSkill === 'Kubernetes')).toBe(true);
-    });
-  });
-
-  describe('Rejestracja i wywołanie skilla', () => {
-    it('posiada poprawne metadane skilla skill-bridge-matrix-v1', () => {
-      expect(SkillBridgeMatrix.id).toBe('skill-bridge-matrix-v1');
-      expect(SkillBridgeMatrix.dependencies).toContain('gap-analysis');
-      expect(SkillBridgeMatrix.dependencies).toContain('master-vault');
-      expect(SkillBridgeMatrix.activation.hotkey).toBe('Ctrl+B');
-    });
-
-    it('jest poprawnie zarejestrowany w rejestrze ag i obsługuje invokeSkillBridgeMatrix', () => {
-      const registered = ag.getSkill('skill-bridge-matrix-v1');
-      expect(registered).toBeDefined();
-
-      const vault = createMockVault();
-      const result = invokeSkillBridgeMatrix({ missingSkill: 'Kafka', vault });
-      expect(result).toBeDefined();
     });
   });
 });

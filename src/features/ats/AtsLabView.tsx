@@ -19,6 +19,7 @@ import {
 } from 'lucide-react';
 import { MasterVault } from '../../types';
 import { simulateMultiEngineATS, AtsEngineResult } from '../../lib/atsSimulator';
+import { formatDecimalPl } from '../../lib/pluralFormat';
 import { buildAtsTelemetryReport, STUFFING_DENSITY_THRESHOLD } from '../../lib/atsScorer';
 import { ScoreRing } from '../../components/ui/ScoreRing';
 import { StorageKeys, readJson, writeJson } from '../../lib/storage';
@@ -139,7 +140,12 @@ export const AtsLabView: React.FC<AtsLabViewProps> = ({
         <div className="grid grid-cols-1 gap-8 lg:grid-cols-12 items-center">
           {/* Radialny wskaźnik mediany — ScoreRing, jedno źródło geometrii */}
           <div className="lg:col-span-4 flex flex-col items-center justify-center text-center p-4 rounded-2xl bg-surface/50 border border-ink/5">
-            <ScoreRing value={consensus.medianScore} label="Mediana Rynkowa" />
+            <ScoreRing value={consensus.medianScore} label="Mediana filtrów" />
+            {/* Mediana liczy się z ocen wewnętrznych silników CVelocity — dawna
+                nazwa „rynkowa" sugerowała benchmark, którego nie mierzymy. */}
+            <span className="mt-2 block text-[11px] text-ink-faint">
+              mediana naszych filtrów, nie rynku
+            </span>
 
             <div className="mt-4 flex items-center gap-2">
               <span className={`px-2.5 py-0.5 rounded-full text-xs font-extrabold ${
@@ -176,7 +182,8 @@ export const AtsLabView: React.FC<AtsLabViewProps> = ({
               </div>
               <div className="p-3 rounded-xl bg-surface/60 border border-ink/5 text-center">
                 <span className="text-xs text-ink-faint block">Liczba Silników</span>
-                <span className="text-xl font-bold font-mono text-brand-fg mt-0.5 block">10 / 10</span>
+                {/* Wyprowadzone z konsensusu — hardcod „10 / 10" rozjeżdżał się z faktyczną listą silników. */}
+                <span className="text-xl font-bold font-mono text-brand-fg mt-0.5 block">{consensus.engines.length} / {consensus.engines.length}</span>
               </div>
             </div>
           </div>
@@ -251,7 +258,7 @@ export const AtsLabView: React.FC<AtsLabViewProps> = ({
               <BookOpen className="h-4 w-4 text-brand-fg" /> Telemetria językowa
             </h4>
             <div className="flex flex-wrap gap-x-6 gap-y-1 text-xs text-ink-muted">
-              <span>Tokens w profilu: <strong className="font-mono text-ink">{telemetry.linguisticTelemetry.totalExtractedTokens}</strong></span>
+              <span>Tokeny w profilu: <strong className="font-mono text-ink">{telemetry.linguisticTelemetry.totalExtractedTokens}</strong></span>
               <span>Sprawczość (cz. dokonane): <strong className="font-mono text-ink">{Math.round(telemetry.linguisticTelemetry.actionVerbRatio * 100)}%</strong> zdań</span>
             </div>
 
@@ -285,12 +292,12 @@ export const AtsLabView: React.FC<AtsLabViewProps> = ({
                         <td className="px-3 py-1.5 font-medium text-ink truncate max-w-[180px]" title={lemma.term}>
                           {lemma.term}
                           {lemma.densityRatio > STUFFING_DENSITY_THRESHOLD && (
-                            <span className="ml-1.5 rounded bg-rose-500/10 px-1 text-[10px] font-bold text-rose-500" title="Podejrzenie upychania słów kluczowych">stuffing?</span>
+                            <span className="ml-1.5 rounded bg-rose-500/10 px-1 text-[10px] font-bold text-rose-500" title="Podejrzenie upychania słów kluczowych">upychanie słów kluczowych?</span>
                           )}
                         </td>
                         <td className="px-2 py-1.5 text-center font-mono text-ink-muted">{lemma.countInCv}</td>
                         <td className="px-2 py-1.5 text-center font-mono text-ink-muted">{lemma.countInJd}</td>
-                        <td className="px-3 py-1.5 text-right font-mono text-ink">{lemma.densityRatio.toFixed(1)}x</td>
+                        <td className="px-3 py-1.5 text-right font-mono text-ink">{formatDecimalPl(lemma.densityRatio, 1)}x</td>
                       </tr>
                     ))}
                   </tbody>
@@ -337,7 +344,13 @@ export const AtsLabView: React.FC<AtsLabViewProps> = ({
         </div>
 
         {/* Werdykty per system */}
-        <div className="mt-6 grid grid-cols-1 gap-4 md:grid-cols-3">
+        {/* Prawdopodobieństwa pochodzą z heurystyk wewnętrznych, nie z pomiaru na
+            produkcyjnych instalacjach ATS — bez adnotacji czytałyby się jak
+            zwalidowany benchmark (wzorzec: mapa ciepła LandingView). */}
+        <p className="mt-6 text-[11px] text-ink-faint">
+          Model poglądowy — estymacje heurystyczne, niewalidowane na produkcyjnych systemach ATS.
+        </p>
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
           {telemetry.systemVulnerabilities.map((system) => (
             <div key={system.systemId} className="p-5 rounded-2xl border border-ink/5 bg-surface/60 space-y-3">
               <div className="flex items-start justify-between gap-2">
@@ -398,7 +411,7 @@ export const AtsLabView: React.FC<AtsLabViewProps> = ({
           <div className="space-y-2 flex-1">
             <div className="flex items-center gap-2">
               <h2 className="text-base font-bold text-ink">
-                Uczciwa Ocena Predyspozycji na to Stanowisko
+                Uczciwa Ocena Predyspozycji do tego stanowiska
               </h2>
               <span className={`px-2 py-0.5 rounded-full text-[10px] font-extrabold ${consensus.careerFitAdvice.isRealisticFit ? 'bg-emerald-500 text-white' : 'bg-amber-500 text-white'}`}>
                 {consensus.careerFitAdvice.isRealisticFit ? 'Dopasowanie Realne' : 'Rozbieżność Kompetencji'}

@@ -24,18 +24,15 @@ type ProfileStep = 'dane' | 'import' | 'preferencje';
 export interface ProfileSectionProps {
   vault: MasterVault;
   onChangeVault: (vault: MasterVault) => void;
-  onApplyParsedVault: (parsed: Partial<MasterVault>) => void;
-  onOpenAdvisor: (initialQuestion?: string) => void;
-  /** Krok, na którym sekcja ma się otworzyć. */
-  initialStep?: ProfileStep;
+  /** Otrzymuje kompletny vault po scaleniu importu z diffem — podstawia 1:1. */
+  onApplyVault: (vault: MasterVault) => void;
   renderEditor: (props: {
     vault: MasterVault;
     onChange: (vault: MasterVault) => void;
-    onOpenAdvisor: (initialQuestion?: string) => void;
   }) => React.ReactNode;
   renderParser: (props: {
     currentVault: MasterVault;
-    onApplyParsedVault: (parsed: Partial<MasterVault>) => void;
+    onApplyVault: (vault: MasterVault) => void;
   }) => React.ReactNode;
   renderProfiler: (props: {
     profiler: ProfilerState;
@@ -52,18 +49,16 @@ const STEPS = [
 export const ProfileSection: React.FC<ProfileSectionProps> = ({
   vault,
   onChangeVault,
-  onApplyParsedVault,
-  onOpenAdvisor,
-  initialStep = 'dane',
+  onApplyVault,
   renderEditor,
   renderParser,
   renderProfiler,
 }) => {
-  const [step, setStep] = useState<ProfileStep>(initialStep);
+  const [step, setStep] = useState<ProfileStep>('dane');
   const completeness = measureVaultCompleteness(vault);
 
-  const handleApplyAndSwitch = (parsed: Partial<MasterVault>) => {
-    onApplyParsedVault(parsed);
+  const handleApplyAndSwitch = (imported: MasterVault) => {
+    onApplyVault(imported);
     setStep('dane');
   };
 
@@ -93,9 +88,9 @@ export const ProfileSection: React.FC<ProfileSectionProps> = ({
 
       <Tabs items={STEPS} active={step} onChange={setStep} variant="underline" />
 
-      {step === 'dane' && renderEditor({ vault, onChange: onChangeVault, onOpenAdvisor })}
+      {step === 'dane' && renderEditor({ vault, onChange: onChangeVault })}
 
-      {step === 'import' && renderParser({ currentVault: vault, onApplyParsedVault: handleApplyAndSwitch })}
+      {step === 'import' && renderParser({ currentVault: vault, onApplyVault: handleApplyAndSwitch })}
 
       {step === 'preferencje' &&
         renderProfiler({

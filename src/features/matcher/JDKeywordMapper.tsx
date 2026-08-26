@@ -161,7 +161,7 @@ export const JDKeywordMapper: React.FC<JDKeywordMapperProps> = ({
               {overallVaultScore > overallCvScore && (
                 <div className="flex items-center gap-1.5 rounded-full bg-brand-50 px-2.5 py-0.5 font-mono text-xs font-bold text-brand-700">
                   <TrendingUp className="h-3.5 w-3.5" />
-                  <span>Potencjał z MasterVault: {overallVaultScore}% (+{overallVaultScore - overallCvScore}%)</span>
+                  <span>Potencjał z MasterVault (szacunek): {overallVaultScore}% (+{overallVaultScore - overallCvScore}%)</span>
                 </div>
               )}
             </div>
@@ -286,7 +286,7 @@ export const JDKeywordMapper: React.FC<JDKeywordMapperProps> = ({
                     <div className="space-y-0.5 min-w-0">
                       <p className="text-xs font-semibold text-ink leading-snug">{sug.message}</p>
                       <div className="flex items-center gap-2 text-[10px] text-muted font-mono">
-                        <span className="font-bold text-brand-600">+{sug.impactScore}% ATS</span>
+                        <span className="font-bold text-brand-600">wpływ wg heurystyki: +{sug.impactScore}%</span>
                         {sug.targetName && <span>Dotyczy: {sug.targetName}</span>}
                       </div>
                     </div>
@@ -449,7 +449,7 @@ export const JDKeywordMapper: React.FC<JDKeywordMapperProps> = ({
                         className="cursor-pointer mt-1 flex w-full items-center justify-center gap-1 rounded-lg border border-brand-500/30 bg-brand-500/10 py-1 font-mono text-[10px] font-bold text-brand-700 hover:bg-brand-500/20 transition-colors duration-[var(--duration-fast)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#F26440]/50"
                       >
                         <Sparkles className="h-3 w-3" />
-                        <span>Most Kompetencyjny (Ctrl+B)</span>
+                        <span>Most Kompetencyjny</span>
                       </button>
                     )}
                   </div>
