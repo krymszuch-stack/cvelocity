@@ -26,6 +26,7 @@ import { ConsistencyGuardView } from '../consistency/ConsistencyGuardView';
 import { JDKeywordMapper } from './JDKeywordMapper';
 import { Tabs } from '../../components/ui/Tabs';
 import { Button } from '../../components/ui/Button';
+import { requestApplicationConfirmation } from '../../store/usePendingApplication';
 
 export type SubTabId =
   | 'preview'
@@ -56,6 +57,22 @@ export const RealtimeLivePreview: React.FC<RealtimeLivePreviewProps> = ({
   className = '',
 }) => {
   const [activeSubTab, setActiveSubTab] = useState<SubTabId>('preview');
+
+  /**
+   * Eksport dokumentu to jedyny moment, w którym wiadomo, że użytkownik
+   * naprawdę zamierza aplikować — i jedyny, w którym wypada o to zapytać.
+   * Pytanie pokazuje `ApplicationFeedbackModal` podpięty globalnie w `App`.
+   */
+  const notifyExported = () =>
+    requestApplicationConfirmation({
+      jobId: jobOffer.id,
+      company: jobOffer.company,
+      title: jobOffer.title,
+      sourceUrl: jobOffer.url,
+      salary: jobOffer.salary,
+      atsScore: atsResult?.overallScore,
+      missingKeywords: atsResult?.missingHardSkills,
+    });
 
   const subTabs = [
     { id: 'preview' as SubTabId, label: 'Podgląd CV (A4)', icon: Eye },
@@ -104,12 +121,14 @@ export const RealtimeLivePreview: React.FC<RealtimeLivePreviewProps> = ({
             <DocumentRenderer
               vault={vault}
               tailoredResume={tailoredResume}
+              onExported={notifyExported}
             />
           )}
 
           {activeSubTab === 'editor' && (
             <CVWordBuilder
               vault={vault}
+              onExported={notifyExported}
             />
           )}
 
@@ -132,6 +151,7 @@ export const RealtimeLivePreview: React.FC<RealtimeLivePreviewProps> = ({
               coverLetter={coverLetter}
               vault={vault}
               jobOffer={jobOffer}
+              onExported={notifyExported}
             />
           )}
 

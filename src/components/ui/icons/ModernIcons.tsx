@@ -1,5 +1,26 @@
 import React from 'react';
 
+/**
+ * Ikony pojęć produktowych pochodzą teraz z autorskiego zestawu
+ * `src/components/icons/CvelIcons.tsx` — skarbiec, celownik, trening
+ * i pipeline rysuje język marki, nie generyczna teczka z Lucide.
+ *
+ * Re-eksport, a nie przepisanie importów w kilkunastu plikach: reguła 3
+ * z `AGENTS.md` chce jednego źródła prawdy na fakt, a reguła 4 — poprawki
+ * klasy zamiast wystąpienia. Nowy kod powinien importować wprost z `CvelIcons`.
+ */
+export {
+  IconVault,
+  IconMatcher,
+  IconTrainer,
+  IconTrainer as IconBrain,
+  IconPipeline,
+  IconPipeline as IconApplications,
+  IconHeatmap,
+  IconGamificationXP,
+  IconCompanyIntel,
+} from '../../icons/CvelIcons';
+
 export interface IconProps extends React.SVGProps<SVGSVGElement> {
   size?: number | string;
   className?: string;
@@ -25,69 +46,7 @@ export const IconSparkles: React.FC<IconProps> = ({ size = 18, className = '', .
   </svg>
 );
 
-/** 2. Modernist Vault / Database Storage Icon */
-export const IconVault: React.FC<IconProps> = ({ size = 18, className = '', ...props }) => (
-  <svg
-    width={size}
-    height={size}
-    viewBox="0 0 24 24"
-    fill="none"
-    stroke="currentColor"
-    strokeWidth="1.8"
-    strokeLinecap="round"
-    strokeLinejoin="round"
-    className={className}
-    {...props}
-  >
-    <rect x="3" y="4" width="18" height="6" rx="2.5" />
-    <rect x="3" y="14" width="18" height="6" rx="2.5" />
-    <line x1="7" y1="7" x2="7.01" y2="7" strokeWidth="2.5" />
-    <line x1="7" y1="17" x2="7.01" y2="17" strokeWidth="2.5" />
-    <path d="M14 7H17" opacity="0.5" />
-    <path d="M14 17H17" opacity="0.5" />
-  </svg>
-);
 
-/** 3. Modernist Job Matcher / Briefcase Icon */
-export const IconMatcher: React.FC<IconProps> = ({ size = 18, className = '', ...props }) => (
-  <svg
-    width={size}
-    height={size}
-    viewBox="0 0 24 24"
-    fill="none"
-    stroke="currentColor"
-    strokeWidth="1.8"
-    strokeLinecap="round"
-    strokeLinejoin="round"
-    className={className}
-    {...props}
-  >
-    <rect x="3" y="7" width="18" height="14" rx="3" />
-    <path d="M8 7V5C8 3.89543 8.89543 3 10 3H14C15.1046 3 16 3.89543 16 5V7" />
-    <path d="M3 12H21" opacity="0.35" />
-    <circle cx="12" cy="12" r="2" fill="currentColor" fillOpacity="0.12" />
-  </svg>
-);
-
-/** 4. Modernist Application Jet / Pipeline Icon */
-export const IconApplications: React.FC<IconProps> = ({ size = 18, className = '', ...props }) => (
-  <svg
-    width={size}
-    height={size}
-    viewBox="0 0 24 24"
-    fill="none"
-    stroke="currentColor"
-    strokeWidth="1.8"
-    strokeLinecap="round"
-    strokeLinejoin="round"
-    className={className}
-    {...props}
-  >
-    <path d="M22 2L11 13" />
-    <path d="M22 2L15 22L11 13L2 9L22 2Z" />
-    <line x1="3" y1="21" x2="8" y2="16" opacity="0.4" strokeDasharray="1.5 2" />
-  </svg>
-);
 
 /** 5. Modernist Parser & Ingestion Icon */
 export const IconParser: React.FC<IconProps> = ({ size = 18, className = '', ...props }) => (
@@ -410,25 +369,6 @@ export const IconSun: React.FC<IconProps> = ({ size = 18, className = '', ...pro
     <line x1="19.5" y1="12" x2="22" y2="12" />
     <line x1="4.22" y1="19.78" x2="6" y2="18" />
     <line x1="18" y1="6" x2="19.78" y2="4.22" />
-  </svg>
-);
-
-/** 21. Modernist Brain / Tactical Cockpit Icon */
-export const IconBrain: React.FC<IconProps> = ({ size = 18, className = '', ...props }) => (
-  <svg
-    width={size}
-    height={size}
-    viewBox="0 0 24 24"
-    fill="none"
-    stroke="currentColor"
-    strokeWidth="1.8"
-    strokeLinecap="round"
-    strokeLinejoin="round"
-    className={className}
-    {...props}
-  >
-    <path d="M9.5 2A2.5 2.5 0 0 1 12 4.5v15a2.5 2.5 0 0 1-4.96.44 2.5 2.5 0 0 1-2.96-3.08 3 3 0 0 1-.34-5.58 2.5 2.5 0 0 1 1.32-4.24 2.5 2.5 0 0 1 4.44-2.04" />
-    <path d="M14.5 2A2.5 2.5 0 0 0 12 4.5v15a2.5 2.5 0 0 0 4.96.44 2.5 2.5 0 0 0 2.96-3.08 3 3 0 0 0 .34-5.58 2.5 2.5 0 0 0-1.32-4.24 2.5 2.5 0 0 0-4.44-2.04" />
   </svg>
 );
 

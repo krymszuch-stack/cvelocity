@@ -27,7 +27,7 @@ function FieldChrome({ inputId, messageId, label, required, error, hint }: Field
       {label && (
         <label
           htmlFor={inputId}
-          className="block text-xs font-semibold text-muted uppercase tracking-wider"
+          className="block text-label font-semibold text-muted uppercase tracking-wider"
         >
           {label}
           {required && <span className="ml-1 text-danger-fg">*</span>}
@@ -35,13 +35,13 @@ function FieldChrome({ inputId, messageId, label, required, error, hint }: Field
       )}
 
       {error && (
-        <p id={messageId} role="alert" className="text-[11px] font-semibold text-danger-fg">
+        <p id={messageId} role="alert" className="text-meta font-semibold text-danger-fg">
           {error}
         </p>
       )}
 
       {!error && hint && (
-        <p id={messageId} className="text-[11px] text-muted">
+        <p id={messageId} className="text-meta text-muted">
           {hint}
         </p>
       )}

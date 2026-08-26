@@ -121,18 +121,22 @@ export const PricingView: React.FC = () => {
         >
           {/* Billing Cycle Toggle */}
           <div className="flex items-center justify-center gap-3">
-            <span
+            <button
+              type="button"
               onClick={() => setBillingCycle('monthly')}
-              className={`cursor-pointer text-xs font-bold ${
+              className={`cursor-pointer rounded text-label font-bold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#F26440]/50 ${
                 billingCycle === 'monthly' ? 'text-ink' : 'text-muted'
               }`}
             >
               Rozliczenie miesięczne
-            </span>
+            </button>
             <button
               type="button"
               onClick={() => setBillingCycle((b) => (b === 'monthly' ? 'annual' : 'monthly'))}
-              className={`relative h-6 w-11 rounded-full border border-line transition-colors ${
+              role="switch"
+              aria-checked={billingCycle === 'annual'}
+              aria-label="Przełącz rozliczenie roczne"
+              className={`relative h-6 w-11 cursor-pointer rounded-full border border-line transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#F26440]/50 ${
                 billingCycle === 'annual' ? 'bg-brand-600' : 'bg-sunken'
               }`}
             >
@@ -142,9 +146,10 @@ export const PricingView: React.FC = () => {
                 }`}
               />
             </button>
-            <span
+            <button
+              type="button"
               onClick={() => setBillingCycle('annual')}
-              className={`cursor-pointer text-xs font-bold ${
+              className={`cursor-pointer rounded text-label font-bold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#F26440]/50 ${
                 billingCycle === 'annual' ? 'text-ink' : 'text-muted'
               }`}
             >
@@ -152,7 +157,7 @@ export const PricingView: React.FC = () => {
               <span className="rounded-full bg-success-soft px-2 py-0.5 text-[10px] font-bold text-success-fg">
                 Oszczędzasz 20%
               </span>
-            </span>
+            </button>
           </div>
 
           {/* 3 Pricing Cards */}
@@ -249,7 +254,7 @@ export const PricingView: React.FC = () => {
 
           {/* Feature Comparison Table */}
           <div className="rounded-3xl border border-line bg-surface p-6 sm:p-8 space-y-5">
-            <h3 className="text-base font-bold text-ink">Szczegółowe Porównanie Funkcji</h3>
+            <h2 className="text-base font-bold text-ink">Szczegółowe Porównanie Funkcji</h2>
 
             <div className="overflow-x-auto">
               <table className="w-full text-left text-xs font-mono">
@@ -545,7 +550,7 @@ export const PricingView: React.FC = () => {
 
           {/* Ethics Checklist from WALIDACJA.md */}
           <div className="rounded-3xl border border-line bg-surface p-6 sm:p-8 space-y-4">
-            <h3 className="text-sm font-bold text-ink">Checklista Etyki i Ochrony Użytkownika</h3>
+            <h2 className="text-sm font-bold text-ink">Checklista Etyki i Ochrony Użytkownika</h2>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-xs">
               <div className="flex items-center gap-2 rounded-xl bg-elevated p-3 border border-line">
                 <IconCheckCircle className="h-4 w-4 text-success-fg shrink-0" />

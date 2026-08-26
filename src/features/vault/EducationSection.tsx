@@ -5,6 +5,7 @@ import { Education } from '../../types';
 import { Card } from '../../components/ui/Card';
 import { Button } from '../../components/ui/Button';
 import { Input, Textarea } from '../../components/ui/Field';
+import { EmptyState } from '../../components/ui/EmptyState';
 
 export interface EducationSectionProps {
   education: Education[];
@@ -64,22 +65,16 @@ export const EducationSection: React.FC<EducationSectionProps> = ({
       <div className="space-y-4">
         <AnimatePresence mode="popLayout">
           {education.length === 0 ? (
-            <div className="rounded-2xl border border-dashed border-line bg-surface/50 p-8 text-center">
-              <GraduationCap className="mx-auto h-8 w-8 text-subtle mb-2" />
-              <p className="text-xs font-semibold text-muted">
-                Brak dodanych pozycji wykształcenia.
-              </p>
-              <Button
-                type="button"
-                variant="ghost"
-                size="sm"
-                icon={Plus}
-                onClick={handleAddEducation}
-                className="mt-3"
-              >
-                Dodaj pierwszy wpis
-              </Button>
-            </div>
+            <EmptyState
+              icon={GraduationCap}
+              title="Brak dodanych pozycji wykształcenia"
+              description="Dodaj uczelnię lub szkołę, kierunek studiów i uzyskany tytuł — to podstawa sekcji edukacji w CV."
+              action={
+                <Button type="button" variant="secondary" size="sm" icon={Plus} onClick={handleAddEducation}>
+                  Dodaj pierwszy wpis
+                </Button>
+              }
+            />
           ) : (
             education.map((item, index) => (
               <motion.div
@@ -92,7 +87,7 @@ export const EducationSection: React.FC<EducationSectionProps> = ({
                 className="rounded-2xl border border-line bg-surface p-4 sm:p-5 space-y-4"
               >
                 <div className="flex items-center justify-between border-b border-line pb-3">
-                  <span className="font-mono text-xs font-bold text-brand-fg">
+                  <span className="font-mono text-label font-bold text-brand-fg">
                     Pozycja #{index + 1}
                   </span>
 

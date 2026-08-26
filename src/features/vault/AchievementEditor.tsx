@@ -5,6 +5,7 @@ import { HighlightMetric } from '../../types';
 import { Button } from '../../components/ui/Button';
 import { Chip } from '../../components/ui/Chip';
 import { Textarea } from '../../components/ui/Field';
+import { EmptyState } from '../../components/ui/EmptyState';
 
 export interface AchievementEditorProps {
   highlights: HighlightMetric[];
@@ -60,10 +61,10 @@ export const AchievementEditor: React.FC<AchievementEditorProps> = ({
     <div className={`space-y-3.5 ${className}`}>
       <div className="flex items-center justify-between">
         <div>
-          <h4 className="text-xs font-bold uppercase tracking-wider text-muted">
+          <h4 className="text-label font-bold uppercase tracking-wider text-muted">
             Kluczowe Osiągnięcia i Rezultaty (Metoda STAR)
           </h4>
-          <p className="text-[11px] text-subtle">
+          <p className="text-meta text-subtle">
             Formułuj punkty jako: Działanie + Zastosowane Narzędzie + Mierzalny Rezultat (%).
           </p>
         </div>
@@ -82,11 +83,16 @@ export const AchievementEditor: React.FC<AchievementEditorProps> = ({
       <div className="space-y-3">
         <AnimatePresence mode="popLayout">
           {highlights.length === 0 ? (
-            <div className="rounded-xl border border-dashed border-line bg-surface/40 p-4 text-center">
-              <p className="text-xs text-muted">
-                Brak dodanych punktów osiągnięć. Dodaj przynajmniej 2–3 mierzalne sukcesy.
-              </p>
-            </div>
+            <EmptyState
+              icon={Sparkles}
+              title="Brak dodanych osiągnięć"
+              description="Opisz co najmniej 2–3 mierzalne sukcesy — tylko takie punkty realnie podnoszą siłę CV."
+              action={
+                <Button type="button" variant="secondary" size="sm" icon={Plus} onClick={handleAddHighlight}>
+                  Dodaj pierwsze osiągnięcie
+                </Button>
+              }
+            />
           ) : (
             highlights.map((hl, index) => (
                 <motion.div
@@ -143,7 +149,7 @@ export const AchievementEditor: React.FC<AchievementEditorProps> = ({
                       pytań uzupełniających (`src/lib/cvQuestionEngine.ts`).
                     */}
                     {!hl.metric?.trim() && hl.text.trim() && (
-                      <span className="inline-flex items-center gap-1.5 text-[11px] text-subtle">
+                      <span className="inline-flex items-center gap-1.5 text-meta text-subtle">
                         <Sparkles className="h-3 w-3" />
                         Brakuje mierzalnego efektu — zapytamy o niego na ekranie startowym
                       </span>

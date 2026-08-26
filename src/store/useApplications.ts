@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { ApplicationStatus, JobApplication } from '../types';
 import { StorageKeys, onAppStorageWiped, readJson, writeJson } from '../lib/storage';
+import { grantXp } from './useGamificationStore';
 
 /**
  * Aplikacje w Pipeline — jedno źródło prawdy dla całego interfejsu.
@@ -55,6 +56,11 @@ export function useApplications() {
     const index = applications.findIndex((entry) => entry.id === application.id);
     if (index === -1) {
       commit([application, ...applications]);
+      // Punkty wyłącznie za nowy wpis. Gdyby liczyła się też edycja, licznik
+      // rósłby od poprawiania literówki w nazwie firmy.
+      // Cel roszczenia to konkretna oferta: dwa wpisy o tej samej firmie i
+      // stanowisku są tym samym zgłoszeniem, nawet jeśli mają różne id.
+      grantXp('application_added', `${application.company}|${application.position}`);
       return;
     }
     const next = [...applications];

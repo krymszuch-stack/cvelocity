@@ -22,6 +22,9 @@ import {
 import { Button } from '../ui/Button';
 import { Chip } from '../ui/Chip';
 import { showToast } from '../../store/useToastStore';
+import { grantXp } from '../../store/useGamificationStore';
+import { XP_EVENTS } from '../../lib/gamification';
+import { contributeInterviewQuestion } from '../../lib/crowdsourceIntel';
 
 export interface PostCallDebriefViewProps {
   session: InterviewLoopSession;
@@ -41,8 +44,12 @@ export const PostCallDebriefView: React.FC<PostCallDebriefViewProps> = ({
   const [rating, setRating] = useState<1 | 2 | 3 | 4 | 5>(
     session.postCallDebrief?.overallRating || 4
   );
+  // Pole startuje puste. Podpowiedź „dyskusja o architekturze systemu"
+  // wpisywała się do zapisanego debriefu i do maila follow-up jako rzecz,
+  // która rzekomo się wydarzyła — czyli wymyślona treść w dokumencie idącym
+  // do rekrutera (reguła 1). Przykład zostaje w `placeholder`.
   const [whatWentWell, setWhatWentWell] = useState(
-    session.postCallDebrief?.whatWentWell || 'dyskusja o architekturze systemu i planach rozwoju'
+    session.postCallDebrief?.whatWentWell || ''
   );
   const [topicsToClarify, setTopicsToClarify] = useState(
     session.postCallDebrief?.topicsToClarifyInFollowUp || ''
@@ -50,6 +57,30 @@ export const PostCallDebriefView: React.FC<PostCallDebriefViewProps> = ({
   const [salaryNotes, setSalaryNotes] = useState(
     session.postCallDebrief?.salaryTimelineNotes || ''
   );
+
+  /**
+   * Pytania faktycznie zadane na rozmowie.
+   *
+   * Najcenniejsza rzecz, jaka wychodzi z tego ekranu: nie ma jej w żadnym
+   * publicznym ogłoszeniu. Trafia do wspólnej bazy anonimowo — bez konta,
+   * bez `user_id`, wyłącznie para firma + stanowisko + pytanie.
+   */
+  const [trickyQuestions, setTrickyQuestions] = useState<string[]>(
+    session.postCallDebrief?.trickyQuestions ?? []
+  );
+  const [questionDraft, setQuestionDraft] = useState('');
+
+  const handleAddQuestion = () => {
+    const question = questionDraft.trim();
+    if (question.length < 3) return;
+
+    setTrickyQuestions((prev) => [...prev, question]);
+    setQuestionDraft('');
+
+    contributeInterviewQuestion(session.companyName, session.roleTitle ?? '', question);
+    grantXp('question_confirmed', `${session.companyName}|${question}`);
+  };
+
 
   const [generatedEmail, setGeneratedEmail] = useState<string>(() => {
     return (
@@ -75,7 +106,7 @@ export const PostCallDebriefView: React.FC<PostCallDebriefViewProps> = ({
     const debrief: PostCallDebrief = {
       overallRating: rating,
       whatWentWell,
-      trickyQuestions: [],
+      trickyQuestions,
       topicsToClarifyInFollowUp: topicsToClarify,
       salaryTimelineNotes: salaryNotes,
       generatedFollowUpEmail: generatedEmail,
@@ -172,6 +203,64 @@ export const PostCallDebriefView: React.FC<PostCallDebriefViewProps> = ({
           />
         </div>
       </div>
+
+      {/* 2b. Pytania z rozmowy — zasilają wspólną bazę wiedzy */}
+      <div className="rounded-2xl border border-line bg-elevated p-4 space-y-3">
+        <div>
+          <label
+            htmlFor="debrief-question"
+            className="font-mono text-xs font-bold uppercase tracking-wider text-ink"
+          >
+            Pytania, które faktycznie padły:
+          </label>
+          <p className="mt-1 text-[11px] text-muted">
+            Zapisujemy je anonimowo — bez Twojego konta i bez notatek. Dzięki temu
+            następna osoba idąca do {session.companyName} wie, na co się przygotować.
+            Za każde pytanie dostajesz {XP_EVENTS.question_confirmed.points} XP.
+          </p>
+        </div>
+
+        <div className="flex flex-wrap gap-2">
+          <input
+            id="debrief-question"
+            type="text"
+            value={questionDraft}
+            onChange={(e) => setQuestionDraft(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') {
+                e.preventDefault();
+                handleAddQuestion();
+              }
+            }}
+            placeholder="np. Jak rozwiązywałeś konflikt w zespole?"
+            className="min-w-0 flex-1 rounded-xl border border-line bg-surface px-3 py-2 font-mono text-xs text-ink placeholder:text-muted focus:border-brand-500 focus:outline-none focus-visible:ring-2 focus-visible:ring-[#F26440]/50"
+          />
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={handleAddQuestion}
+            disabled={questionDraft.trim().length < 3}
+          >
+            Dodaj pytanie
+          </Button>
+        </div>
+
+        {trickyQuestions.length > 0 && (
+          <ul className="space-y-1.5">
+            {trickyQuestions.map((question, index) => (
+              <li
+                key={`${index}-${question}`}
+                className="rounded-lg border border-line/70 bg-surface px-3 py-2 text-xs leading-relaxed text-ink"
+              >
+                {question}
+              </li>
+            ))}
+          </ul>
+        )}
+      </div>
+
+
 
       {/* 3. Generator Follow-up Email */}
       <div className="rounded-2xl border border-line bg-elevated p-4 space-y-3 shadow-xs">

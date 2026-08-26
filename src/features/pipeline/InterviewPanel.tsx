@@ -4,6 +4,8 @@ import { JobApplication, MasterVault } from '../../types';
 import { Button } from '../../components/ui/Button';
 import { Card } from '../../components/ui/Card';
 import { ReactFloatingPanel } from '../../components/hud/ReactFloatingPanel';
+import { FeatureGate } from '../../components/gamification/FeatureGate';
+import { useAppStore } from '../../store/useAppStore';
 import { InterviewLoopModal } from '../loop/InterviewLoopModal';
 
 /**
@@ -77,6 +79,7 @@ export const InterviewPanel: React.FC<InterviewPanelProps> = ({
 
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [isHUDOpen, setHUDOpen] = useState(false);
+  const { setActiveTab } = useAppStore();
   const [isLoopOpen, setLoopOpen] = useState(false);
 
   // Domyślnie najbliższa rozmowa z terminem; bez terminu — pierwsza z listy.
@@ -233,7 +236,25 @@ export const InterviewPanel: React.FC<InterviewPanelProps> = ({
         </div>
       )}
 
-      <ReactFloatingPanel isOpen={isHUDOpen} onClose={() => setHUDOpen(false)} vault={vault} />
+      {/* Bramka rangi zamiast pustego kliknięcia: teleprompter jest funkcją beta
+          od poziomu 3, a użytkownik ma zobaczyć ile mu brakuje i czym to skrócić,
+          nie komunikat o braku uprawnień. */}
+      {isHUDOpen && (
+        <FeatureGate
+          feature="LIVE_HUD_TELEPROMPTER"
+          pitch="Podpowiedzi z Twojego Vaultu na wierzchu ekranu w trakcie rozmowy — bez przeglądania notatek na oczach rekrutera."
+          onTrain={() => {
+            setHUDOpen(false);
+            setActiveTab('trenuj');
+          }}
+          onBuyPass={() => {
+            setHUDOpen(false);
+            setActiveTab('pricing');
+          }}
+        >
+          <ReactFloatingPanel isOpen onClose={() => setHUDOpen(false)} vault={vault} />
+        </FeatureGate>
+      )}
       <InterviewLoopModal isOpen={isLoopOpen} onClose={() => setLoopOpen(false)} vault={vault} />
     </Card>
   );

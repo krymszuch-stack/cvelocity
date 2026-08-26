@@ -32,8 +32,14 @@ export const StorageKeys = {
   cockpitProgress: `${PREFIX}cockpit-progress`,
   uxMilestones: `${PREFIX}ux-milestones`,
   cvQuestionsSkipped: `${PREFIX}cv-questions-skipped`,
+  /** Punkty, poziom i osiągnięcia. Rejestr, żeby „usuń moje dane" je objęło. */
+  gamification: `${PREFIX}gamification`,
+  /** Rejestr akcji punktowych: deduplikacja i limity dobowe (anty-farming). */
+  xpLedger: `${PREFIX}xp-ledger`,
   /** Szkice formularzy per widok — giną przy zamknięciu przeglądarki (sessionStorage-semantyka w LS). */
   draftAtsLab: `${PREFIX}draft-ats-lab`,
+  /** Historia Doradcy tylko na czas bieżącej sesji przeglądarki. */
+  advisorConversation: `${PREFIX}advisor-conversation`,
 } as const;
 
 export type StorageKey = (typeof StorageKeys)[keyof typeof StorageKeys];
@@ -81,6 +87,38 @@ const OWNED_PREFIXES = ['cvelocity', 'skillvault'];
 
 function isBrowser(): boolean {
   return typeof localStorage !== 'undefined';
+}
+
+function hasSessionStorage(): boolean {
+  return typeof sessionStorage !== 'undefined';
+}
+
+export function readSessionJson<T>(key: StorageKey, fallback: T): T {
+  if (!hasSessionStorage()) return fallback;
+  try {
+    const raw = sessionStorage.getItem(key);
+    return raw === null ? fallback : (JSON.parse(raw) as T);
+  } catch {
+    return fallback;
+  }
+}
+
+export function writeSessionJson(key: StorageKey, value: unknown): void {
+  if (!hasSessionStorage()) return;
+  try {
+    sessionStorage.setItem(key, JSON.stringify(value));
+  } catch {
+    // Tryb prywatny lub limit schowka — rozmowa nadal działa w pamięci Reacta.
+  }
+}
+
+export function removeSession(key: StorageKey): void {
+  if (!hasSessionStorage()) return;
+  try {
+    sessionStorage.removeItem(key);
+  } catch {
+    /* jw. */
+  }
 }
 
 /** Aktualna wersja schematu zapisu JSON — rośnie przy migracji kształtu danych. */
@@ -348,6 +386,15 @@ export function wipeAppStorage(): void {
   }
 
   for (const key of doomed) removeRaw(key);
+
+  if (hasSessionStorage()) {
+    const sessionKeys: string[] = [];
+    for (let i = 0; i < sessionStorage.length; i++) {
+      const key = sessionStorage.key(i);
+      if (key && OWNED_PREFIXES.some((prefix) => key.startsWith(prefix))) sessionKeys.push(key);
+    }
+    for (const key of sessionKeys) sessionStorage.removeItem(key);
+  }
 
   // Kopia zapasowa IndexedDB należy do tej samej umowy „klucz nieobecny w
   // rejestrze nie istnieje" — bez tego „usuń moje dane" odradzałoby profile

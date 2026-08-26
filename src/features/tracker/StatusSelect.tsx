@@ -16,6 +16,13 @@ const STATUS_CONFIG: Record<
   ApplicationStatus,
   { label: string; bg: string; text: string; border: string; dot: string }
 > = {
+  'Do wysłania': {
+    label: 'Do wysłania',
+    bg: 'bg-warning-soft',
+    text: 'text-warning-fg',
+    border: 'border-warning/30',
+    dot: 'bg-warning',
+  },
   Wysłana: {
     label: 'Wysłana',
     bg: 'bg-sunken',
@@ -61,6 +68,7 @@ export const StatusSelect: React.FC<StatusSelectProps> = ({
         aria-label="Zmień status aplikacji"
         className={`appearance-none rounded-xl border px-3 py-1.5 pr-7 font-mono text-xs font-bold transition-all focus:outline-none focus:ring-2 focus:ring-brand-500/20 cursor-pointer ${current.bg} ${current.text} ${current.border}`}
       >
+        <option value="Do wysłania">Do wysłania</option>
         <option value="Wysłana">Wysłana</option>
         <option value="Rozmowa">Rozmowa</option>
         <option value="Oferta">Oferta</option>

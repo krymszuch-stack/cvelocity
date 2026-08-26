@@ -12,7 +12,7 @@ export interface TrustChipProps {
  */
 export const TrustChip: React.FC<TrustChipProps> = ({ children, className = '' }) => (
   <span
-    className={`rounded-[5px] border border-line bg-sunken px-1.5 py-0.5 font-mono text-[9.5px] tracking-[0.05em] text-subtle ${className}`}
+    className={`rounded-[5px] border border-line bg-sunken px-1.5 py-0.5 font-mono text-[9.5px] tracking-[0.05em] text-muted ${className}`}
   >
     {children}
   </span>

@@ -22,27 +22,48 @@ import { Button } from '../../components/ui/Button';
 import { Card } from '../../components/ui/Card';
 import { Chip } from '../../components/ui/Chip';
 import { ConsistencyLockBadge } from '../../components/consistency/ConsistencyLockBadge';
+import { Tooltip } from '../../components/ui/Tooltip';
 
 export type TemplateId = 'modern' | 'minimal' | 'executive' | 'creative';
+
+/**
+ * Etykiety szablonów. Wcześniej przycisk pokazywał surowe `id` z `capitalize`
+ * („Modern", „Executive") — angielski identyfikator techniczny wyświetlany
+ * użytkownikowi polskiego interfejsu. Opis mówi, do czego szablon służy,
+ * bo sama nazwa tego nie zdradza.
+ */
+const TEMPLATES: { id: TemplateId; label: string; hint: string }[] = [
+  { id: 'modern', label: 'Nowoczesny', hint: 'Domyślny. Kolorowy akcent, czytelne sekcje — pasuje do większości ofert.' },
+  { id: 'minimal', label: 'Minimalny', hint: 'Bez ozdobników, maksimum treści na stronie. Bezpieczny dla systemów ATS.' },
+  { id: 'executive', label: 'Menedżerski', hint: 'Poważna typografia, nacisk na zakres odpowiedzialności i wyniki.' },
+  { id: 'creative', label: 'Kreatywny', hint: 'Mocniejszy nagłówek i kolor. Do branż, gdzie forma jest częścią oceny.' },
+];
 
 export interface DocumentRendererProps {
   vault: MasterVault;
   tailoredResume?: TailoredResume | null;
+  /**
+   * Dokument opuścił aplikację (druk/PDF albo skopiowana treść). Woła to ten,
+   * kto wie, o którą ofertę chodzi — renderer sam tego nie wie.
+   */
+  onExported?: () => void;
   className?: string;
 }
 
+// Kontrast każdego koloru wobec tła #FFFFFF (WCAG 2.x, wzór na luminancję względną) musi wynosić min. 4,5:1.
 const COLOR_SWATCHES = [
-  { id: 'brand', label: 'Indigo Brand', hex: '#4f46e5' },
-  { id: 'emerald', label: 'Emerald Green', hex: '#059669' },
-  { id: 'sky', label: 'Sky Blue', hex: '#0284c7' },
-  { id: 'rose', label: 'Rose Velvet', hex: '#e11d48' },
-  { id: 'amber', label: 'Amber Gold', hex: '#d97706' },
-  { id: 'slate', label: 'Classic Slate', hex: '#334155' },
+  { id: 'brand', label: 'Indigo Brand', hex: '#4f46e5' }, // kontrast ~6,29:1
+  { id: 'emerald', label: 'Emerald Green', hex: '#047857' }, // oryginalny #059669 miał ~3,77:1; zastąpiono emerald-700, kontrast ~5,48:1
+  { id: 'sky', label: 'Sky Blue', hex: '#0369a1' }, // oryginalny #0284c7 miał ~4,10:1; zastąpiono sky-700, kontrast ~5,93:1
+  { id: 'rose', label: 'Rose Velvet', hex: '#e11d48' }, // kontrast ~4,70:1
+  { id: 'amber', label: 'Amber Gold', hex: '#b45309' }, // oryginalny #d97706 miał ~3,19:1; zastąpiono amber-700, kontrast ~5,02:1
+  { id: 'slate', label: 'Classic Slate', hex: '#334155' }, // kontrast ~10,35:1
 ];
 
 export const DocumentRenderer: React.FC<DocumentRendererProps> = ({
   vault,
   tailoredResume,
+  onExported,
   className = '',
 }) => {
   const [activeTemplate, setActiveTemplate] = useState<TemplateId>('modern');
@@ -59,6 +80,7 @@ export const DocumentRenderer: React.FC<DocumentRendererProps> = ({
 
   const handlePrint = () => {
     window.print();
+    onExported?.();
   };
 
   const handleCopyText = () => {
@@ -81,6 +103,7 @@ ${education.map((e) => `${e.degree} - ${e.institution} (${e.startDate} - ${e.end
     `.trim();
 
     navigator.clipboard.writeText(textContent);
+    onExported?.();
     setIsCopied(true);
     setTimeout(() => setIsCopied(false), 2000);
   };
@@ -89,24 +112,34 @@ ${education.map((e) => `${e.degree} - ${e.institution} (${e.startDate} - ${e.end
     <div className={`space-y-6 ${className}`}>
       {/* Controls Bar: Templates, Colors, Export Buttons */}
       <div className="flex flex-wrap items-center justify-between gap-4 rounded-2xl border border-line bg-elevated p-4 shadow-raised">
-        {/* Template Selector */}
-        <div className="flex items-center gap-1.5">
-          <span className="text-xs font-bold uppercase tracking-wider text-muted mr-2">
-            Szablon:
+        {/* Wybór szablonu.
+            `role="group"` + `aria-pressed`: to nie są cztery niezależne akcje,
+            tylko jeden wybór — czytnik ekranu ma o tym wiedzieć. Stan aktywny
+            nie zmienia grubości ramki ani paddingu, więc pasek nie drga przy
+            przełączaniu. */}
+        <div
+          className="flex flex-wrap items-center gap-1.5"
+          role="group"
+          aria-label="Szablon dokumentu"
+        >
+          <span className="mr-2 text-label font-bold uppercase tracking-wider text-muted">
+            Szablon
           </span>
-          {(['modern', 'minimal', 'executive', 'creative'] as TemplateId[]).map((tmpl) => (
-            <button
-              key={tmpl}
-              type="button"
-              onClick={() => setActiveTemplate(tmpl)}
-              className={`rounded-xl px-3 py-1.5 text-xs font-bold capitalize transition-colors ${
-                activeTemplate === tmpl
-                  ? 'bg-brand-600 text-on-brand shadow-xs'
-                  : 'border border-line bg-surface text-muted hover:text-ink'
-              }`}
-            >
-              {tmpl}
-            </button>
+          {TEMPLATES.map((tmpl) => (
+            <Tooltip key={tmpl.id} content={tmpl.hint}>
+              <button
+                type="button"
+                onClick={() => setActiveTemplate(tmpl.id)}
+                aria-pressed={activeTemplate === tmpl.id}
+                className={`cursor-pointer rounded-xl border px-3 py-1.5 text-label font-bold transition-colors duration-[var(--duration-fast)] ease-out focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#F26440]/50 ${
+                  activeTemplate === tmpl.id
+                    ? 'border-brand-600 bg-brand-600 text-on-brand shadow-xs'
+                    : 'border-line bg-surface text-muted hover:text-ink'
+                }`}
+              >
+                {tmpl.label}
+              </button>
+            </Tooltip>
           ))}
         </div>
 
@@ -115,19 +148,20 @@ ${education.map((e) => `${e.degree} - ${e.institution} (${e.startDate} - ${e.end
           <Palette className="h-4 w-4 text-muted" />
           <div className="flex items-center gap-1.5">
             {COLOR_SWATCHES.map((swatch) => (
+              <Tooltip key={swatch.id} content={swatch.label}>
               <button
-                key={swatch.id}
                 type="button"
                 onClick={() => setSelectedColor(swatch.hex)}
                 style={{ backgroundColor: swatch.hex }}
-                className={`h-5 w-5 rounded-full transition-transform focus-visible:outline-none ${
+                aria-pressed={selectedColor === swatch.hex}
+                className={`h-5 w-5 cursor-pointer rounded-full transition-transform focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#F26440]/50 ${
                   selectedColor === swatch.hex
                     ? 'scale-125 ring-2 ring-brand-500/50 ring-offset-2 ring-offset-surface'
                     : 'opacity-70 hover:opacity-100'
                 }`}
-                title={swatch.label}
-                aria-label={swatch.label}
+                aria-label={`Kolor akcentu: ${swatch.label}`}
               />
+              </Tooltip>
             ))}
           </div>
         </div>
@@ -165,7 +199,7 @@ ${education.map((e) => `${e.degree} - ${e.institution} (${e.startDate} - ${e.end
               type="button"
               aria-pressed={zoom === z}
               onClick={() => setZoom(z)}
-              className={`rounded-lg px-2 py-0.5 font-mono text-[10px] font-bold transition-colors ${
+              className={`cursor-pointer rounded-lg px-2 py-0.5 font-mono text-[10px] font-bold transition-colors duration-[var(--duration-fast)] ease-out focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#F26440]/50 ${
                 zoom === z
                   ? 'bg-brand-600 text-on-brand'
                   : 'border border-line bg-surface text-muted hover:text-ink'

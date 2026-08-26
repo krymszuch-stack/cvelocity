@@ -117,6 +117,8 @@ export interface Claim {
   tags: string[];
 }
 
+import type { MobilityPreferences } from '../lib/commuteCalculator';
+
 export interface MasterVault {
   version: string;
   updatedAt: string;
@@ -127,6 +129,12 @@ export interface MasterVault {
   education: Education[];
   projects: Project[];
   claims?: Claim[];
+  /**
+   * Preferencje dojazdu do kalkulatora opłacalności. Pole opcjonalne, bo
+   * vaulty zapisane przed jego wprowadzeniem muszą się dalej wczytywać —
+   * brak preferencji znaczy „jeszcze nie ustawione", nie „zero".
+   */
+  mobilityPreferences?: MobilityPreferences;
 }
 
 export interface PhraseSlot {
@@ -468,7 +476,13 @@ export interface ApplicationHistoryRecord {
 
 
 
-export type ApplicationStatus = 'Wysłana' | 'Rozmowa' | 'Oferta' | 'Odrzucona';
+/**
+ * „Do wysłania" to szkic: dokumenty gotowe, zgłoszenie jeszcze nie poszło.
+ * Doszedł razem z ankietą po eksporcie — bez niego oferta, przy której portal
+ * odrzucił plik, musiałaby wylądować jako „Wysłana", czyli jako nieprawda
+ * (reguła 1 w `AGENTS.md`).
+ */
+export type ApplicationStatus = 'Do wysłania' | 'Wysłana' | 'Rozmowa' | 'Oferta' | 'Odrzucona';
 
 /**
  * Jedna aplikacja o pracę w Pipeline.

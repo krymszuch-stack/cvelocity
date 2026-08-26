@@ -120,6 +120,7 @@ export const ApplicationModal: React.FC<ApplicationModalProps> = ({
             value={status}
             onChange={(e) => setStatus(e.target.value as ApplicationStatus)}
             options={[
+              { value: 'Do wysłania', label: 'Do wysłania' },
               { value: 'Wysłana', label: 'Wysłana' },
               { value: 'Rozmowa', label: 'Rozmowa' },
               { value: 'Oferta', label: 'Oferta' },

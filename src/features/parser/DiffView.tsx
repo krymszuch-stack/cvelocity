@@ -18,6 +18,7 @@ import { ParsedCVResult } from '../../lib/cvUniversalParser';
 import { Card } from '../../components/ui/Card';
 import { Button } from '../../components/ui/Button';
 import { Chip } from '../../components/ui/Chip';
+import { EmptyState } from '../../components/ui/EmptyState';
 
 export type SectionStrategy = 'merge' | 'replace' | 'keep';
 
@@ -71,7 +72,7 @@ export const DiffView: React.FC<DiffViewProps> = ({
           <p className="mt-1 font-mono text-2xl font-black text-success-fg">
             +{newHardSkills.length + (parsedData.history?.length || 0) + (parsedData.education?.length || 0)}
           </p>
-          <p className="text-[11px] text-success-fg/80">Wykryte w dokumencie</p>
+          <p className="text-meta text-success-fg/80">Wykryte w dokumencie</p>
         </div>
 
         <div className="rounded-2xl border border-line bg-elevated p-4">
@@ -82,7 +83,7 @@ export const DiffView: React.FC<DiffViewProps> = ({
           <p className="mt-1 font-mono text-2xl font-black text-ink">
             {parsedData.history?.length || 0}
           </p>
-          <p className="text-[11px] text-muted">Zidentyfikowane pozycje</p>
+          <p className="text-meta text-muted">Zidentyfikowane pozycje</p>
         </div>
 
         <div className="rounded-2xl border border-line bg-elevated p-4">
@@ -93,7 +94,7 @@ export const DiffView: React.FC<DiffViewProps> = ({
           <p className="mt-1 font-mono text-xl font-black text-ink truncate">
             {parsedData.detectedFormat || 'Plik tekstowy'}
           </p>
-          <p className="text-[11px] text-muted">Silnik Universal Parser</p>
+          <p className="text-meta text-muted">Silnik Universal Parser</p>
         </div>
       </div>
 
@@ -114,7 +115,7 @@ export const DiffView: React.FC<DiffViewProps> = ({
         <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between border-b border-line pb-3">
           <div className="flex items-center gap-2">
             <User className="h-4 w-4 text-brand-600" />
-            <h4 className="text-xs font-bold uppercase tracking-wider text-ink">
+            <h4 className="text-label font-bold uppercase tracking-wider text-ink">
               Dane Osobowe & Kontakt
             </h4>
           </div>
@@ -123,7 +124,7 @@ export const DiffView: React.FC<DiffViewProps> = ({
             <button
               type="button"
               onClick={() => setPersonalStrategy('replace')}
-              className={`rounded-lg px-2.5 py-1 text-xs font-bold transition-colors ${
+              className={`rounded-lg px-2.5 py-1 cursor-pointer text-xs font-bold transition-colors duration-[var(--duration-fast)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#F26440]/50 ${
                 personalStrategy === 'replace'
                   ? 'bg-brand-600 text-on-brand'
                   : 'border border-line bg-surface text-muted hover:text-ink'
@@ -134,7 +135,7 @@ export const DiffView: React.FC<DiffViewProps> = ({
             <button
               type="button"
               onClick={() => setPersonalStrategy('keep')}
-              className={`rounded-lg px-2.5 py-1 text-xs font-bold transition-colors ${
+              className={`rounded-lg px-2.5 py-1 cursor-pointer text-xs font-bold transition-colors duration-[var(--duration-fast)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#F26440]/50 ${
                 personalStrategy === 'keep'
                   ? 'bg-brand-600 text-on-brand'
                   : 'border border-line bg-surface text-muted hover:text-ink'
@@ -175,7 +176,7 @@ export const DiffView: React.FC<DiffViewProps> = ({
         <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between border-b border-line pb-3">
           <div className="flex items-center gap-2">
             <Star className="h-4 w-4 text-brand-600" />
-            <h4 className="text-xs font-bold uppercase tracking-wider text-ink">
+            <h4 className="text-label font-bold uppercase tracking-wider text-ink">
               Umiejętności Twarde & Technologie
             </h4>
           </div>
@@ -184,7 +185,7 @@ export const DiffView: React.FC<DiffViewProps> = ({
             <button
               type="button"
               onClick={() => setSkillsStrategy('merge')}
-              className={`rounded-lg px-2.5 py-1 text-xs font-bold transition-colors ${
+              className={`rounded-lg px-2.5 py-1 cursor-pointer text-xs font-bold transition-colors duration-[var(--duration-fast)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#F26440]/50 ${
                 skillsStrategy === 'merge'
                   ? 'bg-brand-600 text-on-brand'
                   : 'border border-line bg-surface text-muted hover:text-ink'
@@ -195,7 +196,7 @@ export const DiffView: React.FC<DiffViewProps> = ({
             <button
               type="button"
               onClick={() => setSkillsStrategy('replace')}
-              className={`rounded-lg px-2.5 py-1 text-xs font-bold transition-colors ${
+              className={`rounded-lg px-2.5 py-1 cursor-pointer text-xs font-bold transition-colors duration-[var(--duration-fast)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#F26440]/50 ${
                 skillsStrategy === 'replace'
                   ? 'bg-brand-600 text-on-brand'
                   : 'border border-line bg-surface text-muted hover:text-ink'
@@ -206,7 +207,7 @@ export const DiffView: React.FC<DiffViewProps> = ({
             <button
               type="button"
               onClick={() => setSkillsStrategy('keep')}
-              className={`rounded-lg px-2.5 py-1 text-xs font-bold transition-colors ${
+              className={`rounded-lg px-2.5 py-1 cursor-pointer text-xs font-bold transition-colors duration-[var(--duration-fast)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#F26440]/50 ${
                 skillsStrategy === 'keep'
                   ? 'bg-brand-600 text-on-brand'
                   : 'border border-line bg-surface text-muted hover:text-ink'
@@ -220,7 +221,7 @@ export const DiffView: React.FC<DiffViewProps> = ({
         <div className="space-y-3">
           {newHardSkills.length > 0 && (
             <div>
-              <span className="text-[11px] font-bold text-success-fg block mb-1.5">
+              <span className="text-meta font-bold text-success-fg block mb-1.5">
                 Nowe technologie do dodania (+{newHardSkills.length}):
               </span>
               <div className="flex flex-wrap gap-1.5">
@@ -239,7 +240,7 @@ export const DiffView: React.FC<DiffViewProps> = ({
 
           {existingMatches.length > 0 && (
             <div>
-              <span className="text-[11px] font-semibold text-muted block mb-1.5">
+              <span className="text-meta font-semibold text-muted block mb-1.5">
                 Umiejętności już obecne w profilu ({existingMatches.length}):
               </span>
               <div className="flex flex-wrap gap-1.5">
@@ -259,7 +260,7 @@ export const DiffView: React.FC<DiffViewProps> = ({
         <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between border-b border-line pb-3">
           <div className="flex items-center gap-2">
             <Briefcase className="h-4 w-4 text-brand-600" />
-            <h4 className="text-xs font-bold uppercase tracking-wider text-ink">
+            <h4 className="text-label font-bold uppercase tracking-wider text-ink">
               Doświadczenie Zawodowe ({parsedData.history?.length || 0} pozycji)
             </h4>
           </div>
@@ -268,7 +269,7 @@ export const DiffView: React.FC<DiffViewProps> = ({
             <button
               type="button"
               onClick={() => setExpStrategy('merge')}
-              className={`rounded-lg px-2.5 py-1 text-xs font-bold transition-colors ${
+              className={`rounded-lg px-2.5 py-1 cursor-pointer text-xs font-bold transition-colors duration-[var(--duration-fast)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#F26440]/50 ${
                 expStrategy === 'merge'
                   ? 'bg-brand-600 text-on-brand'
                   : 'border border-line bg-surface text-muted hover:text-ink'
@@ -279,7 +280,7 @@ export const DiffView: React.FC<DiffViewProps> = ({
             <button
               type="button"
               onClick={() => setExpStrategy('replace')}
-              className={`rounded-lg px-2.5 py-1 text-xs font-bold transition-colors ${
+              className={`rounded-lg px-2.5 py-1 cursor-pointer text-xs font-bold transition-colors duration-[var(--duration-fast)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#F26440]/50 ${
                 expStrategy === 'replace'
                   ? 'bg-brand-600 text-on-brand'
                   : 'border border-line bg-surface text-muted hover:text-ink'
@@ -298,7 +299,7 @@ export const DiffView: React.FC<DiffViewProps> = ({
             >
               <div>
                 <p className="font-bold text-ink">{exp.role} w <span className="text-brand-fg">{exp.company}</span></p>
-                <p className="font-mono text-[11px] text-muted">{exp.startDate} – {exp.isCurrent ? 'Obecnie' : exp.endDate || 'Brak daty'}</p>
+                <p className="font-mono text-meta text-muted">{exp.startDate} – {exp.isCurrent ? 'Obecnie' : exp.endDate || 'Brak daty'}</p>
               </div>
               <span className="rounded-md bg-brand-50 px-2 py-0.5 font-mono text-[10px] font-bold text-brand-fg">
                 Sparsowane
@@ -313,7 +314,7 @@ export const DiffView: React.FC<DiffViewProps> = ({
         <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between border-b border-line pb-3">
           <div className="flex items-center gap-2">
             <GraduationCap className="h-4 w-4 text-brand-600" />
-            <h4 className="text-xs font-bold uppercase tracking-wider text-ink">
+            <h4 className="text-label font-bold uppercase tracking-wider text-ink">
               Wykształcenie ({parsedData.education?.length || 0} pozycji)
             </h4>
           </div>
@@ -322,7 +323,7 @@ export const DiffView: React.FC<DiffViewProps> = ({
             <button
               type="button"
               onClick={() => setEduStrategy('merge')}
-              className={`rounded-lg px-2.5 py-1 text-xs font-bold transition-colors ${
+              className={`rounded-lg px-2.5 py-1 cursor-pointer text-xs font-bold transition-colors duration-[var(--duration-fast)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#F26440]/50 ${
                 eduStrategy === 'merge'
                   ? 'bg-brand-600 text-on-brand'
                   : 'border border-line bg-surface text-muted hover:text-ink'
@@ -333,7 +334,7 @@ export const DiffView: React.FC<DiffViewProps> = ({
             <button
               type="button"
               onClick={() => setEduStrategy('replace')}
-              className={`rounded-lg px-2.5 py-1 text-xs font-bold transition-colors ${
+              className={`rounded-lg px-2.5 py-1 cursor-pointer text-xs font-bold transition-colors duration-[var(--duration-fast)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#F26440]/50 ${
                 eduStrategy === 'replace'
                   ? 'bg-brand-600 text-on-brand'
                   : 'border border-line bg-surface text-muted hover:text-ink'
@@ -344,7 +345,7 @@ export const DiffView: React.FC<DiffViewProps> = ({
             <button
               type="button"
               onClick={() => setEduStrategy('keep')}
-              className={`rounded-lg px-2.5 py-1 text-xs font-bold transition-colors ${
+              className={`rounded-lg px-2.5 py-1 cursor-pointer text-xs font-bold transition-colors duration-[var(--duration-fast)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#F26440]/50 ${
                 eduStrategy === 'keep'
                   ? 'bg-brand-600 text-on-brand'
                   : 'border border-line bg-surface text-muted hover:text-ink'
@@ -356,9 +357,11 @@ export const DiffView: React.FC<DiffViewProps> = ({
         </div>
 
         {(parsedData.education || []).length === 0 ? (
-          <p className="text-xs text-muted">
-            W dokumencie nie wykryto sekcji wykształcenia. Możesz uzupełnić ją ręcznie w Master Vault.
-          </p>
+          <EmptyState
+            icon={GraduationCap}
+            title="Nie wykryto wykształcenia w dokumencie"
+            description="Parser nie znalazł sekcji wykształcenia w tym pliku. Możesz uzupełnić ją ręcznie w Master Vault."
+          />
         ) : (
           <div className="space-y-2">
             {(parsedData.education || []).map((edu, idx) => (

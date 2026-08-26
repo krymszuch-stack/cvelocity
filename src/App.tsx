@@ -16,6 +16,8 @@ import {
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { ThemeProvider } from './providers/ThemeProvider';
 import { ToastHost } from './components/ui/ToastHost';
+import { XpToastHost } from './components/gamification/XpToastHost';
+import { ApplicationFeedbackModal } from './features/tracker/ApplicationFeedbackModal';
 import { showToast } from './store/useToastStore';
 import { useAppStore } from './store/useAppStore';
 import { useApplications } from './store/useApplications';
@@ -31,6 +33,7 @@ import { resolveVaultOnSignIn } from './lib/vaultSync';
 import { SkillBridgeMatrixModal } from './components/bridge/SkillBridgeMatrixModal';
 import { ElevatorPitchModal } from './features/pitch/ElevatorPitchModal';
 import { DrillModeModal } from './features/drill/DrillModeModal';
+import { AdvisorModalHost, preloadAdvisorModal } from './features/advisor/AdvisorModalHost';
 
 // Lazy-loaded heavy views for fast initial bundle & LCP
 const JobMatcher = lazy(() => import('./features/matcher/JobMatcher').then((m) => ({ default: m.JobMatcher })));
@@ -38,7 +41,6 @@ const AtsLabView = lazy(() => import('./features/ats/AtsLabView').then((m) => ({
 const MasterVaultEditor = lazy(() => import('./features/vault/MasterVaultEditor').then((m) => ({ default: m.MasterVaultEditor })));
 const ProfilerSection = lazy(() => import('./features/profiler/ProfilerSection').then((m) => ({ default: m.ProfilerSection })));
 const CVParserModal = lazy(() => import('./features/parser/CVParserModal').then((m) => ({ default: m.CVParserModal })));
-const GeminiAdvisorModal = lazy(() => import('./features/advisor/GeminiAdvisorModal').then((m) => ({ default: m.GeminiAdvisorModal })));
 const ApplicationTracker = lazy(() => import('./features/tracker/ApplicationTracker').then((m) => ({ default: m.ApplicationTracker })));
 const PricingView = lazy(() => import('./views/PricingView').then((m) => ({ default: m.PricingView })));
 const DesignTokensShowcaseModal = lazy(() => import('./components/DesignTokensShowcaseModal').then((m) => ({ default: m.DesignTokensShowcaseModal })));
@@ -233,6 +235,8 @@ function MainApp() {
   };
 
   const handleOpenAdvisor = (initialQuestion?: string) => {
+    // Preload tuż przed otwarciem — chunk zdąży się pobrać zanim React go zażąda.
+    void preloadAdvisorModal();
     setAdvisorOpen(true, initialQuestion);
   };
 
@@ -243,6 +247,9 @@ function MainApp() {
   const [isSkillBridgeOpen, setSkillBridgeOpen] = useState(false);
   const [isPitchOpen, setPitchOpen] = useState(false);
   const [isDrillOpen, setDrillOpen] = useState(false);
+
+  /** Pusty profil = pierwsza wizyta. Ta sama reguła co w `HomeView`. */
+  const isFirstVisit = !vault.personalInfo.fullName && vault.history.length === 0;
 
   return (
     <GlobalShell
@@ -267,20 +274,38 @@ function MainApp() {
           {/* Ekran startowy: jedna rekomendacja na górze, reszta pod nią. */}
           {activeTab === 'home' && (
             <div className="space-y-6">
-              <NextActionCard action={nextAction} onNavigate={navigate} />
               {/*
-                Pytania uzupełniające stoją pod „następnym krokiem", a nie
-                w osobnej zakładce: to ten sam ekran, na którym aplikacja mówi
-                „zrób teraz to", a zakładka, do której trzeba trafić samemu,
+                Kolejność zależy od tego, czy profil jest pusty.
+
+                Osoba, która widzi aplikację pierwszy raz, dostawała na wejściu
+                „Uzupełnij: Doświadczenie zawodowe" i formularz pytań — prośbę
+                o pracę, zanim cokolwiek obiecaliśmy. Dla pustego profilu obie
+                karty schodzą pod stronę wejściową z `HomeView`; gdy w profilu
+                są już dane, rekomendacja wraca na górę, bo wtedy jest
+                podsumowaniem, a nie zaczepką.
+
+                Pytania uzupełniające trzymają się „następnego kroku", a nie
+                osobnej zakładki: zakładka, do której trzeba trafić samemu,
                 nie zostałaby odwiedzona. Karta znika sama, gdy nie ma o co pytać.
               */}
-              <CvQuestionsCard vault={vault} onChange={setVault} />
+              {!isFirstVisit ? (
+                <>
+                  <NextActionCard action={nextAction} onNavigate={navigate} />
+                  <CvQuestionsCard vault={vault} onChange={setVault} />
+                </>
+              ) : null}
               <HomeView
                 vault={vault}
                 onNavigate={navigate}
                 onOpenAdvisor={handleOpenAdvisor}
                 onAdoptVault={setVault}
               />
+              {isFirstVisit ? (
+                <>
+                  <NextActionCard action={nextAction} onNavigate={navigate} />
+                  <CvQuestionsCard vault={vault} onChange={setVault} />
+                </>
+              ) : null}
             </div>
           )}
 
@@ -338,7 +363,7 @@ function MainApp() {
       </AnimatePresence>
 
       <Suspense fallback={null}>
-        <GeminiAdvisorModal
+        <AdvisorModalHost
           isOpen={isAdvisorOpen}
           onClose={() => setAdvisorOpen(false)}
           vault={vault}
@@ -374,6 +399,9 @@ function MainApp() {
 
       <DrillModeModal isOpen={isDrillOpen} onClose={() => setDrillOpen(false)} />
 
+      {/* Ankieta po eksporcie: pyta o wysyłkę i sama prowadzi wpis w Pipeline */}
+      <ApplicationFeedbackModal onNavigate={navigate} />
+
       {/* Paleta poleceń (Cmd+K) — jedyny skrót globalny, jaki został */}
       <CommandPalette />
     </GlobalShell>
@@ -386,6 +414,9 @@ export default function App() {
       <AuthProvider>
         <MainApp />
         <ToastHost />
+        {/* Osobny host nagród: stoi w innym rogu niż komunikaty systemowe,
+            żeby awans nie wyglądał jak potwierdzenie zapisu. */}
+        <XpToastHost />
       </AuthProvider>
     </ThemeProvider>
   );

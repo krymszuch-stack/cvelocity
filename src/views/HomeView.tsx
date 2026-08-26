@@ -28,6 +28,7 @@ import { Card } from '../components/ui/Card';
 import { TrustRow } from '../components/ui/TrustChip';
 import { QuickAtsCheck } from '../features/quickcheck/QuickAtsCheck';
 import { WelcomeWizard } from '../features/onboarding/WelcomeWizard';
+import { LandingView } from './LandingView';
 import { showToast } from '../store/useToastStore';
 import { MasterVault } from '../types';
 import { NavTabId } from '../components/GlobalShell';
@@ -287,11 +288,48 @@ export const HomeView: React.FC<HomeViewProps> = ({
     },
   };
 
+  /**
+   * Pierwsza wizyta: profil jest pusty, więc pulpit z licznikami „0 pozycji"
+   * i prośbą o uzupełnienie danych nie ma czego podsumowywać. Taka osoba
+   * dostaje stronę wejściową, która najpierw tłumaczy, po co miałaby cokolwiek
+   * wpisywać. Gdy w profilu jest choć nazwisko albo jedna pozycja historii,
+   * wraca zwykły pulpit.
+   */
+  const isFirstVisit = !hasFullName && historyCount === 0;
+
+  /** Klin wejściowy renderują obie ścieżki, więc mieszka w jednym miejscu. */
+  const atsCheck = (
+    <QuickAtsCheck
+      onSaveProfile={(parsedVault) => {
+        onAdoptVault(parsedVault);
+        showToast('Profil zapisany', {
+          message: 'Dane z CV trafiły do profilu w tej przeglądarce.',
+          variant: 'success',
+        });
+      }}
+      onOpenEditor={(parsedVault) => {
+        onAdoptVault(parsedVault);
+        onNavigate('profil');
+      }}
+    />
+  );
+
   return (
     <div className="space-y-8 pb-12">
-      {/* 0. Przewodnik pierwszego uruchomienia — tylko dla pustego profilu */}
+      {isFirstVisit ? (
+        <LandingView onNavigate={onNavigate} atsSlot={atsCheck} />
+      ) : null}
+
+      {/* 0. Przewodnik pierwszego uruchomienia — tylko dla pustego profilu.
+
+          Przy pierwszej wizycie stoi POD stroną wejściową, nie nad nią:
+          otwieranie aplikacji pytaniem „uzupełnij doświadczenie zawodowe",
+          zanim ktokolwiek wyjaśnił, po co, jest prośbą o pracę przed
+          obietnicą. Dla wypełnionego profilu kolejność bez zmian. */}
       <WelcomeWizard vault={vault} onNavigate={onNavigate} />
 
+      {!isFirstVisit ? (
+        <>
       {/* 1. Nagłówek ekspozycyjny */}
       <motion.div
         initial={{ opacity: 0, y: 15 }}
@@ -357,19 +395,7 @@ export const HomeView: React.FC<HomeViewProps> = ({
           a nie pustym formularzem. Kolejność „nagłówek → wezwanie do działania
           → narzędzie" jest tu jedyną zmianą — sam klin działa bez zmian
           i nadal nie wymaga konta. */}
-      <QuickAtsCheck
-        onSaveProfile={(parsedVault) => {
-          onAdoptVault(parsedVault);
-          showToast('Profil zapisany', {
-            message: 'Dane z CV trafiły do profilu w tej przeglądarce.',
-            variant: 'success',
-          });
-        }}
-        onOpenEditor={(parsedVault) => {
-          onAdoptVault(parsedVault);
-          onNavigate('profil');
-        }}
-      />
+      {atsCheck}
 
       {/* 3. Liczniki profilu
 
@@ -472,6 +498,9 @@ export const HomeView: React.FC<HomeViewProps> = ({
           ))}
         </motion.div>
       </div>
+
+        </>
+      ) : null}
 
       {/* 5. Mikroblog kariery — porady rekrutacyjne */}
       <div className="space-y-4">

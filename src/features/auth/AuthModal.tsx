@@ -1,4 +1,4 @@
-import React, { useCallback, useState } from 'react';
+import React, { useCallback, useId, useState } from 'react';
 import { Cloud, HardDrive, ArrowLeft, MailCheck } from 'lucide-react';
 import { Modal } from '../../components/ui/Modal';
 import { Input } from '../../components/ui/Field';
@@ -43,6 +43,15 @@ const TYTULY: Record<Widok, string> = {
   lokalny: 'Profil na tym urządzeniu',
 };
 
+// Podtytuł prostym językiem — mówi, co się zaraz wydarzy, zanim użytkownik
+// zacznie czytać formularz.
+const OPISY: Partial<Record<Widok, string>> = {
+  wybor: 'Wybierz, jak chcesz zapisywać swoje CV.',
+  logowanie: 'Wpisz e-mail i hasło, żeby wrócić do swojego CV.',
+  rejestracja: 'Załóż darmowe konto, żeby mieć dostęp z każdego urządzenia.',
+  lokalny: 'Dane zostają wyłącznie w tej przeglądarce — bez konta i bez hasła.',
+};
+
 const GoogleIcon: React.FC<{ className?: string }> = ({ className = 'h-4 w-4' }) => (
   <svg className={className} viewBox="0 0 24 24" aria-hidden="true">
     <path
@@ -73,23 +82,73 @@ const GoogleButton: React.FC<{
     type="button"
     onClick={onClick}
     disabled={loading}
-    className="flex w-full items-center justify-center gap-3 rounded-xl border border-line bg-surface px-4 py-2.5 text-sm font-semibold text-ink shadow-xs transition hover:bg-elevated hover:border-ink/20 disabled:opacity-50 active:scale-[0.99]"
+    aria-busy={loading || undefined}
+    className="flex h-11 w-full items-center justify-center gap-3 rounded-xl border border-line bg-surface px-4 text-sm font-semibold text-ink shadow-xs transition-colors hover:bg-elevated hover:border-ink/20 disabled:cursor-not-allowed disabled:opacity-50 active:scale-[0.99]"
   >
     <GoogleIcon />
-    <span>{loading ? 'Łączenie z Google...' : text}</span>
+    <span className="truncate">{loading ? 'Łączenie z Google…' : text}</span>
   </button>
 );
 
-const OrDivider: React.FC<{ text?: string }> = ({ text = 'lub' }) => (
-  <div className="relative my-3 flex items-center justify-center">
+const OrDivider: React.FC<{ text?: string }> = ({ text = 'albo' }) => (
+  <div className="relative my-3 flex items-center justify-center" role="separator">
     <div className="absolute inset-0 flex items-center">
       <div className="w-full border-t border-line" />
     </div>
-    <span className="relative bg-surface px-2 text-[10px] font-bold uppercase tracking-wider text-muted">
+    <span className="relative bg-surface px-2 text-meta font-bold uppercase tracking-wider text-muted">
       {text}
     </span>
   </div>
 );
+
+/**
+ * Przełącznik logowanie/rejestracja — jeden `role="tablist"`, dwa `role="tab"`.
+ * Szerokość kolumn jest stała (grid-cols-2), więc zmiana zakładki nie
+ * przesuwa reszty formularza.
+ */
+const AuthTabs: React.FC<{
+  aktywny: 'logowanie' | 'rejestracja';
+  onChange: (widok: 'logowanie' | 'rejestracja') => void;
+}> = ({ aktywny, onChange }) => {
+  const tabId = useId();
+
+  const tabClass = (tab: 'logowanie' | 'rejestracja') =>
+    [
+      'cursor-pointer rounded-lg py-2 text-label font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#F26440]/50',
+      aktywny === tab ? 'bg-surface text-ink shadow-xs' : 'text-muted hover:text-ink',
+    ].join(' ');
+
+  return (
+    <div
+      role="tablist"
+      aria-label="Wybór między logowaniem a rejestracją"
+      className="grid grid-cols-2 gap-1 rounded-xl bg-sunken p-1"
+    >
+      <button
+        type="button"
+        role="tab"
+        id={`${tabId}-logowanie`}
+        aria-selected={aktywny === 'logowanie'}
+        aria-pressed={aktywny === 'logowanie'}
+        onClick={() => onChange('logowanie')}
+        className={tabClass('logowanie')}
+      >
+        Logowanie
+      </button>
+      <button
+        type="button"
+        role="tab"
+        id={`${tabId}-rejestracja`}
+        aria-selected={aktywny === 'rejestracja'}
+        aria-pressed={aktywny === 'rejestracja'}
+        onClick={() => onChange('rejestracja')}
+        className={tabClass('rejestracja')}
+      >
+        Rejestracja
+      </button>
+    </div>
+  );
+};
 
 export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onSuccessVaultLoaded }) => {
   const {
@@ -241,25 +300,31 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onSuccess
   );
 
   const sila = passwordStrength(haslo);
+  const jestFormularzemUwierzytelniania = widok === 'logowanie' || widok === 'rejestracja';
 
   return (
-    <Modal isOpen={isOpen} onClose={zamknij} title={TYTULY[widok]} size="sm">
+    <Modal isOpen={isOpen} onClose={zamknij} title={TYTULY[widok]} description={OPISY[widok]} size="sm">
       {widok !== 'wybor' && widok !== 'potwierdz' && cloudAvailable && (
         <button
           type="button"
           onClick={() => idzDo('wybor')}
-          className="mb-3 inline-flex items-center gap-1.5 text-xs font-semibold text-muted hover:text-ink"
+          className="mb-3 inline-flex cursor-pointer items-center gap-1.5 text-label font-semibold text-muted transition-colors hover:text-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#F26440]/50 rounded"
         >
-          <ArrowLeft className="h-3.5 w-3.5" />
+          <ArrowLeft className="h-3.5 w-3.5" aria-hidden="true" />
           Wróć do wyboru
         </button>
       )}
 
-      {blad && (
-        <Alert variant="danger" className="mb-4">
-          {blad}
-        </Alert>
+      {jestFormularzemUwierzytelniania && (
+        <div className="mb-4">
+          <AuthTabs aktywny={widok} onChange={idzDo} />
+        </div>
       )}
+
+      {/* Stała wysokość, żeby pojawienie się błędu nie przesuwało formularza. */}
+      <div className="mb-4 min-h-[3rem]" aria-live="assertive">
+        {blad && <Alert variant="danger">{blad}</Alert>}
+      </div>
 
       {/* --- wybór trybu --- */}
       {widok === 'wybor' && (
@@ -267,19 +332,19 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onSuccess
           {cloudAvailable && (
             <>
               <GoogleButton onClick={zalogujGoogle} loading={pracuje} text="Zaloguj się przez Google" />
-              <OrDivider text="lub wybierz metodę" />
+              <OrDivider text="albo wybierz metodę" />
             </>
           )}
 
           <button
             type="button"
             onClick={() => idzDo('logowanie')}
-            className="flex w-full items-start gap-3 rounded-xl border border-line bg-surface p-4 text-left hover:border-brand-400 transition"
+            className="flex w-full cursor-pointer items-start gap-3 rounded-xl border border-line bg-surface p-4 text-left transition-colors hover:border-brand-400 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#F26440]/50"
           >
-            <Cloud className="mt-0.5 h-5 w-5 shrink-0 text-brand-fg" />
+            <Cloud className="mt-0.5 h-5 w-5 shrink-0 text-brand-fg" aria-hidden="true" />
             <span>
-              <span className="block text-sm font-bold text-ink">Konto w chmurze (E-mail i hasło)</span>
-              <span className="mt-0.5 block text-xs text-muted">
+              <span className="block text-sm font-bold text-ink">Konto w chmurze (e-mail i hasło)</span>
+              <span className="mt-0.5 block text-label text-muted">
                 CV przeżyje wyczyszczenie przeglądarki i wróci na innym urządzeniu.
               </span>
             </span>
@@ -288,12 +353,12 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onSuccess
           <button
             type="button"
             onClick={() => idzDo('lokalny')}
-            className="flex w-full items-start gap-3 rounded-xl border border-line bg-surface p-4 text-left hover:border-brand-400 transition"
+            className="flex w-full cursor-pointer items-start gap-3 rounded-xl border border-line bg-surface p-4 text-left transition-colors hover:border-brand-400 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#F26440]/50"
           >
-            <HardDrive className="mt-0.5 h-5 w-5 shrink-0 text-muted" />
+            <HardDrive className="mt-0.5 h-5 w-5 shrink-0 text-muted" aria-hidden="true" />
             <span>
               <span className="block text-sm font-bold text-ink">Tylko na tym urządzeniu</span>
-              <span className="mt-0.5 block text-xs text-muted">
+              <span className="mt-0.5 block text-label text-muted">
                 Bez konta i bez hasła. Dane nie opuszczają tej przeglądarki.
               </span>
             </span>
@@ -305,12 +370,13 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onSuccess
       {widok === 'logowanie' && (
         <div className="space-y-4">
           <GoogleButton onClick={zalogujGoogle} loading={pracuje} text="Kontynuuj z Google" />
-          <OrDivider text="lub e-mail i hasło" />
+          <OrDivider text="albo e-mail i hasło" />
 
-          <form onSubmit={zaloguj} className="space-y-4">
+          <form onSubmit={zaloguj} className="space-y-4" noValidate={false}>
             <Input
               label="Adres e-mail"
               type="email"
+              inputMode="email"
               autoComplete="email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
@@ -329,11 +395,12 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onSuccess
               Zaloguj się
             </Button>
 
-            <div className="flex justify-between text-xs">
-              <button type="button" onClick={() => idzDo('rejestracja')} className="font-semibold text-brand-fg">
-                Załóż konto
-              </button>
-              <button type="button" onClick={() => idzDo('reset')} className="text-muted hover:text-ink">
+            <div className="flex justify-end">
+              <button
+                type="button"
+                onClick={() => idzDo('reset')}
+                className="cursor-pointer text-label text-muted transition-colors hover:text-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#F26440]/50 rounded"
+              >
                 Nie pamiętam hasła
               </button>
             </div>
@@ -345,7 +412,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onSuccess
       {widok === 'rejestracja' && (
         <div className="space-y-4">
           <GoogleButton onClick={zalogujGoogle} loading={pracuje} text="Zarejestruj się przez Google" />
-          <OrDivider text="lub wypełnij formularz" />
+          <OrDivider text="albo wypełnij formularz" />
 
           <form onSubmit={zarejestruj} className="space-y-4">
             <Input
@@ -353,11 +420,13 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onSuccess
               value={imie}
               onChange={(e) => setImie(e.target.value)}
               placeholder="np. Jan"
+              autoComplete="name"
               autoFocus
             />
             <Input
               label="Adres e-mail"
               type="email"
+              inputMode="email"
               autoComplete="email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
@@ -377,7 +446,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onSuccess
                 <div className="mt-1.5 flex items-center gap-2">
                   <div className="h-1 flex-1 overflow-hidden rounded-full bg-sunken">
                     <div
-                      className="h-full rounded-full bg-brand-600 transition-all"
+                      className="h-full rounded-full bg-brand-600 transition-[width] duration-[var(--duration-state)]"
                       style={{ width: `${(sila / 4) * 100}%` }}
                     />
                   </div>
@@ -389,13 +458,6 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onSuccess
             <Button type="submit" variant="primary" loading={pracuje} className="w-full">
               Załóż konto
             </Button>
-
-            <p className="text-center text-xs text-muted">
-              Masz już konto?{' '}
-              <button type="button" onClick={() => idzDo('logowanie')} className="font-semibold text-brand-fg">
-                Zaloguj się
-              </button>
-            </p>
           </form>
         </div>
       )}
@@ -409,6 +471,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onSuccess
           <Input
             label="Adres e-mail"
             type="email"
+            inputMode="email"
             autoComplete="email"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
@@ -424,11 +487,11 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onSuccess
       {/* --- po rejestracji / po resecie --- */}
       {widok === 'potwierdz' && (
         <div className="space-y-4 text-center">
-          <MailCheck className="mx-auto h-10 w-10 text-brand-fg" />
+          <MailCheck className="mx-auto h-10 w-10 text-brand-fg" aria-hidden="true" />
           <p className="text-sm text-ink">
             Jeśli ten adres ma u nas konto, wysłaliśmy na niego wiadomość.
           </p>
-          <p className="text-xs text-muted">
+          <p className="text-label text-muted">
             Link działa przez godzinę. Sprawdź też folder ze spamem — wiadomości
             od nowych nadawców czasem tam trafiają.
           </p>
@@ -446,12 +509,15 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onSuccess
             value={imie}
             onChange={(e) => setImie(e.target.value)}
             placeholder="np. Jan Kowalski"
+            autoComplete="name"
             required
             autoFocus
           />
           <Input
             label="Adres e-mail (opcjonalnie)"
             type="email"
+            inputMode="email"
+            autoComplete="email"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
             placeholder="jan.kowalski@domena.pl"

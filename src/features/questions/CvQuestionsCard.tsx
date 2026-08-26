@@ -110,7 +110,7 @@ export const CvQuestionsCard: React.FC<CvQuestionsCardProps> = ({
     >
       <div className="flex items-center gap-3">
         <ProgressBar value={position} max={seriesLength} className="h-1.5" />
-        <span className="shrink-0 font-mono text-[11px] font-bold text-muted">
+        <span className="shrink-0 font-mono text-meta font-bold text-muted">
           {position}/{seriesLength}
         </span>
       </div>
@@ -121,7 +121,7 @@ export const CvQuestionsCard: React.FC<CvQuestionsCardProps> = ({
         </span>
 
         <div className="min-w-0 flex-1">
-          <p className="font-mono text-[11px] font-bold uppercase tracking-[0.18em] text-brand-fg">
+          <p className="font-mono text-meta font-bold uppercase tracking-[0.18em] text-brand-fg">
             {current.topic}
           </p>
 
@@ -145,7 +145,7 @@ export const CvQuestionsCard: React.FC<CvQuestionsCardProps> = ({
           rows={3}
           placeholder="Wpisz własnymi słowami — trafi do CV dokładnie tak, jak to napiszesz."
         />
-        <p className="mt-1 text-right font-mono text-[11px] text-subtle">
+        <p className="mt-1 text-right font-mono text-meta text-subtle">
           {answer.length}/{MAX_ANSWER_LENGTH}
         </p>
       </div>
@@ -165,7 +165,7 @@ export const CvQuestionsCard: React.FC<CvQuestionsCardProps> = ({
       )}
 
       <div className="mt-4 flex flex-col-reverse gap-2 sm:flex-row sm:items-center sm:justify-between">
-        <p className="font-mono text-[11px] text-subtle">
+        <p className="font-mono text-meta text-subtle">
           {totalGaps > questions.length
             ? `Do uzupełnienia jeszcze ${totalGaps - questions.length} poza tą serią`
             : 'To ostatnia seria pytań'}
