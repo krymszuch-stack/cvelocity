@@ -30,6 +30,7 @@ import { simulateAtsCheck } from '../../lib/atsSimulator';
 import { generateAntiTemplateCoverLetter } from '../../lib/coverLetterEngine';
 import { triggerConfetti } from '../../lib/confetti';
 import { grantXp } from '../../store/useGamificationStore';
+import { consumeAiLocally } from '../../store/useEntitlements';
 import { contributeJobIntel } from '../../lib/crowdsourceIntel';
 import { AtsSimulatorView } from './AtsSimulatorView';
 import { PageHeader } from '../../components/ui/PageHeader';
@@ -42,14 +43,12 @@ import { showToast } from '../../store/useToastStore';
 export interface JobMatcherProps {
   vault: MasterVault;
   onUpdateVault?: (updated: MasterVault) => void;
-  onOpenAdvisor?: (initialQuestion?: string) => void;
   className?: string;
 }
 
 export const JobMatcher: React.FC<JobMatcherProps> = ({
   vault,
   onUpdateVault,
-  onOpenAdvisor,
   className = '',
 }) => {
   // ATS Matching State
@@ -172,7 +171,12 @@ export const JobMatcher: React.FC<JobMatcherProps> = ({
       // `any`, so a shape mismatch would otherwise pass typecheck and leave every
       // field undefined — throwing away a result we paid the model for.
       let parsed: ParsedJobDescription;
+      // Podpowiedź licznika na zero = strzał skazany na 402; lokalny parser
+      // daje od razu gorszy, ale uczciwy wynik. Prawdę o limicie i tak zna
+      // serwer — tu decydujemy tylko, czy warto wysyłać.
+      const aiAvailable = consumeAiLocally();
       try {
+        if (!aiAvailable) throw new Error('lokalny limit AI wyczerpany');
         const parseData = await api.post<{ parsedJd: unknown }>('/api/parse-jd', {
           rawJdText: fetched.descriptionRaw,
         });
@@ -231,8 +235,8 @@ export const JobMatcher: React.FC<JobMatcherProps> = ({
     <div className={`space-y-6 ${className}`}>
       <PageHeader
         title="Dopasowanie Ofert & Symulator ATS"
-        description="Wklej link do oferty lub jej treść — silnik CVELOCITY zweryfikuje Twoje CV przeciwko algorytmom ATS i wygeneruje spersonalizowane dokumenty aplikacyjne."
-        badge="Zero-Token Slot Engine"
+        description="Wklej link do oferty lub jej treść — symulator ATS sprawdzi pokrycie wymagań Twojego CV, a dokumenty aplikacyjne przygotujesz na tej podstawie."
+        badge="Analiza bez tokenów AI"
       />
 
       {/* Input Modes (Live / URL / Manual) */}

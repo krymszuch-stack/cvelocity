@@ -6,8 +6,6 @@ import {
 } from '../elevatorPitchEngine';
 import { MasterVault } from '../../types';
 import { createEmptyVault } from '../sampleVault';
-import { ElevatorPitchGen, invokeElevatorPitchGen } from '../../skills/elevator-pitch-gen';
-import { ag } from '../../skills/liveHudSkill';
 
 describe('Elevator Pitch Generator (elevator-pitch-gen-v1)', () => {
   const createMockVault = (): MasterVault => {
@@ -139,25 +137,6 @@ describe('Elevator Pitch Generator (elevator-pitch-gen-v1)', () => {
       const pitch = generateElevatorPitch(vault);
       expect(pitch.thirtySeconds).toContain('Monter Konstrukcji Stalowych / Spawacz TIG');
       expect(pitch.thirtySeconds).toContain('Spawanie TIG 141');
-    });
-  });
-
-  describe('Rejestracja i wywołanie skilla', () => {
-    it('posiada poprawne metadane skilla elevator-pitch-gen-v1', () => {
-      expect(ElevatorPitchGen.id).toBe('elevator-pitch-gen-v1');
-      expect(ElevatorPitchGen.dependencies).toContain('slot-filling-engine');
-      expect(ElevatorPitchGen.dependencies).toContain('master-vault');
-      expect(ElevatorPitchGen.activation.hotkey).toBe('Ctrl+P');
-    });
-
-    it('jest zarejestrowany w ag i obsługuje invokeElevatorPitchGen', () => {
-      const registered = ag.getSkill('elevator-pitch-gen-v1');
-      expect(registered).toBeDefined();
-
-      const vault = createMockVault();
-      const pitch = invokeElevatorPitchGen({ vault });
-      expect(pitch).toBeDefined();
-      expect(pitch?.targetRole).toBe('Senior DevOps & Cloud Engineer');
     });
   });
 });

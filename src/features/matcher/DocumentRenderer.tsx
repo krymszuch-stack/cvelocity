@@ -21,7 +21,6 @@ import { MasterVault, TailoredResume } from '../../types';
 import { Button } from '../../components/ui/Button';
 import { Card } from '../../components/ui/Card';
 import { Chip } from '../../components/ui/Chip';
-import { ConsistencyLockBadge } from '../../components/consistency/ConsistencyLockBadge';
 import { Tooltip } from '../../components/ui/Tooltip';
 
 export type TemplateId = 'modern' | 'minimal' | 'executive' | 'creative';
@@ -279,7 +278,6 @@ ${education.map((e) => `${e.degree} - ${e.institution} (${e.startDate} - ${e.end
                 >
                   Podsumowanie Zawodowe
                 </h2>
-                <ConsistencyLockBadge isConsistent={true} size="sm" variant="icon-only" label="spójność potwierdzona" />
               </div>
               <p className="text-xs leading-relaxed text-ink/90">
                 {tailoredResume?.summary || personal.summary}
@@ -293,7 +291,6 @@ ${education.map((e) => `${e.degree} - ${e.institution} (${e.startDate} - ${e.end
               <h2 className="text-xs font-extrabold uppercase tracking-wider text-muted font-mono">
                 Kluczowe Umiejętności & Technologie
               </h2>
-              <ConsistencyLockBadge isConsistent={true} size="sm" variant="icon-only" label="spójność potwierdzona" />
             </div>
             <div className="flex flex-wrap gap-1.5">
               {hardSkills.map((s, i) => (
@@ -317,7 +314,6 @@ ${education.map((e) => `${e.degree} - ${e.institution} (${e.startDate} - ${e.end
               <h2 className="text-xs font-extrabold uppercase tracking-wider text-muted font-mono">
                 Doświadczenie Zawodowe
               </h2>
-              <ConsistencyLockBadge isConsistent={true} size="sm" variant="icon-only" label="spójność potwierdzona" />
             </div>
 
             <div className="space-y-4">
@@ -358,7 +354,6 @@ ${education.map((e) => `${e.degree} - ${e.institution} (${e.startDate} - ${e.end
                 <h2 className="text-xs font-extrabold uppercase tracking-wider text-muted font-mono">
                   Edukacja & Wykształcenie
                 </h2>
-                <ConsistencyLockBadge isConsistent={true} size="sm" variant="icon-only" label="spójność potwierdzona" />
               </div>
               <div className="space-y-2">
                 {education.map((e) => (

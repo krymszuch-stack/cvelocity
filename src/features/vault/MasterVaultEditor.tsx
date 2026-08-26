@@ -3,18 +3,15 @@ import {
   User,
   Briefcase,
   GraduationCap,
-  Sparkles,
   Sliders,
   Star,
   Download,
   Upload,
-  Cloud,
   CheckCircle2,
   ArrowRight,
   ArrowLeft,
   LayoutList,
   Layers,
-  Save,
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { MasterVault, ProfilerState } from '../../types';
@@ -32,11 +29,15 @@ import { ConsistencyLockBadge } from '../../components/consistency/ConsistencyLo
 import { showToast } from '../../store/useToastStore';
 import { useFieldSuggestions } from '../../hooks/useFieldSuggestions';
 import { bestSubRoleMatch } from '../../lib/specializationIndex';
+import {
+  extractClaimsFromVault,
+  validateConsistency,
+  ProjectedClaimItem,
+} from '../../lib/consistencyGuard';
 
 export interface MasterVaultEditorProps {
   vault: MasterVault;
   onChange: (updatedVault: MasterVault) => void;
-  onOpenAdvisor?: (initialQuestion?: string) => void;
   className?: string;
 }
 
@@ -53,7 +54,6 @@ const VAULT_STEPS: StepItem[] = [
 export const MasterVaultEditor: React.FC<MasterVaultEditorProps> = ({
   vault,
   onChange,
-  onOpenAdvisor,
   className = '',
 }) => {
   const [viewMode, setViewMode] = useState<ViewMode>('stepper');
@@ -80,6 +80,28 @@ export const MasterVaultEditor: React.FC<MasterVaultEditorProps> = ({
       .join(' ');
     return signal.trim() ? bestSubRoleMatch(signal)?.subRole.id : undefined;
   }, [vault.profiler?.subRoleId, vault.personalInfo.title, vault.history]);
+
+  /**
+   * Prawdziwa walidacja spójności, ta sama co w widoku ConsistencyGuard.
+   *
+   * Plakietka przy nagłówku pokazywała wcześniej zaszyte `isConsistent={true}`
+   * — twierdziła „spójność potwierdzona", zanim jakiekolwiek sprawdzenie
+   * zostało uruchomione (reguła 2). Tu liczymy ją z danych, nie deklarujemy.
+   */
+  const consistency = useMemo(() => {
+    const claims = extractClaimsFromVault(vault);
+    const projectedItems: ProjectedClaimItem[] = claims.map((claim, index) => ({
+      sectionId: index % 2 === 0 ? 'cv_experience' : 'cv_projects',
+      sectionName: index % 2 === 0 ? 'Doświadczenie Zawodowe' : 'Projekty i Osiągnięcia',
+      claimId: claim.id,
+      claimedDateRange: claim.dateRange,
+      claimedTags: claim.tags,
+    }));
+    return validateConsistency(vault, {
+      claimIdsToCheck: claims.map((c) => c.id),
+      projectedItems,
+    });
+  }, [vault]);
 
   /**
    * Zapis wybranej podroli do vaultu. Bez niego wybór branży znikał razem z
@@ -137,10 +159,6 @@ export const MasterVaultEditor: React.FC<MasterVaultEditorProps> = ({
     if (e.target) e.target.value = '';
   };
 
-  const handleCloudSave = () => {
-    showNotification('Profil został zsynchronizowany i zabezpieczony w chmurze.');
-  };
-
   const viewModeOptions = [
     { id: 'stepper' as ViewMode, label: 'Krok po kroku', icon: Layers },
     { id: 'full' as ViewMode, label: 'Pełny formularz', icon: LayoutList },
@@ -160,11 +178,15 @@ export const MasterVaultEditor: React.FC<MasterVaultEditorProps> = ({
       {/* Header with Mode Switcher & Actions */}
       <PageHeader
         title="Master Vault • Profil Główny Kandydata"
-        description="Pojedyncze źródło prawdy (Single Source of Truth) dla wszystkich Twoich kompetencji, doświadczeń i preferencji."
+        description="Pojedyncze źródło prawdy (Single Source of Truth) dla wszystkich Twoich kompetencji, doświadczeń i preferencji. Zmiany zapisują się automatycznie — lokalnie, a po zalogowaniu także w chmurze konta."
         badge={
           <div className="flex items-center gap-2">
             <span>Core SSoT</span>
-            <ConsistencyLockBadge isConsistent={true} size="sm" label="spójność potwierdzona" />
+            <ConsistencyLockBadge
+              isConsistent={consistency.isConsistent}
+              size="sm"
+              label="spójność potwierdzona"
+            />
           </div>
         }
         actions={
@@ -194,15 +216,6 @@ export const MasterVaultEditor: React.FC<MasterVaultEditorProps> = ({
               title="Wczytaj profil z pliku JSON"
             >
               Importuj JSON
-            </Button>
-
-            <Button
-              variant="primary"
-              size="sm"
-              icon={Save}
-              onClick={handleCloudSave}
-            >
-              Zapisz w Chmurze
             </Button>
           </div>
         }
@@ -252,7 +265,6 @@ export const MasterVaultEditor: React.FC<MasterVaultEditorProps> = ({
                 <ExperienceSection
                   history={vault.history || []}
                   onChange={(updated) => onChange({ ...vault, history: updated })}
-                  onOpenAdvisor={onOpenAdvisor}
                   suggest={suggest}
                 />
               )}
@@ -326,14 +338,14 @@ export const MasterVaultEditor: React.FC<MasterVaultEditorProps> = ({
                 Dalej
               </Button>
             ) : (
-              <Button
-                variant="primary"
-                size="md"
-                icon={CheckCircle2}
-                onClick={handleCloudSave}
-              >
-                Zakończ & Zapisz
-              </Button>
+              // Ostatni krok nie potrzebuje przycisku „zapisz": zapis jest
+              // automatyczny (useDeferredPersist w App), a poprzedni przycisk
+              // „Zakończ & Zapisz" tylko pokazywał komunikat o chmurze, nic
+              // nie zapisując.
+              <span className="flex items-center gap-1.5 text-xs font-semibold text-muted">
+                <CheckCircle2 className="h-4 w-4 text-success-fg" />
+                Profil zapisany automatycznie
+              </span>
             )}
           </div>
         </div>
@@ -349,7 +361,6 @@ export const MasterVaultEditor: React.FC<MasterVaultEditorProps> = ({
           <ExperienceSection
             history={vault.history || []}
             onChange={(updated) => onChange({ ...vault, history: updated })}
-            onOpenAdvisor={onOpenAdvisor}
             suggest={suggest}
           />
 

@@ -13,6 +13,7 @@ import { rankExperienceByRelevance } from './relevanceRanking';
 import { lookupGlossaryDefinition, hasGlossaryDefinition } from '../data/interviewGlossaryDictionary';
 import { api, ApiError } from './apiClient';
 import { StorageKeys, cheatSheetCacheKeyFor, readJson, removeRaw, writeJson } from './storage';
+import { consumeAiLocally } from '../store/useEntitlements';
 
 /**
  * 0-Token local "skeleton" builder for the Interview Cheat Sheet — mirrors the
@@ -429,6 +430,16 @@ export async function generateCheatSheetEnrichmentWithAI(
   const cached = readCachedEnrichment(hash);
   if (cached) {
     return { enrichment: cached, fromCache: true };
+  }
+
+  // Podpowiedź licznika przed strzałem: gdy interfejs wie, że darmowy dobowy
+  // limit stoi na zerze, wysyłka skazana na 402 tylko marnowałaby czas.
+  // Ostateczną decyzję i tak podejmuje serwer — ten komunikat obsługuje wyłącznie
+  // przypadek, w którym podpowiedź i prawda się zgadzają.
+  if (!consumeAiLocally()) {
+    throw new Error(
+      'Dzisiejszy limit darmowych wywołań AI jest wyczerpany. Limit odnowi się o północy albo aktywuj plan Pro.'
+    );
   }
 
   let data: { enrichment: CheatSheetEnrichment };

@@ -6,6 +6,7 @@ import { Card } from '../../components/ui/Card';
 import { ReactFloatingPanel } from '../../components/hud/ReactFloatingPanel';
 import { FeatureGate } from '../../components/gamification/FeatureGate';
 import { useAppStore } from '../../store/useAppStore';
+import { useEntitlements } from '../../store/useEntitlements';
 import { InterviewLoopModal } from '../loop/InterviewLoopModal';
 
 /**
@@ -81,6 +82,10 @@ export const InterviewPanel: React.FC<InterviewPanelProps> = ({
   const [isHUDOpen, setHUDOpen] = useState(false);
   const { setActiveTab } = useAppStore();
   const [isLoopOpen, setLoopOpen] = useState(false);
+  // Karnet kupiony za pieniądze przechodzi obok progu rangi — bez tego
+  // obietnica z Centrum Kariery („karnet odblokowuje beta od razu”) byłaby
+  // tylko tekstem.
+  const { hasActivePass } = useEntitlements();
 
   // Domyślnie najbliższa rozmowa z terminem; bez terminu — pierwsza z listy.
   const selected = useMemo(() => {
@@ -242,6 +247,7 @@ export const InterviewPanel: React.FC<InterviewPanelProps> = ({
       {isHUDOpen && (
         <FeatureGate
           feature="LIVE_HUD_TELEPROMPTER"
+          hasPaidPass={hasActivePass}
           pitch="Podpowiedzi z Twojego Vaultu na wierzchu ekranu w trakcie rozmowy — bez przeglądania notatek na oczach rekrutera."
           onTrain={() => {
             setHUDOpen(false);

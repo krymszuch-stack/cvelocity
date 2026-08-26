@@ -1,15 +1,15 @@
 import React, { useState, useMemo } from 'react';
 import {
   X,
-  Sparkles,
   Zap,
-  Keyboard,
   Target,
-  User,
 } from 'lucide-react';
 import { motion } from 'motion/react';
 import { MasterVault } from '../../types';
-import { generateElevatorPitch } from '../../lib/elevatorPitchEngine';
+import {
+  generateElevatorPitch,
+  hasVaultEvidence,
+} from '../../lib/elevatorPitchEngine';
 import { EditableTextWithTimer } from '../../components/pitch/EditableTextWithTimer';
 
 export interface ElevatorPitchModalProps {
@@ -29,6 +29,9 @@ export const ElevatorPitchModal: React.FC<ElevatorPitchModalProps> = ({
     return generateElevatorPitch(vault, roleOverride || undefined);
   }, [vault, roleOverride]);
 
+  // Plakietka proweniencji liczy się z danych, nie jest dekoracją.
+  const verifiedFromVault = useMemo(() => hasVaultEvidence(vault), [vault]);
+
   if (!isOpen) return null;
 
   return (
@@ -47,14 +50,9 @@ export const ElevatorPitchModal: React.FC<ElevatorPitchModalProps> = ({
               <Zap className="h-5 w-5" />
             </div>
             <div>
-              <div className="flex items-center gap-2">
-                <h3 className="text-base font-extrabold text-ink tracking-tight font-mono">
-                  Elevator Pitch Generator (elevator-pitch-gen-v1)
-                </h3>
-                <span className="rounded bg-sunken px-2 py-0.5 font-mono text-[10px] font-bold text-muted flex items-center gap-1">
-                  <Keyboard className="h-3 w-3" /> Ctrl+P
-                </span>
-              </div>
+              <h3 className="text-base font-extrabold text-ink tracking-tight font-mono">
+                Elevator Pitch Generator (elevator-pitch-gen-v1)
+              </h3>
               <p className="text-xs text-muted">
                 3 precyzyjne warianty autoprezentacji oparte na faktach z MasterVault i mierzone w czasie rzeczywistym.
               </p>
@@ -89,7 +87,7 @@ export const ElevatorPitchModal: React.FC<ElevatorPitchModalProps> = ({
         </div>
 
         {/* Główny komponent z timerem i 3 wersjami pitcha */}
-        <EditableTextWithTimer pitchData={pitchData} />
+        <EditableTextWithTimer pitchData={pitchData} verifiedFromVault={verifiedFromVault} />
       </motion.div>
     </div>
   );

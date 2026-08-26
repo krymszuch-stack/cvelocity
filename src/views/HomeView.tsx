@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { StorageKeys, readJson, writeJson } from '../lib/storage';
+import { pluralPl } from '../lib/pluralFormat';
 import {
   FileText,
   Search,
@@ -31,6 +32,7 @@ import { QuickAtsCheck } from '../features/quickcheck/QuickAtsCheck';
 import { WelcomeWizard } from '../features/onboarding/WelcomeWizard';
 import { LandingView } from './LandingView';
 import { showToast } from '../store/useToastStore';
+import { FREE_MONTHLY_IMPORTS } from '../store/useEntitlements';
 import { MasterVault } from '../types';
 import { NavTabId } from '../components/GlobalShell';
 
@@ -102,7 +104,7 @@ const CAREER_TIPS: CareerTip[] = [
     readTime: '5 min',
     date: '12.08.2026',
     content: {
-      summary: 'Rekruterzy przeglądają pojedyncze CV średnio przez 6–8 sekund. Nadmiar nieuporządkowanych informacji działa na Twoją niekorzyść.',
+      summary: 'Rekruter skanuje CV w kilkanaście sekund, zanim zdecyduje, czy je przeczytać. Nadmiar nieuporządkowanych informacji działa na Twoją niekorzyść.',
       keyPoints: [
         'Brak linku do aktywnego demo projektu (sam kod na GitHub to za mało).',
         'Paski postępu umiejętności (np. "HTML 90%, CSS 75%") – są niemierzalne.',
@@ -246,7 +248,7 @@ export const HomeView: React.FC<HomeViewProps> = ({
       description: 'Zarządzaj pełną historią zatrudnienia, projektami i matrycą skilli.',
       icon: FileText,
       tab: 'profil' as NavTabId,
-      badge: `${historyCount} pozycji`,
+      badge: `${historyCount} ${pluralPl(historyCount, 'pozycja', 'pozycje', 'pozycji')}`,
       badgeColor: 'success',
     },
     {
@@ -417,7 +419,7 @@ export const HomeView: React.FC<HomeViewProps> = ({
             label: 'Twarde Skille',
             icon: Award,
             value: hardSkillsCount,
-            caption: `+ ${certsCount} certyfikatów`,
+            caption: `+ ${certsCount} ${pluralPl(certsCount, 'certyfikat', 'certyfikaty', 'certyfikatów')}`,
           },
           {
             label: 'Projekty',
@@ -515,7 +517,7 @@ export const HomeView: React.FC<HomeViewProps> = ({
               <h2 className="text-base font-bold text-ink">Baza Wiedzy & Porady Rekrutacyjne</h2>
             </div>
             <p className="text-xs text-muted">
-              Praktyczne przewodniki przygotowane przez ekspertów rekrutacji technicznej
+              Praktyczne poradniki rekrutacji technicznej i zawodów fizycznych
             </p>
           </div>
 

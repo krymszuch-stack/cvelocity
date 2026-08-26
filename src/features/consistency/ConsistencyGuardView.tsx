@@ -2,18 +2,11 @@ import React, { useState, useMemo } from 'react';
 import {
   ShieldCheck,
   Lock,
-  AlertTriangle,
   FileText,
   Activity,
   Mic,
-  RefreshCw,
   Sliders,
-  CheckCircle2,
-  Calendar,
-  Sparkles,
-  Award,
   Layers,
-  ArrowRight,
 } from 'lucide-react';
 import { MasterVault } from '../../types';
 import {
@@ -45,51 +38,20 @@ export const ConsistencyGuardView: React.FC<ConsistencyGuardViewProps> = ({
 }) => {
   const [activeTab, setActiveTab] = useState<ConsistencyTabId>('cv');
 
-  // Symulacje rozbieżności do demonstracji walidatora
-  const [simulateDateMismatch, setSimulateDateMismatch] = useState(false);
-  const [simulateSkillContradiction, setSimulateSkillContradiction] = useState(false);
-
   // Pobranie wszystkich claimów z MasterVault
   const vaultClaims = useMemo(() => extractClaimsFromVault(vault), [vault]);
   const activeClaimIds = useMemo(() => vaultClaims.map((c) => c.id), [vaultClaims]);
 
   // Przygotowanie projekcji dla walidatora
   const projectedItems: ProjectedClaimItem[] = useMemo(() => {
-    return vaultClaims.map((c, index) => {
-      // Symulacja błędu daty (>0.5 roku) na pierwszym claimie
-      if (simulateDateMismatch && index === 0) {
-        return {
-          sectionId: 'cv_experience',
-          sectionName: 'Doświadczenie Zawodowe',
-          claimId: c.id,
-          claimedDateRange: {
-            start: '2019-01', // Przesunięcie o 2 lata wcześniej względem Vault
-            end: '2023-01',
-          },
-          claimedTags: c.tags,
-        };
-      }
-
-      // Symulacja sprzeczności w skillach na drugim claimie
-      if (simulateSkillContradiction && index === 1) {
-        return {
-          sectionId: 'hud_skills',
-          sectionName: 'Radar Umiejętności HUD',
-          claimId: c.id,
-          claimedDateRange: c.dateRange,
-          claimedTags: ['Brak znajomości SQL', 'PostgreSQL Expert', ...c.tags],
-        };
-      }
-
-      return {
-        sectionId: index % 2 === 0 ? 'cv_experience' : 'cv_projects',
-        sectionName: index % 2 === 0 ? 'Doświadczenie Zawodowe' : 'Projekty i Osiągnięcia',
-        claimId: c.id,
-        claimedDateRange: c.dateRange,
-        claimedTags: c.tags,
-      };
-    });
-  }, [vaultClaims, simulateDateMismatch, simulateSkillContradiction]);
+    return vaultClaims.map((c, index) => ({
+      sectionId: index % 2 === 0 ? 'cv_experience' : 'cv_projects',
+      sectionName: index % 2 === 0 ? 'Doświadczenie Zawodowe' : 'Projekty i Osiągnięcia',
+      claimId: c.id,
+      claimedDateRange: c.dateRange,
+      claimedTags: c.tags,
+    }));
+  }, [vaultClaims]);
 
   // Walidacja spójności
   const validationResult: ConsistencyValidationResult = useMemo(() => {
@@ -132,35 +94,6 @@ export const ConsistencyGuardView: React.FC<ConsistencyGuardViewProps> = ({
               Gwarancja Single Source of Truth — renderery (CV, HUD, Pitch) zasilane bezpośrednio z MasterVault przez claimId.
             </p>
           </div>
-        </div>
-
-        {/* Szybkie przełączniki testowe dla walidatora */}
-        <div className="flex flex-wrap items-center gap-2 text-xs">
-          <button
-            type="button"
-            onClick={() => setSimulateDateMismatch(!simulateDateMismatch)}
-            className={`cursor-pointer flex items-center gap-1.5 rounded-lg border px-2.5 py-1.5 font-semibold transition-colors duration-[var(--duration-fast)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#F26440]/50 ${
-              simulateDateMismatch
-                ? 'border-warning bg-warning-soft text-warning-fg'
-                : 'border-line bg-surface text-muted hover:text-ink'
-            }`}
-          >
-            <Calendar className="h-3.5 w-3.5" />
-            <span>Test różnicy lat &gt;0.5r</span>
-          </button>
-
-          <button
-            type="button"
-            onClick={() => setSimulateSkillContradiction(!simulateSkillContradiction)}
-            className={`cursor-pointer flex items-center gap-1.5 rounded-lg border px-2.5 py-1.5 font-semibold transition-colors duration-[var(--duration-fast)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#F26440]/50 ${
-              simulateSkillContradiction
-                ? 'border-warning bg-warning-soft text-warning-fg'
-                : 'border-line bg-surface text-muted hover:text-ink'
-            }`}
-          >
-            <AlertTriangle className="h-3.5 w-3.5" />
-            <span>Test sprzeczności skilla</span>
-          </button>
         </div>
       </div>
 

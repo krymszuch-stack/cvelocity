@@ -21,7 +21,7 @@ import {
   StripeCheckoutModal,
   StripeCheckoutProduct,
 } from '../components/payments/StripeCheckoutModal';
-import { useEntitlements } from '../store/useEntitlements';
+import { useEntitlements, FREE_MONTHLY_IMPORTS, FREE_DAILY_AI_USES } from '../store/useEntitlements';
 import { PageHeader } from '../components/ui/PageHeader';
 import { Tabs } from '../components/ui/Tabs';
 import { Button } from '../components/ui/Button';
@@ -49,6 +49,9 @@ export const PricingView: React.FC = () => {
       price: billingCycle === 'monthly' ? '49 zł' : '39 zł',
       period: '/ miesiąc brutto',
       recurring: true,
+      // Częstotliwość odnowienia musi jawnie trafić do modala — hardkod „co miesiąc"
+      // kłamałby przy rozliczeniu rocznym.
+      interval: billingCycle === 'monthly' ? 'month' : 'year',
       trialDays: 30,
     });
   };
@@ -73,13 +76,25 @@ export const PricingView: React.FC = () => {
           badge="CVELOCITY PRICING"
         />
 
-        {/* Big Hero KPI Banner matching prototyp-monetyzacji.html */}
+        {/* Reguła 2 — ekran mówi wprost, że egzekwowanie płatności i okresu próbnego jeszcze
+            nie istnieje; przyciski zakupu poniżej nie mogą sugerować działającej ścieżki. */}
+        <div className="flex items-start gap-2 rounded-2xl border border-line bg-warning-soft px-4 py-3 text-xs text-warning-fg">
+          <IconAlertTriangle className="mt-0.5 h-4 w-4 shrink-0" aria-hidden="true" />
+          <span>
+            Integracja płatności jest w trakcie podłączania — zakupy i okres próbny nie są jeszcze
+            aktywne. Rdzeń aplikacji pozostaje bezpłatny.
+          </span>
+        </div>
+
+        {/* Hero baner mówi wyłącznie to, co wynika z cennika poniżej — żadnych
+            „92% oszczędności”, bo takiego pomiaru nie robimy i liczba z sufitu
+            byłaby daną wymyśloną (reguła 1 w AGENTS.md). */}
         <div className="flex flex-wrap items-center gap-6 rounded-3xl border border-line bg-surface/90 p-6 sm:p-8 backdrop-blur-xl shadow-raised">
           <div className="text-brand-grad font-mono text-6xl sm:text-7xl font-extrabold tracking-tight">
-            92%
+            0 zł
           </div>
           <div className="max-w-md border-l border-line pl-6 text-xs sm:text-sm text-muted leading-relaxed">
-            <b className="text-ink font-semibold">Oszczędności czasu:</b> użytkownicy CVELOCITY Pro tworzą perfekcyjnie dopasowane CV i listy motywacyjne w mniej niż 3 minuty na ofertę.
+            <b className="text-ink font-semibold">Rdzeń bezpłatny na zawsze:</b> edycja Master Vault, audyt ATS i eksport PDF. Płacisz tylko za automatyzację i AI.
           </div>
           <div className="ml-auto flex items-center gap-2">
             {isPro ? (
@@ -175,8 +190,10 @@ export const PricingView: React.FC = () => {
                 'Symulator ATS & Score Ring 0-100%',
                 'Darmowy eksport PDF i DOCX (szablony bazowe)',
                 'Pipeline zgłoszeń (CRM)',
-                '1 darmowy Instant-Import pliku / mc',
-                '5 darmowych operacji AI / mc',
+                // Liczby z useEntitlements — te same, które egzekwuje licznik;
+                // wcześniej tu siedziała osobna kopia i rozjeżdżała się z nią.
+                `${FREE_MONTHLY_IMPORTS} darmowy Instant-Import pliku / mc`,
+                `${FREE_DAILY_AI_USES} darmowych operacji AI / dzień`,
               ]}
               excluded={[
                 'Nielimitowane importy plików PDF/DOCX',
@@ -184,7 +201,9 @@ export const PricingView: React.FC = () => {
                 'Szablony Executive & Creative',
                 'Analityka Pro Insights',
               ]}
-              disabled={isPro}
+              // Brak ścieżki downgrade — karta jest nieaktywna bezwarunkowo; etykieta opisuje
+              // stan planu, a kliknięcie celowo nic nie robi.
+              disabled={true}
               ctaLabel={!isPro ? 'Twój obecny plan' : 'Plan Podstawowy'}
               onSelect={() => {}}
             />
@@ -230,21 +249,22 @@ export const PricingView: React.FC = () => {
                 'Edycja WYSIWYG w czasie rzeczywistym',
                 'Eksport PDF & DOCX w wysokiej rozdzielczości',
                 'Brak subskrypcji i cyklicznych opłat',
-                'Opcjonalny pakiet 5 szablonów za 79 zł',
               ]}
               excluded={[
                 'Nielimitowane operacje AI',
                 'Automatyczny Instant-Import z plików',
               ]}
-              ctaLabel="Kup wybrany szablon"
+              ctaLabel="Kup szablon Executive"
               onSelect={() => handleOpenTemplateCheckout('Executive')}
             />
           </div>
 
           {/* Payment trust signals — shown before checkout, not after */}
           <div className="flex flex-col items-center gap-2 pt-1">
+            {/* Bez „SSL 256-BIT" — twierdzenie kryptograficzne bez pokrycia w repo;
+                o bezpieczeństwie mówi sąsiedni tekst: kartę obsługuje wyłącznie Stripe. */}
             <TrustRow
-              items={['VISA', 'MASTERCARD', 'BLIK', 'APPLE PAY', 'GOOGLE PAY', 'SSL 256-BIT']}
+              items={['VISA', 'MASTERCARD', 'BLIK', 'APPLE PAY', 'GOOGLE PAY']}
               className="justify-center"
             />
             <p className="text-[11px] text-subtle">
@@ -293,14 +313,14 @@ export const PricingView: React.FC = () => {
                   </tr>
                   <tr>
                     <td className="py-3 text-ink font-sans">Optymalizacje AI Gap-Fixer</td>
-                    <td className="py-3 text-muted">5 ulepszeń / mc</td>
+                    <td className="py-3 text-muted">5 ulepszeń / dzień</td>
                     <td className="py-3 text-success-fg font-bold">Nielimitowane</td>
-                    <td className="py-3 text-muted">5 ulepszeń / mc</td>
+                    <td className="py-3 text-muted">5 ulepszeń / dzień</td>
                   </tr>
                   <tr>
                     <td className="py-3 text-ink font-sans">Analityka Pro Insights CRM</td>
                     <td className="py-3 text-muted">Podstawowa</td>
-                    <td className="py-3 text-success-fg font-bold">Trendy & Prognozy</td>
+                    <td className="py-3 text-success-fg font-bold">Planowana (trendy, prognozy)</td>
                     <td className="py-3 text-muted">Podstawowa</td>
                   </tr>
                 </tbody>
@@ -328,7 +348,7 @@ export const PricingView: React.FC = () => {
                   </div>
                   <div>
                     <h3 className="text-sm font-bold text-ink">1. Instant-Import CV</h3>
-                    <p className="text-xs text-muted">Oszczędność ~1h ręcznego przepisywania</p>
+                    <p className="text-xs text-muted">Import z pliku zamiast ręcznego przepisywania</p>
                   </div>
                 </div>
                 <span className="rounded-full bg-brand-50 px-2.5 py-0.5 font-mono text-[10px] font-bold text-brand-fg">
@@ -368,13 +388,15 @@ export const PricingView: React.FC = () => {
                   </div>
                 </div>
                 <span className="rounded-full bg-success-soft px-2.5 py-0.5 font-mono text-[10px] font-bold text-success-fg">
-                  5 free / mc • Pro
+                  5 free / dzień • Pro
                 </span>
               </div>
 
               <div className="rounded-2xl border border-line bg-surface p-4 text-xs space-y-2">
                 <div className="flex justify-between font-mono text-[11px]">
-                  <span>Miesięczny limit ulepszeń AI:</span>
+                  {/* Limit AI jest dobowy — tak rezerwuje go serwer
+                      (`reserve_ai_quota`), więc i tu mówimy „dziś”. */}
+                  <span>Dzisiejszy limit ulepszeń AI:</span>
                   <b>{isPro ? 'Nielimitowane' : `${usage.aiUses} / 5`}</b>
                 </div>
                 <p className="text-muted text-[11px]">
@@ -452,8 +474,14 @@ export const PricingView: React.FC = () => {
               </div>
 
               <p className="text-[11px] text-muted">
-                Podstawowy rejestr aplikacji jest darmowy. Pro Insights dodaje wykresy konwersji i estymację czasu do oferty.
+                Podstawowy rejestr aplikacji jest darmowy. Planowane w Pro: wykresy konwersji i estymacja czasu do oferty.
               </p>
+
+              {/* Makieta oznaczona jak w LandingView — zaszyte wysokości słupków ilustrują wygląd
+                  wykresu, a nie wynik pomiaru; bez etykiety czytałyby się jak prawdziwa analityka. */}
+              <span className="rounded-full bg-sunken px-2.5 py-0.5 font-mono text-[10px] font-bold text-subtle">
+                przykładowy wygląd
+              </span>
 
               {/* Teaser: the shape of the data is visible, the values are not */}
               <LockCover
@@ -523,7 +551,7 @@ export const PricingView: React.FC = () => {
               </div>
               <h4 className="text-xs font-bold text-ink">Mierzalny Efekt</h4>
               <p className="mt-1 text-[11px] text-muted leading-relaxed">
-                Wzrost wskaźnika przejścia przez filtry ATS z ~40% do ponad 90% na każdym zgłoszeniu.
+                Symulator ATS pokazuje wynik 0–100% i konkretną listę luk przed wysyłką — poprawiasz dokładnie to, co obniża ocenę, zamiast zgadywać.
               </p>
             </div>
 

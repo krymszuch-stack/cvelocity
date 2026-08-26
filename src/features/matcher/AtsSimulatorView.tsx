@@ -69,6 +69,12 @@ export const AtsSimulatorView: React.FC<AtsSimulatorViewProps> = ({
             <h4 className="text-xs font-bold uppercase tracking-wider text-muted">
               Estymacja Kompatybilności w Systemach ATS
             </h4>
+            {/* Oceny systemów to heurystyki złożone ze składowych naszego audytu,
+                nie pomiary na produkcyjnych instalacjach — bez adnotacji czytałyby
+                się jak zwalidowany benchmark. */}
+            <p className="text-[11px] text-subtle">
+              Estymacje heurystyczne — nie mierzone na produkcyjnych ATS.
+            </p>
 
             <div className="space-y-2">
               {systemScores.map((sys) => (
@@ -108,7 +114,7 @@ export const AtsSimulatorView: React.FC<AtsSimulatorViewProps> = ({
           <div className="flex items-center gap-2">
             <Lightbulb className="h-4 w-4 text-warning-fg" />
             <h4 className="text-xs font-bold uppercase tracking-wider text-ink">
-              Rekomendacje Optymalizacji ATS (Actionable Tips)
+              Rekomendacje Optymalizacji ATS (konkretne wskazówki)
             </h4>
           </div>
 

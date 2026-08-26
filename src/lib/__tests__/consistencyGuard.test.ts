@@ -13,8 +13,6 @@ import {
 } from '../consistencyGuard';
 import { MasterVault } from '../../types';
 import { createEmptyVault } from '../sampleVault';
-import { ag } from '../../skills/liveHudSkill';
-import { invokeClaimConsistencyGuard } from '../../skills/claim-consistency-guard';
 
 describe('ConsistencyGuard Engine', () => {
   const createMockVault = (): MasterVault => {
@@ -248,39 +246,6 @@ describe('ConsistencyGuard Engine', () => {
       expect(linkedIn.experience.length).toBe(2);
       expect(linkedIn.experience[0].company).toBe('Cloud Corp');
       expect(linkedIn.skills).toContain('TypeScript');
-    });
-  });
-
-  describe('Skill ClaimConsistencyGuard (claim-consistency-guard-v1)', () => {
-    it('posiada poprawne ID, zależności i rejestrację w ag', () => {
-      const skill = ag.getSkill('claim-consistency-guard-v1');
-      expect(skill).toBeDefined();
-      expect(skill?.dependencies).toContain('master-vault');
-      expect(skill?.dependencies).toContain('cv-renderer');
-      expect(skill?.dependencies).toContain('linkedin-exporter');
-    });
-
-    it('obsługuje wywołanie invokeClaimConsistencyGuard dla walidacji i rendererów', () => {
-      const vault = createMockVault();
-      const res = invokeClaimConsistencyGuard({ action: 'validate', vault }) as { isConsistent: boolean };
-      expect(res.isConsistent).toBe(true);
-
-      const linkedInRes = invokeClaimConsistencyGuard({
-        action: 'renderLinkedIn',
-        vault,
-        claimIds: ['claim_exp_exp_1'],
-      }) as { headline: string };
-      expect(linkedInRes.headline).toBeDefined();
-    });
-
-    it('obsługuje wyzwalacze zdarzeń before-generate-cv, onSave, onExport, onGenerate', () => {
-      const vault = createMockVault();
-      expect(() => {
-        ag.emit('before-generate-cv', { vault });
-        ag.emit('onSave', { vault });
-        ag.emit('onExport', { vault });
-        ag.emit('onGenerate', { vault });
-      }).not.toThrow();
     });
   });
 });

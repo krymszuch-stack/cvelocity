@@ -50,6 +50,22 @@ export function extractTopMetrics(vault: MasterVault | undefined | null): string
 }
 
 /**
+ * Czy pitch da się zbudować z faktów użytkownika, czy z szablonów zastępczych.
+ *
+ * Generator nigdy nie zwraca pustego tekstu — przy pustym profilu wpada
+ * w zapasowe frazy („Specjalista", „wymierną poprawę efektywności"). Etykiety
+ * typu „100% Vault Verified" muszą więc móc rozróżnić oba przypadki, zamiast
+ * świecić zawsze (reguły 1–2).
+ */
+export function hasVaultEvidence(vault: MasterVault | Partial<MasterVault> | undefined | null): boolean {
+  const safeVault = vault || ({} as MasterVault);
+  const hasMetric = extractTopMetrics(safeVault as MasterVault).length > 0;
+  const hasSummary = Boolean(safeVault.personalInfo?.summary?.trim());
+  const hasSkills = (safeVault.skillsMatrix?.hardSkills || []).length > 0;
+  return hasMetric || hasSummary || hasSkills;
+}
+
+/**
  * Generator 3 wariantów Elevator Pitch (1-liner, 30s, 90s) na podstawie MasterVault
  * Obsługuje opcjonalny `variantIndex` dla rotacji i eliminacji powtarzalności.
  */

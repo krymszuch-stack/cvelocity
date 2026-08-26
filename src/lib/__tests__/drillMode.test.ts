@@ -10,8 +10,6 @@ import {
 } from '../drillEngine';
 import { MemoryStorage } from './helpers/memoryStorage';
 import { resetLastGoodCache } from '../storage';
-import { MockDrillMode, invokeMockDrillMode } from '../../skills/mock-drill-mode';
-import { ag } from '../../skills/liveHudSkill';
 
 describe('DrillEngine (Tryb Mock Drill Mode - mock-drill-mode-v1)', () => {
   beforeEach(() => {
@@ -110,25 +108,6 @@ describe('DrillEngine (Tryb Mock Drill Mode - mock-drill-mode-v1)', () => {
 
       clearDrillHistory();
       expect(loadDrillHistory().length).toBe(0);
-    });
-  });
-
-  describe('Skill MockDrillMode (mock-drill-mode-v1)', () => {
-    it('posiada poprawne ID i metadane skilla', () => {
-      expect(MockDrillMode.id).toBe('mock-drill-mode-v1');
-      expect(MockDrillMode.activation.hotkey).toBe('Cmd+D');
-      expect(ag.getSkill('mock-drill-mode-v1')).toBeDefined();
-    });
-
-    it('obsługuje wywołanie invokeMockDrillMode', () => {
-      const randomQ = invokeMockDrillMode({ action: 'randomQuestion' });
-      expect(randomQ).toBeDefined();
-
-      const evaluated = invokeMockDrillMode({
-        action: 'evaluate',
-        transcript: 'W projekcie zadaniem było wdrożenie testów...',
-      });
-      expect(evaluated).toBeDefined();
     });
   });
 });

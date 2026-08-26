@@ -41,8 +41,10 @@ export const PostCallDebriefView: React.FC<PostCallDebriefViewProps> = ({
 }) => {
   const candidateName = vault.personalInfo?.fullName || 'Kandydat';
 
-  const [rating, setRating] = useState<1 | 2 | 3 | 4 | 5>(
-    session.postCallDebrief?.overallRating || 4
+  // Ocena startuje bez wyboru. Domyślna „4" archiwizowała się jako fakt po
+  // jednym kliknięciu „zapisz", choć użytkownik niczego nie ocenił (reguła 1).
+  const [rating, setRating] = useState<1 | 2 | 3 | 4 | 5 | null>(
+    session.postCallDebrief?.overallRating ?? null
   );
   // Pole startuje puste. Podpowiedź „dyskusja o architekturze systemu"
   // wpisywała się do zapisanego debriefu i do maila follow-up jako rzecz,
@@ -103,6 +105,8 @@ export const PostCallDebriefView: React.FC<PostCallDebriefViewProps> = ({
   };
 
   const handleSaveDebrief = () => {
+    if (rating === null) return;
+
     const debrief: PostCallDebrief = {
       overallRating: rating,
       whatWentWell,
@@ -140,7 +144,13 @@ export const PostCallDebriefView: React.FC<PostCallDebriefViewProps> = ({
       });
       setTimeout(() => setCopied(false), 2000);
     } catch {
-      // Fallback
+      // Schowek bywa zablokowany (niewidoczna karta, brak uprawnień, http) —
+      // milczenie wyglądałoby jak skopiowanie. Użytkownik ma treść w polu
+      // obok, więc wystarczy wskazać ręczną drogę.
+      showToast('Nie udało się skopiować', {
+        message: 'Zaznacz treść maila w polu powyżej i skopiuj ją ręcznie.',
+        variant: 'error',
+      });
     }
   };
 
@@ -167,7 +177,9 @@ export const PostCallDebriefView: React.FC<PostCallDebriefViewProps> = ({
             >
               <Star
                 className={`h-5 w-5 ${
-                  star <= rating ? 'fill-amber-500 text-amber-500' : 'text-muted/40'
+                  rating !== null && star <= rating
+                    ? 'fill-amber-500 text-amber-500'
+                    : 'text-muted/40'
                 }`}
               />
             </button>
@@ -304,14 +316,20 @@ export const PostCallDebriefView: React.FC<PostCallDebriefViewProps> = ({
 
       {/* Przycisk Zapisz Debrief */}
       <div className="flex items-center justify-end gap-3 pt-2">
+        {rating === null && (
+          <span className="text-xs text-muted">
+            Wybierz ocenę, żeby zapisać debrief.
+          </span>
+        )}
         <Button
           type="button"
           variant="primary"
           size="md"
           icon={Save}
+          disabled={rating === null}
           onClick={handleSaveDebrief}
         >
-          Zapisz i Zakończ Sesję 💾
+          Zapisz i Zakończ Sesję
         </Button>
       </div>
     </div>

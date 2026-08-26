@@ -1,21 +1,9 @@
 import React, { useState } from 'react';
-import {
-  UploadCloud,
-  FileText,
-  FileCode,
-  Sparkles,
-  CheckCircle2,
-  AlertTriangle,
-  ArrowRight,
-  RefreshCw,
-  Zap,
-  Lock,
-} from 'lucide-react';
-import { motion, AnimatePresence } from 'motion/react';
+import { UploadCloud, FileCode, Sparkles } from 'lucide-react';
 import { MasterVault } from '../../types';
 import { DropZone } from './DropZone';
-import { DiffView, MergeStrategies, SectionStrategy } from './DiffView';
-import { mergeUnique } from '../../lib/vaultImportMerge';
+import { DiffView, MergeStrategies } from './DiffView';
+import { applyParsedCVToVault } from '../../lib/vaultImportMerge';
 import { extractTextFromAnyFile, parseTextToMasterVault, ParsedCVResult } from '../../lib/cvUniversalParser';
 import { Card } from '../../components/ui/Card';
 import { Button } from '../../components/ui/Button';
@@ -24,13 +12,18 @@ import { ProgressBar } from '../../components/ui/ProgressBar';
 import { Tabs } from '../../components/ui/Tabs';
 import { PageHeader } from '../../components/ui/PageHeader';
 import { PremiumBadge } from '../../components/ui/PremiumBadge';
-import { useEntitlements } from '../../store/useEntitlements';
+import { useEntitlements, FREE_MONTHLY_IMPORTS } from '../../store/useEntitlements';
 import { StripeCheckoutModal } from '../../components/payments/StripeCheckoutModal';
 import { showToast } from '../../store/useToastStore';
 
 export interface CVParserModalProps {
   currentVault: MasterVault;
-  onApplyParsedVault: (parsed: Partial<MasterVault>) => void;
+  /**
+   * Otrzymuje **kompletny** vault po scaleniu ze strategiami z diffu.
+   * Wcześniej przekazywał częściowy wynik dalej przez `mergeImportedVault`,
+   * które zawsze dokłada wpisy — strategia „zastąp" była martwa.
+   */
+  onApplyVault: (vault: MasterVault) => void;
   className?: string;
 }
 
@@ -38,7 +31,7 @@ type IngestMode = 'file' | 'rawText';
 
 export const CVParserModal: React.FC<CVParserModalProps> = ({
   currentVault,
-  onApplyParsedVault,
+  onApplyVault,
   className = '',
 }) => {
   const [ingestMode, setIngestMode] = useState<IngestMode>('file');
@@ -48,7 +41,6 @@ export const CVParserModal: React.FC<CVParserModalProps> = ({
   const [parseProgress, setParseProgress] = useState(0);
   const [statusMessage, setStatusMessage] = useState('');
   const [parsedResult, setParsedResult] = useState<ParsedCVResult | null>(null);
-  const [successToast, setSuccessToast] = useState(false);
   const [isCheckoutOpen, setIsCheckoutOpen] = useState(false);
 
   const { usage, isPro, consumeImport } = useEntitlements();
@@ -67,9 +59,10 @@ export const CVParserModal: React.FC<CVParserModalProps> = ({
         return;
       }
 
-      // Check import limit
-      const canProceed = consumeImport();
-      if (!canProceed) {
+      // Sprawdzenie limitu przed pracą, ale odjęcie dopiero po udanym
+      // parsowaniu — wcześniej nieczytelny plik kosztował jeden z darmowych
+      // importów, choć nic z niego nie wyciągnęliśmy.
+      if (!isPro && usage.importUses <= 0) {
         setIsCheckoutOpen(true);
         return;
       }
@@ -103,8 +96,9 @@ export const CVParserModal: React.FC<CVParserModalProps> = ({
     setStatusMessage('Formatowanie widoku porównawczego (Diff)...');
 
     const result = parseTextToMasterVault(textToParse);
-    if (selectedFile) {
-      result.detectedFormat = selectedFile.name.split('.').pop()?.toUpperCase() || 'Plik';
+    if (ingestMode === 'file') {
+      consumeImport();
+      result.detectedFormat = selectedFile?.name.split('.').pop()?.toUpperCase() || 'Plik';
     } else {
       result.detectedFormat = 'Wklejony Tekst';
     }
@@ -119,86 +113,28 @@ export const CVParserModal: React.FC<CVParserModalProps> = ({
   const handleApplyMerge = (strategies: MergeStrategies) => {
     if (!parsedResult) return;
 
-    const mergeList = <T,>(incoming: T[], existing: T[], strategy: SectionStrategy, keyFn: (item: T) => string): T[] => {
-      if (strategy === 'keep') return existing;
-      if (strategy === 'replace') return incoming;
-      return mergeUnique(existing, incoming, keyFn);
-    };
+    const { vault: scalonyVault, added } = applyParsedCVToVault(currentVault, parsedResult, strategies);
 
-    const mergeSkills = (incoming: string[], existing: string[], strategy: SectionStrategy): string[] => {
-      if (strategy === 'keep') return existing;
-      if (strategy === 'replace') return incoming;
-      return Array.from(new Set([...existing, ...incoming]));
-    };
+    onApplyVault(scalonyVault);
 
-    const payload: Partial<MasterVault> = {
-      personalInfo:
-        strategies.personal === 'keep'
-          ? currentVault.personalInfo
-          : {
-              ...currentVault.personalInfo,
-              ...(parsedResult.personalInfo.fullName ? { fullName: parsedResult.personalInfo.fullName } : {}),
-              ...(parsedResult.personalInfo.title ? { title: parsedResult.personalInfo.title } : {}),
-              ...(parsedResult.personalInfo.email ? { email: parsedResult.personalInfo.email } : {}),
-              ...(parsedResult.personalInfo.phone ? { phone: parsedResult.personalInfo.phone } : {}),
-              ...(parsedResult.personalInfo.location ? { location: parsedResult.personalInfo.location } : {}),
-              ...(parsedResult.personalInfo.summary ? { summary: parsedResult.personalInfo.summary } : {}),
-            },
-      skillsMatrix: {
-        ...currentVault.skillsMatrix,
-        hardSkills: mergeSkills(
-          parsedResult.hardSkills,
-          currentVault.skillsMatrix?.hardSkills || [],
-          strategies.skills
-        ),
-        softSkills: mergeSkills(
-          parsedResult.softSkills,
-          currentVault.skillsMatrix?.softSkills || [],
-          strategies.skills
-        ),
-        toolsAndTech: mergeSkills(
-          parsedResult.toolsAndTech,
-          currentVault.skillsMatrix?.toolsAndTech || [],
-          strategies.skills
-        ),
-        certifications: mergeList(
-          parsedResult.certifications || [],
-          currentVault.skillsMatrix?.certifications || [],
-          strategies.skills,
-          (item) => (item.name || '').toLowerCase().trim()
-        ),
-      },
-      profiler: {
-        ...currentVault.profiler,
-        languages: parsedResult.languages && parsedResult.languages.length > 0
-          ? mergeUnique(currentVault.profiler?.languages || [], parsedResult.languages, (item) => (item.language || '').toLowerCase().trim())
-          : currentVault.profiler?.languages || [],
-      },
-      history: mergeList(
-        parsedResult.history || [],
-        currentVault.history || [],
-        strategies.experience,
-        (item) => ((item.company || '') + '|' + (item.role || '')).toLowerCase().trim()
-      ),
-      education: mergeList(
-        parsedResult.education || [],
-        currentVault.education || [],
-        strategies.education,
-        (item) => ((item.institution || '') + '|' + (item.degree || '')).toLowerCase().trim()
-      ),
-      projects: parsedResult.projects && parsedResult.projects.length > 0
-        ? mergeUnique(currentVault.projects || [], parsedResult.projects, (item) => (item.name || '').toLowerCase().trim())
-        : currentVault.projects || [],
-    };
+    // Komunikat idzie przez globalny toast, nie przez banner w tym komponencie:
+    // rodzic przełącza krok sekcji i odmontowuje parser w tym samym cyklu,
+    // więc lokalny komunikat znikał, zanim cokolwiek widać.
+    const części: string[] = [];
+    if (added.history) części.push(`${added.history} stanowisk`);
+    if (added.education) części.push(`${added.education} szkół`);
+    const dodaneUmiejętności =
+      added.hardSkills + added.softSkills + added.toolsAndTech + added.certifications;
+    if (dodaneUmiejętności) części.push(`${dodaneUmiejętności} pozycji umiejętności`);
 
-    onApplyParsedVault(payload);
-    setSuccessToast(true);
-    setTimeout(() => {
-      setSuccessToast(false);
-      setParsedResult(null);
-      setSelectedFile(null);
-      setRawText('');
-    }, 2500);
+    showToast('CV scalone z profilem', {
+      message: części.length ? `Dodano: ${części.join(', ')}.` : 'Nie wykryto nowych pozycji do dodania.',
+      variant: 'success',
+    });
+
+    setParsedResult(null);
+    setSelectedFile(null);
+    setRawText('');
   };
 
   return (
@@ -208,23 +144,6 @@ export const CVParserModal: React.FC<CVParserModalProps> = ({
         description="Zaimportuj dotychczasowe CV w dowolnym formacie (PDF, DOCX, TXT), a silnik automatycznie wyekstrahuje historię, umiejętności i dane kontaktowe do porównania z Master Vault."
         badge="Universal Ingestion"
       />
-
-      {/* Success Notification */}
-      <AnimatePresence>
-        {successToast && (
-          <motion.div
-            initial={{ opacity: 0, y: -10 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -10 }}
-            className="flex items-center gap-2 rounded-2xl border border-success/30 bg-success-soft p-4 text-xs font-bold text-success-fg shadow-raised"
-          >
-            <CheckCircle2 className="h-5 w-5 shrink-0" />
-            <span>
-              Profil kandydata w Master Vault został pomyślnie zaktualizowany! Dane zostały scalone.
-            </span>
-          </motion.div>
-        )}
-      </AnimatePresence>
 
       {!parsedResult ? (
         <div className="space-y-6">
@@ -248,7 +167,10 @@ export const CVParserModal: React.FC<CVParserModalProps> = ({
                 ) : usage.importUses > 0 ? (
                   <span>Pozostało darmowych importów pliku w tym miesiącu: <b className="text-ink">{usage.importUses}</b></span>
                 ) : (
-                  <span className="text-warning-fg font-bold">Wykorzystano miesięczny limit 1 pliku (Wklejanie tekstu nadal darmowe!)</span>
+                  <span className="text-warning-fg font-bold">
+                    Wykorzystano miesięczny limit {FREE_MONTHLY_IMPORTS}{' '}
+                    {FREE_MONTHLY_IMPORTS === 1 ? 'pliku' : 'plików'} (Wklejanie tekstu nadal darmowe!)
+                  </span>
                 )}
               </div>
             )}
