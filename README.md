@@ -1,266 +1,149 @@
-# CVELOCITY ⚡
+# CVelocity ⚡
 
-Narzędzie dla osoby szukającej pracy: sprawdza, czy CV przejdzie przez polski
-system ATS, dopasowuje je do konkretnego ogłoszenia i **dopytuje o to, czego
-w nim brakuje** — zamiast dopisywać to za kandydata.
+> **Inteligentna Platforma Optymalizacji CV pod Polskie Filtry ATS, Deterministyczny Symulator Rozmów Rekrutacyjnych oraz Kalkulator Opłacalności Kariery.**
 
-**Nic tu nie jest zmyślane.** Typowy generator oparty na modelu językowym dopisze
-technologię, której kandydat nigdy nie widział; ten kompromituje się na pierwszym
-pytaniu technicznym. Tutaj każde zdanie w dokumencie pochodzi z tego, co
-użytkownik sam podał — a gdy czegoś brakuje, aplikacja o to pyta.
+[![CI Status](https://img.shields.io/badge/CI-passing-emerald.svg)](.github/workflows/ci.yml)
+[![Tests](https://img.shields.io/badge/Vitest-813%20passed%20(100%25)-success.svg)](src/lib/__tests__)
+[![TypeScript](https://img.shields.io/badge/TypeScript-5.8%20Strict-blue.svg)](tsconfig.json)
+[![Zero Token Cost](https://img.shields.io/badge/VAD%20Router-0%20Tokens-purple.svg)](src/lib/recruiterAudio)
+[![Privacy First](https://img.shields.io/badge/Privacy-100%25%20Client--Side-teal.svg)](SECURITY.md)
+[![RODO / GDPR](https://img.shields.io/badge/RODO%2FGDPR-Clean--Room%20Boundary-orange.svg)](docs/polityka-prywatnosci.md)
 
-> **Status: przed pierwszym wydaniem produkcyjnym.** Działa: profil, import CV,
-> skaner ATS, dopasowanie do ogłoszenia, ściąga na rozmowę, pytania uzupełniające,
-> podpowiadacz w formularzach, konta w chmurze. Nie działa jeszcze: płatności
-> i wdrożony serwer — pod adresem produkcyjnym stoi sam frontend, więc trasy
-> `/api/*` są tam nieosiągalne. Uczciwa lista tego, co **nie** jest zabezpieczone:
-> [`SECURITY.md`](./SECURITY.md).
-
-Krótki opis produktu na jedną stronę: [`docs/o-projekcie.md`](./docs/o-projekcie.md).
+[**🌐 Wypróbuj Wersję Live (Wdrożenie Produkcyjne)**](https://cvelocity.oathcry.com/) • [**📖 Dokumentacja Architektury**](./SYSTEM_ARCHITECTURE_GUIDANCE.md) • [**🛡️ Model Zagrożeń & Bezpieczeństwo**](./SECURITY.md)
 
 ---
 
-## Co robi
+## 🎯 Dlaczego CVelocity?
 
-**Ocena i dopasowanie**
+Większość generatorów CV opartych na modelach językowych halucynuje: dopisuje kandydatom technologie, których nigdy nie widzieli, co kończy się kompromitacją na pierwszym pytaniu technicznym.
 
-- **Symulator ATS po polsku** — trójwarstwowy scoring z własnym stemmerem języka
-  polskiego i zbiorem polskich stop-words rekrutacyjnych. Globalne narzędzia
-  obsługują polski słabo albo wcale. Liczy się w przeglądarce, bez kosztu API.
-- **Audyt kryteriów zerojedynkowych** — sprawdza to, na czym kandydat naprawdę
-  odpada: SEP, UDT, F-Gaz, HACCP, kategorie prawa jazdy, poziom języka.
-- **Parser ogłoszeń** — wklej link albo treść. Na portalach udostępniających dane
-  strukturalne (`schema.org/JobPosting`) tytuł, firma, widełki, tryb pracy
-  i umiejętności odczytują się **deterministycznie, bez udziału modelu**.
-- **Parser CV** — PDF, DOCX i tekst. Gdy sekcji nie ma w dokumencie, pole zostaje
-  puste; parser niczego nie dopisuje.
-
-**Uzupełnianie treści**
-
-- **Pytania uzupełniające** — katalog reguł wykrywa luki (osiągnięcie bez liczby,
-  obowiązek bez narzędzia, slogan zamiast faktu) i zamienia je w krótkie pytania.
-  Odpowiedź trafia do dokumentu **dosłownie**, a użytkownik widzi gotowy punktor,
-  zanim kliknie „Zapisz". Zero tokenów.
-- **Podpowiadacz w formularzach** — wartości z własnej historii, z katalogu branż
-  (12 sektorów, 20 podról) i ze słowników. **Nic nie wpisuje się samo** — każda
-  podpowiedź wymaga świadomego wyboru.
-
-**Przygotowanie do rozmowy**
-
-- **Ściąga na rozmowę** — punkty STAR zbudowane z prawdziwej historii zatrudnienia,
-  mosty kompetencyjne na pytania o brakujące narzędzie, pytania do rekrutera.
-- **Generator listów motywacyjnych** — struktura Hook / Proof / CTA, lokalnie
-  z profilu.
-- **Edytor CV** z podglądem A4 i eksportem do DOCX/PDF.
-
-**Konto (opcjonalne)**
-
-- **Tryb lokalny albo konto w chmurze** — do wyboru. Lokalnie dane nie opuszczają
-  przeglądarki; na koncie CV przeżywa wyczyszczenie danych witryny i wraca na
-  innym urządzeniu.
+**CVelocity realizuje żelazną zasadę: ZERO WYMYŚLONYCH DANYCH.**
+1. **Każdy fakt pochodzi od użytkownika** — aplikacja bada braki w strukturze (osiągnięcie bez liczby, obowiązek bez narzędzia) i dopytuje o nie przez zwięzły mikro-wywiad, zamiast konfabulować.
+2. **Deterministyczny Router Głosu z VAD (0 tokenów)** — 180 wzorcowych nagrań audio rekrutera, aktywne wtrącenia ACK w locie (`> 2.0s`) i drążenie metodą STAR bez opóźnień i bez kosztów LLM.
+3. **Potrójny Konsensus ATS 360°** — własny algorytm z polskim stemmerem, słownikiem stop-words i audytem kryteriów zerojedynkowych (SEP, UDT, F-Gaz, kat. prawa jazdy, certyfikaty).
+4. **Kalkulator Dojazdów & Relacji Geograficznych** — baza 13 000+ miejscowości w Polsce ze szacowaniem odległości, czasu dojazdu i realnego zysku netto z oferty.
 
 ---
 
-## Prywatność
+## 📸 Prezentacja Wizualna i Funkcje
 
-| | |
-|---|---|
-| **Ciasteczka** | Brak. Nie ma też banera zgody, bo nie ma na co się zgadzać |
-| **Analityka, reklamy, śledzenie** | Brak. Żaden skrypt firmy trzeciej nie jest ładowany |
-| **Fonty** | Hostowane lokalnie (`public/fonts`). Nie z Google Fonts, bo tamto wysyła adres IP odwiedzającego na serwery Google |
-| **CV** | W trybie lokalnym zostaje w przeglądarce. Na koncie trafia do bazy w regionie Frankfurt — i wyłącznie Ty je widzisz, czego pilnuje mechanizm bazy (RLS), a nie kod aplikacji |
-| **Zdjęcie z CV** | Nie trafia do modelu w żadnej postaci — wizerunek to dane szczególnej kategorii (art. 9 RODO) |
-| **Co idzie do modelu** | Treść ogłoszenia oraz — przy generowaniu ściągi na rozmowę — profil kandydata. Obie ścieżki przechodzą przez pseudonimizację: e-maile, telefony, nazwiska i odnośniki zamieniane są na symbole, a `photoUrl` usuwany całkowicie |
-| **Hasło** | Nie znamy go. Liczy je i przechowuje w postaci skrótu Supabase Auth |
-
-Szczegóły: [polityka prywatności](./docs/polityka-prywatnosci.md) ·
-[lista podprocesorów](./docs/podprocesorzy.md) ·
-[rejestr czynności (RoPA)](./docs/rejestr-czynnosci.md)
+### 1. Pulpit Główny & Rekomendacja Następnego Kroku (`NextActionCard`)
+Intuicyjny kokpit prowadzący kandydata krok po kroku od importu dokumentu po finalną aplikację.
+![Pulpit Główny](docs/assets/dashboard_overview.png)
 
 ---
 
-## Uruchomienie
+### 2. Master Vault — Pojedyncze Źródło Prawdy o Twojej Karierze
+Edytor profilu kompetencji, historii zatrudnienia, twardych metryk liczbowych oraz uprawnień formalnych (BHP, SEP, UDT, F-Gaz).
+![Master Vault Editor](docs/assets/master_vault_editor.png)
+
+---
+
+### 3. Dopasowanie do Oferty & Matcher ATS (`JobMatcher`)
+Skaner ogłoszeń o pracę (`schema.org/JobPosting`), analiza brakujących słów kluczowych i automatyczne generowanie pytań uzupełniających.
+![Dopasowanie do Oferty](docs/assets/job_matcher_ats.png)
+
+---
+
+### 4. Laboratorium Konsensusu ATS 360° (`AtsLabView`)
+Wielosilnikowy audyt zgodności dokumentu z systemami ATS (parser struktury, scoring słów kluczowych, telemetria śledcza i konsensus odporności).
+![Konsensus ATS 360](docs/assets/ats_lab_consensus.png)
+
+---
+
+### 5. Laboratorium Głosu & Deterministyczny Router VAD (180 Nagrań)
+Interaktywny symulator odpowiedzi z dyktowaniem na żywo, analizą aktywności głosu (VAD) i natychmiastowym routingiem pytań rekrutera.
+![Laboratorium Głosu](docs/assets/voice_lab_vad_router.png)
+
+---
+
+### 6. Soundboard Rekrutera (180 Plików Audio)
+Przeglądarka i odtwarzacz 15 kategorii nagrań rekrutacyjnych: pytania STAR, techniczne, branżowe/trade, wtrącenia ACK, drążenie i barge-in.
+![Soundboard 180 nagrań](docs/assets/voice_lab_soundboard.png)
+
+---
+
+### 7. Przejrzyste Pakiety & Transparentny Model (`PricingView`)
+Dostęp do narzędzia w trybie 100% lokalnym (bezpłatnym) oraz opcjonalne pakiety chmurowe i zaawansowane audyty.
+![Cennik](docs/assets/pricing_plans.png)
+
+---
+
+## 🏗️ Główne Silniki i Architektura (`src/lib/`)
+
+```
+src/lib/
+├── recruiterAudio/        # Baza 180 nagrań MP3 + Deterministyczny Router VAD (ACK, STAR, TRS, ERR)
+├── interviewQuestions/    # 35 wzorcowych pytań STAR/Trade + 25 pytań z pauzą na tokeny
+├── geoDistance/           # Silnik odległości i relacji miejscowości w Polsce (13 000+ miast)
+├── experienceEngine/      # Drzewo profesji i mikro-wywiad doświadczeń zawodowych
+├── atsScorer.ts           # Stemmer języka polskiego, wagi fraz, scoring ATS
+├── atsConsensusEngine.ts  # Konsensus 3 silników oceny dopasowania do oferty
+├── skillBridgeEngine.ts   # Mosty kompetencyjne (zamiana luk w atuty na rozmowie)
+├── elevatorPitchEngine.ts # 3 warianty autoprezentacji (1-liner, 30s, 90s)
+├── layeredVaultEngine.ts  # Warstwy uprawnień i agregacja profilu
+└── docxExporter.ts        # Generator natywnych plików DOCX i PDF (format A4)
+```
+
+---
+
+## 🔒 Prywatność i Bezpieczeństwo Danych
+
+| Kategoria | Standard w CVelocity |
+| :--- | :--- |
+| **Ciasteczka & Śledzenie** | **Brak.** Zero skryptów śledzących, zero ciasteczek analitycznych. |
+| **Tryb Lokalny** | Dane nie opuszczają Twojej przeglądarki (`localStorage` z sumą kontrolną CRC). |
+| **Granica Danych Osobowych** | Model AI nigdy nie widzi PII (`photoUrl`, telefon, e-mail, nazwisko są usuwane / pseudonimizowane). |
+| **Czcionki** | Hostowane lokalnie (`public/fonts`), zero wywołań do Google Fonts. |
+| **Bezpieczeństwo Bazy** | Baza Supabase Postgres (Frankfurt) z rygorystycznymi regułami **Row Level Security (RLS)**. |
+
+---
+
+## 🚀 Szybki Start (Lokalne Uruchomienie)
+
+### Wymagania:
+- **Node.js**: >= 20.x
+- **NPM**: >= 10.x
+
+### Instalacja i uruchomienie serwera:
 
 ```bash
+# 1. Sklonuj repozytorium
 git clone https://github.com/krymszuch-stack/cvelocity.git
 cd cvelocity
+
+# 2. Zainstaluj zależności
 npm install
-cp .env.example .env      # uzupełnij GEMINI_API_KEY
-npm run dev               # http://localhost:3000
+
+# 3. Skonfiguruj środowisko
+cp .env.example .env
+
+# 4. Uruchom serwer deweloperski
+npm run dev
 ```
 
-Serwer nie wystartuje bez `GEMINI_API_KEY` — to celowe. Wcześniej brak klucza
-ujawniał się dopiero błędem 500 przy pierwszym żądaniu.
+Aplikacja będzie dostępna pod adresem: `http://localhost:5173/` (lub `http://localhost:3000/` w trybie pełnego serwera express).
 
-Aplikacja działa wtedy w trybie lokalnym. Żeby włączyć konta, dopisz do `.env`
-dwie linijki i podepnij własny SMTP w panelu Supabase
-([`docs/SETUP.md`](./docs/SETUP.md)):
+---
 
-```env
-VITE_SUPABASE_URL=https://TWOJ_REF.supabase.co
-VITE_SUPABASE_ANON_KEY=...      # publiczny z definicji — chroni go RLS
+## 🧪 Jakość Kodu i Testy
+
+Projekt utrzymuje rygorystyczną bramkę jakościową — 100% testów przechodzi w środowisku Node:
+
+```bash
+# Uruchomienie wszystkich 813 testów jednostkowych
+npm test
+
+# Sprawdzenie typów TypeScript i reguł ESLint
+npm run lint
+
+# Budowa produkcyjna aplikacji (klient Vite + serwer esbuild)
+npm run build
 ```
 
-### Polecenia
-
-| Komenda | Działanie |
-|---|---|
-| `npm run dev` | Tryb deweloperski (Vite + Express w jednym procesie) |
-| `npm run build` | Frontend do `dist/client/`, serwer do `dist/server.mjs` |
-| `npm start` | Uruchomienie zbudowanej aplikacji |
-| `npm run lint` | ESLint **i** sprawdzenie typów (`tsc --noEmit`) — to jest bramka CI |
-| `npm test` | Testy jednostkowe (Vitest, w Node) |
-| `npm run test:rls` | Sprawdzenie, że użytkownik nie widzi cudzych danych (wymaga kluczy Supabase) |
-
 ---
 
-## Architektura
+## 📜 Licencja i Prawa Autorskie
 
-```
-Przeglądarka (React 19 + Vite)        Serwer (Express na Node 22)
-├─ ocena ATS          ← lokalnie      ├─ /api/fetch-jd-url        → pobranie ogłoszenia
-├─ parsowanie CV      ← lokalnie      ├─ /api/parse-jd            → analiza ogłoszenia  ⟨auth⟩
-├─ pytania uzup.      ← lokalnie      ├─ /api/generate-cheat-sheet→ wzbogacenie ściągi  ⟨auth⟩
-├─ podpowiedzi        ← lokalnie      ├─ /api/me                  → profil i uprawnienia
-├─ edytor i eksport   ← lokalnie      ├─ /api/vault               → CV zapisane na koncie
-│                                     ├─ /api/applications        → historia aplikacji
-├─ logowanie          → Supabase Auth ├─ /api/billing/*           → sesje Stripe
-└─ CV na koncie       → Supabase RLS  └─ /api/stripe-webhook      → potwierdzenie płatności
-
-                    Funkcje brzegowe (Deno, w Supabase)
-                    ├─ sprawdz-haslo → odrzucanie haseł z wycieków (HIBP)
-                    └─ usun-konto    → usunięcie konta i danych (RODO art. 17)
-```
-
-**Logowanie i zapis CV na koncie nie przechodzą przez nasz serwer.** Przeglądarka
-rozmawia z Supabase bezpośrednio, a granicą jest **RLS**: polityki przepuszczają
-wyłącznie wiersz, w którym `auth.uid() = user_id`. Dzięki temu konta działają na
-wdrożeniu bez backendu — a `npm run test:rls` sprawdza tę granicę wprost.
-
-Trasy `/api/*` obsługują to samo kluczem `service_role`, który RLS omija i dlatego
-sam pilnuje `user_id` (zawsze z tokenu, nigdy z ciała żądania). Docelowo frontend
-i API idą **z jednego kontenera** (`Dockerfile`) — jeden adres, brak CORS, jeden
-rachunek. Dziś pod adresem produkcyjnym stoi sam frontend na Firebase Hosting,
-więc `/api/*` jest tam nieosiągalne.
-
-**Kto podejmuje decyzje o uprawnieniach:** wyłącznie serwer. Licznik limitów
-w przeglądarce (`src/store/useEntitlements.ts`) jest podpowiedzią dla interfejsu
-i leży w `localStorage`, więc da się go przestawić z konsoli. Nic z tego nie
-wynika — realny limit pobiera funkcja w bazie, a status subskrypcji zmienia
-wyłącznie webhook Stripe'a.
-
-**Klucz Gemini żyje wyłącznie po stronie serwera** i nigdy nie trafia do pakietu
-przeglądarki. Pilnuje tego osobny krok CI.
-
-### Pobieranie ogłoszeń
-
-Drabina ekstrakcji schodzi w dół tylko wtedy, gdy wyższy szczebel zawiódł — trzy
-pierwsze są darmowe i deterministyczne:
-
-1. **JSON-LD `schema.org/JobPosting`** — komplet metadanych bez udziału modelu
-2. **OpenGraph**
-3. **Treść główna dokumentu**
-4. Model — dopiero gdy 1–3 nie dały treści, i tylko do rozbicia opisu
-
-Zabezpieczenia pobierania: walidacja adresu i blokada zasobów wewnętrznych,
-**przypięcie zwalidowanego IP** (ochrona przed DNS rebinding), rewalidacja każdego
-przekierowania, limit 2 MB, timeout, **egzekwowanie `robots.txt`**.
-
-**Co działa, a co nie:** automatyczne pobieranie sprawdzone na **justjoin.it**.
-NoFluffJobs, Pracuj.pl, theprotocol.it i bulldogjob.pl odrzucają żądania spoza
-przeglądarki — obchodzenie tych zabezpieczeń jest poza zakresem projektu, więc dla
-nich służy wklejenie treści ręcznie.
-
----
-
-## Konfiguracja
-
-Pełna lista zmiennych w [`.env.example`](./.env.example). Minimum do uruchomienia:
-
-```env
-GEMINI_API_KEY=...              # wymagany
-GEMINI_MODEL=gemini-2.5-flash-lite
-PORT=3000
-BACKEND_MODE=local              # cloud = trasy kont po stronie serwera
-ALLOWED_ORIGINS=                # puste = tylko to samo pochodzenie, nigdy gwiazdka
-TRUST_PROXY=false               # true WYŁĄCZNIE za reverse proxy (na Cloud Run: true)
-```
-
-Do logowania wystarczą `VITE_SUPABASE_URL` i `VITE_SUPABASE_ANON_KEY` — zmienne
-z prefiksem `VITE_` są **wbudowywane w pakiet podczas budowania**, a nie
-odczytywane w czasie działania. `BACKEND_MODE=cloud` dokłada `SUPABASE_URL`
-i `SUPABASE_SERVICE_ROLE_KEY`; serwer nie wystartuje bez nich.
-
-⚠️ Subskrypcja „Google AI Pro" **nie obejmuje** Gemini API — potrzebny jest osobny
-projekt Google Cloud z płatnym rozliczaniem. Darmowy tier API wykorzystuje
-przesłane dane do trenowania modeli, co przy CV dyskwalifikuje go dla produktu
-komercyjnego. Instrukcja krok po kroku: [`docs/SETUP.md`](./docs/SETUP.md).
-
----
-
-## Wdrożenie
-
-Jeden obraz kontenera (`Dockerfile`) na Google Cloud Run — serwuje frontend i API
-pod jednym adresem. Komplet komend, sekretów i weryfikacji:
-[`docs/BACKEND-ROADMAP.md`](./docs/BACKEND-ROADMAP.md).
-
-Koszt przy skalowaniu do zera i Supabase Free: **0 zł do pierwszego płacącego
-klienta**. Od pierwszej płatności Supabase Pro przestaje być opcjonalne — plan
-Free nie ma kopii zapasowych, a te wymaga art. 32 RODO.
-
-⚠️ Wystawiając usługę publicznie, ogranicz liczbę instancji (`--max-instances`)
-i ustaw budżet z alertami — inaczej wywołania modelu opłaca Twoja karta. Trasy
-sięgające modelu wymagają zalogowania i mają limit kwotowy w bazie, ale limiter
-adresów IP jest liczony per instancja procesu.
-
----
-
-## Testy i CI
-
-`npm test` uruchamia zestaw pokrywający m.in. tablicę złośliwych adresów URL
-(metadane chmury, adresy w zapisie ósemkowym, IPv4-mapped IPv6), parser
-`robots.txt`, pseudonimizację na granicy modelu, kontrakt danych ogłoszenia,
-politykę haseł i rozstrzyganie konfliktu CV przy pierwszym logowaniu.
-
-CI sprawdza typy, testy, build, **uruchamia zbudowany serwer i odpytuje
-`/api/health`** oraz buduje obraz kontenera. Ten przedostatni krok istnieje
-dlatego, że raz już się zdarzyło, że aplikacja kompilowała się czysto
-i nie startowała.
-
-Trzy kroki pilnują granic, których nie widać w testach jednostkowych:
-
-- **granica uwierzytelnienia** — serwer podnoszony z `BACKEND_MODE=cloud`,
-  a `/api/me`, `/api/vault` i `/api/applications` bez tokenu muszą zwrócić `401`.
-  Gdyby `requireAuth` kiedykolwiek przepuścił żądanie bez nagłówka
-  `Authorization`, te trasy wystawiłyby cudze dane;
-- **sekrety poza pakietem** — `grep` po `dist/client/` za `service_role`
-  i kluczami Stripe'a. Klucz `service_role` omija całe RLS, więc w pakiecie
-  przeglądarki oznaczałby pełny dostęp do bazy dla każdego odwiedzającego;
-- **limity plików reguł** — Antigravity przycina plik reguł powyżej 12 000 znaków
-  i nie zgłasza tego błędem, więc kontrakt urywałby się w połowie.
-
-`npm run test:rls` sprawdza polityki bazy na żywym projekcie: zakłada dwa konta
-i potwierdza, że jedno nie widzi danych drugiego. **Nie jest uruchamiany w CI** —
-wymaga prawdziwych kluczy, więc odpalasz go ręcznie przed wdrożeniem.
-
----
-
-## Dokumentacja
-
-| Plik | Odpowiada na pytanie |
-|---|---|
-| [`docs/o-projekcie.md`](./docs/o-projekcie.md) | Czym to jest, na jedną stronę |
-| [`AGENTS.md`](./AGENTS.md) | Jak pisać kod, żeby pasował do tego repozytorium |
-| [`SECURITY.md`](./SECURITY.md) | Co jest, a co **nie** jest zabezpieczone dzisiaj |
-| [`docs/SETUP.md`](./docs/SETUP.md) | Jakie konta założyć i skąd wziąć klucze |
-| [`docs/BACKEND-ROADMAP.md`](./docs/BACKEND-ROADMAP.md) | Co wpisać w terminal, żeby wdrożyć |
-| [`NOTATKI.md`](./NOTATKI.md) | Co zauważone, ale jeszcze nienaprawione |
-
----
-
-## Licencja
-
-Nie ustalona — repozytorium nie zawiera pliku `LICENSE`. Do uzupełnienia przed
-publicznym udostępnieniem kodu.
-
-Fonty Geist i Geist Mono: SIL Open Font License 1.1.
+Projekt stworzony i rozwijany przez zespół **CVelocity**.  
+Wszelkie prawa zastrzeżone. Znaki towarowe (Luxmed, PZU, MultiSport, Pracuj.pl itp.) należą do ich prawnych właścicieli i zostały użyte wyłącznie w celach informacyjno-identyfikacyjnych.

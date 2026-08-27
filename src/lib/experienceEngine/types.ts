@@ -3,7 +3,10 @@ export type GrammarNarrativeStyle = 'impersonal' | 'first_person_m' | 'first_per
 export interface RoleKnowledgeNode {
   roleId: string;
   label: string;
-  areas: { id: string; label: string }[];
+  category?: string;
+  description?: string;
+  aliases?: string[];
+  areas: { id: string; label: string; description?: string }[];
   actions: Record<string, string[]>;
   objects: Record<string, string[]>;
   outcomes: Record<string, string[]>;

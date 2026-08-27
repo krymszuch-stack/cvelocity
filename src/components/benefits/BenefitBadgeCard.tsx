@@ -11,9 +11,14 @@ import { Tooltip } from '../ui/Tooltip';
  * Stan „brak" nie znika i nie chudnie — ma tę samą wysokość co „zapewnione",
  * bo przy przełączaniu ofert siatka inaczej podskakiwała.
  */
+import { BrandBenefitLogo } from './BrandBenefitLogo';
+import type { BadgeKey } from '../icons/HandDrawnBadges';
+
 export interface BenefitBadgeCardProps {
-  /** Rysowana odznaka z `HandDrawnBadges`. */
-  icon: React.ComponentType<{ className?: string }>;
+  /** Rysowana odznaka z `HandDrawnBadges` lub klucz. */
+  icon?: React.ComponentType<{ className?: string }>;
+  benefitKey?: BadgeKey;
+  brandKey?: string;
   label: string;
   /** Krótka wartość pod etykietą — np. „ok. 150 zł" albo „do negocjacji". */
   value: string;
@@ -24,6 +29,8 @@ export interface BenefitBadgeCardProps {
 
 export const BenefitBadgeCard: React.FC<BenefitBadgeCardProps> = ({
   icon: Icon,
+  benefitKey,
+  brandKey,
   label,
   value,
   hint,
@@ -37,7 +44,11 @@ export const BenefitBadgeCard: React.FC<BenefitBadgeCardProps> = ({
           : 'border-line bg-slate-900/30 text-subtle opacity-60 grayscale hover:opacity-90 hover:grayscale-0'
       }`}
     >
-      <Icon className="h-10 w-10 shrink-0" />
+      {benefitKey ? (
+        <BrandBenefitLogo benefitKey={benefitKey} brandKey={brandKey} className="h-10 w-10 shrink-0" />
+      ) : Icon ? (
+        <Icon className="h-10 w-10 shrink-0" />
+      ) : null}
 
       <div className="min-w-0 flex-1">
         <p className="truncate text-[12px] font-bold">{label}</p>

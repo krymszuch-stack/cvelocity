@@ -48,48 +48,36 @@ export interface DrillScorecard {
   suggestions: string[];
 }
 
-export const DEFAULT_DRILL_QUESTIONS: DrillQuestion[] = [
-  {
-    id: 'drill_1',
-    question: 'Opowiedz o poważnym błędzie lub awarii, za którą odpowiadałeś, i jak sobie z nią poradziłeś.',
-    category: 'BEHAVIORAL',
-    hint: 'Skup się na szybkiej reakcji, analizie przyczyn (RCA), naprawie i procedurach prewencyjnych.',
+import { PRERECORDED_INTERVIEW_QUESTIONS } from './interviewQuestions/prerecordedQuestions';
+import { getInjectedQuestions, QuestionTokenContext } from './interviewQuestions';
+
+export const DEFAULT_DRILL_QUESTIONS: DrillQuestion[] = PRERECORDED_INTERVIEW_QUESTIONS.map((q) => ({
+  id: q.id,
+  question: q.question,
+  category: q.category === 'LEADERSHIP' || q.category === 'CLIENT' ? 'SITUATIONAL' : q.category,
+  hint: `${q.intent} Struktura STAR: ${q.starHint.situation} -> ${q.starHint.action} -> ${q.starHint.result}`,
+  targetDurationSec: q.recommendedDurationSec,
+  referenceNotes: `S: ${q.starHint.situation} | T: ${q.starHint.task} | A: ${q.starHint.action} | R: ${q.starHint.result}`,
+}));
+
+/**
+ * Generuje pełną pulę pytań do drill mode (35 bazowych + 25 kontekstowych z wstrzykniętymi tokenami).
+ */
+export function buildContextualDrillPool(context: QuestionTokenContext = {}): DrillQuestion[] {
+  const basePool = [...DEFAULT_DRILL_QUESTIONS];
+  const injected = getInjectedQuestions(context);
+
+  const injectedDrills: DrillQuestion[] = injected.map((q) => ({
+    id: q.id,
+    question: q.resolvedQuestion,
+    category: q.category === 'LEADERSHIP' || q.category === 'CLIENT' ? 'SITUATIONAL' : q.category,
+    hint: `${q.intent} ${q.starGuide}`,
     targetDurationSec: 60,
-    referenceNotes: 'Kontekst awarii -> Szybkie opanowanie incydentu -> RCA (przyczyna źródłowa) -> Wdrożenie zabezpieczeń.',
-  },
-  {
-    id: 'drill_2',
-    question: 'Opowiedz o sytuacji, gdy musiałeś podjąć trudną decyzję techniczną lub operacyjną pod presją czasu.',
-    category: 'TECHNICAL',
-    hint: 'Pokaż kompromisy (trade-offs), kryteria wyboru rozwiązania i wzięcie odpowiedzialności za wynik.',
-    targetDurationSec: 60,
-    referenceNotes: 'Ograniczenia czasowe -> Analiza ryzyk -> Wybór rozwiązania -> Wdrożenie i monitoring metryk.',
-  },
-  {
-    id: 'drill_3',
-    question: 'Opowiedz o projekcie lub zadaniu, z którego wymiernych wyników jesteś najbardziej dumny.',
-    category: 'BEHAVIORAL',
-    hint: 'Pamiętaj o podaniu konkretnych liczb, skali projektu i wymiernego zysku dla firmy.',
-    targetDurationSec: 60,
-    referenceNotes: 'Wyzwanie biznesowe -> Moja rola i plan -> Realizacja -> Twarde liczby i metryki sukcesu.',
-  },
-  {
-    id: 'drill_4',
-    question: 'Jak poradziłeś sobie z konfliktem zdań w zespole lub z niezgodnością wymagań klienta?',
-    category: 'SITUATIONAL',
-    hint: 'Podkreśl komunikację opartą na faktach, dążenie do wspólnego celu i profesjonalizm.',
-    targetDurationSec: 60,
-    referenceNotes: 'Źródło rozbieżności -> Rozmowa 1:1 i argumentacja merytoryczna -> Konsensus -> Sukces projektu.',
-  },
-  {
-    id: 'drill_5',
-    question: 'Opowiedz o sytuacji wymagającej bezwzględnego przestrzegania procedur bezpieczeństwa (BHP / SEP / procedury produkcyjne).',
-    category: 'TRADE',
-    hint: 'Pokaż odpowiedzialność za ludzi i sprzęt oraz zero kompromisów w kwestii norm bezpieczeństwa.',
-    targetDurationSec: 60,
-    referenceNotes: 'Identyfikacja ryzyka -> Zabezpieczenie strefy -> Przeprowadzenie prac zgodnie z normą -> 0 incydentów.',
-  },
-];
+    referenceNotes: q.starGuide,
+  }));
+
+  return [...basePool, ...injectedDrills];
+}
 
 /**
  * Wybiera losowe pytanie z puli, opcjonalnie wykluczając poprzednio wyświetlone ID.

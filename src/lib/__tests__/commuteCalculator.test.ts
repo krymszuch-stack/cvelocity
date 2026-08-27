@@ -126,6 +126,26 @@ describe('rozpoznawanie benefitów', () => {
     expect(benefitPackageValue(detected)).toBe(330);
   });
 
+  it('wykrywa pakiety marek prywatnych: PZU, Luxmed, MultiSport, MyBenefit, Kawa i Owoce', () => {
+    const offer = {
+      description:
+        'Zapewniamy: abonament PZU Sport lub MultiSport, opiekę medyczną LuxMed, ' +
+        'dostęp do kafeterii MyBenefit (150 pkt/mies.), darmową kawę z ekspresu i owocowe czwartki.',
+    };
+
+    const detected = detectBenefits(benefitSourcesFromOffer(offer));
+    const byKey = Object.fromEntries(detected.map((item) => [item.key, item]));
+
+    expect(byKey.SPORT?.status).toBe('PROVIDED');
+    expect(byKey.MEDICAL?.status).toBe('PROVIDED');
+    expect(byKey.MYBENEFIT?.status).toBe('PROVIDED');
+    expect(byKey.COFFEE?.status).toBe('PROVIDED');
+    expect(byKey.FRUITS?.status).toBe('PROVIDED');
+
+    expect(byKey.MEDICAL?.brandKey).toBe('luxmed');
+    expect(byKey.MYBENEFIT?.brandKey).toBe('mybenefit');
+  });
+
   it('pusta oferta nie generuje benefitów z powietrza', () => {
     const detected = detectBenefits([undefined, null, '   ']);
     expect(detected.every((item) => item.status === 'MISSING')).toBe(true);

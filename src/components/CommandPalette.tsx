@@ -93,7 +93,7 @@ export const CommandPalette: React.FC<CommandPaletteProps> = ({ onNavigate }) =>
   const [query, setQuery] = useState('');
   const [selectedIndex, setSelectedIndex] = useState(0);
 
-  const { setAdvisorOpen, setDesignTokensOpen } = useAppStore();
+  const { setAdvisorOpen, setDesignTokensOpen, setVoiceLabOpen } = useAppStore();
 
   const { theme, setTheme } = useTheme();
   const { userVault } = useAuth();
@@ -118,14 +118,14 @@ export const CommandPalette: React.FC<CommandPaletteProps> = ({ onNavigate }) =>
     const base: CommandItem[] = [
       {
         id: 'nav-home',
-        label: 'Przejdź do: Twój następny krok',
+        label: 'Przejdź do: Pulpit główny',
         category: 'Nawigacja',
         icon: IconHome,
         action: () => onNavigate('home'),
       },
       {
         id: 'nav-profil',
-        label: 'Przejdź do: Profil (dane, doświadczenie, import CV)',
+        label: 'Przejdź do: Profil & Master Vault',
         category: 'Nawigacja',
         icon: IconVault,
         keywords: 'master vault umiejętności doświadczenie edukacja',
@@ -168,6 +168,16 @@ export const CommandPalette: React.FC<CommandPaletteProps> = ({ onNavigate }) =>
         category: 'Nawigacja',
         icon: IconPricing,
         action: () => onNavigate('pricing'),
+      },
+      {
+        id: 'act-voice-lab',
+        label: 'Laboratorium Głosu & Router VAD (180 nagrań, mikrofon i dyktowanie)',
+        category: 'Narzędzia',
+        icon: IconBrain,
+        keywords: 'glos vad mikrofon nagrania audio rekruter dyktowanie speech router 180',
+        action: () => {
+          setVoiceLabOpen(true);
+        },
       },
       {
         id: 'act-advisor',

@@ -15,7 +15,7 @@ export function generateExperienceVariants(fact: ExperienceFact): GeneratedExper
 
   // 1. Wariant Formalny (Rzeczownikowy / Bezosobowy — standard nowoczesnego CV ATS)
   const actionNoun = formatActionWord(fact.action, 'impersonal');
-  let formalBullet1 = `${actionNoun} ${objectsStr}`;
+  let formalBullet1 = `${actionNoun}: ${objectsStr}`;
   if (techStr) {
     formalBullet1 += ` z wykorzystaniem ${techStr}`;
   }
@@ -26,10 +26,10 @@ export function generateExperienceVariants(fact: ExperienceFact): GeneratedExper
   }
 
   const formalBullet2 = techStr
-    ? `Bieżąca praca w środowisku technologicznym ${techStr}, z dbałością o standardy jakościowe.`
-    : `Realizacja zadań w obszarze ${fact.area} zgodnie z dokumentacją i standardami technicznymi.`;
+    ? `Bieżąca praca w oparciu o ${techStr}, z dbałością o najwyższe standardy techniczne i jakościowe.`
+    : `Realizacja zadań w obszarze ${fact.area} zgodnie z dokumentacją i normami branżowymi.`;
 
-  // 2. Wariant Aktywny (Czasowniki sprawcze 1 os. lp)
+  // 2. Wariant Aktywny (Czasowniki sprawcze 1 os. lp z uwzględnieniem formy gramatycznej)
   const actionVerb = formatActionWord(fact.action, fact.narrativeStyle);
   let activeBullet1 = `${actionVerb} ${objectsStr}`;
   if (techStr) {
@@ -41,14 +41,19 @@ export function generateExperienceVariants(fact: ExperienceFact): GeneratedExper
     activeBullet1 += '.';
   }
 
+  const isFemale = fact.narrativeStyle === 'first_person_f';
   const activeBullet2 = fact.outcome
-    ? `Konsekwentnie dbałem o wysoką jakość i niezawodność realizowanych rozwiązań.`
-    : `Współpracowałem w zespole nad ciągłym rozwojem i optymalizacją powierzonych obszarów.`;
+    ? (isFemale
+        ? 'Konsekwentnie dbałam o wysoką jakość, terminowość i bezpieczeństwo realizowanych prac.'
+        : 'Konsekwentnie dbałem o wysoką jakość, terminowość i bezpieczeństwo realizowanych prac.')
+    : (isFemale
+        ? 'Współpracowałam w zespole nad ciągłym rozwojem, standaryzacją i optymalizacją procesów.'
+        : 'Współpracowałem w zespole nad ciągłym rozwojem, standaryzacją i optymalizacją procesów.');
 
   // 3. Wariant Techniczny / Narzędziowy
   let techBullet1 = techStr
-    ? `Stack technologiczny: ${techStr} — ${actionNoun.toLowerCase()} ${objectsStr}.`
-    : `${actionNoun} ${objectsStr} w ramach projektów ${fact.area}.`;
+    ? `Narzędzia i technologie: ${techStr} — ${actionNoun.toLowerCase()}: ${objectsStr}.`
+    : `${actionNoun}: ${objectsStr} w ramach obszaru ${fact.area}.`;
   if (outcomeClause && fact.outcome) {
     techBullet1 += ` Cel: ${fact.outcome.replace(/^,\s*/, '')}${metricClause}.`;
   }

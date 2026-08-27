@@ -10,16 +10,32 @@ import {
   TrendingUp,
   Hash,
   RotateCcw,
+  Search,
+  Building2,
+  X,
+  Edit3,
+  Flame,
+  Zap,
+  Truck,
+  HardHat,
+  Cog,
+  Activity,
+  ShoppingBag,
+  Users,
+  Code,
+  Shield,
 } from 'lucide-react';
 import { Modal } from '../../components/ui/Modal';
 import { Button } from '../../components/ui/Button';
 import {
   resolveRoleKnowledgeNode,
+  getAllRoleKnowledgeNodes,
   generateExperienceVariants,
   getAffinityObjects,
   ExperienceFact,
   GeneratedExperienceVariant,
   GrammarNarrativeStyle,
+  RoleKnowledgeNode,
 } from '../../lib/experienceEngine';
 
 export interface ExperienceWizardModalProps {
@@ -30,6 +46,26 @@ export interface ExperienceWizardModalProps {
   onApplyDescription: (description: string, bullets: string[]) => void;
 }
 
+// Mapowanie ikon dla kategorii zawodowych
+const CATEGORY_ICONS: Record<string, React.ElementType> = {
+  'Instalacje & HVAC': Flame,
+  'Elektryka & Automatyka': Zap,
+  'Spawalnictwo & Ślusarstwo': Wrench,
+  'Logistyka & Magazyn': Building2,
+  'Transport & Spedycja': Truck,
+  'Motoryzacja & Diagnostyka': Wrench,
+  'Budownictwo & Wykończenia': HardHat,
+  'Produkcja & Obróbka CNC': Cog,
+  'Finanse & Księgowość': Building2,
+  'Sprzedaż & Rozwój Biznesu': ShoppingBag,
+  'Obsługa Klienta & Support': Users,
+  'Medycyna & Zdrowie': Activity,
+  'IT & Software Engineering': Code,
+  'DevOps & Infrastruktura': Shield,
+  'Zarządzanie & Projekty': Briefcase,
+  'Administracja & Biuro': Building2,
+};
+
 export const ExperienceWizardModal: React.FC<ExperienceWizardModalProps> = ({
   isOpen,
   onClose,
@@ -37,18 +73,36 @@ export const ExperienceWizardModal: React.FC<ExperienceWizardModalProps> = ({
   userSkills = [],
   onApplyDescription,
 }) => {
-  const roleNode = useMemo(() => {
-    return resolveRoleKnowledgeNode(roleTitle);
-  }, [roleTitle]);
+  // Wszystkie węzły zawodowe
+  const allRoles = useMemo(() => getAllRoleKnowledgeNodes(), []);
+
+  // Aktywnie wybrana rola w kreatorze (początkowo wykrywana z roleTitle)
+  const [selectedRoleNode, setSelectedRoleNode] = useState<RoleKnowledgeNode>(() =>
+    resolveRoleKnowledgeNode(roleTitle)
+  );
+
+  // Synchronizacja przy zmianie roleTitle z zewnątrz
+  const [prevRoleTitle, setPrevRoleTitle] = useState(roleTitle);
+  if (roleTitle !== prevRoleTitle) {
+    setPrevRoleTitle(roleTitle);
+    setSelectedRoleNode(resolveRoleKnowledgeNode(roleTitle));
+  }
+
+  // Stan wyszukiwarki/wyboru innego zawodu
+  const [isRolePickerOpen, setIsRolePickerOpen] = useState<boolean>(false);
+  const [roleSearchQuery, setRoleSearchQuery] = useState<string>('');
+  const [selectedCategoryFilter, setSelectedCategoryFilter] = useState<string>('Wszystkie');
 
   const [step, setStep] = useState<number>(0);
   const [narrativeStyle, setNarrativeStyle] = useState<GrammarNarrativeStyle>('impersonal');
 
-  const initialArea = roleNode.areas.length > 0 ? roleNode.areas[0].id : '';
-  const initialActions = initialArea ? (roleNode.actions[initialArea] || roleNode.actions[Object.keys(roleNode.actions)[0]] || []) : [];
+  // Stan wyboru w kreatorze
+  const initialArea = selectedRoleNode.areas.length > 0 ? selectedRoleNode.areas[0].id : '';
+  const initialActions = initialArea
+    ? selectedRoleNode.actions[initialArea] || selectedRoleNode.actions[Object.keys(selectedRoleNode.actions)[0]] || []
+    : [];
   const initialAction = initialActions.length > 0 ? initialActions[0] : '';
 
-  // Stan wyboru w kreatorze
   const [selectedArea, setSelectedArea] = useState<string>(initialArea);
   const [selectedAction, setSelectedAction] = useState<string>(initialAction);
   const [selectedObjects, setSelectedObjects] = useState<string[]>([]);
@@ -57,52 +111,120 @@ export const ExperienceWizardModal: React.FC<ExperienceWizardModalProps> = ({
   const [selectedOutcome, setSelectedOutcome] = useState<string>('');
   const [metricInput, setMetricInput] = useState<string>('');
 
-  // Synchronizacja przy zmianie roli
-  const [prevRoleId, setPrevRoleId] = useState(roleNode.roleId);
-  if (roleNode.roleId !== prevRoleId) {
-    setPrevRoleId(roleNode.roleId);
-    setSelectedArea(initialArea);
-    setSelectedAction(initialAction);
-  }
+  // Synchronizacja przy zmianie wybranej roli
+  const handleSelectRoleNode = (node: RoleKnowledgeNode) => {
+    setSelectedRoleNode(node);
+    const newInitialArea = node.areas.length > 0 ? node.areas[0].id : '';
+    const newInitialActions = newInitialArea
+      ? node.actions[newInitialArea] || node.actions[Object.keys(node.actions)[0]] || []
+      : [];
+    setSelectedArea(newInitialArea);
+    setSelectedAction(newInitialActions.length > 0 ? newInitialActions[0] : '');
+    setSelectedObjects([]);
+    setSelectedTech([]);
+    setSelectedOutcome('');
+    setMetricInput('');
+    setStep(0);
+    setIsRolePickerOpen(false);
+  };
+
+  // Zmiana obszaru -> automatyczny reset akcji i obiektów
+  const handleSelectArea = (areaId: string) => {
+    setSelectedArea(areaId);
+    const areaActions = selectedRoleNode.actions[areaId] || selectedRoleNode.actions[Object.keys(selectedRoleNode.actions)[0]] || [];
+    setSelectedAction(areaActions.length > 0 ? areaActions[0] : '');
+    setSelectedObjects([]);
+    setSelectedOutcome('');
+  };
+
+  // Filtrowanie listy ról w pickerze
+  const categoriesList = useMemo(() => {
+    const cats = new Set(allRoles.map((r) => r.category || 'Inne'));
+    return ['Wszystkie', ...Array.from(cats)];
+  }, [allRoles]);
+
+  const filteredRoles = useMemo(() => {
+    const query = roleSearchQuery.toLowerCase().trim();
+    return allRoles.filter((r) => {
+      const matchCat = selectedCategoryFilter === 'Wszystkie' || r.category === selectedCategoryFilter;
+      if (!matchCat) return false;
+      if (!query) return true;
+      const matchLabel = r.label.toLowerCase().includes(query);
+      const matchDesc = r.description?.toLowerCase().includes(query);
+      const matchAlias = r.aliases?.some((a) => a.toLowerCase().includes(query));
+      const matchArea = r.areas.some((a) => a.label.toLowerCase().includes(query));
+      return matchLabel || matchDesc || matchAlias || matchArea;
+    });
+  }, [allRoles, roleSearchQuery, selectedCategoryFilter]);
 
   // Lista dostępnych czynności dla wybranego obszaru
   const availableActions = useMemo(() => {
-    return roleNode.actions[selectedArea] || roleNode.actions[Object.keys(roleNode.actions)[0]] || [];
-  }, [roleNode, selectedArea]);
+    return (
+      selectedRoleNode.actions[selectedArea] ||
+      selectedRoleNode.actions[Object.keys(selectedRoleNode.actions)[0]] ||
+      []
+    );
+  }, [selectedRoleNode, selectedArea]);
 
   // Lista dostępnych obiektów
   const availableObjects = useMemo(() => {
-    const rawObjects = roleNode.objects[selectedArea] || roleNode.objects[Object.keys(roleNode.objects)[0]] || [];
+    const rawObjects =
+      selectedRoleNode.objects[selectedArea] ||
+      selectedRoleNode.objects[Object.keys(selectedRoleNode.objects)[0]] ||
+      [];
     return getAffinityObjects(selectedAction, rawObjects);
-  }, [roleNode, selectedArea, selectedAction]);
+  }, [selectedRoleNode, selectedArea, selectedAction]);
 
-  // Lista dostępnych technologii (połączenie skilli użytkownika + grafu stanowiska)
+  // Lista dostępnych technologii / narzędzi / uprawnień
   const availableTech = useMemo(() => {
-    const defaultRoleTech = roleNode.defaultTech[selectedArea] || roleNode.defaultTech.default || [];
+    const defaultRoleTech =
+      selectedRoleNode.defaultTech[selectedArea] ||
+      selectedRoleNode.defaultTech.default ||
+      [];
     const merged = Array.from(new Set([...userSkills, ...defaultRoleTech]));
-    return merged.slice(0, 15);
-  }, [roleNode, selectedArea, userSkills]);
+    return merged.slice(0, 16);
+  }, [selectedRoleNode, selectedArea, userSkills]);
 
-  // Lista dostępnych efektów
+  // Lista dostępnych efektów / celów
   const availableOutcomes = useMemo(() => {
-    return roleNode.outcomes[selectedArea] || roleNode.outcomes.default || [];
-  }, [roleNode, selectedArea]);
+    return (
+      selectedRoleNode.outcomes[selectedArea] ||
+      selectedRoleNode.outcomes.default ||
+      []
+    );
+  }, [selectedRoleNode, selectedArea]);
 
   // Złożony fakt doświadczenia
   const currentFact: ExperienceFact = useMemo(() => {
-    const areaLabel = roleNode.areas.find((a) => a.id === selectedArea)?.label || selectedArea;
+    const areaLabel =
+      selectedRoleNode.areas.find((a) => a.id === selectedArea)?.label || selectedArea;
     return {
-      role: roleTitle || roleNode.label,
+      role: roleTitle || selectedRoleNode.label,
       area: areaLabel,
-      action: selectedAction || availableActions[0] || 'rozwijałem',
-      objects: selectedObjects.length > 0 ? selectedObjects : [availableObjects[0] || 'projekty i zadania'],
+      action: selectedAction || availableActions[0] || 'prowadziłem',
+      objects:
+        selectedObjects.length > 0
+          ? selectedObjects
+          : [availableObjects[0] || 'zadania i prace operacyjne'],
       technologies: selectedTech,
       outcome: selectedOutcome,
       metric: metricInput.trim() || undefined,
       narrativeStyle,
       verifiedByUser: true,
     };
-  }, [roleTitle, roleNode, selectedArea, selectedAction, availableActions, selectedObjects, availableObjects, selectedTech, selectedOutcome, metricInput, narrativeStyle]);
+  }, [
+    roleTitle,
+    selectedRoleNode,
+    selectedArea,
+    selectedAction,
+    availableActions,
+    selectedObjects,
+    availableObjects,
+    selectedTech,
+    selectedOutcome,
+    metricInput,
+    narrativeStyle,
+  ]);
 
   // Wygenerowane warianty
   const generatedVariants: GeneratedExperienceVariant[] = useMemo(() => {
@@ -144,24 +266,55 @@ export const ExperienceWizardModal: React.FC<ExperienceWizardModalProps> = ({
     setMetricInput('');
   };
 
+  const ActiveIcon = CATEGORY_ICONS[selectedRoleNode.category || ''] || Briefcase;
+
   return (
     <Modal
       isOpen={isOpen}
       onClose={onClose}
       title="Mikro-Wywiad Doświadczenia (Career Experience Wizard)"
-      size="lg"
+      size="xl"
     >
       <div className="space-y-5">
-        {/* Nagłówek ze statusem i krokami */}
-        <div className="rounded-2xl border border-brand-500/30 bg-brand-500/5 p-4 space-y-2">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2 text-xs font-bold text-ink">
-              <Sparkles className="h-4 w-4 text-brand-600" />
-              <span>Stanowisko: {roleTitle || 'Specjalista'}</span>
+        {/* Nagłówek ze statusem, profesją i przełącznikiem wyboru zawodu */}
+        <div className="rounded-2xl border border-brand-500/30 bg-brand-500/5 p-4 space-y-3">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
+            <div className="flex items-center gap-2.5">
+              <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-brand-500/20 text-brand-600 shrink-0">
+                <ActiveIcon className="h-5 w-5" />
+              </div>
+              <div>
+                <div className="flex items-center gap-2">
+                  <span className="text-[11px] font-mono text-muted uppercase tracking-wide">
+                    {selectedRoleNode.category || 'Branża Zawodowa'}
+                  </span>
+                </div>
+                <div className="text-sm font-bold text-ink flex items-center gap-2">
+                  <span>{selectedRoleNode.label}</span>
+                  {roleTitle && roleTitle !== selectedRoleNode.label && (
+                    <span className="text-xs font-normal text-muted truncate max-w-[200px]">
+                      (Stanowisko z CV: {roleTitle})
+                    </span>
+                  )}
+                </div>
+              </div>
             </div>
-            <span className="text-[11px] font-mono text-muted">
-              Krok {step + 1} z 5
-            </span>
+
+            <div className="flex items-center gap-2 self-end sm:self-auto">
+              <Button
+                type="button"
+                variant="secondary"
+                size="sm"
+                icon={isRolePickerOpen ? X : Edit3}
+                onClick={() => setIsRolePickerOpen((prev) => !prev)}
+                className="text-xs h-8 px-3"
+              >
+                {isRolePickerOpen ? 'Zamknij słownik' : 'Zmień / Doprecyzuj zawód'}
+              </Button>
+              <span className="text-[11px] font-mono text-muted pl-2 border-l border-line">
+                Krok {step + 1} z 5
+              </span>
+            </div>
           </div>
 
           {/* Pasek postępu */}
@@ -173,34 +326,126 @@ export const ExperienceWizardModal: React.FC<ExperienceWizardModalProps> = ({
           </div>
         </div>
 
-        {/* Treść kroków */}
-        {step === 0 && (
-          <div className="space-y-4">
-            <div className="flex items-center gap-2 text-xs font-bold text-ink">
-              <Layers className="h-4 w-4 text-brand-600" />
-              <span>1. W jakim głównym obszarze pracowałeś na tym stanowisku?</span>
+        {/* Panel wyboru zawodu ze słownika (progressive disclosure) */}
+        {isRolePickerOpen && (
+          <div className="rounded-2xl border border-line bg-surface p-4 space-y-3.5 shadow-md animate-in fade-in duration-200">
+            <div className="flex items-center justify-between">
+              <h4 className="text-xs font-bold text-ink flex items-center gap-1.5">
+                <Search className="h-4 w-4 text-brand-600" />
+                Wybierz zawód lub profil z bazy klasyfikacji zawodowych (16 branż):
+              </h4>
+              <span className="text-[10px] font-mono text-muted">
+                Znaleziono: {filteredRoles.length}
+              </span>
             </div>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
-              {roleNode.areas.map((area) => (
+
+            {/* Wyszukiwarka */}
+            <div className="relative">
+              <Search className="absolute left-3 top-2.5 h-4 w-4 text-muted" />
+              <input
+                type="text"
+                value={roleSearchQuery}
+                onChange={(e) => setRoleSearchQuery(e.target.value)}
+                placeholder="Szukaj po nazwie lub słowach kluczowych (np. monter, spawacz, elektryk, magazynier, księgowa, devops)..."
+                className="w-full rounded-xl border border-line bg-sunken pl-9 pr-3.5 py-2 text-xs text-ink placeholder:text-subtle focus:border-brand-500/60 focus:outline-none"
+              />
+            </div>
+
+            {/* Kategorie filter chips */}
+            <div className="flex flex-wrap gap-1.5 max-h-[75px] overflow-y-auto pr-1">
+              {categoriesList.map((cat) => (
                 <button
-                  key={area.id}
+                  key={cat}
                   type="button"
-                  onClick={() => setSelectedArea(area.id)}
-                  className={`p-3 rounded-xl border text-left text-xs font-semibold cursor-pointer transition-all ${
-                    selectedArea === area.id
-                      ? 'border-brand-500 bg-brand-500/10 text-brand-fg ring-1 ring-brand-500/30'
-                      : 'border-line bg-surface hover:border-brand-500/30 text-ink'
+                  onClick={() => setSelectedCategoryFilter(cat)}
+                  className={`px-2.5 py-1 rounded-lg text-[11px] font-semibold cursor-pointer transition-colors ${
+                    selectedCategoryFilter === cat
+                      ? 'bg-brand-600 text-white shadow-2xs'
+                      : 'bg-sunken text-muted hover:text-ink hover:bg-surface'
                   }`}
                 >
-                  {area.label}
+                  {cat}
                 </button>
               ))}
+            </div>
+
+            {/* Siatka ról do wyboru */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 max-h-[220px] overflow-y-auto pr-1">
+              {filteredRoles.map((role) => {
+                const isSelected = selectedRoleNode.roleId === role.roleId;
+                const RoleIcon = CATEGORY_ICONS[role.category || ''] || Briefcase;
+                return (
+                  <button
+                    key={role.roleId}
+                    type="button"
+                    onClick={() => handleSelectRoleNode(role)}
+                    className={`p-2.5 rounded-xl border text-left cursor-pointer transition-all flex items-start gap-2.5 ${
+                      isSelected
+                        ? 'border-brand-500 bg-brand-500/10 ring-1 ring-brand-500/30'
+                        : 'border-line bg-surface hover:border-brand-500/30'
+                    }`}
+                  >
+                    <RoleIcon className={`h-4 w-4 mt-0.5 shrink-0 ${isSelected ? 'text-brand-600' : 'text-muted'}`} />
+                    <div className="space-y-0.5 min-w-0">
+                      <div className="text-xs font-bold text-ink truncate">
+                        {role.label}
+                      </div>
+                      <div className="text-[10px] text-muted line-clamp-1">
+                        {role.description}
+                      </div>
+                    </div>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        )}
+
+        {/* Treść kroków mikro-wywiadu */}
+        {step === 0 && (
+          <div className="space-y-3.5">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2 text-xs font-bold text-ink">
+                <Layers className="h-4 w-4 text-brand-600" />
+                <span>1. W jakim głównym obszarze pracowałeś na tym stanowisku?</span>
+              </div>
+              <span className="text-[10px] text-muted font-mono">
+                {selectedRoleNode.label}
+              </span>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+              {selectedRoleNode.areas.map((area) => {
+                const isSelected = selectedArea === area.id;
+                return (
+                  <button
+                    key={area.id}
+                    type="button"
+                    onClick={() => handleSelectArea(area.id)}
+                    className={`p-3.5 rounded-xl border text-left cursor-pointer transition-all space-y-1 ${
+                      isSelected
+                        ? 'border-brand-500 bg-brand-500/10 text-brand-fg ring-1 ring-brand-500/30 shadow-2xs'
+                        : 'border-line bg-surface hover:border-brand-500/30 text-ink'
+                    }`}
+                  >
+                    <div className="text-xs font-bold flex items-center justify-between">
+                      <span>{area.label}</span>
+                      {isSelected && <Check className="h-3.5 w-3.5 text-brand-600" />}
+                    </div>
+                    {area.description && (
+                      <div className="text-[11px] text-muted leading-snug">
+                        {area.description}
+                      </div>
+                    )}
+                  </button>
+                );
+              })}
             </div>
           </div>
         )}
 
         {step === 1 && (
-          <div className="space-y-4">
+          <div className="space-y-3.5">
             <div className="flex items-center gap-2 text-xs font-bold text-ink">
               <Briefcase className="h-4 w-4 text-brand-600" />
               <span>2. Jaka była Twoja główna czynność / rola sprawcza?</span>
@@ -225,7 +470,7 @@ export const ExperienceWizardModal: React.FC<ExperienceWizardModalProps> = ({
         )}
 
         {step === 2 && (
-          <div className="space-y-4">
+          <div className="space-y-3.5">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2 text-xs font-bold text-ink">
                 <Wrench className="h-4 w-4 text-brand-600" />
@@ -243,14 +488,14 @@ export const ExperienceWizardModal: React.FC<ExperienceWizardModalProps> = ({
                     key={obj}
                     type="button"
                     onClick={() => toggleObject(obj)}
-                    className={`px-3 py-1.5 rounded-xl border text-xs font-medium cursor-pointer transition-all flex items-center gap-1.5 ${
+                    className={`px-3.5 py-2 rounded-xl border text-xs font-medium cursor-pointer transition-all flex items-center gap-1.5 ${
                       isSelected
-                        ? 'border-brand-500 bg-brand-500/10 text-brand-fg font-bold'
+                        ? 'border-brand-500 bg-brand-500/10 text-brand-fg font-bold ring-1 ring-brand-500/30'
                         : 'border-line bg-surface hover:border-brand-500/30 text-ink'
                     }`}
                   >
-                    {isSelected && <Check className="h-3.5 w-3.5" />}
-                    {obj}
+                    {isSelected && <Check className="h-3.5 w-3.5 text-brand-600" />}
+                    <span>{obj}</span>
                   </button>
                 );
               })}
@@ -259,16 +504,17 @@ export const ExperienceWizardModal: React.FC<ExperienceWizardModalProps> = ({
         )}
 
         {step === 3 && (
-          <div className="space-y-4">
+          <div className="space-y-3.5">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2 text-xs font-bold text-ink">
                 <Wrench className="h-4 w-4 text-brand-600" />
-                <span>4. Jakich technologii / narzędzi używałeś?</span>
+                <span>4. Jakich technologii, sprzętu, narzędzi lub uprawnień używałeś?</span>
               </div>
               <span className="text-[10px] text-muted font-mono">
                 Wybrano: {selectedTech.length}
               </span>
             </div>
+
             <div className="flex flex-wrap gap-2">
               {availableTech.map((tech) => {
                 const isSelected = selectedTech.includes(tech);
@@ -279,12 +525,12 @@ export const ExperienceWizardModal: React.FC<ExperienceWizardModalProps> = ({
                     onClick={() => toggleTech(tech)}
                     className={`px-3 py-1.5 rounded-xl border text-xs font-medium cursor-pointer transition-all flex items-center gap-1.5 ${
                       isSelected
-                        ? 'border-brand-500 bg-brand-500/10 text-brand-fg font-bold'
+                        ? 'border-brand-500 bg-brand-500/10 text-brand-fg font-bold ring-1 ring-brand-500/30'
                         : 'border-line bg-surface hover:border-brand-500/30 text-ink'
                     }`}
                   >
-                    {isSelected && <Check className="h-3.5 w-3.5" />}
-                    {tech}
+                    {isSelected && <Check className="h-3.5 w-3.5 text-brand-600" />}
+                    <span>{tech}</span>
                   </button>
                 );
               })}
@@ -296,7 +542,7 @@ export const ExperienceWizardModal: React.FC<ExperienceWizardModalProps> = ({
                 value={customTechInput}
                 onChange={(e) => setCustomTechInput(e.target.value)}
                 onKeyDown={handleAddCustomTech}
-                placeholder="Dodaj inną technologię lub narzędzie..."
+                placeholder="Wpisz inne narzędzie, urządzenie, normę lub uprawnienie (np. SEP G2, Linde, KTS, Catia)..."
                 className="flex-1 rounded-xl border border-line bg-sunken px-3 py-2 text-xs text-ink placeholder:text-subtle focus:border-brand-500/60 focus:outline-none"
               />
               <Button
@@ -313,10 +559,10 @@ export const ExperienceWizardModal: React.FC<ExperienceWizardModalProps> = ({
         )}
 
         {step === 4 && (
-          <div className="space-y-4">
+          <div className="space-y-3.5">
             <div className="flex items-center gap-2 text-xs font-bold text-ink">
               <TrendingUp className="h-4 w-4 text-brand-600" />
-              <span>5. Jaki był cel lub mierzalny efekt tej pracy?</span>
+              <span>5. Jaki był cel, mierzalny efekt lub skala tej pracy?</span>
             </div>
             <div className="flex flex-wrap gap-2">
               {availableOutcomes.map((outcome) => (
@@ -338,7 +584,7 @@ export const ExperienceWizardModal: React.FC<ExperienceWizardModalProps> = ({
             <div className="space-y-1.5 pt-2 border-t border-line/50">
               <label className="text-xs font-bold text-ink flex items-center gap-1.5">
                 <Hash className="h-3.5 w-3.5 text-brand-600" />
-                Opcjonalna liczba / skala (np. „skrócono o 35%”, „100k użytkowników”):
+                Opcjonalna liczba / skala (np. „ponad 450 przeglądów”, „czas reakcji &lt; 2h”, „99.8% poprawności”):
               </label>
               <input
                 type="text"
@@ -356,7 +602,7 @@ export const ExperienceWizardModal: React.FC<ExperienceWizardModalProps> = ({
           <div className="flex items-center justify-between">
             <h4 className="text-xs font-bold text-ink flex items-center gap-1.5">
               <Sparkles className="h-4 w-4 text-brand-600" />
-              Propozycje opisu stanowiska (3 warianty):
+              Propozycje opisu stanowiska (3 warianty dopasowane do branży):
             </h4>
 
             {/* Przełącznik stylu narracji */}

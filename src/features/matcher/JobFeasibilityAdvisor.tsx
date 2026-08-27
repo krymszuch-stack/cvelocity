@@ -316,6 +316,8 @@ export const JobFeasibilityAdvisor: React.FC<JobFeasibilityAdvisorProps> = ({
                 <li key={benefit.key}>
                   <BenefitBadgeCard
                     icon={Icon}
+                    benefitKey={benefit.key}
+                    brandKey={benefit.brandKey}
                     label={benefit.label}
                     provided={provided}
                     value={
@@ -335,6 +337,10 @@ export const JobFeasibilityAdvisor: React.FC<JobFeasibilityAdvisorProps> = ({
               );
             })}
           </ul>
+
+          <div className="mt-3 rounded-lg border border-line/60 bg-surface/40 p-2.5 text-[9px] leading-relaxed text-subtle/80">
+            <span className="font-semibold text-muted">Nota prawna:</span> Wszelkie znaki towarowe, logotypy oraz nazwy handlowe (m.in. MultiSport, PZU, Lux Med, Medicover, MyBenefit, Sodexo, Edenred, Enel-Med) należą do ich prawnych właścicieli i zostały użyte wyłącznie w celach informacyjno-identyfikacyjnych w kalkulatorze opłacalności.
+          </div>
         </div>
       </div>
     </section>

@@ -20,6 +20,7 @@ interface AppStoreState {
   isAdvisorOpen: boolean;
   isAuthModalOpen: boolean;
   isDesignTokensOpen: boolean;
+  isVoiceLabOpen: boolean;
   advisorInitialQuestion?: string;
   /**
    * Aplikacja wskazana przez rekomendację „następnego kroku" — Pipeline
@@ -36,6 +37,7 @@ let globalState: AppStoreState = {
   isAdvisorOpen: false,
   isAuthModalOpen: false,
   isDesignTokensOpen: false,
+  isVoiceLabOpen: false,
   advisorInitialQuestion: undefined,
   highlightedApplicationId: null,
 };
@@ -146,6 +148,10 @@ export function useAppStore() {
     setStoreState({ isDesignTokensOpen });
   }, []);
 
+  const setVoiceLabOpen = useCallback((isVoiceLabOpen: boolean) => {
+    setStoreState({ isVoiceLabOpen });
+  }, []);
+
   const setHighlightedApplicationId = useCallback((highlightedApplicationId: string | null) => {
     setStoreState({ highlightedApplicationId });
   }, []);
@@ -158,6 +164,7 @@ export function useAppStore() {
     setAdvisorOpen,
     setAuthModalOpen,
     setDesignTokensOpen,
+    setVoiceLabOpen,
     setHighlightedApplicationId,
   };
 }

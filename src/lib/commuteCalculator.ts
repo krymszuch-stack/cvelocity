@@ -34,6 +34,12 @@ export interface MobilityPreferences {
   oneWayMinutes: number;
   /** Paliwo, bilety, parking — złotych miesięcznie. */
   monthlyCommuteCost: number;
+  /** Miasto zamieszkania (np. "Tarnów", "Chorzów", "Gdańsk"). */
+  homeCity?: string;
+  /** Miasto lokalizacji biura/pracy (np. "Kraków", "Warszawa", "Katowice"). */
+  officeCity?: string;
+  /** Obliczona odległość drogowa w km. */
+  roadDistanceKm?: number;
 }
 
 export const DEFAULT_MOBILITY_PREFERENCES: MobilityPreferences = {
@@ -44,6 +50,41 @@ export const DEFAULT_MOBILITY_PREFERENCES: MobilityPreferences = {
   oneWayMinutes: 30,
   monthlyCommuteCost: 300,
 };
+
+import { getGeoDistanceRegistry } from './geoDistance';
+
+/**
+ * Automatycznie wylicza czas, koszty paliwa i odległość na podstawie miast z bazy geoDistance.
+ */
+export function autoCalculateCommuteFromCities(
+  homeCity: string,
+  officeCity: string,
+  workMode: WorkMode = 'HYBRID',
+  officeDaysPerWeek = 3
+): {
+  oneWayMinutes: number;
+  monthlyCommuteCost: number;
+  roadDistanceKm: number;
+  directDistanceKm: number;
+  corridorDescription: string;
+} | null {
+  const calculation = getGeoDistanceRegistry().calculateCommute(homeCity, officeCity);
+  if (!calculation) return null;
+
+  const officeDays =
+    workMode === 'REMOTE' ? 0 : workMode === 'ONSITE' ? 5 : Math.min(5, Math.max(0, officeDaysPerWeek));
+  const monthlyCost = Math.round(
+    calculation.estimatedFuelCostOneWayPln * 2 * officeDays * WEEKS_PER_MONTH
+  );
+
+  return {
+    oneWayMinutes: calculation.estimatedDriveTimeMinutes,
+    monthlyCommuteCost: monthlyCost,
+    roadDistanceKm: calculation.roadDistanceKm,
+    directDistanceKm: calculation.directDistanceKm,
+    corridorDescription: calculation.corridorDescription,
+  };
+}
 
 /* ------------------------------------------------------------------ */
 /* Podatki i składki                                                   */
@@ -119,10 +160,24 @@ export function effectiveCommuteCost(prefs: MobilityPreferences): number {
 
 export type BenefitKey =
   | 'SPORT'
+  | 'SPORT_MULTISPORT'
+  | 'SPORT_PZU'
+  | 'SPORT_MEDICOVER'
   | 'MEDICAL'
+  | 'MEDICAL_LUXMED'
+  | 'MEDICAL_MEDICOVER'
+  | 'MEDICAL_PZU'
+  | 'MEDICAL_ENELMED'
+  | 'MYBENEFIT'
+  | 'FOOD'
+  | 'FOOD_LUNCH'
+  | 'FRUITS'
+  | 'COFFEE'
+  | 'WELLBEING'
+  | 'TRAINING'
+  | 'INSURANCE'
   | 'DRIVING_LICENSE'
   | 'COMMUTE'
-  | 'FOOD'
   | 'EQUIPMENT';
 
 export interface BenefitAssumption {
@@ -139,29 +194,79 @@ export interface BenefitAssumption {
   basis: string;
   /** Frazy z ogłoszenia, po których rozpoznajemy benefit. */
   keywords: string[];
+  /** Domyślny klucz marki do pobierania logotypu. */
+  defaultBrandKey?: string;
 }
 
 export const BENEFIT_ASSUMPTIONS: readonly BenefitAssumption[] = [
   {
     key: 'SPORT',
-    label: 'Karta sportowa',
+    label: 'Karta sportowa / MultiSport / PZU Sport',
     monthlyValue: 150,
-    basis: 'Założenie: abonament sportowy w wariancie podstawowym.',
-    keywords: ['multisport', 'medicover sport', 'karta sportowa', 'siłowni', 'fitprofit', 'benefit systems'],
+    basis: 'Założenie: abonament sportowy w wariancie podstawowym (MultiSport, PZU Sport, Medicover Sport).',
+    keywords: ['multisport', 'pzu sport', 'medicover sport', 'karta sportowa', 'karty sportow', 'siłowni', 'fitprofit', 'benefit systems', 'karnet sportow', 'aktywność fizyczn'],
+    defaultBrandKey: 'multisport',
   },
   {
     key: 'MEDICAL',
-    label: 'Opieka medyczna',
+    label: 'Opieka medyczna / LuxMed / Medicover / PZU',
     monthlyValue: 180,
-    basis: 'Założenie: prywatny pakiet medyczny dla jednej osoby.',
-    keywords: ['luxmed', 'lux med', 'medicover', 'enel-med', 'opieka medyczna', 'prywatna opieka', 'pakiet medyczny'],
+    basis: 'Założenie: prywatny pakiet medyczny dla jednej osoby (LuxMed, Medicover, PZU Zdrowie, Enel-Med).',
+    keywords: ['luxmed', 'lux med', 'medicover', 'pzu zdrowie', 'enel-med', 'enelmed', 'opieka medyczna', 'opiekę medyczn', 'opieki medyczn', 'prywatna opieka', 'pakiet medyczny', 'pakiet zdrowotn'],
+    defaultBrandKey: 'luxmed',
+  },
+  {
+    key: 'MYBENEFIT',
+    label: 'Kafeteria MyBenefit / Punkty',
+    monthlyValue: 150,
+    basis: 'Założenie: miesięczny budżet punktowy na platformie kafeteryjnej MyBenefit.',
+    keywords: ['mybenefit', 'my benefit', 'kafeteria benefit', 'system kafeteryjny', 'punkty kafeteryjne', 'platforma benefitowa', 'kafeteri'],
+    defaultBrandKey: 'mybenefit',
   },
   {
     key: 'FOOD',
-    label: 'Wyżywienie',
+    label: 'Karta Lunch / Posiłki',
     monthlyValue: 300,
-    basis: 'Założenie: dofinansowanie lunchu w dni robocze.',
-    keywords: ['karta lunch', 'lunch', 'posiłk', 'kantyn', 'owocowe czwartki', 'kawa i herbata', 'sodexo', 'edenred'],
+    basis: 'Założenie: dofinansowanie lunchu i posiłków w dni robocze (Sodexo, Edenred).',
+    keywords: ['karta lunch', 'lunch', 'posiłk', 'kantyn', 'sodexo', 'edenred', 'pluxee', 'dofinansowanie do posiłków', 'obiad'],
+    defaultBrandKey: 'sodexo',
+  },
+  {
+    key: 'FRUITS',
+    label: 'Świeże owoce & Przekąski',
+    monthlyValue: 60,
+    basis: 'Założenie: świeże owoce, soki i zdrowe przekąski w biurze.',
+    keywords: ['owocowe czwartki', 'owoce w biurze', 'świeże owoce', 'owocowe wtorki', 'owocowe dni', 'zdrowe przekąski', 'owoc'],
+  },
+  {
+    key: 'COFFEE',
+    label: 'Kawa Specialty & Herbata',
+    monthlyValue: 80,
+    basis: 'Założenie: nielimitowana kawa z ekspresu ciśnieniowego / specialty i herbata w biurze.',
+    keywords: ['kawa', 'kawę', 'kawy', 'ekspres', 'herbat', 'barista', 'kawa specialty', 'darmowa kawa'],
+  },
+  {
+    key: 'WELLBEING',
+    label: 'Wellbeing & Psycholog',
+    monthlyValue: 120,
+    basis: 'Założenie: konsultacje psychologiczne i program wsparcia pracowników (EAP / Mindgram).',
+    keywords: ['mindgram', 'psycholog', 'wsparcie psychologiczne', 'wellbeing', 'zdrowie psychiczne', 'program wsparcia pracowników', 'eap'],
+    defaultBrandKey: 'mindgram',
+  },
+  {
+    key: 'TRAINING',
+    label: 'Budżet szkoleniowy & Certyfikaty',
+    monthlyValue: 200,
+    basis: 'Założenie: roczny budżet szkoleniowy i dofinansowanie certyfikacji rozbite na miesiące.',
+    keywords: ['budżet szkoleniowy', 'szkolenia', 'szkoleń', 'dofinansowanie kursów', 'certyfikat', 'konferencje', 'udemy', 'coursera'],
+  },
+  {
+    key: 'INSURANCE',
+    label: 'Ubezpieczenie na życie',
+    monthlyValue: 90,
+    basis: 'Założenie: grupowe ubezpieczenie na życie (PZU, Warta, Nationale-Nederlanden).',
+    keywords: ['ubezpieczenie na życie', 'ubezpieczenie grupowe', 'pzu życie', 'ubezpieczenie nnw', 'polisa na życie'],
+    defaultBrandKey: 'pzu',
   },
   {
     key: 'EQUIPMENT',
@@ -179,10 +284,10 @@ export const BENEFIT_ASSUMPTIONS: readonly BenefitAssumption[] = [
   },
   {
     key: 'DRIVING_LICENSE',
-    label: 'Prawo jazdy',
+    label: 'Prawo jazdy & Uprawnienia',
     monthlyValue: null,
     basis: 'To wymaganie oferty, nie benefit — nie wliczamy go do wartości pakietu.',
-    keywords: ['prawo jazdy', 'kat. b', 'kategorii b', 'kat.b', 'kategoria b', 'kat. c'],
+    keywords: ['prawo jazdy', 'kat. b', 'kategorii b', 'kat.b', 'kategoria b', 'kat. c', 'sep', 'udt'],
   },
 ] as const;
 
@@ -196,6 +301,26 @@ export interface DetectedBenefit {
   basis: string;
   /** Fragment ogłoszenia, który uruchomił dopasowanie — dowód, nie domysł. */
   matchedPhrase: string | null;
+  /** Klucz marki (np. 'luxmed', 'pzu', 'multisport', 'mybenefit', 'sodexo') do pobrania logotypu. */
+  brandKey?: string;
+}
+
+/**
+ * Rozpoznaje powiązaną markę na podstawie dopasowanej frazy.
+ */
+function resolveBrandKey(matchedPhrase: string | null, defaultBrandKey?: string): string | undefined {
+  if (!matchedPhrase) return defaultBrandKey;
+  const p = matchedPhrase.toLowerCase();
+  if (p.includes('multisport') || p.includes('benefit systems')) return 'multisport';
+  if (p.includes('pzu')) return 'pzu';
+  if (p.includes('luxmed') || p.includes('lux med')) return 'luxmed';
+  if (p.includes('medicover')) return 'medicover';
+  if (p.includes('enel')) return 'enelmed';
+  if (p.includes('mybenefit') || p.includes('my benefit')) return 'mybenefit';
+  if (p.includes('sodexo') || p.includes('pluxee')) return 'sodexo';
+  if (p.includes('edenred')) return 'edenred';
+  if (p.includes('mindgram')) return 'mindgram';
+  return defaultBrandKey;
 }
 
 /**
@@ -212,6 +337,8 @@ export function detectBenefits(sources: Array<string | undefined | null>): Detec
 
   return BENEFIT_ASSUMPTIONS.map((assumption) => {
     const matched = assumption.keywords.find((keyword) => haystack.includes(keyword)) ?? null;
+    const brandKey = resolveBrandKey(matched, assumption.defaultBrandKey);
+
     return {
       key: assumption.key,
       label: assumption.label,
@@ -219,6 +346,7 @@ export function detectBenefits(sources: Array<string | undefined | null>): Detec
       monthlyValue: assumption.monthlyValue,
       basis: assumption.basis,
       matchedPhrase: matched,
+      brandKey,
     };
   });
 }

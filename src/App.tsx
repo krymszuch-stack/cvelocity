@@ -35,6 +35,7 @@ import { resolveVaultOnSignIn } from './lib/vaultSync';
 import { AdvisorModalHost, preloadAdvisorModal } from './features/advisor/AdvisorModalHost';
 import { ElevatorPitchModal } from './features/pitch/ElevatorPitchModal';
 import { DrillModeModal } from './features/drill/DrillModeModal';
+import { RecruiterVoiceLabModal } from './features/recruiter/RecruiterVoiceLabModal';
 import { Modal } from './components/ui/Modal';
 
 // Lazy-loaded heavy views for fast initial bundle & LCP
@@ -71,6 +72,8 @@ function MainApp() {
     setAuthModalOpen,
     isDesignTokensOpen,
     setDesignTokensOpen,
+    isVoiceLabOpen,
+    setVoiceLabOpen,
     advisorInitialQuestion,
   } = useAppStore();
 
@@ -438,6 +441,12 @@ function MainApp() {
       />
 
       <DrillModeModal isOpen={isDrillOpen} onClose={() => setDrillOpen(false)} />
+
+      {/* Laboratorium Głosu & Deterministyczny Router VAD (180 nagrań, dyktowanie) */}
+      <RecruiterVoiceLabModal
+        isOpen={isVoiceLabOpen}
+        onClose={() => setVoiceLabOpen(false)}
+      />
 
       {/* Ankieta po eksporcie: pyta o wysyłkę i sama prowadzi wpis w Pipeline */}
       <ApplicationFeedbackModal onNavigate={navigate} />
