@@ -197,6 +197,8 @@ export function applyParsedCVToVault(
       toolsAndTech,
       certifications,
     },
+    history,
+    education,
     profiler: {
       ...base.profiler,
       languages:

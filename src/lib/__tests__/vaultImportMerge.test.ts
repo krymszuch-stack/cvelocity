@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { mergeImportedVault, mergeUnique } from '../vaultImportMerge';
+import { mergeImportedVault, mergeUnique, applyParsedCVToVault } from '../vaultImportMerge';
 import { createEmptyVault } from '../sampleVault';
 import { MasterVault, WorkExperience, Education, Project } from '../../types';
 
@@ -124,3 +124,71 @@ describe('mergeImportedVault', () => {
     expect(merged.personalInfo.email).toBe('anna@example.pl');
   });
 });
+
+describe('applyParsedCVToVault', () => {
+  const parsedMock = {
+    personalInfo: { fullName: 'Jan Kowalski', title: 'Monter', email: 'jan@monter.pl' },
+    hardSkills: ['SEP G1', 'Spawanie TIG'],
+    softSkills: ['Dokładność'],
+    toolsAndTech: ['Miernik Sonel'],
+    certifications: [{ id: 'c1', name: 'Uprawnienia SEP G1', issuer: 'SEP', date: '2023' }],
+    languages: [{ id: 'l1', language: 'Angielski', level: 'B2' }],
+    projects: [{ id: 'p1', name: 'Instalacja fotowoltaiczna 50kW', role: 'Główny monter', description: '', techStack: [] }],
+    history: [
+      experience('exp-1', 'Elektro-Mont', 'Elektromonter'),
+      experience('exp-2', 'Solar-Tech', 'Monter PV'),
+    ],
+    education: [
+      education('edu-1', 'Technikum Elektryczne', 'Technik elektryk'),
+    ],
+    detectedFormat: 'PDF',
+    rawText: '...',
+    hasCyrillicScript: false,
+    warnings: [],
+  };
+
+  it('poprawnie przenosi historię i wykształcenie do wynikowego obiektu vault (strategia merge)', () => {
+    const prev = vaultWithHistory(experience('exp-0', 'Stara Firma', 'Pomocnik'));
+    const { vault, added } = applyParsedCVToVault(prev, parsedMock as any, {
+      personal: 'replace',
+      skills: 'merge',
+      experience: 'merge',
+      education: 'merge',
+    });
+
+    expect(vault.history).toHaveLength(3);
+    expect(vault.history.map((h) => h.company)).toEqual(['Stara Firma', 'Elektro-Mont', 'Solar-Tech']);
+    expect(vault.education).toHaveLength(1);
+    expect(vault.education[0].institution).toBe('Technikum Elektryczne');
+    expect(added.history).toBe(2);
+    expect(added.education).toBe(1);
+  });
+
+  it('zastępuje historię gdy wybrana jest strategia replace', () => {
+    const prev = vaultWithHistory(experience('exp-0', 'Stara Firma', 'Pomocnik'));
+    const { vault } = applyParsedCVToVault(prev, parsedMock as any, {
+      personal: 'keep',
+      skills: 'merge',
+      experience: 'replace',
+      education: 'replace',
+    });
+
+    expect(vault.history).toHaveLength(2);
+    expect(vault.history.map((h) => h.company)).toEqual(['Elektro-Mont', 'Solar-Tech']);
+  });
+
+  it('zachowuje obecną historię gdy wybrana jest strategia keep', () => {
+    const prev = vaultWithHistory(experience('exp-0', 'Stara Firma', 'Pomocnik'));
+    const { vault, added } = applyParsedCVToVault(prev, parsedMock as any, {
+      personal: 'keep',
+      skills: 'keep',
+      experience: 'keep',
+      education: 'keep',
+    });
+
+    expect(vault.history).toHaveLength(1);
+    expect(vault.history[0].company).toBe('Stara Firma');
+    expect(added.history).toBe(0);
+  });
+});
+
