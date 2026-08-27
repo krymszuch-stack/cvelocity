@@ -74,7 +74,7 @@ export const InterviewPanel: React.FC<InterviewPanelProps> = ({
   className = '',
 }) => {
   const interviews = useMemo(
-    () => applications.filter((app) => app.status === 'Rozmowa'),
+    () => (Array.isArray(applications) ? applications : []).filter((app) => app?.status === 'Rozmowa'),
     [applications]
   );
 

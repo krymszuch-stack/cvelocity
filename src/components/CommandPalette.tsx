@@ -1,4 +1,4 @@
-﻿import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import {
   Search,
   CornerDownLeft,
@@ -230,12 +230,13 @@ export const CommandPalette: React.FC<CommandPaletteProps> = ({ onNavigate }) =>
 
     // Aktywne oferty z Pipeline — po nazwie firmy trafi się szybciej niż przez menu.
     for (const application of applications.slice(0, 8)) {
+      if (!application) continue;
       base.push({
         id: `app-${application.id}`,
-        label: `Aplikacja: ${application.company} — ${application.position}`,
+        label: `Aplikacja: ${application.company || ''} — ${application.position || ''}`,
         category: 'Oferty',
         icon: Briefcase,
-        keywords: `${application.status} oferta`,
+        keywords: `${application.status || ''} oferta`,
         action: () => onNavigate('pipeline'),
       });
     }

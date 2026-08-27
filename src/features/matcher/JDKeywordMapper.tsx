@@ -68,12 +68,13 @@ export const JDKeywordMapper: React.FC<JDKeywordMapperProps> = ({
 
   // Filtrowanie listy słów kluczowych
   const filteredKeywords = useMemo(() => {
-    return keywords.filter((kw) => {
+    return (Array.isArray(keywords) ? keywords : []).filter((kw) => {
+      if (!kw) return false;
       if (activeCategory !== 'ALL' && kw.category !== activeCategory) return false;
       if (activeStatus !== 'ALL' && kw.status !== activeStatus) return false;
       if (searchQuery.trim()) {
         const query = searchQuery.toLowerCase();
-        return kw.term.toLowerCase().includes(query);
+        return (kw.term || '').toLowerCase().includes(query);
       }
       return true;
     });
@@ -416,7 +417,7 @@ export const JDKeywordMapper: React.FC<JDKeywordMapperProps> = ({
           ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2.5 pt-2">
             {filteredKeywords.map((kw) => {
-              const badge = statusBadges[kw.status];
+              const badge = (kw?.status && statusBadges[kw.status]) || { label: 'Brak', variant: 'neutral' as const };
 
               return (
                 <div

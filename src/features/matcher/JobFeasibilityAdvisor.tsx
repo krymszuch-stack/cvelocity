@@ -307,9 +307,9 @@ export const JobFeasibilityAdvisor: React.FC<JobFeasibilityAdvisorProps> = ({
           </p>
 
           <ul className="mt-3 grid grid-cols-1 gap-2 sm:grid-cols-2">
-            {benefits.map((benefit) => {
+            {(Array.isArray(benefits) ? benefits : []).filter(Boolean).map((benefit) => {
               const Icon = BADGE_ICONS[benefit.key];
-              const provided = benefit.status === 'PROVIDED';
+              const provided = benefit?.status === 'PROVIDED';
               const assumption = BENEFIT_ASSUMPTIONS.find((item) => item.key === benefit.key);
 
               return (

@@ -90,29 +90,30 @@ export const ApplicationTracker: React.FC<ApplicationTrackerProps> = ({
 
   // Statistics
   const totalApps = applications.length;
-  const inInterviews = applications.filter((a) => a.status === 'Rozmowa').length;
-  const offersReceived = applications.filter((a) => a.status === 'Oferta').length;
+  const inInterviews = applications.filter((a) => a?.status === 'Rozmowa').length;
+  const offersReceived = applications.filter((a) => a?.status === 'Oferta').length;
   const responseRate = totalApps > 0 ? Math.round(((inInterviews + offersReceived) / totalApps) * 100) : 0;
 
   // Filtered and Sorted
   const filteredApps = useMemo(() => {
     return applications
       .filter((app) => {
+        if (!app) return false;
         if (filterStatus !== 'ALL' && app.status !== filterStatus) return false;
         if (searchQuery.trim()) {
           const query = searchQuery.toLowerCase();
           return (
-            app.company.toLowerCase().includes(query) ||
-            app.position.toLowerCase().includes(query) ||
+            (app.company && app.company.toLowerCase().includes(query)) ||
+            (app.position && app.position.toLowerCase().includes(query)) ||
             (app.notes && app.notes.toLowerCase().includes(query))
           );
         }
         return true;
       })
       .sort((a, b) => {
-        if (sortBy === 'DATE_DESC') return new Date(b.date).getTime() - new Date(a.date).getTime();
-        if (sortBy === 'DATE_ASC') return new Date(a.date).getTime() - new Date(b.date).getTime();
-        if (sortBy === 'COMPANY') return a.company.localeCompare(b.company);
+        if (sortBy === 'DATE_DESC') return new Date(b.date || 0).getTime() - new Date(a.date || 0).getTime();
+        if (sortBy === 'DATE_ASC') return new Date(a.date || 0).getTime() - new Date(b.date || 0).getTime();
+        if (sortBy === 'COMPANY') return (a.company || '').localeCompare(b.company || '');
         return 0;
       });
   }, [applications, filterStatus, searchQuery, sortBy]);
@@ -124,7 +125,7 @@ export const ApplicationTracker: React.FC<ApplicationTrackerProps> = ({
   const handleSaveApp = (app: JobApplication) => {
     saveApplication(app);
     showToast('Pipeline zaktualizowany', {
-      message: `${app.company} — ${app.position} (${app.status}).`,
+      message: `${app.company || ''} — ${app.position || ''} (${app.status || ''}).`,
     });
   };
 
@@ -152,11 +153,11 @@ export const ApplicationTracker: React.FC<ApplicationTrackerProps> = ({
 
   const filterButtons: Array<{ id: string; label: string; count: number }> = [
     { id: 'ALL', label: 'Wszystkie', count: totalApps },
-    { id: 'Do wysłania', label: 'Do wysłania', count: applications.filter((a) => a.status === 'Do wysłania').length },
-    { id: 'Wysłana', label: 'Wysłane', count: applications.filter((a) => a.status === 'Wysłana').length },
+    { id: 'Do wysłania', label: 'Do wysłania', count: applications.filter((a) => a?.status === 'Do wysłania').length },
+    { id: 'Wysłana', label: 'Wysłane', count: applications.filter((a) => a?.status === 'Wysłana').length },
     { id: 'Rozmowa', label: 'Rozmowy', count: inInterviews },
     { id: 'Oferta', label: 'Oferty', count: offersReceived },
-    { id: 'Odrzucona', label: 'Odrzucone', count: applications.filter((a) => a.status === 'Odrzucona').length },
+    { id: 'Odrzucona', label: 'Odrzucone', count: applications.filter((a) => a?.status === 'Odrzucona').length },
   ];
 
   return (

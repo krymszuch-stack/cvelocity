@@ -68,7 +68,7 @@ export const AtsLabView: React.FC<AtsLabViewProps> = ({
     return consensus.engines.find((e) => e.id === selectedEngineId) || consensus.engines[0];
   }, [consensus.engines, selectedEngineId]);
 
-  const getStatusColor = (status: AtsEngineResult['status']) => {
+  const getStatusColor = (status?: AtsEngineResult['status'] | string) => {
     switch (status) {
       case 'OPTIMAL':
         return {
@@ -101,6 +101,14 @@ export const AtsLabView: React.FC<AtsLabViewProps> = ({
           text: 'text-rose-700 dark:text-rose-400',
           label: 'Odrzucony',
           badge: 'bg-rose-500 text-white',
+        };
+      default:
+        return {
+          bg: 'bg-ink/5',
+          border: 'border-ink/20',
+          text: 'text-ink-muted',
+          label: 'Nieznany',
+          badge: 'bg-ink/60 text-white',
         };
     }
   };

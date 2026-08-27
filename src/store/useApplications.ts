@@ -19,7 +19,13 @@ import { grantXp } from './useGamificationStore';
  * na utratę danych (reguła 9 w `AGENTS.md`).
  */
 
-let applications: JobApplication[] = readJson<JobApplication[]>(StorageKeys.applications, []);
+function loadInitialApplications(): JobApplication[] {
+  const raw = readJson<JobApplication[]>(StorageKeys.applications, []);
+  if (!Array.isArray(raw)) return [];
+  return raw.filter((a): a is JobApplication => Boolean(a && typeof a === 'object' && a.id && a.status));
+}
+
+let applications: JobApplication[] = loadInitialApplications();
 const listeners = new Set<() => void>();
 
 /**
@@ -32,6 +38,7 @@ const listeners = new Set<() => void>();
  * różny wynik w zależności od tego, gdzie użytkownik kliknął.
  */
 function withStatusRules(application: JobApplication): JobApplication {
+  if (!application) return application;
   if (application.status === 'Odrzucona' && application.interviewAt !== undefined) {
     return { ...application, interviewAt: undefined };
   }
@@ -39,7 +46,7 @@ function withStatusRules(application: JobApplication): JobApplication {
 }
 
 function commit(next: JobApplication[]): void {
-  applications = next.map(withStatusRules);
+  applications = (Array.isArray(next) ? next : []).filter(Boolean).map(withStatusRules);
   writeJson(StorageKeys.applications, applications);
   listeners.forEach((notify) => notify());
 }

@@ -79,19 +79,21 @@ function freshState(): EntitlementsState {
 }
 
 function loadInitialState(): EntitlementsState {
-  const saved = readJson<EntitlementsState | null>(StorageKeys.entitlementsCache, null);
-  if (!saved?.usage || !saved.subscription) return freshState();
+  const saved = readJson<Partial<EntitlementsState> | null>(StorageKeys.entitlementsCache, null);
+  if (!saved || typeof saved !== 'object' || !saved.usage || !saved.subscription || !saved.subscription.status) {
+    return freshState();
+  }
 
   // Serwer zeruje miesiąc po `date_trunc('month', now())`, a dobę po dacie UTC.
   // Tutaj te same klucze pilnują tylko tego, żeby podpowiedź nie pokazywała
   // zużytych sztuk do czasu pierwszej odpowiedzi z API po zmianie doby.
   let usage = saved.usage;
-  if (usage.monthKey !== getMonthKey()) {
+  if (!usage.monthKey || usage.monthKey !== getMonthKey()) {
     usage = { ...usage, importUses: FREE_IMPORTS, monthKey: getMonthKey() };
   }
-  if (usage.dayKey !== getDayKey()) {
+  if (!usage.dayKey || usage.dayKey !== getDayKey()) {
     // Plan opłacony nie ma dobowego sufitu — serwer zwraca wtedy MAX_SAFE_INTEGER.
-    const paid = isProStatus(saved.subscription.status);
+    const paid = isProStatus(saved.subscription?.status);
     usage = {
       ...usage,
       aiUses: paid ? Number.MAX_SAFE_INTEGER : FREE_AI_USES,
@@ -100,7 +102,12 @@ function loadInitialState(): EntitlementsState {
   }
 
   // Starsze wpisy ze schowka mogą nie znać pola karnetu — brak znaczy false.
-  return { ...saved, usage, hasActivePass: saved.hasActivePass === true };
+  return {
+    subscription: saved.subscription || { status: 'free' },
+    usage,
+    hasActivePass: saved.hasActivePass === true,
+    source: saved.source === 'server' ? 'server' : 'local',
+  };
 }
 
 let globalState: EntitlementsState = loadInitialState();
@@ -121,7 +128,7 @@ onAppStorageWiped(() => {
   listeners.forEach((notify) => notify());
 });
 
-export function isProStatus(status: SubscriptionStatus): boolean {
+export function isProStatus(status?: SubscriptionStatus | string | null): boolean {
   return status === 'active' || status === 'trialing';
 }
 
@@ -133,10 +140,10 @@ interface MeResponse {
 }
 
 function consumeLocal(kind: 'ai' | 'import'): boolean {
-  if (isProStatus(globalState.subscription.status)) return true;
+  if (isProStatus(globalState?.subscription?.status)) return true;
 
   const field = kind === 'ai' ? 'aiUses' : 'importUses';
-  if (globalState.usage[field] <= 0) return false;
+  if (!globalState?.usage || typeof globalState.usage[field] !== 'number' || globalState.usage[field] <= 0) return false;
 
   setState((prev) => ({ ...prev, usage: { ...prev.usage, [field]: prev.usage[field] - 1 } }));
   return true;
@@ -173,12 +180,19 @@ export function useEntitlements() {
 
     try {
       const me = await api.get<MeResponse>('/api/me');
-      setState(() => ({
-        subscription: me.subscription,
-        usage: me.usage,
-        hasActivePass: me.hasActivePass === true,
-        source: 'server',
-      }));
+      if (me && me.subscription) {
+        setState(() => ({
+          subscription: me.subscription,
+          usage: me.usage || {
+            importUses: FREE_IMPORTS,
+            aiUses: FREE_AI_USES,
+            monthKey: getMonthKey(),
+            dayKey: getDayKey(),
+          },
+          hasActivePass: me.hasActivePass === true,
+          source: 'server',
+        }));
+      }
     } catch (err) {
       // Niezalogowany użytkownik dostaje 401 i to jest normalny stan, nie awaria.
       if (err instanceof ApiError && err.isUnauthorized) {
@@ -191,7 +205,7 @@ export function useEntitlements() {
     }
   }, []);
 
-  const isPro = isProStatus(state.subscription.status);
+  const isPro = isProStatus(state?.subscription?.status);
 
   /**
    * Zmniejsza licznik pokazywany w interfejsie i mówi, czy warto w ogóle
@@ -213,13 +227,18 @@ export function useEntitlements() {
   }, []);
 
   return {
-    subscription: state.subscription,
-    usage: state.usage,
-    source: state.source,
+    subscription: state?.subscription || { status: 'free' },
+    usage: state?.usage || {
+      importUses: FREE_IMPORTS,
+      aiUses: FREE_AI_USES,
+      monthKey: getMonthKey(),
+      dayKey: getDayKey(),
+    },
+    source: state?.source || 'local',
     isPro,
     // Karnet kupiony za pieniądze odblokowuje funkcje beta niezależnie od rangi
     // XP — dokładnie tak, jak obiecuje Centrum Kariery.
-    hasActivePass: state.hasActivePass === true,
+    hasActivePass: state?.hasActivePass === true,
     refresh,
     consumeAi,
     consumeImport,
