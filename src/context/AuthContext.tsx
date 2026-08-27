@@ -22,6 +22,7 @@ import { saveCloudVault } from '../lib/cloudVault';
 import { authErrorMessage } from '../lib/authErrors';
 import { removeRaw, vaultKeyFor } from '../lib/storage';
 import { showToast } from '../store/useToastStore';
+import { setAccessTokenProvider } from '../lib/apiClient';
 
 /**
  * Jedyne źródło prawdy o tym, kto korzysta z aplikacji.
@@ -114,6 +115,19 @@ export const AuthProvider: React.FC<{
 
   const supabase = getSupabaseBrowserClient();
   const cloudAvailable = supabase !== null;
+
+  // Dostawca tokenu dla apiClient: zapytania pod /api/* automatycznie dostają
+  // nagłówek Authorization: Bearer <token>, gdy aktywna jest sesja w chmurze.
+  useEffect(() => {
+    if (supabase) {
+      setAccessTokenProvider(async () => {
+        const { data } = await supabase.auth.getSession();
+        return data.session?.access_token ?? null;
+      });
+    } else {
+      setAccessTokenProvider(() => null);
+    }
+  }, [supabase]);
 
   // Uwaga: celowo brak efektu przeładowującego vault przy każdej zmianie `user`.
   // Każda ścieżka ustawia vault jawnie wartością, którą właśnie wyliczyła, a

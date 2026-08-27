@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import {
   Briefcase,
   Plus,
@@ -7,9 +7,10 @@ import {
   Building2,
   ChevronUp,
   ChevronDown,
+  Sparkles,
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
-import { WorkExperience, HighlightMetric } from '../../types';
+import { WorkExperience } from '../../types';
 import { Card } from '../../components/ui/Card';
 import { Button } from '../../components/ui/Button';
 import { Input, Textarea } from '../../components/ui/Field';
@@ -18,10 +19,12 @@ import type { SuggestFn } from '../../hooks/useFieldSuggestions';
 import { Toggle } from '../../components/ui/Toggle';
 import { AchievementEditor } from './AchievementEditor';
 import { EmptyState } from '../../components/ui/EmptyState';
+import { ExperienceWizardModal } from './ExperienceWizardModal';
 
 export interface ExperienceSectionProps {
   history: WorkExperience[];
   onChange: (updated: WorkExperience[]) => void;
+  userSkills?: string[];
   /**
    * Podpowiedzi do nazwy firmy i stanowiska. Opcjonalne — bez nich `Combobox`
    * dostaje pustą listę i zachowuje się jak zwykły `Input`.
@@ -33,9 +36,12 @@ export interface ExperienceSectionProps {
 export const ExperienceSection: React.FC<ExperienceSectionProps> = ({
   history,
   onChange,
+  userSkills = [],
   suggest,
   className = '',
 }) => {
+  const [wizardExperience, setWizardExperience] = useState<WorkExperience | null>(null);
+
   const handleAddExperience = () => {
     const newExp: WorkExperience = {
       id: `exp-${Date.now()}`,
@@ -72,19 +78,27 @@ export const ExperienceSection: React.FC<ExperienceSectionProps> = ({
     onChange(updated);
   };
 
+  const handleApplyWizardDescription = (desc: string) => {
+    if (!wizardExperience) return;
+    handleUpdateExperience(wizardExperience.id, 'description', desc);
+  };
+
   return (
     <Card tone="raised" className={`space-y-6 ${className}`}>
-      <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+      <div className="flex items-center justify-between border-b border-line pb-4">
         <div>
-          <h3 className="text-base font-bold text-ink">Doświadczenie Zawodowe</h3>
-          <p className="text-xs text-muted">
-            Historia zatrudnienia, pełnione role oraz kluczowe osiągnięcia zrealizowane w projektach.
+          <h3 className="text-base font-bold text-ink flex items-center gap-2">
+            <Briefcase className="h-4 w-4 text-brand-600" />
+            Historia Zatrudnienia i Doświadczenie
+          </h3>
+          <p className="text-xs text-muted mt-0.5">
+            Dodaj swoje stanowiska. Im więcej szczegółów i faktów, tym precyzyjniej silnik dopasuje Twoje CV do ogłoszenia.
           </p>
         </div>
 
         <Button
           type="button"
-          variant="secondary"
+          variant="primary"
           size="sm"
           icon={Plus}
           onClick={handleAddExperience}
@@ -94,14 +108,20 @@ export const ExperienceSection: React.FC<ExperienceSectionProps> = ({
       </div>
 
       <div className="space-y-6">
-        <AnimatePresence mode="popLayout">
+        <AnimatePresence initial={false}>
           {history.length === 0 ? (
             <EmptyState
               icon={Briefcase}
-              title="Brak dodanych stanowisk"
-              description="Dodaj przynajmniej jedno miejsce pracy z zakresem obowiązków i mierzalnymi osiągnięciami."
+              title="Brak dodanego doświadczenia"
+              description="Dodaj swoje pierwsze stanowisko, aby silnik mógł wygenerować trafne podsumowanie i dopasować słowa kluczowe."
               action={
-                <Button type="button" variant="secondary" size="sm" icon={Plus} onClick={handleAddExperience}>
+                <Button
+                  type="button"
+                  variant="primary"
+                  size="sm"
+                  icon={Plus}
+                  onClick={handleAddExperience}
+                >
                   Dodaj pierwsze stanowisko
                 </Button>
               }
@@ -110,12 +130,10 @@ export const ExperienceSection: React.FC<ExperienceSectionProps> = ({
             history.map((item, index) => (
               <motion.div
                 key={item.id}
-                layout
                 initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, scale: 0.95 }}
-                transition={{ duration: 0.2, ease: [0.19, 1, 0.22, 1] }}
-                className="rounded-2xl border border-line bg-surface p-4 sm:p-6 space-y-4 shadow-sm"
+                exit={{ opacity: 0, scale: 0.98 }}
+                className="relative space-y-4 rounded-2xl border border-line bg-surface p-5 shadow-2xs"
               >
                 {/* Header & Reorder Controls */}
                 <div className="flex items-center justify-between border-b border-line pb-3">
@@ -170,7 +188,7 @@ export const ExperienceSection: React.FC<ExperienceSectionProps> = ({
                     value={item.company}
                     onChange={(value) => handleUpdateExperience(item.id, 'company', value)}
                     suggestions={suggest?.('company', item.company) ?? []}
-                    placeholder="np. Allegro, TechCorp"
+                    placeholder="np. Szpital Wojewódzki, Firma Sp. z o.o., Zakład Pracy..."
                     required
                   />
 
@@ -180,7 +198,7 @@ export const ExperienceSection: React.FC<ExperienceSectionProps> = ({
                     value={item.role}
                     onChange={(value) => handleUpdateExperience(item.id, 'role', value)}
                     suggestions={suggest?.('jobTitle', item.role) ?? []}
-                    placeholder="np. Senior Frontend Engineer"
+                    placeholder="np. Lekarz / Monter / Magazynier / Inżynier..."
                     required
                   />
 
@@ -211,19 +229,35 @@ export const ExperienceSection: React.FC<ExperienceSectionProps> = ({
                   )}
                 </div>
 
-                {/* Description */}
-                <Textarea
-                  label="Ogólny Opis Roli i Odpowiedzialności"
-                  rows={2}
-                  value={item.description}
-                  onChange={(e) => handleUpdateExperience(item.id, 'description', e.target.value)}
-                  placeholder="Krótki zarys projektu, wielkość zespołu oraz zakres odpowiedzialności..."
-                />
+                {/* Description with Experience Wizard */}
+                <div className="space-y-1.5 pt-2 border-t border-line/50">
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <label className="text-xs font-bold text-ink">
+                      Ogólny Opis Roli i Zakres Odpowiedzialności
+                    </label>
+                    <button
+                      type="button"
+                      onClick={() => setWizardExperience(item)}
+                      className="text-[11px] font-bold text-brand-fg hover:underline cursor-pointer flex items-center gap-1.5 bg-brand-500/10 hover:bg-brand-500/20 px-2.5 py-1 rounded-xl transition-colors"
+                    >
+                      <Sparkles className="h-3.5 w-3.5 text-brand-600" />
+                      <span>Pomóż opisać to stanowisko (Mikro-wywiad)</span>
+                    </button>
+                  </div>
+
+                  <Textarea
+                    rows={2}
+                    value={item.description || ''}
+                    onChange={(e) => handleUpdateExperience(item.id, 'description', e.target.value)}
+                    placeholder="Krótki zarys projektu, wielkość zespołu oraz zakres odpowiedzialności..."
+                  />
+                </div>
 
                 {/* STAR Achievements Editor */}
                 <div className="border-t border-line/60 pt-4">
                   <AchievementEditor
                     highlights={item.highlights || []}
+                    roleTitle={item.role}
                     onChange={(hl) => handleUpdateExperience(item.id, 'highlights', hl)}
                   />
                 </div>
@@ -232,6 +266,17 @@ export const ExperienceSection: React.FC<ExperienceSectionProps> = ({
           )}
         </AnimatePresence>
       </div>
+
+      {/* Modal Mikro-Wywiadu Doświadczenia */}
+      {wizardExperience && (
+        <ExperienceWizardModal
+          isOpen={Boolean(wizardExperience)}
+          onClose={() => setWizardExperience(null)}
+          roleTitle={wizardExperience.role}
+          userSkills={userSkills}
+          onApplyDescription={handleApplyWizardDescription}
+        />
+      )}
     </Card>
   );
 };

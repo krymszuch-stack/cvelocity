@@ -45,9 +45,9 @@ export const ReactFloatingPanel: React.FC<ReactFloatingPanelProps> = ({
   const [isMinimized, setIsMinimized] = useState(false);
   const [opacity, setOpacity] = useState(90); // 30% - 100%
   const [fontSize, setFontSize] = useState(14); // 12px - 22px
-  const [wpmSpeed, setWpmSpeed] = useState(140); // 100 - 220 WPM
   const [isScrolling, setIsScrolling] = useState(false);
   const [isZoomSimulated, setIsZoomSimulated] = useState(false);
+  const wpmSpeed = 140; // Domyślna prędkość telepromptera WPM
 
   // Pozycja okna (drag)
   const [position, setPosition] = useState({ x: 24, y: 80 });

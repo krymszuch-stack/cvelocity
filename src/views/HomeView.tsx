@@ -17,12 +17,12 @@ import {
   Zap,
   TrendingUp,
   X,
-  Share2,
   Layers,
   ShieldCheck,
   MonitorSmartphone,
   CookieIcon,
   EyeOff,
+  ChevronDown,
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { Card } from '../components/ui/Card';
@@ -165,6 +165,10 @@ interface HomeViewProps {
   onOpenAdvisor: (question?: string) => void;
   /** Zapisuje profil odczytany z CV w szybkim sprawdzeniu. */
   onAdoptVault: (vault: MasterVault) => void;
+  /** Karta rekomendacji kolejnego kroku (NextActionCard) */
+  actionSlot?: React.ReactNode;
+  /** Karta pytań uzupełniających CV (CvQuestionsCard) */
+  questionsSlot?: React.ReactNode;
 }
 
 /**
@@ -200,6 +204,8 @@ export const HomeView: React.FC<HomeViewProps> = ({
   onNavigate,
   onOpenAdvisor,
   onAdoptVault,
+  actionSlot,
+  questionsSlot,
 }) => {
   const [selectedCategory, setSelectedCategory] = useState<string>('Wszystkie');
   const [favorites, setFavorites] = useState<string[]>(() => {
@@ -323,82 +329,95 @@ export const HomeView: React.FC<HomeViewProps> = ({
         <LandingView onNavigate={onNavigate} atsSlot={atsCheck} />
       ) : null}
 
-      {/* 0. Przewodnik pierwszego uruchomienia — tylko dla pustego profilu.
-
-          Przy pierwszej wizycie stoi POD stroną wejściową, nie nad nią:
-          otwieranie aplikacji pytaniem „uzupełnij doświadczenie zawodowe",
-          zanim ktokolwiek wyjaśnił, po co, jest prośbą o pracę przed
-          obietnicą. Dla wypełnionego profilu kolejność bez zmian. */}
       <WelcomeWizard vault={vault} onNavigate={onNavigate} />
 
       {!isFirstVisit ? (
         <>
-      {/* 1. Nagłówek ekspozycyjny */}
-      <motion.div
-        initial={{ opacity: 0, y: 15 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.4, ease: [0.19, 1, 0.22, 1] }}
-        className="relative overflow-hidden px-4 py-10 text-center sm:py-14"
-      >
-        <div className="relative z-10 mx-auto flex max-w-3xl flex-col items-center gap-5">
-          <div className="glass-panel inline-flex items-center gap-2 rounded-full px-3.5 py-1.5 font-mono text-xs font-semibold text-brand-fg">
-            <Sparkles className="h-3.5 w-3.5 text-brand-500" />
-            CVelocity Career Hub • Edycja 2026
+          {/* 1. Nagłówek ekspozycyjny na samej górze strony */}
+          <motion.div
+            initial={{ opacity: 0, y: 12 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.35, ease: [0.19, 1, 0.22, 1] }}
+            className="relative overflow-hidden px-4 pt-2 pb-6 text-center sm:pb-8"
+          >
+            <div className="relative z-10 mx-auto flex max-w-4xl flex-col items-center gap-4">
+              {/* Nagłówek powitalny */}
+              <h1 className="text-display text-[2rem] text-ink sm:text-[2.5rem] lg:text-[3rem]">
+                {hasFullName ? (
+                  <>
+                    Witaj ponownie,{' '}
+                    <span className="text-display-grad">{vault.personalInfo.fullName}</span>
+                  </>
+                ) : (
+                  <>
+                    Twoje CV, przepuszczone{' '}
+                    <span className="text-display-grad">przez filtry rekrutacji</span>
+                  </>
+                )}
+              </h1>
+
+              <p className="max-w-xl text-balance text-xs leading-relaxed text-muted sm:text-sm">
+                Asystent kariery, który przygotowuje dokumenty pokonujące automatyczne filtry ATS
+                i przyciągające uwagę rekruterów.
+              </p>
+
+              <div className="flex flex-wrap items-center justify-center gap-3 pt-1">
+                <button
+                  type="button"
+                  onClick={() => onNavigate('aplikuj')}
+                  className="flex items-center gap-2 rounded-xl bg-brand-600 px-5 py-2.5 text-xs sm:text-sm font-semibold text-on-brand shadow-raised transition-all hover:bg-brand-700 hover:scale-[1.02] focus-visible:outline-none cursor-pointer"
+                >
+                  <Search className="h-4 w-4" />
+                  <span>Dopasuj do Oferty</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => onOpenAdvisor('Jak najlepiej zoptymalizować mój profil pod kątem ATS?')}
+                  className="glass-panel flex items-center gap-2 rounded-xl px-5 py-2.5 text-xs sm:text-sm font-semibold text-ink transition-colors hover:text-brand-fg focus-visible:outline-none cursor-pointer"
+                >
+                  <Sparkles className="h-4 w-4 text-brand-500" />
+                  <span>Zapytaj Doradcę</span>
+                </button>
+              </div>
+
+              {/* Karty kolejnego kroku i pytań uzupełniających pod powitaniem */}
+              {(actionSlot || questionsSlot) && (
+                <div className="w-full space-y-4 pt-4 text-left">
+                  {actionSlot}
+                  {questionsSlot}
+                </div>
+              )}
+
+              {/* Wskaźnik, że poniżej znajduje się dalsza zawartość i moduły */}
+              <div className="pt-4 flex flex-col items-center">
+                <button
+                  type="button"
+                  onClick={() => {
+                    const target = document.getElementById('dashboard-modules');
+                    target?.scrollIntoView({ behavior: 'smooth' });
+                  }}
+                  className="group flex flex-col items-center gap-1 text-muted hover:text-brand-600 transition-colors cursor-pointer focus-visible:outline-none"
+                  aria-label="Przewiń w dół, aby zobaczyć moduły, audyt ATS i bazę wiedzy"
+                >
+                  <span className="text-[11px] font-semibold tracking-wide text-ink-muted group-hover:text-brand-600">
+                    Odkryj narzędzia i moduły poniżej
+                  </span>
+                  <motion.div
+                    animate={{ y: [0, 4, 0] }}
+                    transition={{ duration: 1.6, repeat: Infinity, ease: 'easeInOut' }}
+                    className="flex h-6 w-6 items-center justify-center rounded-full border border-line bg-surface group-hover:border-brand-500/50 shadow-xs"
+                  >
+                    <ChevronDown className="h-3.5 w-3.5 text-brand-600" />
+                  </motion.div>
+                </button>
+              </div>
+            </div>
+          </motion.div>
+
+          {/* 2. Klin wejściowy — wynik ATS bez zakładania konta */}
+          <div id="dashboard-modules" className="scroll-mt-6">
+            {atsCheck}
           </div>
-
-          {/* Nagłówek na dwóch wierszach: powitanie zwykłym atramentem, nazwa
-              produktu wypełniona gradientem. Odwrotny podział — gradient na
-              powitaniu — sprawiłby, że barwy tańczą po imieniu użytkownika,
-              które bywa krótkie albo bardzo długie i nigdy nie wygląda tak samo. */}
-          <h1 className="text-display text-[2rem] text-ink sm:text-[2.75rem] lg:text-[3.5rem]">
-            {hasFullName ? (
-              <>
-                Witaj ponownie,
-                <br />
-                <span className="text-display-grad">{vault.personalInfo.fullName}</span>
-              </>
-            ) : (
-              <>
-                Twoje CV, przepuszczone
-                <br />
-                <span className="text-display-grad">przez filtry rekrutacji</span>
-              </>
-            )}
-          </h1>
-
-          <p className="max-w-xl text-balance text-sm leading-relaxed text-muted sm:text-base">
-            Asystent kariery, który przygotowuje dokumenty pokonujące automatyczne filtry ATS
-            i przyciągające uwagę rekruterów.
-          </p>
-
-          <div className="flex flex-wrap items-center justify-center gap-3 pt-1">
-            <button
-              type="button"
-              onClick={() => onNavigate('aplikuj')}
-              className="flex items-center gap-2 rounded-xl bg-brand-600 px-5 py-3 text-sm font-semibold text-on-brand shadow-raised transition-all hover:bg-brand-700 hover:scale-[1.02] focus-visible:outline-none"
-            >
-              <Search className="h-4 w-4" />
-              <span>Dopasuj do Oferty</span>
-            </button>
-            <button
-              type="button"
-              onClick={() => onOpenAdvisor('Jak najlepiej zoptymalizować mój profil pod kątem ATS?')}
-              className="glass-panel flex items-center gap-2 rounded-xl px-5 py-3 text-sm font-semibold text-ink transition-colors hover:text-brand-fg focus-visible:outline-none"
-            >
-              <Sparkles className="h-4 w-4 text-brand-500" />
-              <span>Zapytaj Doradcę</span>
-            </button>
-          </div>
-        </div>
-      </motion.div>
-
-      {/* 2. Klin wejściowy — wynik ATS bez zakładania konta.
-
-          Stoi pod nagłówkiem, nie nad nim: strona ma się otwierać obietnicą,
-          a nie pustym formularzem. Kolejność „nagłówek → wezwanie do działania
-          → narzędzie" jest tu jedyną zmianą — sam klin działa bez zmian
-          i nadal nie wymaga konta. */}
-      {atsCheck}
 
       {/* 3. Liczniki profilu
 

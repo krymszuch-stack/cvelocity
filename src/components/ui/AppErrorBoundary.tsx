@@ -41,12 +41,22 @@ export class AppErrorBoundary extends React.Component<
 
     return (
       <div className="flex min-h-screen items-center justify-center bg-ink/40 p-4">
-        <div role="alertdialog" aria-modal="true" aria-labelledby="app-error-title" aria-describedby="app-error-description" className="w-full max-w-md rounded-2xl border border-line bg-surface p-6 shadow-xl">
+        <div role="alertdialog" aria-modal="true" aria-labelledby="app-error-title" aria-describedby="app-error-description" className="w-full max-w-lg rounded-2xl border border-line bg-surface p-6 shadow-xl">
           <h1 id="app-error-title" className="text-base font-semibold text-fg">Wystąpił błąd aplikacji</h1>
           <p id="app-error-description" className="mt-2 text-sm text-fg-muted">
             Twoje dane pozostają bezpieczne. Zgłoszenie awarii zawiera wyłącznie
             techniczny opis błędu — bez danych z Twojego profilu.
           </p>
+          {this.state.error && (
+            <div className="mt-4 rounded-lg border border-danger-line bg-danger-soft/30 p-3 text-xs font-mono text-danger-fg">
+              <p className="font-bold text-danger-fg">{this.state.error.name}: {this.state.error.message}</p>
+              {this.state.error.stack && (
+                <pre className="mt-2 max-h-40 overflow-y-auto whitespace-pre-wrap text-[11px] opacity-80">
+                  {this.state.error.stack}
+                </pre>
+              )}
+            </div>
+          )}
           <div className="mt-5 flex flex-wrap gap-2">
             <Button type="button" onClick={this.handleReload} className="cursor-pointer focus-visible:ring-2 focus-visible:ring-brand-500/50">Odśwież stronę</Button>
           </div>

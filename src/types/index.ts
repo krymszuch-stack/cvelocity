@@ -36,6 +36,9 @@ export interface ProfilerState {
 
 export interface PersonalInfo {
   fullName: string;
+  firstName?: string;
+  middleName?: string;
+  lastName?: string;
   email: string;
   phone: string;
   location: string;
@@ -460,6 +463,7 @@ export interface JobOffer {
   level?: string;
   url?: string;
   rawDescription?: string;
+  parsedJd?: import('../lib/jdParser').ParsedJobDescription;
 }
 
 export interface ApplicationHistoryRecord {

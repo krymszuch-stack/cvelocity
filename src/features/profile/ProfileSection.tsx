@@ -29,6 +29,7 @@ export interface ProfileSectionProps {
   renderEditor: (props: {
     vault: MasterVault;
     onChange: (vault: MasterVault) => void;
+    onOpenCvParser?: () => void;
   }) => React.ReactNode;
   renderParser: (props: {
     currentVault: MasterVault;
@@ -88,7 +89,12 @@ export const ProfileSection: React.FC<ProfileSectionProps> = ({
 
       <Tabs items={STEPS} active={step} onChange={setStep} variant="underline" />
 
-      {step === 'dane' && renderEditor({ vault, onChange: onChangeVault })}
+      {step === 'dane' &&
+        renderEditor({
+          vault,
+          onChange: onChangeVault,
+          onOpenCvParser: () => setStep('import'),
+        })}
 
       {step === 'import' && renderParser({ currentVault: vault, onApplyVault: handleApplyAndSwitch })}
 

@@ -181,3 +181,70 @@ export function useXpNotices(): XpNotice[] {
 
   return snapshot;
 }
+
+/**
+ * Synchronizacja stanu gamifikacji z serwerem.
+ *
+ * Model: Server-Authoritative ze scaleniem przy pierwszym logowaniu.
+ * - Nowe konto w chmurze otrzymuje lokalne osiągnięcia zdobyte jako gość (Merge).
+ * - Istniejące konto w chmurze staje się autorytatywnym źródłem prawdy z dołączeniem ewentualnych
+ *   nowych osiągnięć zdobytych offline.
+ */
+export async function syncGamificationWithServer(): Promise<void> {
+  try {
+    const res = await api.get<{
+      success: boolean;
+      gamification: { xp: number; counters: Record<string, number>; achievements: string[] } | null;
+    }>('/api/gamification');
+
+    if (!res || !res.success) return;
+
+    if (!res.gamification) {
+      if (state.xp > 0 || state.unlockedAchievements.length > 0) {
+        await api
+          .put('/api/gamification', {
+            xp: state.xp,
+            counters: state.counters,
+            achievements: state.unlockedAchievements,
+          })
+          .catch(() => undefined);
+      }
+      return;
+    }
+
+    const remote = res.gamification;
+    const mergedCounters = { ...state.counters };
+    for (const [k, v] of Object.entries(remote.counters || {})) {
+      mergedCounters[k as XpEventId] = Math.max(mergedCounters[k as XpEventId] ?? 0, v);
+    }
+
+    const mergedAchievements = Array.from(
+      new Set([...(state.unlockedAchievements || []), ...(remote.achievements || [])])
+    );
+
+    const mergedXp = Math.max(state.xp, remote.xp);
+
+    const nextState: GamificationState = {
+      xp: mergedXp,
+      counters: mergedCounters,
+      unlockedAchievements: mergedAchievements,
+    };
+
+    state = nextState;
+    writeJson(StorageKeys.gamification, nextState);
+    listeners.forEach((notify) => notify());
+
+    if (mergedXp !== remote.xp || mergedAchievements.length !== (remote.achievements?.length ?? 0)) {
+      await api
+        .put('/api/gamification', {
+          xp: nextState.xp,
+          counters: nextState.counters,
+          achievements: nextState.unlockedAchievements,
+        })
+        .catch(() => undefined);
+    }
+  } catch {
+    // Tryb offline lub błąd połączenia — aplikacja działa płynnie na stanie lokalnym.
+  }
+}
+

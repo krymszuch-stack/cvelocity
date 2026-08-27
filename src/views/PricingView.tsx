@@ -4,16 +4,13 @@ import {
   IconZap,
   IconSparkles,
   IconVault,
-  IconDocument,
   IconCheckCircle,
-  IconLock,
-  IconArrowRight,
   IconAlertTriangle,
   IconParser,
   IconPalette,
   IconRadar,
 } from '../components/ui/icons/ModernIcons';
-import { motion, AnimatePresence } from 'motion/react';
+import { motion } from 'motion/react';
 import { PricingCard } from '../components/ui/PricingCard';
 import { TrustRow } from '../components/ui/TrustChip';
 import { LockCover } from '../components/ui/LockCover';

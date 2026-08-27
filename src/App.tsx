@@ -15,8 +15,10 @@ import {
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { useEntitlements, isProStatus } from './store/useEntitlements';
 import { ThemeProvider } from './providers/ThemeProvider';
+import { AccessibilityProvider } from './providers/AccessibilityProvider';
 import { ToastHost } from './components/ui/ToastHost';
 import { XpToastHost } from './components/gamification/XpToastHost';
+import { syncGamificationWithServer } from './store/useGamificationStore';
 import { ApplicationFeedbackModal } from './features/tracker/ApplicationFeedbackModal';
 import { showToast } from './store/useToastStore';
 import { useAppStore } from './store/useAppStore';
@@ -33,15 +35,18 @@ import { resolveVaultOnSignIn } from './lib/vaultSync';
 import { AdvisorModalHost, preloadAdvisorModal } from './features/advisor/AdvisorModalHost';
 import { ElevatorPitchModal } from './features/pitch/ElevatorPitchModal';
 import { DrillModeModal } from './features/drill/DrillModeModal';
+import { Modal } from './components/ui/Modal';
 
 // Lazy-loaded heavy views for fast initial bundle & LCP
 const JobMatcher = lazy(() => import('./features/matcher/JobMatcher').then((m) => ({ default: m.JobMatcher })));
+const DocumentRenderer = lazy(() => import('./features/matcher/DocumentRenderer').then((m) => ({ default: m.DocumentRenderer })));
 const AtsLabView = lazy(() => import('./features/ats/AtsLabView').then((m) => ({ default: m.AtsLabView })));
 const MasterVaultEditor = lazy(() => import('./features/vault/MasterVaultEditor').then((m) => ({ default: m.MasterVaultEditor })));
 const ProfilerSection = lazy(() => import('./features/profiler/ProfilerSection').then((m) => ({ default: m.ProfilerSection })));
 const CVParserModal = lazy(() => import('./features/parser/CVParserModal').then((m) => ({ default: m.CVParserModal })));
 const ApplicationTracker = lazy(() => import('./features/tracker/ApplicationTracker').then((m) => ({ default: m.ApplicationTracker })));
 const PricingView = lazy(() => import('./views/PricingView').then((m) => ({ default: m.PricingView })));
+const CareerTipsView = lazy(() => import('./views/CareerTipsView').then((m) => ({ default: m.CareerTipsView })));
 const DesignTokensShowcaseModal = lazy(() => import('./components/DesignTokensShowcaseModal').then((m) => ({ default: m.DesignTokensShowcaseModal })));
 const InterviewCockpitView = lazy(() => import('./features/cockpit/InterviewCockpitView').then((m) => ({ default: m.InterviewCockpitView })));
 const ProfileSection = lazy(() => import('./features/profile/ProfileSection').then((m) => ({ default: m.ProfileSection })));
@@ -110,6 +115,7 @@ function MainApp() {
   useEffect(() => {
     if (mode !== 'cloud' || !user) return;
     void refreshEntitlements();
+    void syncGamificationWithServer();
   }, [mode, user?.id, refreshEntitlements]);
 
   useEffect(() => {
@@ -301,6 +307,7 @@ function MainApp() {
   // z preselekcją brakującej umiejętności.
   const [isPitchOpen, setPitchOpen] = useState(false);
   const [isDrillOpen, setDrillOpen] = useState(false);
+  const [isGlobalCvPreviewOpen, setIsGlobalCvPreviewOpen] = useState(false);
 
   /** Pusty profil = pierwsza wizyta. Ta sama reguła co w `HomeView`. */
   const isFirstVisit = !vault.personalInfo.fullName && vault.history.length === 0;
@@ -311,6 +318,7 @@ function MainApp() {
       onSelectTab={navigate}
       onOpenAdvisor={handleOpenAdvisor}
       onOpenAuthModal={() => setAuthModalOpen(true)}
+      onOpenCvPreview={() => setIsGlobalCvPreviewOpen(true)}
       onOpenDesignTokens={() => setDesignTokensOpen(true)}
       unlockedSections={unlocks.sections}
       lockReasons={unlocks.reasons}
@@ -326,42 +334,24 @@ function MainApp() {
           exit={{ opacity: 0, y: -6 }}
           transition={{ duration: 0.25, ease: [0.19, 1, 0.22, 1] }}
         >
-          {/* Ekran startowy: jedna rekomendacja na górze, reszta pod nią. */}
+          {/* Ekran startowy: powitanie na górze, rekomendacje i pytania pod nim, moduły poniżej. */}
           {activeTab === 'home' && (
-            <div className="space-y-6">
-              {/*
-                Kolejność zależy od tego, czy profil jest pusty.
-
-                Osoba, która widzi aplikację pierwszy raz, dostawała na wejściu
-                „Uzupełnij: Doświadczenie zawodowe" i formularz pytań — prośbę
-                o pracę, zanim cokolwiek obiecaliśmy. Dla pustego profilu obie
-                karty schodzą pod stronę wejściową z `HomeView`; gdy w profilu
-                są już dane, rekomendacja wraca na górę, bo wtedy jest
-                podsumowaniem, a nie zaczepką.
-
-                Pytania uzupełniające trzymają się „następnego kroku", a nie
-                osobnej zakładki: zakładka, do której trzeba trafić samemu,
-                nie zostałaby odwiedzona. Karta znika sama, gdy nie ma o co pytać.
-              */}
-              {!isFirstVisit ? (
-                <>
+            <HomeView
+              vault={vault}
+              onNavigate={navigate}
+              onOpenAdvisor={handleOpenAdvisor}
+              onAdoptVault={setVault}
+              actionSlot={
+                !isFirstVisit ? (
                   <NextActionCard action={nextAction} onNavigate={navigate} />
+                ) : undefined
+              }
+              questionsSlot={
+                !isFirstVisit ? (
                   <CvQuestionsCard vault={vault} onChange={setVault} />
-                </>
-              ) : null}
-              <HomeView
-                vault={vault}
-                onNavigate={navigate}
-                onOpenAdvisor={handleOpenAdvisor}
-                onAdoptVault={setVault}
-              />
-              {isFirstVisit ? (
-                <>
-                  <NextActionCard action={nextAction} onNavigate={navigate} />
-                  <CvQuestionsCard vault={vault} onChange={setVault} />
-                </>
-              ) : null}
-            </div>
+                ) : undefined
+              }
+            />
           )}
 
           <Suspense fallback={<ViewLoadingFallback />}>
@@ -411,6 +401,9 @@ function MainApp() {
 
             {/* Cennik — poza czterema krokami, wchodzi się z menu konta */}
             {activeTab === 'pricing' && <PricingView />}
+
+            {/* Porady & Baza wiedzy (Blog/SEO) */}
+            {activeTab === 'porady' && <CareerTipsView />}
           </Suspense>
         </motion.div>
       </AnimatePresence>
@@ -449,6 +442,29 @@ function MainApp() {
       {/* Ankieta po eksporcie: pyta o wysyłkę i sama prowadzi wpis w Pipeline */}
       <ApplicationFeedbackModal onNavigate={navigate} />
 
+      {/* Szybki podgląd i druk CV z paska bocznego */}
+      {isGlobalCvPreviewOpen && (
+        <Modal
+          isOpen={isGlobalCvPreviewOpen}
+          onClose={() => setIsGlobalCvPreviewOpen(false)}
+          title={`Podgląd i Druk CV (A4) • ${vault.personalInfo?.fullName || 'Twój Profil'}`}
+          size="full"
+        >
+          <Suspense fallback={<Skeleton className="h-[600px] w-full rounded-2xl" />}>
+            <DocumentRenderer
+              vault={vault}
+              onUpdateVault={(updated) => setVault(updated)}
+              onExported={() => {
+                showToast('Eksport CV', {
+                  message: 'Dokument CV został przekazany do druku / zapisu PDF.',
+                  variant: 'info',
+                });
+              }}
+            />
+          </Suspense>
+        </Modal>
+      )}
+
       {/* Paleta poleceń (Cmd+K) — jedyny skrót globalny, jaki został.
           Dostaje `navigate`, nie `setActiveTab`: wcześniej omijała blokady
           sekcji, bo jedyny strażnik odblokowań siedzi w `navigate`. */}
@@ -460,13 +476,15 @@ function MainApp() {
 export default function App() {
   return (
     <ThemeProvider>
-      <AuthProvider>
-        <MainApp />
-        <ToastHost />
-        {/* Osobny host nagród: stoi w innym rogu niż komunikaty systemowe,
-            żeby awans nie wyglądał jak potwierdzenie zapisu. */}
-        <XpToastHost />
-      </AuthProvider>
+      <AccessibilityProvider>
+        <AuthProvider>
+          <MainApp />
+          <ToastHost />
+          {/* Osobny host nagród: stoi w innym rogu niż komunikaty systemowe,
+              żeby awans nie wyglądał jak potwierdzenie zapisu. */}
+          <XpToastHost />
+        </AuthProvider>
+      </AccessibilityProvider>
     </ThemeProvider>
   );
 }

@@ -65,15 +65,13 @@ export const Card: React.FC<CardProps> = ({
   };
 
   const hoverStyles = hoverEffect && resolvedTone === 'raised'
-    ? 'hover:border-brand-500/40 hover:shadow-lg hover:shadow-brand-500/5 transition-all duration-200'
+    ? 'hover:border-brand-500/40 hover:shadow-lg hover:shadow-brand-500/5 transition-[border-color,box-shadow] duration-150 ease-out'
     : hoverEffect
-    ? 'hover:border-brand-500/30 transition-all duration-200'
+    ? 'hover:border-brand-500/30 transition-[border-color,box-shadow] duration-150 ease-out'
     : '';
 
   return (
     <motion.div
-      whileHover={hoverEffect ? { y: -2, scale: 1.005 } : undefined}
-      transition={{ duration: 0.2, ease: [0.19, 1, 0.22, 1] }}
       onMouseEnter={spotlight ? () => setSpotlit(true) : undefined}
       onMouseMove={spotlight ? handleSpotlightMove : undefined}
       onMouseLeave={spotlight ? handleSpotlightLeave : undefined}

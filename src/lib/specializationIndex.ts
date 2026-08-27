@@ -174,11 +174,20 @@ export function matchSubRoles(text: string, limit = 3): SubRoleMatch[] {
       ];
 
       for (const [phrases, weight] of signalGroups) {
-        for (const phrase of phrases ?? []) {
-          const specificity = phraseSpecificity(phrase, textStems);
-          if (specificity === 0) continue;
-          score += weight * specificity;
-          matchedSignals.push(phrase);
+        for (const rawPhrase of phrases ?? []) {
+          // Rozbicie wariantów z ukośnikiem (np. 'Junkers / Bosch', 'Wilo / Grundfos') —
+          // kandydat nie musi wymieniać obu marek, żeby sygnał został zaliczony (reguła 8).
+          const variants = rawPhrase.includes('/')
+            ? rawPhrase.split(/\s*[/]\s*/).filter(Boolean)
+            : [rawPhrase];
+
+          for (const variant of variants) {
+            const specificity = phraseSpecificity(variant, textStems);
+            if (specificity === 0) continue;
+            score += weight * specificity;
+            matchedSignals.push(variant);
+            break; // Jedno trafienie z grupy wariantów wystarcza
+          }
         }
       }
 

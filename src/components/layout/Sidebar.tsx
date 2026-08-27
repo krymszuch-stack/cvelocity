@@ -1,32 +1,35 @@
-import React from 'react';
+import React, { useState } from 'react';
 import {
   PanelLeftClose,
   PanelLeft,
   ShieldCheck,
   LogIn,
+  User,
+  Target,
+  GraduationCap,
+  Kanban,
+  Eye,
+  Sparkles,
+  BookOpen,
+  LucideIcon,
 } from 'lucide-react';
-import {
-  IconMatcher,
-  IconBrain,
-  IconApplications,
-  IconVault,
-  IconSparkles,
-} from '../ui/icons/ModernIcons';
 import { NavItem } from './NavItem';
 import { Tooltip } from '../ui/Tooltip';
 import { CVelocityLogo } from '../CVelocityLogo';
 import { LevelWidget } from '../gamification/LevelWidget';
+import { SidebarShortcutsWidget } from './SidebarShortcutsWidget';
+import { PrivacyPolicyModal } from '../legal/PrivacyPolicyModal';
+import { SupportContactModal } from '../legal/SupportContactModal';
 import { NAV_SECTIONS, NavSectionId, NavTabId } from '../../lib/navigation';
 
 /**
- * Ikona na sekcję. Osobna mapa, bo `NAV_SECTIONS` opisuje strukturę produktu
- * i nie ma powodu, żeby wiedziało cokolwiek o komponentach ikon.
+ * Czytelne, jednoznaczne ikony sekcji z pakietu lucide-react.
  */
-const SECTION_ICONS: Record<NavSectionId, typeof IconVault> = {
-  profil: IconVault,
-  aplikuj: IconMatcher,
-  trenuj: IconBrain,
-  pipeline: IconApplications,
+const SECTION_ICONS: Record<NavSectionId, LucideIcon> = {
+  profil: User,
+  aplikuj: Target,
+  trenuj: GraduationCap,
+  pipeline: Kanban,
 };
 
 export interface SidebarProps {
@@ -36,6 +39,7 @@ export interface SidebarProps {
   onToggleCollapse: () => void;
   onOpenAdvisor: () => void;
   onOpenAuthModal: () => void;
+  onOpenCvPreview?: () => void;
   /** Które sekcje są już dostępne. Brak wpisu znaczy „dostępna". */
   unlockedSections?: Partial<Record<NavSectionId, boolean>>;
   /** Czemu sekcja jest jeszcze zamknięta — pokazywane w podpowiedzi. */
@@ -53,6 +57,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
   onToggleCollapse,
   onOpenAdvisor,
   onOpenAuthModal,
+  onOpenCvPreview,
   unlockedSections,
   lockReasons,
   isAuthenticated = false,
@@ -60,17 +65,17 @@ export const Sidebar: React.FC<SidebarProps> = ({
   planStatus = 'free',
   className = '',
 }) => {
+  const [isPrivacyOpen, setIsPrivacyOpen] = useState(false);
+  const [isSupportOpen, setIsSupportOpen] = useState(false);
+
   return (
     <div
-      /* `transition-[width]`, nie `transition-all`: animujemy wyłącznie
-         szerokość kolumny. `transition-all` przy zwijaniu ruszało też paddingi
-         i kolory, przez co etykiety skakały w połowie klatek. */
       className={`flex h-full flex-col justify-between overflow-hidden p-3.5 transition-[width] duration-[var(--duration-ui)] ease-out ${
         isCollapsed ? 'w-16' : 'w-64'
       } ${className}`}
     >
       {/* Top Section: Brand & Navigation */}
-      <div className="space-y-4">
+      <div className="space-y-3.5">
         {/* Brand Logo & Collapse Toggle */}
         <div className="flex h-10 items-center justify-between px-1.5">
           {!isCollapsed ? (
@@ -78,7 +83,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
               type="button"
               onClick={() => onSelectTab('home')}
               className="flex cursor-pointer items-center gap-2.5 rounded-xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#F26440]/50"
-              aria-label="Ekran startowy — Twój następny krok"
+              aria-label="Ekran startowy — Panel Główny"
             >
               <CVelocityLogo />
             </button>
@@ -87,7 +92,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
               type="button"
               onClick={() => onSelectTab('home')}
               className="mx-auto cursor-pointer rounded-xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#F26440]/50"
-              aria-label="Ekran startowy — Twój następny krok"
+              aria-label="Ekran startowy — Panel Główny"
             >
               <CVelocityLogo collapsed showBadge={false} />
             </button>
@@ -103,24 +108,18 @@ export const Sidebar: React.FC<SidebarProps> = ({
           </button>
         </div>
 
-        {/* Poziom kariery tuż pod logo: postęp ma być widoczny bez wchodzenia
-            w osobny ekran, inaczej gamifikacja istnieje tylko w momencie
-            przyznania punktów. */}
+        {/* Poziom kariery i ranga grywalizacji */}
         <LevelWidget isCollapsed={isCollapsed} />
 
-        {/* Navigation Items Group */}
-
-        {/* Cztery kroki jednej podróży zamiast ośmiu równorzędnych narzędzi.
-            Kolejność jest kolejnością, w jakiej się ich używa, a nie listą
-            posortowaną według ważności modułu. */}
-        <nav className="flex flex-col gap-1 pt-2" aria-label="Główna nawigacja">
+        {/* Główne 4 kroki procesu rekrutacji */}
+        <nav className="flex flex-col gap-1 pt-1" aria-label="Główna nawigacja">
           {NAV_SECTIONS.map((section, index) => {
             const isLocked = unlockedSections?.[section.id] === false;
 
             return (
               <NavItem
                 key={section.id}
-                icon={SECTION_ICONS[section.id] as any}
+                icon={SECTION_ICONS[section.id]}
                 label={section.label}
                 badge={String(index + 1)}
                 badgeVariant="brand"
@@ -134,63 +133,140 @@ export const Sidebar: React.FC<SidebarProps> = ({
             );
           })}
         </nav>
+
+        {/* Narzędzia dodatkowe: Podgląd CV oraz Porady (Blog/SEO) */}
+        <div className="pt-2 border-t border-line/60 space-y-1">
+          <NavItem
+            icon={Eye}
+            label="Podgląd CV"
+            badge="A4"
+            badgeVariant="success"
+            hint="Szybki podgląd i druk Twojego gotowego CV w formacie A4 z wyborem szablonów."
+            isCollapsed={isCollapsed}
+            onClick={() => {
+              if (onOpenCvPreview) {
+                onOpenCvPreview();
+              } else {
+                onSelectTab('profil');
+              }
+            }}
+            className="text-brand-fg hover:bg-brand-500/10 border border-brand-500/20 bg-brand-500/5 font-semibold"
+          />
+
+          <NavItem
+            icon={BookOpen}
+            label="Porady"
+            badge="BLOG"
+            badgeVariant="brand"
+            hint="Baza wiedzy, strategie rekrutacyjne, algorytmy ATS i wzorce rozmów."
+            isActive={activeTab === 'porady'}
+            isCollapsed={isCollapsed}
+            onClick={() => onSelectTab('porady')}
+          />
+
+          <NavItem
+            icon={ShieldCheck}
+            label="Audyt ATS"
+            badge="360°"
+            badgeVariant="warning"
+            hint="Wielosilnikowe laboratorium audytu CV pod kątem Workday, Taleo, Greenhouse i iCIMS."
+            isActive={activeTab === 'ats-lab'}
+            isCollapsed={isCollapsed}
+            onClick={() => onSelectTab('ats-lab')}
+          />
+        </div>
+
+        {/* Mini-ściągawka skrótów klawiszowych dla klientów (pośrodku) */}
+        {!isCollapsed && (
+          <div className="pt-2">
+            <SidebarShortcutsWidget
+              onTriggerCvPreview={onOpenCvPreview}
+            />
+          </div>
+        )}
       </div>
 
-      {/* Bottom Footer Section */}
-      <div className="space-y-2 border-t border-line pt-3">
-        {/* Quick Advisor Button */}
+      {/* Bottom Footer Section: Doradca, Polityka & Konto */}
+      <div className="space-y-2.5 border-t border-line pt-3">
+        {/* Linki prawne i wsparcie na dole paska */}
+        {!isCollapsed && (
+          <div className="flex items-center justify-between px-1 text-[10px] text-muted font-medium">
+            <button
+              type="button"
+              onClick={() => setIsPrivacyOpen(true)}
+              className="hover:text-ink hover:underline cursor-pointer transition-colors"
+            >
+              Prywatność & RODO
+            </button>
+            <span>•</span>
+            <button
+              type="button"
+              onClick={() => setIsSupportOpen(true)}
+              className="hover:text-ink hover:underline cursor-pointer transition-colors"
+            >
+              Kontakt & Wsparcie
+            </button>
+          </div>
+        )}
+
+        {/* Przycisk Doradcy AI */}
         <NavItem
-          icon={IconSparkles as any}
+          icon={Sparkles}
           label="Zapytaj Doradcę Kariery"
           isCollapsed={isCollapsed}
           onClick={onOpenAdvisor}
           className="text-brand-fg hover:bg-brand-500/10"
         />
 
-        {/* User Account Pill */}
-        {/* Pigułka konta była `div`em z `onClick` — niedostępna z klawiatury
-            i niewidoczna dla czytnika jako akcja. Teraz jest przyciskiem,
-            a podpowiedź idzie przez `Tooltip`, nie przez natywny `title`. */}
+        {/* Pigułka Konta Użytkownika */}
         <Tooltip
           content={isAuthenticated ? userEmail : 'Zaloguj się'}
           side={isCollapsed ? 'right' : 'top'}
           className="w-full"
         >
-        <button
-          type="button"
-          onClick={onOpenAuthModal}
-          className={`flex w-full min-h-[2.75rem] cursor-pointer items-center gap-2.5 rounded-xl border border-line bg-surface p-2 text-left transition-colors duration-[var(--duration-fast)] ease-out hover:border-brand-500/30 hover:bg-brand-500/5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#F26440]/50 ${
-            isCollapsed ? 'justify-center' : ''
-          }`}
-        >
-          <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-brand-50 text-brand-600">
-            {isAuthenticated ? (
-              <ShieldCheck className="h-4 w-4 text-success-fg" />
-            ) : (
-              <LogIn className="h-4 w-4" />
-            )}
-          </div>
-
-          {!isCollapsed && (
-            <div className="min-w-0 flex-1">
-              <p className="truncate text-label font-semibold text-ink">
-                {isAuthenticated ? userEmail : 'Logowanie / Konto'}
-              </p>
-              <p className="truncate font-mono text-[10px] text-muted">
-                {/* `trialing` przewiduje typ i przychodzi ze Stripe, więc musi
-                    mieć własną etykietę — inaczej osoba na okresie próbnym
-                    widzi „Plan Podstawowy”, choć płaci za Pro po trialu. */}
-                {planStatus === 'active'
-                  ? 'Plan Pro aktywny'
-                  : planStatus === 'trialing'
-                  ? 'Plan Pro — okres próbny'
-                  : 'Plan Free'}
-              </p>
+          <button
+            type="button"
+            onClick={onOpenAuthModal}
+            className={`flex w-full min-h-[2.75rem] cursor-pointer items-center gap-2.5 rounded-xl border border-line bg-surface p-2 text-left transition-colors duration-[var(--duration-fast)] ease-out hover:border-brand-500/30 hover:bg-brand-500/5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#F26440]/50 ${
+              isCollapsed ? 'justify-center' : ''
+            }`}
+          >
+            <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-brand-50 text-brand-600 font-bold text-xs">
+              {isAuthenticated ? (
+                <ShieldCheck className="h-4 w-4 text-success-fg" />
+              ) : (
+                <LogIn className="h-4 w-4" />
+              )}
             </div>
-          )}
-        </button>
+
+            {!isCollapsed && (
+              <div className="min-w-0 flex-1">
+                <p className="truncate text-label font-semibold text-ink">
+                  {isAuthenticated ? userEmail : 'Logowanie / Konto'}
+                </p>
+                <p className="truncate font-mono text-[10px] text-muted">
+                  {planStatus === 'active'
+                    ? 'Plan Pro aktywny'
+                    : planStatus === 'trialing'
+                    ? 'Plan Pro — okres próbny'
+                    : 'Plan Free'}
+                </p>
+              </div>
+            )}
+          </button>
         </Tooltip>
       </div>
+
+      {/* Modale prawne i kontaktu */}
+      <PrivacyPolicyModal
+        isOpen={isPrivacyOpen}
+        onClose={() => setIsPrivacyOpen(false)}
+      />
+
+      <SupportContactModal
+        isOpen={isSupportOpen}
+        onClose={() => setIsSupportOpen(false)}
+      />
     </div>
   );
 };

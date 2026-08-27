@@ -12,9 +12,16 @@ import {
   ArrowLeft,
   LayoutList,
   Layers,
+  Eye,
+  ChevronDown,
+  Database,
+  Maximize2,
+  Sparkles,
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { MasterVault, ProfilerState } from '../../types';
+import { Modal } from '../../components/ui/Modal';
+import { DocumentRenderer } from '../matcher/DocumentRenderer';
 import { StepIndicator, StepItem } from './StepIndicator';
 import { PersonalSection } from './PersonalSection';
 import { ExperienceSection } from './ExperienceSection';
@@ -38,6 +45,7 @@ import {
 export interface MasterVaultEditorProps {
   vault: MasterVault;
   onChange: (updatedVault: MasterVault) => void;
+  onOpenCvParser?: () => void;
   className?: string;
 }
 
@@ -54,25 +62,16 @@ const VAULT_STEPS: StepItem[] = [
 export const MasterVaultEditor: React.FC<MasterVaultEditorProps> = ({
   vault,
   onChange,
+  onOpenCvParser,
   className = '',
 }) => {
   const [viewMode, setViewMode] = useState<ViewMode>('stepper');
+  const [isPreviewOpen, setIsPreviewOpen] = useState(false);
+  const [isDataMenuOpen, setIsDataMenuOpen] = useState(false);
 
-  // Podpowiedzi liczone raz na cały edytor: każda sekcja dostaje gotową
-  // funkcję zamiast własnej kopii vaultu i listy aplikacji.
+  // Podpowiedzi liczone raz na cały edytor
   const suggest = useFieldSuggestions(vault);
 
-  /**
-   * Branża rozpoznana z profilu — wartość początkowa dla wyboru specjalizacji.
-   *
-   * `SpecializationPicker.initialSubRoleId` istniał od dawna i nikt go nie
-   * ustawiał, więc każdy zaczynał od dwóch pustych list rozwijanych, nawet mając
-   * wpisany tytuł zawodowy. To nadal wyłącznie **wartość początkowa**: obie listy
-   * zostają do zmiany, a żadna umiejętność nie wchodzi do profilu bez kliknięcia.
-   *
-   * Jawny wybór użytkownika (`profiler.subRoleId`) bije rozpoznanie — zgadywanka
-   * służy dopóki decyzja nie została podjęta, nie po niej.
-   */
   const detectedSubRoleId = useMemo(() => {
     if (vault.profiler?.subRoleId) return vault.profiler.subRoleId;
     const signal = [vault.personalInfo.title, vault.history[0]?.role, vault.history[0]?.company]
@@ -81,13 +80,6 @@ export const MasterVaultEditor: React.FC<MasterVaultEditorProps> = ({
     return signal.trim() ? bestSubRoleMatch(signal)?.subRole.id : undefined;
   }, [vault.profiler?.subRoleId, vault.personalInfo.title, vault.history]);
 
-  /**
-   * Prawdziwa walidacja spójności, ta sama co w widoku ConsistencyGuard.
-   *
-   * Plakietka przy nagłówku pokazywała wcześniej zaszyte `isConsistent={true}`
-   * — twierdziła „spójność potwierdzona", zanim jakiekolwiek sprawdzenie
-   * zostało uruchomione (reguła 2). Tu liczymy ją z danych, nie deklarujemy.
-   */
   const consistency = useMemo(() => {
     const claims = extractClaimsFromVault(vault);
     const projectedItems: ProjectedClaimItem[] = claims.map((claim, index) => ({
@@ -103,11 +95,6 @@ export const MasterVaultEditor: React.FC<MasterVaultEditorProps> = ({
     });
   }, [vault]);
 
-  /**
-   * Zapis wybranej podroli do vaultu. Bez niego wybór branży znikał razem z
-   * widokiem i kolejne wejście dostawało ponownie rozpoznanie z tekstu zamiast
-   * decyzji użytkownika.
-   */
   const handleSubRoleChange = (subRoleId: string | undefined) => {
     onChange({ ...vault, profiler: { ...vault.profiler, subRoleId } });
   };
@@ -123,6 +110,7 @@ export const MasterVaultEditor: React.FC<MasterVaultEditorProps> = ({
 
   // Export JSON handler
   const handleExportJSON = () => {
+    setIsDataMenuOpen(false);
     const dataStr = 'data:text/json;charset=utf-8,' + encodeURIComponent(JSON.stringify(vault, null, 2));
     const downloadAnchor = document.createElement('a');
     downloadAnchor.setAttribute('href', dataStr);
@@ -135,6 +123,7 @@ export const MasterVaultEditor: React.FC<MasterVaultEditorProps> = ({
 
   // Import JSON handler
   const handleImportJSON = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setIsDataMenuOpen(false);
     const file = e.target.files?.[0];
     if (!file) return;
 
@@ -196,24 +185,56 @@ export const MasterVaultEditor: React.FC<MasterVaultEditorProps> = ({
             />
 
             <Button
-              variant="outline"
+              variant="primary"
               size="sm"
-              icon={Download}
-              onClick={handleExportJSON}
-              title="Pobierz kopię profilu JSON"
+              icon={Eye}
+              onClick={() => setIsPreviewOpen(true)}
+              title="Zobacz gotowy dokument CV na arkuszu A4, zmień szablon i wydrukuj"
             >
-              Eksportuj JSON
+              Podgląd i Druk CV
             </Button>
 
-            <Button
-              variant="outline"
-              size="sm"
-              icon={Upload}
-              onClick={() => fileInputRef.current?.click()}
-              title="Wczytaj profil z pliku JSON"
-            >
-              Importuj JSON
-            </Button>
+            {/* Zintegrowany jeden rozwijalny przycisk kopii zapasowej JSON */}
+            <div className="relative">
+              <Button
+                variant="outline"
+                size="sm"
+                icon={Database}
+                onClick={() => setIsDataMenuOpen(!isDataMenuOpen)}
+                className="flex items-center gap-1"
+                title="Zarządzaj plikiem JSON (Eksport / Import)"
+              >
+                Kopia JSON
+                <ChevronDown className="h-3.5 w-3.5 text-muted ml-0.5" />
+              </Button>
+
+              {isDataMenuOpen && (
+                <div
+                  className="absolute right-0 top-full mt-1.5 w-48 rounded-xl border border-line bg-surface p-1.5 shadow-floating z-50 space-y-1"
+                  onMouseLeave={() => setIsDataMenuOpen(false)}
+                >
+                  <button
+                    type="button"
+                    onClick={handleExportJSON}
+                    className="flex w-full items-center gap-2 rounded-lg px-2.5 py-1.5 text-xs text-ink hover:bg-brand-500/10 hover:text-brand-fg cursor-pointer transition-colors text-left"
+                  >
+                    <Download className="h-3.5 w-3.5 text-brand-600" />
+                    <span>Eksportuj kopię JSON</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setIsDataMenuOpen(false);
+                      fileInputRef.current?.click();
+                    }}
+                    className="flex w-full items-center gap-2 rounded-lg px-2.5 py-1.5 text-xs text-ink hover:bg-brand-500/10 hover:text-brand-fg cursor-pointer transition-colors text-left"
+                  >
+                    <Upload className="h-3.5 w-3.5 text-brand-600" />
+                    <span>Importuj z pliku JSON</span>
+                  </button>
+                </div>
+              )}
+            </div>
           </div>
         }
       />
@@ -233,165 +254,323 @@ export const MasterVaultEditor: React.FC<MasterVaultEditorProps> = ({
         )}
       </AnimatePresence>
 
-      {/* Stepper View Mode */}
-      {viewMode === 'stepper' ? (
-        <div className="space-y-6">
-          <StepIndicator
-            steps={VAULT_STEPS}
-            activeStep={activeStep}
-            onStepClick={setActiveStep}
-          />
+      {/* Główny układ 2-kolumnowy: Ściśnięty formularz po lewej + Żywy podgląd CV po prawej */}
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+        {/* LEWA KOLUMNA: Formularz (7/12 szerokości na desktopie) */}
+        <div className="lg:col-span-7 space-y-6">
+          {viewMode === 'stepper' ? (
+            <div className="space-y-6">
+              <StepIndicator
+                steps={VAULT_STEPS}
+                activeStep={activeStep}
+                onStepClick={setActiveStep}
+              />
 
-          <AnimatePresence mode="wait">
-            <motion.div
-              key={activeStep}
-              initial={{ opacity: 0, x: 20 }}
-              animate={{ opacity: 1, x: 0 }}
-              exit={{ opacity: 0, x: -20 }}
-              transition={{ duration: 0.25, ease: [0.19, 1, 0.22, 1] }}
-            >
-              {activeStep === 0 && (
-                <PersonalSection
-                  data={vault.personalInfo}
-                  onChange={(updated) => onChange({ ...vault, personalInfo: updated })}
-                  suggest={suggest}
-                />
-              )}
+              <AnimatePresence mode="wait">
+                <motion.div
+                  key={activeStep}
+                  initial={{ opacity: 0, x: 20 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  exit={{ opacity: 0, x: -20 }}
+                  transition={{ duration: 0.2 }}
+                >
+                  {activeStep === 0 && (
+                    <PersonalSection
+                      data={vault.personalInfo}
+                      onChange={(personalInfo) => onChange({ ...vault, personalInfo })}
+                      suggest={suggest}
+                      onOpenCvParser={onOpenCvParser}
+                      vault={vault}
+                    />
+                  )}
 
-              {activeStep === 1 && (
-                <ExperienceSection
-                  history={vault.history || []}
-                  onChange={(updated) => onChange({ ...vault, history: updated })}
-                  suggest={suggest}
-                />
-              )}
+                  {activeStep === 1 && (
+                    <ExperienceSection
+                      history={vault.history}
+                      onChange={(history) => onChange({ ...vault, history })}
+                      userSkills={vault.skillsMatrix?.hardSkills || []}
+                      suggest={suggest}
+                    />
+                  )}
 
-              {activeStep === 2 && (
-                <SpecializationPicker
-                  initialSubRoleId={detectedSubRoleId}
-                  skillsMatrix={vault.skillsMatrix}
-                  onUpdateSkillsMatrix={(updated) => onChange({ ...vault, skillsMatrix: updated })}
-                  onSubRoleChange={handleSubRoleChange}
-                  className="mb-4"
-                />
-              )}
+                  {activeStep === 2 && (
+                    <div className="space-y-6">
+                      <SpecializationPicker
+                        skillsMatrix={vault.skillsMatrix}
+                        onUpdateSkillsMatrix={(skillsMatrix) => onChange({ ...vault, skillsMatrix })}
+                        initialSubRoleId={detectedSubRoleId}
+                        onSubRoleChange={handleSubRoleChange}
+                      />
+                      <SkillsMatrix
+                        skillsMatrix={vault.skillsMatrix}
+                        languages={vault.profiler?.languages || []}
+                        licenses={vault.profiler?.licenses}
+                        onUpdateSkillsMatrix={(skillsMatrix) => onChange({ ...vault, skillsMatrix })}
+                        onUpdateLanguages={(languages) =>
+                          onChange({
+                            ...vault,
+                            profiler: { ...vault.profiler, languages },
+                          })
+                        }
+                        onUpdateLicenses={(licenses) =>
+                          onChange({
+                            ...vault,
+                            profiler: { ...vault.profiler, licenses },
+                          })
+                        }
+                        suggest={suggest}
+                      />
+                    </div>
+                  )}
 
-              {activeStep === 2 && (
-                <SkillsMatrix
-                  suggest={suggest}
-                  skillsMatrix={vault.skillsMatrix}
-                  languages={vault.profiler?.languages || []}
-                  licenses={vault.profiler?.licenses || []}
-                  onUpdateSkillsMatrix={(updated) => onChange({ ...vault, skillsMatrix: updated })}
-                  onUpdateLanguages={(updated) =>
-                    onChange({ ...vault, profiler: { ...vault.profiler, languages: updated } })
-                  }
-                  onUpdateLicenses={(updated) =>
-                    onChange({ ...vault, profiler: { ...vault.profiler, licenses: updated } })
-                  }
-                />
-              )}
+                  {activeStep === 3 && (
+                    <EducationSection
+                      education={vault.education || []}
+                      onChange={(education) => onChange({ ...vault, education })}
+                    />
+                  )}
 
-              {activeStep === 3 && (
-                <EducationSection
-                  education={vault.education || []}
-                  onChange={(updated) => onChange({ ...vault, education: updated })}
-                />
-              )}
+                  {activeStep === 4 && (
+                    <PreferencesSection
+                      profiler={vault.profiler}
+                      onChange={(profiler: ProfilerState) => onChange({ ...vault, profiler })}
+                    />
+                  )}
+                </motion.div>
+              </AnimatePresence>
 
-              {activeStep === 4 && (
-                <PreferencesSection
-                  profiler={vault.profiler}
-                  onChange={(updated) => onChange({ ...vault, profiler: updated })}
-                />
-              )}
-            </motion.div>
-          </AnimatePresence>
+              {/* Stepper Navigation Buttons */}
+              <div className="flex items-center justify-between pt-4 border-t border-line/60">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  icon={ArrowLeft}
+                  onClick={() => setActiveStep((prev) => Math.max(0, prev - 1))}
+                  disabled={activeStep === 0}
+                >
+                  Wstecz
+                </Button>
 
-          {/* Stepper Navigation Footer */}
-          <div className="flex items-center justify-between border-t border-line pt-4">
-            <Button
-              variant="outline"
-              size="md"
-              icon={ArrowLeft}
-              disabled={activeStep === 0}
-              onClick={() => setActiveStep((prev) => Math.max(0, prev - 1))}
-            >
-              Wstecz
-            </Button>
+                <span className="font-mono text-xs text-muted">
+                  Krok {activeStep + 1} z {VAULT_STEPS.length}
+                </span>
 
-            <span className="font-mono text-xs text-muted">
-              Krok {activeStep + 1} z {VAULT_STEPS.length}
-            </span>
+                <Button
+                  variant="primary"
+                  size="sm"
+                  icon={ArrowRight}
+                  onClick={() => setActiveStep((prev) => Math.min(VAULT_STEPS.length - 1, prev + 1))}
+                  disabled={activeStep === VAULT_STEPS.length - 1}
+                >
+                  Dalej
+                </Button>
+              </div>
+            </div>
+          ) : (
+            /* Pełny widok formularza */
+            <div className="space-y-6">
+              <PersonalSection
+                data={vault.personalInfo}
+                onChange={(personalInfo) => onChange({ ...vault, personalInfo })}
+                suggest={suggest}
+                onOpenCvParser={onOpenCvParser}
+                vault={vault}
+              />
 
-            {activeStep < VAULT_STEPS.length - 1 ? (
-              <Button
-                variant="primary"
-                size="md"
-                icon={ArrowRight}
-                iconPosition="right"
-                onClick={() => setActiveStep((prev) => Math.min(VAULT_STEPS.length - 1, prev + 1))}
-              >
-                Dalej
-              </Button>
-            ) : (
-              // Ostatni krok nie potrzebuje przycisku „zapisz": zapis jest
-              // automatyczny (useDeferredPersist w App), a poprzedni przycisk
-              // „Zakończ & Zapisz" tylko pokazywał komunikat o chmurze, nic
-              // nie zapisując.
-              <span className="flex items-center gap-1.5 text-xs font-semibold text-muted">
-                <CheckCircle2 className="h-4 w-4 text-success-fg" />
-                Profil zapisany automatycznie
-              </span>
-            )}
+              <ExperienceSection
+                history={vault.history}
+                onChange={(history) => onChange({ ...vault, history })}
+                userSkills={vault.skillsMatrix?.hardSkills || []}
+                suggest={suggest}
+              />
+
+              <SpecializationPicker
+                skillsMatrix={vault.skillsMatrix}
+                onUpdateSkillsMatrix={(skillsMatrix) => onChange({ ...vault, skillsMatrix })}
+                initialSubRoleId={detectedSubRoleId}
+                onSubRoleChange={handleSubRoleChange}
+              />
+
+              <SkillsMatrix
+                skillsMatrix={vault.skillsMatrix}
+                languages={vault.profiler?.languages || []}
+                licenses={vault.profiler?.licenses}
+                onUpdateSkillsMatrix={(skillsMatrix) => onChange({ ...vault, skillsMatrix })}
+                onUpdateLanguages={(languages) =>
+                  onChange({
+                    ...vault,
+                    profiler: { ...vault.profiler, languages },
+                  })
+                }
+                onUpdateLicenses={(licenses) =>
+                  onChange({
+                    ...vault,
+                    profiler: { ...vault.profiler, licenses },
+                  })
+                }
+                suggest={suggest}
+              />
+
+              <EducationSection
+                education={vault.education || []}
+                onChange={(education) => onChange({ ...vault, education })}
+              />
+
+              <PreferencesSection
+                profiler={vault.profiler}
+                onChange={(profiler: ProfilerState) => onChange({ ...vault, profiler })}
+              />
+            </div>
+          )}
+        </div>
+
+        {/* PRAWA KOLUMNA: Żywy Podgląd CV (5/12 szerokości na desktopie) */}
+        <div className="lg:col-span-5 space-y-3 sticky top-4">
+          <div className="rounded-3xl border border-line bg-elevated p-4 shadow-floating space-y-3">
+            <div className="flex items-center justify-between border-b border-line/60 pb-3">
+              <div className="flex items-center gap-2">
+                <div className="flex h-6 w-6 items-center justify-center rounded-lg bg-brand-500/10 text-brand-600">
+                  <Sparkles className="h-3.5 w-3.5" />
+                </div>
+                <div>
+                  <h4 className="text-xs font-bold text-ink">Żywy Podgląd CV (A4)</h4>
+                  <p className="text-[10px] text-muted font-mono">Aktualizuje się na bieżąco</p>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-1.5">
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  icon={Maximize2}
+                  onClick={() => setIsPreviewOpen(true)}
+                  className="h-7 text-[11px] px-2 text-brand-fg hover:bg-brand-500/10"
+                  title="Otwórz pełny ekran i druk"
+                >
+                  Powiększ
+                </Button>
+              </div>
+            </div>
+
+            {/* Żywa kartka A4 w miniaturowym, krystalicznym formacie */}
+            <div className="rounded-2xl border border-line bg-sunken/40 p-2 sm:p-3 overflow-hidden">
+              <div className="doc-paper rounded-xl border border-line/80 bg-white p-5 text-[11px] text-slate-800 shadow-sm space-y-4 max-h-[620px] overflow-y-auto">
+                {/* Live Header */}
+                <div className="border-b border-slate-200 pb-3">
+                  <h2 className="text-base font-extrabold text-slate-900 tracking-tight leading-tight">
+                    {vault.personalInfo?.fullName || 'Imię i Nazwisko'}
+                  </h2>
+                  <p className="text-[11px] font-semibold text-brand-700 mt-0.5">
+                    {vault.personalInfo?.title || 'Twój Tytuł Zawodowy'}
+                  </p>
+                  <div className="flex flex-wrap gap-2 text-[9px] text-slate-500 mt-1.5 font-mono">
+                    {vault.personalInfo?.email && <span>{vault.personalInfo.email}</span>}
+                    {vault.personalInfo?.phone && <span>• {vault.personalInfo.phone}</span>}
+                    {vault.personalInfo?.location && <span>• {vault.personalInfo.location}</span>}
+                  </div>
+                </div>
+
+                {/* Live Summary */}
+                {vault.personalInfo?.summary && (
+                  <div className="space-y-1">
+                    <h5 className="text-[9px] font-bold uppercase tracking-wider text-slate-400 font-mono">
+                      Podsumowanie
+                    </h5>
+                    <p className="text-[10px] text-slate-600 leading-relaxed line-clamp-3">
+                      {vault.personalInfo.summary}
+                    </p>
+                  </div>
+                )}
+
+                {/* Live Skills */}
+                {vault.skillsMatrix?.hardSkills?.length > 0 && (
+                  <div className="space-y-1.5">
+                    <h5 className="text-[9px] font-bold uppercase tracking-wider text-slate-400 font-mono">
+                      Kluczowe Umiejętności ({vault.skillsMatrix.hardSkills.length})
+                    </h5>
+                    <div className="flex flex-wrap gap-1">
+                      {vault.skillsMatrix.hardSkills.slice(0, 10).map((s, i) => (
+                        <span
+                          key={i}
+                          className="rounded bg-slate-100 px-1.5 py-0.5 text-[9px] font-bold text-slate-700 font-mono"
+                        >
+                          {s}
+                        </span>
+                      ))}
+                      {vault.skillsMatrix.hardSkills.length > 10 && (
+                        <span className="text-[9px] text-slate-400 font-mono">
+                          +{vault.skillsMatrix.hardSkills.length - 10} więcej
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                )}
+
+                {/* Live Experience */}
+                {vault.history?.length > 0 && (
+                  <div className="space-y-2">
+                    <h5 className="text-[9px] font-bold uppercase tracking-wider text-slate-400 font-mono">
+                      Doświadczenie ({vault.history.length})
+                    </h5>
+                    <div className="space-y-2">
+                      {vault.history.slice(0, 3).map((h) => (
+                        <div key={h.id} className="space-y-0.5 text-[10px]">
+                          <div className="flex items-baseline justify-between font-bold text-slate-800">
+                            <span>{h.role}</span>
+                            <span className="font-mono text-[9px] text-slate-400">
+                              {h.startDate} – {h.isCurrent ? 'Obecnie' : h.endDate}
+                            </span>
+                          </div>
+                          <p className="text-[9px] text-brand-700 font-semibold">{h.company}</p>
+                          {h.highlights && h.highlights.length > 0 && (
+                            <p className="text-[9px] text-slate-500 line-clamp-2 pl-2 border-l border-slate-200">
+                              • {h.highlights[0].text}
+                            </p>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Live Education */}
+                {vault.education?.length > 0 && (
+                  <div className="space-y-1 border-t border-slate-100 pt-2">
+                    <h5 className="text-[9px] font-bold uppercase tracking-wider text-slate-400 font-mono">
+                      Edukacja
+                    </h5>
+                    <div className="text-[9px] text-slate-600">
+                      <span className="font-bold text-slate-800">{vault.education[0].degree}</span>, {vault.education[0].fieldOfStudy}
+                      <span className="text-slate-400 block">{vault.education[0].institution}</span>
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
           </div>
         </div>
-      ) : (
-        /* Full Form View Mode */
-        <div className="space-y-6">
-          <PersonalSection
-            data={vault.personalInfo}
-            onChange={(updated) => onChange({ ...vault, personalInfo: updated })}
-            suggest={suggest}
-          />
+      </div>
 
-          <ExperienceSection
-            history={vault.history || []}
-            onChange={(updated) => onChange({ ...vault, history: updated })}
-            suggest={suggest}
+      {/* Modal pełnego podglądu i druku CV */}
+      {isPreviewOpen && (
+        <Modal
+          isOpen={isPreviewOpen}
+          onClose={() => setIsPreviewOpen(false)}
+          title={`Podgląd i Druk CV • ${vault.personalInfo?.fullName || 'Profil Kandydata'}`}
+          size="full"
+        >
+          <DocumentRenderer
+            vault={vault}
+            onUpdateVault={onChange}
+            onExported={() => {
+              showToast('Eksport CV', {
+                message: 'Dokument CV został przekazany do druku / zapisu PDF.',
+                variant: 'info',
+              });
+            }}
           />
-
-          <SpecializationPicker
-            initialSubRoleId={detectedSubRoleId}
-            skillsMatrix={vault.skillsMatrix}
-            onUpdateSkillsMatrix={(updated) => onChange({ ...vault, skillsMatrix: updated })}
-            onSubRoleChange={handleSubRoleChange}
-          />
-
-          <SkillsMatrix
-            suggest={suggest}
-            skillsMatrix={vault.skillsMatrix}
-            languages={vault.profiler?.languages || []}
-            licenses={vault.profiler?.licenses || []}
-            onUpdateSkillsMatrix={(updated) => onChange({ ...vault, skillsMatrix: updated })}
-            onUpdateLanguages={(updated) =>
-              onChange({ ...vault, profiler: { ...vault.profiler, languages: updated } })
-            }
-            onUpdateLicenses={(updated) =>
-              onChange({ ...vault, profiler: { ...vault.profiler, licenses: updated } })
-            }
-          />
-
-          <EducationSection
-            education={vault.education || []}
-            onChange={(updated) => onChange({ ...vault, education: updated })}
-          />
-
-          <PreferencesSection
-            profiler={vault.profiler}
-            onChange={(updated) => onChange({ ...vault, profiler: updated })}
-          />
-        </div>
+        </Modal>
       )}
     </div>
   );

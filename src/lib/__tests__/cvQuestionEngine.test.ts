@@ -171,11 +171,9 @@ describe('zawody fizyczne (reguła 8)', () => {
   });
 
   it('nierozpoznany zawód dostaje przykłady z obu światów zamiast zgadywania', () => {
-    // Katalog nie trafia w każdy tytuł — marka figuruje jako „Junkers / Bosch",
-    // a dopasowanie wymaga wszystkich członów frazy. Wtedy pokazujemy przykłady
-    // techniczne i biurowe naraz; wybranie jednego na chybił trafił karałoby
-    // montera podpowiedzią o Jirze (reguła 8).
-    const hint = podpowiedzNarzedzia('Serwisant kotłów gazowych Junkers', 'GROMGAZ');
+    // Gdy branża nie wynika z tytułu ani firmy, pokazujemy przykłady techniczne
+    // i biurowe naraz (UNKNOWN); wybranie jednego na chybił trafił byłoby zgadywaniem (reguła 1 i 8).
+    const hint = podpowiedzNarzedzia('Pracownik ds. projektów specjalnych', 'Firma ABC');
     expect(hint).toContain('analizator spalin');
     expect(hint).toContain('Excel');
   });

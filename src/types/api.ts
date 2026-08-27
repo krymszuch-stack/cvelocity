@@ -1,10 +1,10 @@
-import { MasterVault, JobOffer } from './index';
+import type { MasterVault } from './index';
 
-export interface ApiResponse<T = any> {
+export interface ApiResponse<T = unknown> {
   success: boolean;
   data?: T;
   error?: string;
-  details?: any;
+  details?: unknown;
 }
 
 export interface JobsQueryParams {

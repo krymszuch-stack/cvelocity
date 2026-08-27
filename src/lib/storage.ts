@@ -47,6 +47,10 @@ export const StorageKeys = {
    * obejmowało go jak każdy inny zapis aplikacji.
    */
   errorReportBuffer: `${PREFIX}error-report-buffer`,
+  /** Ustawienia ułatwień dostępu (wysoki kontrast, powiększenie tekstu, czytelność WCAG). */
+  a11ySettings: `${PREFIX}a11y-settings`,
+  /** Samouczący się bank leksemów i adaptacyjnych wag podsumowań NLG (RLAIF / Knowledge Distillation). */
+  learnedLexicon: `${PREFIX}learned-lexicon`,
 } as const;
 
 export type StorageKey = (typeof StorageKeys)[keyof typeof StorageKeys];
@@ -68,10 +72,11 @@ export function cheatSheetCacheKeyFor(hash: string): string {
 }
 
 /**
- * Ustawienia interfejsu przeżywają usunięcie profilu: motyw nie jest daną
- * osobową, a przywitanie użytkownika nagłym jasnym motywem wygląda jak awaria.
+ * Ustawienia interfejsu przeżywają usunięcie profilu: motyw i ułatwienia dostępności
+ * nie są danymi osobowymi, a przywitanie słabowidzącego nagłym jasnym motywem
+ * lub małym fontem po wyczyszczeniu CV utrudniłoby korzystanie z aplikacji.
  */
-const PRESERVED_ON_WIPE = new Set<string>([StorageKeys.theme]);
+const PRESERVED_ON_WIPE = new Set<string>([StorageKeys.theme, StorageKeys.a11ySettings]);
 
 /**
  * Mapa starych kluczy na nowe, uruchamiana raz przy starcie aplikacji.

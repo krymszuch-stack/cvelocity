@@ -65,11 +65,32 @@
     box-sizing: border-box;
   }
   html {
+    font-size: 16px;
     background-color: var(--surface);
     color: var(--ink);
     font-family: var(--font-sans);
     transition: background-color 0.2s cubic-bezier(0.19, 1, 0.22, 1), color 0.2s cubic-bezier(0.19, 1, 0.22, 1);
   }
+
+  /* Optymalizacja skalowania pod monitory 2K / QHD (2560px) oraz ultrawide (+15% - 18%) */
+  @media (min-width: 1920px) {
+    html {
+      font-size: 17.5px; /* +9.4% */
+    }
+  }
+
+  @media (min-width: 2200px) {
+    html {
+      font-size: 18.75px; /* +17.2% dla natywnych ekranów 2560x1440 / 2K */
+    }
+  }
+
+  @media (min-width: 3200px) {
+    html {
+      font-size: 20px; /* +25% dla monitorów 4K */
+    }
+  }
+
   body {
     min-height: 100vh;
     background-color: var(--surface);
@@ -340,4 +361,91 @@ button:focus-visible,
     break-inside: avoid;
     page-break-inside: avoid;
   }
+}
+
+/* ============================================================
+   ACCESSIBILITY & HIGH CONTRAST ENGINE (WCAG 2.1 AAA)
+   ============================================================ */
+
+/* 1. Tryb wysokiego kontrastu */
+html[data-high-contrast="true"] {
+  --surface: #000000 !important;
+  --sunken: #0a0a0a !important;
+  --elevated: #121212 !important;
+  --ink: #ffffff !important;
+  --muted: #e2e8f0 !important;
+  --subtle: #cbd5e1 !important;
+  --line: #ffffff !important;
+  --line-strong: #ffffff !important;
+  --brand-500: #fde047 !important;
+  --brand-fg: #fde047 !important;
+  --brand-600: #eab308 !important;
+  --on-brand: #000000 !important;
+}
+
+html[data-high-contrast="true"] body {
+  background-color: #000000 !important;
+  color: #ffffff !important;
+}
+
+html[data-high-contrast="true"] .aurora-bg,
+html[data-high-contrast="true"] .backdrop-blur-sm,
+html[data-high-contrast="true"] .backdrop-blur-md {
+  display: none !important;
+  backdrop-filter: none !important;
+}
+
+html[data-high-contrast="true"] button,
+html[data-high-contrast="true"] input,
+html[data-high-contrast="true"] textarea,
+html[data-high-contrast="true"] select {
+  border: 2px solid #ffffff !important;
+}
+
+/* 2. Skalowanie tekstu */
+html[data-text-scale="large"] {
+  font-size: 19.5px !important;
+}
+@media (min-width: 1920px) {
+  html[data-text-scale="large"] {
+    font-size: 21.5px !important;
+  }
+}
+
+html[data-text-scale="huge"] {
+  font-size: 23px !important;
+}
+@media (min-width: 1920px) {
+  html[data-text-scale="huge"] {
+    font-size: 25.5px !important;
+  }
+}
+
+/* 3. Zwiększona interlinia i odstępy */
+html[data-dyslexic-spacing="true"] body {
+  letter-spacing: 0.04em !important;
+  word-spacing: 0.08em !important;
+  line-height: 1.75 !important;
+}
+html[data-dyslexic-spacing="true"] p,
+html[data-dyslexic-spacing="true"] span,
+html[data-dyslexic-spacing="true"] li,
+html[data-dyslexic-spacing="true"] label {
+  line-height: 1.8 !important;
+}
+
+/* 4. Super-wyraźny wskaźnik fokusu */
+html[data-enhanced-focus="true"] *:focus-visible {
+  outline: 4px solid #fde047 !important;
+  outline-offset: 3px !important;
+  box-shadow: 0 0 0 6px #000000 !important;
+}
+
+/* 5. Wyłączenie ruchu / animacji */
+html[data-reduced-motion="true"] *,
+html[data-reduced-motion="true"] *::before,
+html[data-reduced-motion="true"] *::after {
+  animation-duration: 0.001ms !important;
+  animation-iteration-count: 1 !important;
+  transition-duration: 0.001ms !important;
 }

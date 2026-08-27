@@ -1,29 +1,95 @@
-import React from 'react';
-import { User, Mail, Phone, MapPin, Linkedin, Github, Globe, Briefcase } from 'lucide-react';
-import { PersonalInfo } from '../../types';
+import React, { useState, useMemo } from 'react';
+import {
+  User,
+  Mail,
+  Phone,
+  MapPin,
+  Linkedin,
+  Github,
+  Globe,
+  Briefcase,
+  Paperclip,
+  Plus,
+  X,
+  Sparkles,
+} from 'lucide-react';
+import { PersonalInfo, MasterVault } from '../../types';
 import { Card } from '../../components/ui/Card';
-import { Input, Textarea, Select } from '../../components/ui/Field';
+import { Input, Textarea } from '../../components/ui/Field';
 import { Combobox } from '../../components/ui/Combobox';
+import { Button } from '../../components/ui/Button';
+import { SummaryAssistantModal } from './SummaryAssistantModal';
 import type { SuggestFn } from '../../hooks/useFieldSuggestions';
 
 export interface PersonalSectionProps {
   data: PersonalInfo;
   onChange: (updated: PersonalInfo) => void;
+  /** Pełny vault do kontekstowego generowania podsumowań */
+  vault?: MasterVault;
   /**
    * Podpowiedzi do pól tekstowych. Opcjonalne, bo ta sekcja bywa renderowana
    * bez dostępu do całego vaultu — wtedy `Combobox` dostaje pustą listę
    * i zachowuje się dokładnie jak zwykły `Input`.
    */
   suggest?: SuggestFn;
+  /** Wywołanie szybkiego importu / wgrania CV z agrafką */
+  onOpenCvParser?: () => void;
   className?: string;
 }
 
 export const PersonalSection: React.FC<PersonalSectionProps> = ({
   data,
   onChange,
+  vault,
   suggest,
+  onOpenCvParser,
   className = '',
 }) => {
+  const [isAssistantOpen, setIsAssistantOpen] = useState(false);
+
+  // Rozbijamy fullName na części, jeśli brak jawnych firstName / lastName
+  const parsedName = useMemo(() => {
+    if (data.firstName || data.lastName) {
+      return {
+        first: data.firstName || '',
+        middle: data.middleName || '',
+        last: data.lastName || '',
+      };
+    }
+    const parts = (data.fullName || '').trim().split(/\s+/);
+    if (parts.length <= 1) {
+      return { first: parts[0] || '', middle: '', last: '' };
+    }
+    if (parts.length === 2) {
+      return { first: parts[0], middle: '', last: parts[1] };
+    }
+    return {
+      first: parts[0],
+      middle: parts[1],
+      last: parts.slice(2).join(' '),
+    };
+  }, [data.firstName, data.middleName, data.lastName, data.fullName]);
+
+  const [showMiddleName, setShowMiddleName] = useState(() => Boolean(data.middleName || parsedName.middle));
+
+  const handleNamePartChange = (part: 'first' | 'middle' | 'last', val: string) => {
+    const nextFirst = part === 'first' ? val : (data.firstName ?? parsedName.first);
+    const nextMiddle = part === 'middle' ? val : (data.middleName ?? parsedName.middle);
+    const nextLast = part === 'last' ? val : (data.lastName ?? parsedName.last);
+
+    const composed = [nextFirst.trim(), showMiddleName ? nextMiddle.trim() : '', nextLast.trim()]
+      .filter(Boolean)
+      .join(' ');
+
+    onChange({
+      ...data,
+      firstName: nextFirst,
+      middleName: showMiddleName ? nextMiddle : '',
+      lastName: nextLast,
+      fullName: composed,
+    });
+  };
+
   const handleChange = (field: keyof PersonalInfo, value: string) => {
     onChange({
       ...data,
@@ -33,25 +99,124 @@ export const PersonalSection: React.FC<PersonalSectionProps> = ({
 
   const isEmailValid = !data.email || /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(data.email);
 
+  // Zbudowanie fallbackowego obiektu vault dla asystenta, jeśli prop nie został podany
+  const effectiveVault: MasterVault = useMemo(() => {
+    if (vault) return vault;
+    return {
+      version: '1.0.0',
+      updatedAt: new Date().toISOString(),
+      personalInfo: data,
+      history: [],
+      skillsMatrix: { hardSkills: [], softSkills: [], toolsAndTech: [], certifications: [] },
+      education: [],
+      projects: [],
+      profiler: {
+        flags: ['OFFICE_IT'],
+        experienceLevel: 'MID',
+        location: {
+          city: data.location || '',
+          radiusKm: 30,
+          willingnessToTravel: false,
+          hybridWork: true,
+          remoteOnly: false,
+        },
+        languages: [],
+      },
+    };
+  }, [vault, data]);
+
   return (
     <Card tone="raised" className={`space-y-6 ${className}`}>
-      <div>
-        <h3 className="text-base font-bold text-ink">Dane Osobowe i Kontaktowe</h3>
-        <p className="text-xs text-muted">
-          Informacje widoczne w nagłówku każdego wygenerowanego dokumentu CV.
-        </p>
+      {/* Nagłówek i widoczny przycisk Wgraj CV z agrafką */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-line/60 pb-4">
+        <div>
+          <h3 className="text-base font-bold text-ink flex items-center gap-2">
+            <User className="h-4 w-4 text-brand-600" />
+            Dane Osobowe i Kontaktowe
+          </h3>
+          <p className="text-xs text-muted mt-0.5">
+            Informacje widoczne w nagłówku Twojego gotowego CV oraz formularzy rekrutacyjnych.
+          </p>
+        </div>
+
+        {onOpenCvParser && (
+          <Button
+            type="button"
+            variant="secondary"
+            size="sm"
+            icon={Paperclip}
+            onClick={onOpenCvParser}
+            className="shrink-0 border-brand-500/30 bg-brand-500/10 text-brand-fg font-bold hover:bg-brand-500/20 shadow-xs"
+          >
+            Wgraj CV (PDF / DOCX)
+          </Button>
+        )}
       </div>
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 md:grid-cols-3">
-        {/* Full Name */}
-        <Input
-          label="Imię i Nazwisko"
-          icon={User}
-          value={data.fullName}
-          onChange={(e) => handleChange('fullName', e.target.value)}
-          placeholder="np. Jan Kowalski"
-          required
-        />
+        {/* Imię z opcją dodania drugiego imienia */}
+        <div className="space-y-1">
+          <div className="flex items-center justify-between">
+            <label className="text-xs font-bold text-ink flex items-center gap-1">
+              Imię <span className="text-danger-fg">*</span>
+            </label>
+            {!showMiddleName && (
+              <button
+                type="button"
+                onClick={() => setShowMiddleName(true)}
+                className="text-[11px] font-semibold text-brand-fg hover:underline cursor-pointer flex items-center gap-0.5"
+              >
+                <Plus className="h-3 w-3" /> Drugie imię
+              </button>
+            )}
+          </div>
+          <Input
+            value={data.firstName ?? parsedName.first}
+            onChange={(e) => handleNamePartChange('first', e.target.value)}
+            placeholder="np. Jan"
+            required
+          />
+        </div>
+
+        {/* Drugie imię (opcjonalne) */}
+        {showMiddleName && (
+          <div className="space-y-1">
+            <div className="flex items-center justify-between">
+              <label className="text-xs font-bold text-muted flex items-center gap-1">
+                Drugie imię
+              </label>
+              <button
+                type="button"
+                onClick={() => {
+                  setShowMiddleName(false);
+                  handleNamePartChange('middle', '');
+                }}
+                className="text-[11px] text-muted hover:text-danger-fg cursor-pointer flex items-center gap-0.5"
+                title="Usuń drugie imię"
+              >
+                <X className="h-3 w-3" /> Usuń
+              </button>
+            </div>
+            <Input
+              value={data.middleName ?? parsedName.middle}
+              onChange={(e) => handleNamePartChange('middle', e.target.value)}
+              placeholder="np. Paweł"
+            />
+          </div>
+        )}
+
+        {/* Nazwisko */}
+        <div className="space-y-1">
+          <label className="text-xs font-bold text-ink flex items-center gap-1">
+            Nazwisko <span className="text-danger-fg">*</span>
+          </label>
+          <Input
+            value={data.lastName ?? parsedName.last}
+            onChange={(e) => handleNamePartChange('last', e.target.value)}
+            placeholder="np. Kowalski"
+            required
+          />
+        </div>
 
         {/* Professional Title */}
         <Combobox
@@ -124,14 +289,37 @@ export const PersonalSection: React.FC<PersonalSectionProps> = ({
         />
       </div>
 
-      {/* Summary */}
-      <Textarea
-        label="Podsumowanie Profilu Zawodowego"
-        rows={4}
-        value={data.summary}
-        onChange={(e) => handleChange('summary', e.target.value)}
-        placeholder="Doświadczony inżynier oprogramowania z ponad 6-letnim stażem w budowie systemów chmurowych..."
-        hint="Podsumowanie powinno zawierać Twoje 3 najmocniejsze atuty i kluczowe technologie"
+      {/* Summary Section z asystentem beztokenowej generacji */}
+      <div className="space-y-1.5 pt-2 border-t border-line/50">
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <label className="text-xs font-bold text-ink">
+            Podsumowanie Profilu Zawodowego
+          </label>
+          <button
+            type="button"
+            onClick={() => setIsAssistantOpen(true)}
+            className="text-[11px] font-bold text-brand-fg hover:underline cursor-pointer flex items-center gap-1.5 bg-brand-500/10 hover:bg-brand-500/20 px-2.5 py-1 rounded-xl transition-colors"
+          >
+            <Sparkles className="h-3.5 w-3.5 text-brand-600" />
+            <span>Zaproponuj podsumowanie (beztokenowe)</span>
+          </button>
+        </div>
+
+        <Textarea
+          rows={4}
+          value={data.summary}
+          onChange={(e) => handleChange('summary', e.target.value)}
+          placeholder="Doświadczony inżynier oprogramowania z ponad 6-letnim stażem w budowie systemów chmurowych..."
+          hint="Podsumowanie powinno zawierać Twoje 3 najmocniejsze atuty i kluczowe technologie"
+        />
+      </div>
+
+      {/* Modal Asystenta Podsumowań */}
+      <SummaryAssistantModal
+        isOpen={isAssistantOpen}
+        onClose={() => setIsAssistantOpen(false)}
+        vault={effectiveVault}
+        onSelectSummary={(text) => handleChange('summary', text)}
       />
     </Card>
   );

@@ -49,7 +49,7 @@ type SectionKey = 'questions' | 'star' | 'glossary' | 'redFlags' | 'ask' | 'emer
  */
 function toParsedJobDescription(jobOffer: JobOffer): ParsedJobDescription {
   const rawText = jobOffer.rawDescription || jobOffer.description || '';
-  const parsed = parseJobDescriptionLocal(rawText, jobOffer.title || 'Stanowisko');
+  const parsed = jobOffer.parsedJd ?? parseJobDescriptionLocal(rawText, jobOffer.title || 'Stanowisko');
 
   const techStack = jobOffer.techStack ?? [];
   const requirements = jobOffer.requirements ?? [];
@@ -60,7 +60,7 @@ function toParsedJobDescription(jobOffer: JobOffer): ParsedJobDescription {
     companyName: jobOffer.company || parsed.companyName,
     toolsAndTech: techStack.length > 0 ? techStack : parsed.toolsAndTech,
     coreResponsibilities:
-      parsed.coreResponsibilities.length > 0 ? parsed.coreResponsibilities : requirements,
+      parsed.coreResponsibilities?.length > 0 ? parsed.coreResponsibilities : requirements,
     mandatoryRequirements:
       parsed.mandatoryRequirements && parsed.mandatoryRequirements.length > 0
         ? parsed.mandatoryRequirements

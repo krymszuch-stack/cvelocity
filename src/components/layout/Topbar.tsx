@@ -9,10 +9,13 @@ import {
   LogOut,
   Trash2,
   ExternalLink,
+  ChevronDown,
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { ThemeToggle } from '../ThemeToggle';
 import { AdvisorButton } from '../ui/AdvisorButton';
+import { AccessibilityButton } from '../a11y/AccessibilityButton';
+import { AccessibilityModal } from '../a11y/AccessibilityModal';
 import { NAV_SECTIONS, NavTabId } from '../../lib/navigation';
 import { useEntitlements } from '../../store/useEntitlements';
 import { useAuth } from '../../context/AuthContext';
@@ -37,9 +40,10 @@ export interface TopbarProps {
  * i przy każdej zmianie trzeba było trafić w oba miejsca.
  */
 const TAB_NAMES: Record<NavTabId, string> = {
-  home: 'Twój następny krok',
+  home: 'Panel Główny',
   pricing: 'Cennik i pakiety',
   'ats-lab': 'Laboratorium Audytu ATS 360°',
+  porady: 'Porady & Baza Wiedzy',
   ...Object.fromEntries(NAV_SECTIONS.map((section) => [section.id, section.label])),
 } as Record<NavTabId, string>;
 
@@ -57,6 +61,7 @@ export const Topbar: React.FC<TopbarProps> = ({
   const { isPro } = useEntitlements();
   const { logout, user, mode, deleteAccount } = useAuth();
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+  const [isA11yModalOpen, setIsA11yModalOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
 
@@ -173,51 +178,74 @@ export const Topbar: React.FC<TopbarProps> = ({
           </motion.button>
         )}
 
+        {/* Accessibility & High Contrast */}
+        <AccessibilityButton onClick={() => setIsA11yModalOpen(true)} />
+
         {/* Theme Toggle */}
         <ThemeToggle />
 
-        {/* Plan Pill & Profile Avatar matching prototyp-monetyzacji.html */}
-        <div className="relative" ref={dropdownRef}>
-          <div className="flex items-center gap-1.5">
-            <span
-              className={`rounded-full px-2 py-0.5 font-mono text-[10px] font-bold uppercase tracking-wider ${
-                isPro
-                  ? 'bg-brand-grad text-on-brand shadow-brand-glow'
-                  : 'bg-sunken text-muted border border-line'
-              }`}
-            >
-              {isPro ? 'Pro' : 'Free'}
-            </span>
+        {/* Accessibility Modal */}
+        <AccessibilityModal
+          isOpen={isA11yModalOpen}
+          onClose={() => setIsA11yModalOpen(false)}
+        />
 
-            <motion.button
-              type="button"
-              // Menu otwiera się także bez konta: siedzi w nim cennik i
-              // logowanie, więc odsyłanie niezalogowanego prosto do modala
-              // zamykało mu jedyną drogę do informacji o pakietach.
-              onClick={() => setIsDropdownOpen((prev) => !prev)}
-              whileHover={{ scale: 1.03 }}
-              whileTap={{ scale: 0.97 }}
-              transition={{ duration: 0.18, ease: [0.19, 1, 0.22, 1] }}
-              className="flex h-9 items-center gap-1.5 rounded-xl border border-line bg-elevated px-2.5 py-1.5 text-xs font-semibold text-ink hover:border-brand-500/30 hover:bg-brand-500/5 focus-visible:outline-none"
-              title={isAuthenticated ? userEmail : 'Zaloguj się'}
-            >
-              {isAuthenticated ? (
-                <>
-                  <div className="flex h-5 w-5 items-center justify-center rounded-lg bg-brand-50 text-[10px] font-bold text-brand-fg">
-                    {(user?.name || userEmail || 'U').slice(0, 2).toUpperCase()}
-                  </div>
-                  <span className="hidden sm:inline font-mono text-[11px] truncate max-w-[90px]">
+        {/* Profile Avatar with embedded PRO badge */}
+        <div className="relative" ref={dropdownRef}>
+          <motion.button
+            type="button"
+            // Menu otwiera się także bez konta: siedzi w nim cennik i
+            // logowanie, więc odsyłanie niezalogowanego prosto do modala
+            // zamykało mu jedyną drogę do informacji o pakietach.
+            onClick={() => setIsDropdownOpen((prev) => !prev)}
+            whileHover={{ scale: 1.02 }}
+            whileTap={{ scale: 0.98 }}
+            transition={{ duration: 0.18, ease: [0.19, 1, 0.22, 1] }}
+            className="flex h-9 items-center gap-2 rounded-xl border border-line bg-elevated px-2 py-1 text-xs font-semibold text-ink shadow-xs hover:border-brand-500/40 hover:bg-brand-500/5 focus-visible:outline-none cursor-pointer"
+            title={isAuthenticated ? userEmail : 'Zaloguj się / Menu konta'}
+          >
+            {isAuthenticated ? (
+              <>
+                <div className="relative flex h-6.5 w-6.5 items-center justify-center rounded-lg bg-gradient-to-br from-brand-500 to-indigo-600 font-bold text-white shadow-xs text-[10px]">
+                  {(user?.name || userEmail || 'U').slice(0, 2).toUpperCase()}
+                  {/* Badge PRO nałożony bezpośrednio na róg avatara */}
+                  <span
+                    className={`absolute -bottom-1 -right-1 flex items-center justify-center rounded-full px-1 py-px font-mono text-[7px] font-black uppercase tracking-tighter shadow-xs border ${
+                      isPro
+                        ? 'bg-gradient-to-r from-amber-400 to-orange-500 text-slate-950 border-surface'
+                        : 'bg-sunken text-muted border-line'
+                    }`}
+                  >
+                    {isPro ? 'PRO' : 'FREE'}
+                  </span>
+                </div>
+
+                <div className="hidden sm:flex flex-col text-left pl-0.5">
+                  <span className="font-bold text-[11px] text-ink truncate max-w-[90px] leading-tight">
                     {user?.name?.split(' ')[0] || userEmail?.split('@')[0]}
                   </span>
-                </>
-              ) : (
-                <>
-                  <User className="h-4 w-4 text-muted" />
-                  <span className="hidden sm:inline">Konto</span>
-                </>
-              )}
-            </motion.button>
-          </div>
+                </div>
+
+                <ChevronDown
+                  className={`h-3.5 w-3.5 text-muted transition-transform duration-200 ${
+                    isDropdownOpen ? 'rotate-180' : ''
+                  }`}
+                />
+              </>
+            ) : (
+              <>
+                <div className="flex h-6.5 w-6.5 items-center justify-center rounded-lg bg-sunken border border-line text-muted">
+                  <User className="h-3.5 w-3.5" />
+                </div>
+                <span className="font-medium text-ink pr-0.5">Konto</span>
+                <ChevronDown
+                  className={`h-3.5 w-3.5 text-muted transition-transform duration-200 ${
+                    isDropdownOpen ? 'rotate-180' : ''
+                  }`}
+                />
+              </>
+            )}
+          </motion.button>
 
           {/* Profile & Stripe Customer Portal Dropdown */}
           <AnimatePresence>

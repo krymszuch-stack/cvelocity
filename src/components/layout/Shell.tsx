@@ -11,6 +11,7 @@ export interface ShellProps {
   onSelectTab: (tab: NavTabId) => void;
   onOpenAdvisor: (initialQuestion?: string) => void;
   onOpenAuthModal: () => void;
+  onOpenCvPreview?: () => void;
   onOpenDesignTokens?: () => void;
   /** Sekcje odblokowane dla tego użytkownika (progresywne odsłanianie). */
   unlockedSections?: Partial<Record<NavSectionId, boolean>>;
@@ -26,6 +27,7 @@ export const Shell: React.FC<ShellProps> = ({
   onSelectTab,
   onOpenAdvisor,
   onOpenAuthModal,
+  onOpenCvPreview,
   onOpenDesignTokens,
   unlockedSections,
   lockReasons,
@@ -78,6 +80,7 @@ export const Shell: React.FC<ShellProps> = ({
           onToggleCollapse={toggleSidebar}
           onOpenAdvisor={() => onOpenAdvisor()}
           onOpenAuthModal={onOpenAuthModal}
+          onOpenCvPreview={onOpenCvPreview}
           unlockedSections={unlockedSections}
           lockReasons={lockReasons}
           isAuthenticated={isAuthenticated}
@@ -105,6 +108,10 @@ export const Shell: React.FC<ShellProps> = ({
             setIsMobileDrawerOpen(false);
             onOpenAuthModal();
           }}
+          onOpenCvPreview={() => {
+            setIsMobileDrawerOpen(false);
+            onOpenCvPreview?.();
+          }}
           unlockedSections={unlockedSections}
           lockReasons={lockReasons}
           isAuthenticated={isAuthenticated}
@@ -127,9 +134,9 @@ export const Shell: React.FC<ShellProps> = ({
           userEmail={userEmail}
         />
 
-        {/* Content Area (p-6 lg:p-8, max-width 1440px) */}
+        {/* Content Area (p-6 lg:p-8, max-width 1440px / 1680px on 2K) */}
         <main className="flex-1 px-4 py-6 sm:px-6 lg:p-8">
-          <div className="mx-auto max-w-[1440px]">{children}</div>
+          <div className="mx-auto max-w-[1440px] 2xl:max-w-[1680px]">{children}</div>
         </main>
       </div>
     </div>

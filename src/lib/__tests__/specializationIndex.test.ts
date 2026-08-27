@@ -58,6 +58,15 @@ describe('Dopasowanie ogłoszenia do zawodu', () => {
     expect(best?.sector.id).toBe('software_it');
   });
 
+  it('rozpoznaje markę występującą w katalogu w parze z ukośnikiem bez wymogu obu członów', () => {
+    // Katalog ma 'Junkers / Bosch' — kandydat piszący tylko o Junkersie musi dostać punkty
+    const cvSnippet = 'Serwisant kotłów Junkers, naprawa pieców gazowych.';
+    const best = bestSubRoleMatch(cvSnippet, 2);
+
+    expect(best?.subRole.id).toBe('gas_heating_technician');
+    expect(best?.matchedSignals).toContain('Junkers');
+  });
+
   it('dopasowuje mimo odmiany — rdzenie, nie dosłowny ciąg znaków', () => {
     // Ogłoszenie: „montaż klimatyzatorów”. Katalog: „Montaż Klimatyzatorów Split”.
     const jd = 'Zajmiesz się montażem klimatyzatorów typu split i próżniowaniem układu.';

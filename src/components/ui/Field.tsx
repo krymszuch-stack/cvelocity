@@ -50,7 +50,7 @@ function FieldChrome({ inputId, messageId, label, required, error, hint }: Field
 }
 
 const CONTROL_BASE =
-  'w-full rounded-xl border bg-sunken text-xs font-medium text-ink placeholder:text-subtle transition-colors focus-visible:outline-none focus:border-brand-500/60 focus:ring-2 focus:ring-brand-500/20 disabled:cursor-not-allowed disabled:opacity-50';
+  'w-full rounded-xl border bg-sunken text-xs font-medium text-ink placeholder:text-subtle transition-colors duration-100 ease-out hover:border-brand-500/40 focus-visible:outline-none focus:border-brand-500/60 focus:ring-2 focus:ring-brand-500/20 disabled:cursor-not-allowed disabled:opacity-50';
 
 function controlBorder(error?: string): string {
   return error ? 'border-danger/60 focus:ring-danger/20' : 'border-line';
