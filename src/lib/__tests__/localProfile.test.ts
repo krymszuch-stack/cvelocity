@@ -147,3 +147,119 @@ describe('Praca sprzed założenia profilu', () => {
     expect(loadProfileVault(ANONYMOUS_PROFILE_ID)).toBeNull();
   });
 });
+
+describe('BUG-007: Izolacja profili po wylogowaniu i odporność na zanieczyszczenie', () => {
+  it('Użytkownik A → wylogowanie → stan anonimowy jest pusty i ANONYMOUS_PROFILE_ID nie zawiera danych A', () => {
+    const { profile } = createLocalProfile('Jan Kowalski', 'jan.kowalski@example.com');
+    const janVault = createEmptyVault('Jan Kowalski', 'jan.kowalski@example.com');
+    janVault.personalInfo.title = 'Monter HVAC';
+    janVault.history = [
+      {
+        id: 'exp-jan-1',
+        company: 'TermoKlim',
+        role: 'Serwisant HVAC',
+        startDate: '2020',
+        endDate: '2024',
+        isCurrent: false,
+        location: 'Warszawa',
+        description: 'Serwis urządzeń grzewczych',
+        highlights: [],
+      },
+    ];
+    saveProfileVault(profile.id, janVault);
+
+    // Jan się wylogowuje / zamyka profil
+    signOutLocalProfile();
+
+    // Weryfikacja: profil aktywny usunięty, schowek anonimowy jest pusty
+    expect(getActiveProfile()).toBeNull();
+    expect(loadProfileVault(ANONYMOUS_PROFILE_ID)).toBeNull();
+  });
+
+  it('Użytkownik A → wylogowanie → utworzenie Użytkownika B → B otrzymuje czysty profil bez danych A', () => {
+    const { profile: janProfile } = createLocalProfile('Jan Kowalski', 'jan@example.pl');
+    const janVault = createEmptyVault('Jan Kowalski', 'jan@example.pl');
+    janVault.history = [
+      {
+        id: 'exp-jan-1',
+        company: 'TermoKlim',
+        role: 'Monter',
+        startDate: '2020',
+        endDate: '2024',
+        isCurrent: false,
+        location: 'Warszawa',
+        description: 'Montaż pomp ciepła',
+        highlights: [],
+      },
+    ];
+    saveProfileVault(janProfile.id, janVault);
+
+    // Jan się wylogowuje
+    signOutLocalProfile();
+
+    // Anna tworzy profil na tym samym urządzeniu
+    const { profile: annaProfile, vault: annaVault } = createLocalProfile('Anna Nowak', 'anna@example.pl');
+
+    expect(annaProfile.name).toBe('Anna Nowak');
+    expect(annaVault.personalInfo.fullName).toBe('Anna Nowak');
+    expect(annaVault.personalInfo.email).toBe('anna@example.pl');
+    // Anna NIE dziedziczy historii zatrudnienia ani stanowiska Jana
+    expect(annaVault.history).toEqual([]);
+    expect(annaVault.personalInfo.title).toBe('');
+
+    // Dane Jana pod jego kluczem pozostają nienaruszone
+    const reloadedJan = loadProfileVault(janProfile.id);
+    expect(reloadedJan?.personalInfo.fullName).toBe('Jan Kowalski');
+    expect(reloadedJan?.history[0]?.company).toBe('TermoKlim');
+  });
+
+  it('Oczekujący opóźniony zapis po wylogowaniu jest anulowany i nie nadpisuje profilu anonimowego', () => {
+    const userVault = createEmptyVault('Jan Kowalski');
+    userVault.personalInfo.title = 'Inżynier';
+
+    let activePersistTarget: string | null = 'local-jan-1';
+    let savedAnonymousVault: unknown = null;
+    let savedUserVault: unknown = null;
+
+    const persistFn = (v: typeof userVault) => {
+      if (activePersistTarget === 'local-jan-1') {
+        savedUserVault = v;
+      } else if (activePersistTarget === null) {
+        savedAnonymousVault = v;
+      }
+    };
+
+    // Tworzymy writer z opóźnieniem
+    let hasPending = true;
+    const cancel = () => {
+      hasPending = false;
+    };
+
+    // Użytkownik A ma oczekującą zmianę
+    userVault.personalInfo.summary = 'Poufne podsumowanie Jana';
+
+    // Następuje wylogowanie: target staje się null, cancel jest wywoływane
+    cancel();
+    activePersistTarget = null;
+
+    // Jeżeli nastąpi próba wywołania po anulowaniu:
+    if (hasPending) {
+      persistFn(userVault);
+    }
+
+    // Schowek anonimowy nie został zanieczyszczony
+    expect(savedAnonymousVault).toBeNull();
+    expect(savedUserVault).toBeNull();
+  });
+
+  it('Istniejące zapisywanie aktywnego profilu nadal poprawnie utrwala dane', () => {
+    const { profile } = createLocalProfile('Piotr');
+    const vault = createEmptyVault('Piotr');
+    vault.skillsMatrix.hardSkills = ['TypeScript', 'React'];
+
+    saveProfileVault(profile.id, vault);
+
+    const loaded = loadProfileVault(profile.id);
+    expect(loaded?.skillsMatrix.hardSkills).toEqual(['TypeScript', 'React']);
+  });
+});

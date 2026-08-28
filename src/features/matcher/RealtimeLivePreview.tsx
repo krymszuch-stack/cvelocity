@@ -72,6 +72,23 @@ export const RealtimeLivePreview: React.FC<RealtimeLivePreviewProps> = ({
       salary: jobOffer.salary,
       atsScore: atsResult?.overallScore,
       missingKeywords: atsResult?.missingHardSkills,
+      documentSnapshot: {
+        schemaVersion: 1,
+        createdAt: new Date().toISOString(),
+        tailoredResume: JSON.parse(JSON.stringify(tailoredResume)),
+        coverLetter: coverLetter ? JSON.parse(JSON.stringify(coverLetter)) : undefined,
+        vaultSnapshot: JSON.parse(JSON.stringify(vault)),
+        jobOfferSnapshot: {
+          id: jobOffer.id,
+          title: jobOffer.title,
+          company: jobOffer.company,
+          salary: jobOffer.salary,
+          location: jobOffer.location,
+          description: jobOffer.description,
+          url: jobOffer.url,
+        },
+        atsResultSnapshot: atsResult ? JSON.parse(JSON.stringify(atsResult)) : undefined,
+      },
     });
 
   const subTabs = [

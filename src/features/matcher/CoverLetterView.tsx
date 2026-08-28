@@ -19,6 +19,8 @@ export interface CoverLetterViewProps {
   coverLetter: CoverLetter;
   vault?: MasterVault;
   jobOffer?: JobOffer;
+  /** Tryb tylko do odczytu dla historycznych snapshotów — blokuje re-generację */
+  isReadOnly?: boolean;
   /** List wyszedł z aplikacji — patrz `DocumentRendererProps`. */
   onExported?: () => void;
   className?: string;
@@ -28,14 +30,16 @@ export const CoverLetterView: React.FC<CoverLetterViewProps> = ({
   coverLetter: initialCoverLetter,
   vault,
   jobOffer,
+  isReadOnly = false,
   onExported,
   className = '',
 }) => {
   const [variantIndex, setVariantIndex] = useState(0);
   const [isCopied, setIsCopied] = useState(false);
 
+  // W trybie isReadOnly lub braku parametrów oferty używamy wyłącznie nienaruszonego snapshotu
   const coverLetter =
-    vault && jobOffer
+    !isReadOnly && vault && jobOffer
       ? generateAntiTemplateCoverLetter(
           jobOffer.title,
           jobOffer.company,
@@ -87,7 +91,7 @@ export const CoverLetterView: React.FC<CoverLetterViewProps> = ({
         </div>
 
         <div className="flex flex-wrap items-center gap-2">
-          {vault && jobOffer && (
+          {!isReadOnly && vault && jobOffer && (
             <Button
               type="button"
               variant="outline"

@@ -87,7 +87,10 @@ export function useApplications() {
       return;
     }
     const next = [...applications];
-    next[index] = application;
+    next[index] = {
+      ...applications[index],
+      ...application,
+    };
     commit(next);
   }, []);
 

@@ -85,6 +85,7 @@ export function createLocalProfile(
 /** Kończy korzystanie z profilu, ale zostawia zapisane dane na urządzeniu. */
 export function signOutLocalProfile(): void {
   removeRaw(StorageKeys.profile);
+  removeRaw(vaultKeyFor(ANONYMOUS_PROFILE_ID));
 }
 
 export function loadProfileVault(profileId: string): MasterVault | null {

@@ -17,6 +17,7 @@ import {
   CoverLetter,
   AtsCheckResult,
   JobOffer,
+  ApplicationDocumentSnapshot,
 } from '../../types';
 import type { FetchJdUrlResponse } from '../../types/api';
 import { ApiError, api } from '../../lib/apiClient';
@@ -169,7 +170,9 @@ export const JobMatcher: React.FC<JobMatcherProps> = ({
       const tailored: TailoredResume = {
         targetJobTitle: job.title,
         companyName: job.company,
-        summary: `Dopasowany profil inżynierski pod stanowisko ${job.title} w firmie ${job.company}.`,
+        summary: vault.personalInfo?.summary
+          ? vault.personalInfo.summary
+          : `Dopasowany profil zawodowy pod stanowisko ${job.title} w firmie ${job.company}.`,
         selectedHighlights: vault.history.flatMap((h) =>
           h.highlights.map((hl) => ({
             experienceId: h.id,
@@ -552,14 +555,24 @@ export const JobMatcher: React.FC<JobMatcherProps> = ({
                 tailoredResume={tailoredResume}
                 coverLetter={coverLetter}
                 onSaveTailoredCV={() => {
-                  // Przycisk wcześniej wyłącznie pokazywał komunikat „Zapisano
-                  // w pipeline". Nic nie zapisywał — użytkownik wracał do
-                  // Pipeline i nie zastawał tam niczego. To jest ten zapis.
-                  //
-                  // Wynik ATS i braki idą z tej samej symulacji, którą widać
-                  // obok na ekranie, więc reguła „popraw dopasowanie" na
-                  // ekranie startowym opiera się na liczbie faktycznie
-                  // zmierzonej, a nie oszacowanej po fakcie.
+                  const snapshot: ApplicationDocumentSnapshot = {
+                    schemaVersion: 1,
+                    createdAt: new Date().toISOString(),
+                    tailoredResume: JSON.parse(JSON.stringify(tailoredResume)),
+                    coverLetter: coverLetter ? JSON.parse(JSON.stringify(coverLetter)) : undefined,
+                    vaultSnapshot: JSON.parse(JSON.stringify(vault)),
+                    jobOfferSnapshot: {
+                      id: selectedJob.id,
+                      title: selectedJob.title,
+                      company: selectedJob.company,
+                      salary: selectedJob.salary,
+                      location: selectedJob.location,
+                      description: selectedJob.description,
+                      url: selectedJob.url,
+                    },
+                    atsResultSnapshot: atsResult ? JSON.parse(JSON.stringify(atsResult)) : undefined,
+                  };
+
                   const application: JobApplication = {
                     id: `app-${Date.now()}`,
                     company: selectedJob.company,
@@ -570,6 +583,7 @@ export const JobMatcher: React.FC<JobMatcherProps> = ({
                     jobUrl: selectedJob.url,
                     atsScore: atsResult.overallScore,
                     missingKeywords: atsResult.missingHardSkills,
+                    documentSnapshot: snapshot,
                   };
 
                   saveApplication(application);

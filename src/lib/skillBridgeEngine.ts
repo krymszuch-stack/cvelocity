@@ -156,7 +156,7 @@ export function findSkillBridgeForGap(
 
   for (const def of BRIDGE_DEFINITIONS) {
     if (def.targetSkillRegex.test(skillStr)) {
-      // Szukamy najlepszej umiejętności pokrewnej posiadanej przez kandydata
+      // Szukamy wyłącznie umiejętności pokrewnej rzeczywiście posiadanej przez kandydata
       let foundAdjacent: string | undefined;
       for (const adj of def.adjacentSkills) {
         if (candLowerMap.has(adj.toLowerCase())) {
@@ -165,63 +165,70 @@ export function findSkillBridgeForGap(
         }
       }
 
-      // Jeśli nie znaleziono bezpośrednio, bierzemy pierwszą najbardziej prawdopodobną z definicji
-      const adjacentSkill = foundAdjacent || def.adjacentSkills[0];
+      // Jeżeli kandydat rzeczywiście posiada umiejętność pokrewną z definicji
+      if (foundAdjacent) {
+        const adjacentSkill = foundAdjacent;
 
-      // Szukamy dowodu z MasterVault (np. projektu lub firmy)
-      let evidenceFromVault: string | undefined;
-      for (const exp of safeVault.history || []) {
-        const matchHl = (exp?.highlights || []).find((rawHl) => {
-          const hl = rawHl as unknown;
-          if (typeof hl === 'string') {
-            return hl.toLowerCase().includes(adjacentSkill.toLowerCase());
+        // Szukamy dowodu z MasterVault (np. projektu lub firmy)
+        let evidenceFromVault: string | undefined;
+        for (const exp of safeVault.history || []) {
+          const matchHl = (exp?.highlights || []).find((rawHl) => {
+            const hl = rawHl as unknown;
+            if (typeof hl === 'string') {
+              return hl.toLowerCase().includes(adjacentSkill.toLowerCase());
+            }
+            if (typeof hl === 'object' && hl !== null) {
+              const obj = hl as { tool?: string; keywords?: string[] };
+              return (
+                obj.tool?.toLowerCase() === adjacentSkill.toLowerCase() ||
+                obj.keywords?.some((k) => k.toLowerCase() === adjacentSkill.toLowerCase())
+              );
+            }
+            return false;
+          });
+          if (matchHl) {
+            evidenceFromVault = `${exp.company || 'Firma'} (${exp.role || 'Rola'})`;
+            break;
           }
-          if (typeof hl === 'object' && hl !== null) {
-            const obj = hl as { tool?: string; keywords?: string[] };
-            return (
-              obj.tool?.toLowerCase() === adjacentSkill.toLowerCase() ||
-              obj.keywords?.some((k) => k.toLowerCase() === adjacentSkill.toLowerCase())
-            );
-          }
-          return false;
-        });
-        if (matchHl) {
-          evidenceFromVault = `${exp.company || 'Firma'} (${exp.role || 'Rola'})`;
-          break;
         }
+
+        const talkingPoint = def.templateTalkingPoint(
+          skillStr,
+          adjacentSkill,
+          evidenceFromVault
+        );
+
+        return {
+          id: `bridge_${skillStr.toLowerCase().replace(/[^a-z0-9]/g, '_')}`,
+          missingSkill: skillStr,
+          adjacentSkill,
+          conceptualEquivalence: def.conceptualEquivalence,
+          bridgeExplanation: `Brak ${skillStr} jest zrównoważony przez udokumentowaną znajomość ${adjacentSkill}.`,
+          talkingPoint,
+          evidenceFromVault,
+          learningCurveDays: def.learningCurveDays,
+          confidenceScore: def.baseConfidence,
+        };
       }
-
-      const talkingPoint = def.templateTalkingPoint(
-        skillStr,
-        adjacentSkill,
-        evidenceFromVault
-      );
-
-      return {
-        id: `bridge_${skillStr.toLowerCase().replace(/[^a-z0-9]/g, '_')}`,
-        missingSkill: skillStr,
-        adjacentSkill,
-        conceptualEquivalence: def.conceptualEquivalence,
-        bridgeExplanation: `Brak ${skillStr} jest w 100% zrównoważony przez znajomość ${adjacentSkill}.`,
-        talkingPoint,
-        evidenceFromVault,
-        learningCurveDays: def.learningCurveDays,
-        confidenceScore: def.baseConfidence,
-      };
     }
   }
 
-  // Most domyślny / generyczny oparty na solidnych podstawach inżynieryjnych
-  const fallbackAdjacent = candidateSkills[0] || 'powiązane technologie projektowe';
+  // Jeśli kandydat nie posiada żadnych umiejętności w profilu, nie generujemy mostu
+  if (candidateSkills.length === 0) {
+    return undefined;
+  }
+
+  // Most generyczny oparty na rzeczywistej najwyższej umiejętności kandydata
+  const fallbackAdjacent = candidateSkills[0];
   return {
     id: `bridge_generic_${skillStr.toLowerCase().replace(/[^a-z0-9]/g, '_')}`,
     missingSkill: skillStr,
     adjacentSkill: fallbackAdjacent,
-    conceptualEquivalence: 'Transferowalność fundamentalnych wzorców inżynieryjnych i sprawdzona szybkość adaptacji nowych narzędzi.',
-    bridgeExplanation: `Solidne podstawy w ${fallbackAdjacent} pozwalają na błyskawiczne wdrożenie w specyfikę ${skillStr}.`,
-    talkingPoint: `Chociaż dotychczas skupiałem się na ${fallbackAdjacent}, fundamentalne prymitywy i architektura ${skillStr} są tożsame. W moich projektach wielokrotnie udowodniłem zdolność szybkiego przyswajania nowych standardów bez kompromisów jakościowych.`,
+    conceptualEquivalence: 'Transferowalność fundamentalnych wzorców zawodowych i sprawdzona szybkość adaptacji nowych standardów.',
+    bridgeExplanation: `Doświadczenie w ${fallbackAdjacent} stanowi bazę do szybkiego wdrożenia w specyfikę ${skillStr}.`,
+    talkingPoint: `Chociaż dotychczas skupiałem się na ${fallbackAdjacent}, fundamentalne zasady i logika działania w ${skillStr} są zbliżone. W moich projektach wielokrotnie udowodniłem zdolność szybkiego przyswajania nowych standardów bez kompromisów jakościowych.`,
     learningCurveDays: 7,
-    confidenceScore: 85,
+    confidenceScore: 75,
   };
 }
 

@@ -193,7 +193,7 @@ export function generateFollowUpEmail(
   const highlightPoint =
     debriefData?.whatWentWell?.trim() ||
     session.liveTracker.notes[0]?.text ||
-    'omówienie wyzwań architektonicznych i planów rozwojowych zespołu';
+    'możliwość szczegółowego poznania zakresu roli i planów zespołu';
 
   const openings = getFollowUpEmailOpenings(role, highlightPoint);
   const idx = selectVariantIndex(variantIndex ?? session.companyName + role, openings.length);

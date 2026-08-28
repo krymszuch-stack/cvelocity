@@ -15,6 +15,7 @@ import {
   deleteLocalProfile,
   loadProfileVault,
   saveProfileVault,
+  ANONYMOUS_PROFILE_ID,
 } from '../lib/localProfile';
 import { MasterVault } from '../types';
 import { getSupabaseBrowserClient } from '../lib/supabaseClient';
@@ -282,10 +283,13 @@ export const AuthProvider: React.FC<{
       // na dysku pod kluczem, którego po wylogowaniu nic już nie odczyta ani
       // nie skasuje — na wspólnym komputerze to jest wyciek, nie niedopatrzenie.
       if (wychodzacy) removeRaw(vaultKeyFor(wychodzacy));
-      return;
+    } else {
+      signOutLocalProfile();
     }
 
-    signOutLocalProfile();
+    // Bezpieczeństwo po wylogowaniu: usuwamy ewentualny ślad anonimowy,
+    // aby kolejny użytkownik nie odziedziczył danych poprzednika.
+    removeRaw(vaultKeyFor(ANONYMOUS_PROFILE_ID));
     setUser(null);
     setMode(null);
     setUserVault(null);

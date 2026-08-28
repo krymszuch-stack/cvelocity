@@ -40,16 +40,19 @@ export function selectVariantIndex(seed: string | number | undefined, totalVaria
  * 1. Bank Hooków do Autoprezentacji / Elevator Pitch (Live HUD, ConsistencyGuard, PitchModal)
  */
 export function getPitchHookVariations(ctx: HookContext): string[] {
-  const { candidateName, roleTitle, topSkills, topMetric, verifiedClaimsCount = 3 } = ctx;
-  const skills = topSkills || 'kluczowe kompetencje techniczne';
+  const { candidateName, roleTitle, topSkills, topMetric, verifiedClaimsCount } = ctx;
+  const skills = topSkills || 'kluczowe kompetencje zawodowe';
   const metricClause = topMetric ? `, w tym z udokumentowanym wynikiem ${topMetric}` : '';
+  const pillarClause = verifiedClaimsCount && verifiedClaimsCount > 0
+    ? `${verifiedClaimsCount} zweryfikowanych filarach zawodowych`
+    : 'solidnym przygotowaniu praktycznym';
 
   return [
     // Wariant 1: Klasyczny merytoryczny
-    `Dzień dobry, nazywam się ${candidateName}. Jako ${roleTitle} opieram swoje doświadczenie na ${verifiedClaimsCount} zweryfikowanych filarach projektowych${metricClause}.`,
+    `Dzień dobry, nazywam się ${candidateName}. Jako ${roleTitle} opieram swoje doświadczenie na ${pillarClause}${metricClause}.`,
     
-    // Wariant 2: Rezultatowy i zorientowany na ROI
-    `Nazywam się ${candidateName}. W roli ${roleTitle} koncentruję się na wymiernych rezultatach – moje dotychczasowe wdrożenia przyniosły m.in. ${topMetric || 'znaczną optymalizację kluczowych procesów'}.`,
+    // Wariant 2: Rezultatowy i zorientowany na cele
+    `Nazywam się ${candidateName}. W roli ${roleTitle} koncentruję się na wymiernych rezultatach – ${topMetric ? `moje dotychczasowe realizacje przyniosły m.in. ${topMetric}` : 'stawiam na rzetelność i terminowe dowożenie celów operacyjnych'}.`,
     
     // Wariant 3: Narzędziowy & Ekspercki
     `Cześć, jestem ${candidateName} i specjalizuję się jako ${roleTitle}. Moje codzienne środowisko pracy opiera się na ${skills}, a w projektach stawiam na jakość i stabilność rozwiązań.`,
@@ -57,8 +60,8 @@ export function getPitchHookVariations(ctx: HookContext): string[] {
     // Wariant 4: Praktyczny & Gotowy do działania
     `Dzień dobry! Nazywam się ${candidateName}. Jako ${roleTitle} łączę praktyczne doświadczenie w ${skills} ze sprawdzoną umiejętnością szybkiego rozwiązywania problemów operacyjnych.`,
     
-    // Wariant 5: Architektoniczno-procesowy
-    `Nazywam się ${candidateName} i od lat realizuję projekty jako ${roleTitle}. W pracy inżynierskiej kładę nacisk na standardy jakościowe oraz mierzalne efekty biznesowe${metricClause}.`,
+    // Wariant 5: Jakościowo-procesowy
+    `Nazywam się ${candidateName} i od lat realizuję projekty jako ${roleTitle}. W codziennej pracy kładę nacisk na standardy jakościowe oraz mierzalne efekty${metricClause}.`,
     
     // Wariant 6: Bezpośredni & Partnerski
     `Dzień dobry, z tej strony ${candidateName}. Jako ${roleTitle} z udokumentowaną historią wdrożeń, wnoszę do zespołu natychmiastową samodzielność i ekspertyzę w ${skills}.`,
@@ -73,7 +76,7 @@ export function getPitchCtaVariations(ctx: HookContext): string[] {
   const target = companyName ? `w firmie ${companyName}` : `na stanowisku ${roleTitle}`;
 
   return [
-    `Chętnie przedstawię szczegóły tych wdrożeń podczas rozmowy technicznej.`,
+    `Chętnie przedstawię szczegóły tych wdrożeń podczas rozmowy rekrutacyjnej.`,
     `Z przyjemnością omówię, w jaki sposób te doświadczenia przełożą się na natychmiastowe wsparcie Państwa zespołu ${target}.`,
     `Chętnie odpowiem na pytania dotyczące konkretnych studiów przypadków i metryk z moich realizacji.`,
     `Będzie mi bardzo miło rozwinąć te wątki i poznać bieżące priorytety projektowe Państwa zespołu.`,
@@ -105,7 +108,7 @@ export function getCoverLetterHookVariations(ctx: HookContext): string[] {
 
   return [
     // Wariant 1: Bezpośrednia propozycja współpracy i gotowości
-    `Zwracam się z propozycją współpracy na stanowisku ${roleTitle} w firmie ${companyName}. Jako specjalista z wieloletnią praktyką w pracy z ${skills}, wnoszę do Państwa zespołu sprawdzoną wiedzę inżynierską oraz gotowość do natychmiastowego podejmowania kluczowych wyzwań.`,
+    `Zwracam się z propozycją współpracy na stanowisku ${roleTitle} w firmie ${companyName}. Jako specjalista z praktyką w pracy z ${skills}, wnoszę do Państwa zespołu sprawdzoną wiedzę praktyczną oraz gotowość do natychmiastowego podejmowania kluczowych wyzwań.`,
     
     // Wariant 2: Odpowiedź na wyzwania biznesowe i dowożenie celów
     `W odpowiedzi na Państwa rekrutację na rolę ${roleTitle}, przedstawiam profil zawodowy skoncentrowany na dowożeniu mierzalnych rezultatów operacyjnych${metricClause}. Śledząc rozwój ${companyName}, jestem przekonany, że moje doświadczenie z ${skills} pozwoli skutecznie wesprzeć Państwa bieżące projekty.`,
@@ -113,7 +116,7 @@ export function getCoverLetterHookVariations(ctx: HookContext): string[] {
     // Wariant 3: Analityczny & Dopasowany do ogłoszenia
     `Z analizy profilu poszukiwanego kandydata wynika, że ${companyName} potrzebuje ${roleTitle}, który łączy rzetelny warsztat techniczny z odpowiedzialnością za powierzony obszar. Moje dotychczasowe realizacje oparte na ${skills} stanowią bezpośrednią odpowiedź na te oczekiwania.`,
     
-    // Wariant 4: Solidność inżynierska & kultura techniczna
+    // Wariant 4: Solidne przygotowanie & kultura pracy
     `Aplikuję na stanowisko ${roleTitle} w ${companyName}, opierając swoją kandydaturę na solidnym przygotowaniu wykonawczym, biegłości w ${skills} oraz rygorystycznym podejściu do standardów bezpieczeństwa i jakości.`,
     
     // Wariant 5: Sprawczość & Rozwiązywanie problemów
@@ -154,7 +157,7 @@ export function getCoverLetterCtaVariations(companyName = 'Państwa Firmie'): st
     `Będzie mi niezmiernie miło spotkać się na rozmowie kwalifikacyjnej, aby porozmawiać o tym, jak moje umiejętności mogą wesprzeć zespół w realizacji najbliższych celów operacyjnych.`,
     `Chętnie odpowiem na wszelkie pytania techniczne i zaprezentuję próbki dotychczasowych wdrożeń podczas rozmowy rekrutacyjnej. Pozostaję do Państwa dyspozycji.`,
     `Z satysfakcją zaprezentuję konkretne przykłady realizacji i porozmawiam o możliwościach współpracy w firmie ${companyName}. Zapraszam do kontaktu telefonicznego lub mailowego.`,
-    `Jestem gotowy do podjęcia nowych wyzwań i chętnie przedstawię swój warsztat inżynierski podczas spotkania rekrutacyjnego. Dziękuję za poświęcony czas.`,
+    `Jestem gotowy do podjęcia nowych wyzwań i chętnie przedstawię swój warsztat zawodowy podczas spotkania rekrutacyjnego. Dziękuję za poświęcony czas.`,
   ];
 }
 

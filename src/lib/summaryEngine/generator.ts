@@ -36,9 +36,10 @@ function pickRandom<T>(arr: T[], rng: () => number): T {
 
 /**
  * Formułuje klauzulę stażu w języku polskim z właściwą odmianą.
+ * Dla 0 lat stażu nie generuje fałszywego „bogatego doświadczenia”.
  */
 function formatYearsClause(years: number): string {
-  if (years <= 0) return 'bogatym doświadczeniem';
+  if (years <= 0) return 'przygotowaniem kierunkowym';
   if (years === 1) return 'rocznym stażem';
   if (years >= 2 && years <= 4) return `${years}-letnim stażem`;
   return `${years}-letnim doświadczeniem`;
@@ -49,19 +50,19 @@ function formatYearsClause(years: number): string {
  */
 function formatSkillClause(skills: string[], rng: () => number): string {
   if (!skills || skills.length === 0) {
-    return 'Posiadam gruntowną wiedzę merytoryczną i praktyczną';
+    return 'W pracy stawiam na rzetelność i ciągły rozwój kompetencji';
   }
   if (skills.length === 1) {
-    return `Specjalizuję się w technologii ${skills[0]}`;
+    return `Specjalizuję się w obszarze: ${skills[0]}`;
   }
   if (skills.length === 2) {
-    return `Kluczowe kompetencje obejmują ${skills[0]} oraz ${skills[1]}`;
+    return `Kluczowe umiejętności obejmują ${skills[0]} oraz ${skills[1]}`;
   }
 
   const templates = [
-    `Biegle wykorzystuję w pracy ${skills[0]}, ${skills[1]} oraz ${skills[2]}`,
+    `W codziennej pracy wykorzystuję ${skills[0]}, ${skills[1]} oraz ${skills[2]}`,
     `Specjalizuję się w obszarach ${skills[0]} i ${skills[1]}`,
-    `Doświadczenie opieram na znajomości ${skills.slice(0, 3).join(', ')}`,
+    `Wiedzę praktyczną opieram na znajomości ${skills.slice(0, 3).join(', ')}`,
   ];
   return pickRandom(templates, rng);
 }
@@ -70,7 +71,7 @@ function formatSkillClause(skills: string[], rng: () => number): string {
  * Formułuje listę umiejętności po przecinku.
  */
 function formatSkillsList(skills: string[]): string {
-  if (!skills || skills.length === 0) return 'narzędzia branżowe i technologie';
+  if (!skills || skills.length === 0) return 'kluczowe kompetencje zawodowe';
   if (skills.length === 1) return skills[0];
   if (skills.length === 2) return `${skills[0]} oraz ${skills[1]}`;
   return `${skills.slice(0, -1).join(', ')} i ${skills[skills.length - 1]}`;

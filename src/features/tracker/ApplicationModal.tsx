@@ -55,6 +55,7 @@ export const ApplicationModal: React.FC<ApplicationModalProps> = ({
     if (!company.trim() || !position.trim()) return;
 
     onSave({
+      ...(initialData || {}),
       id: initialData?.id || `app-${Date.now()}`,
       company: company.trim(),
       position: position.trim(),

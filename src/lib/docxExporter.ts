@@ -184,6 +184,11 @@ function datesOf(start: string, end: string, isCurrent: boolean): string {
   return `${start || '—'} – ${isCurrent ? 'obecnie' : end || '—'}`;
 }
 
+export interface BuildCvDocumentOptions {
+  /** Nadpisanie podsumowania zawodowego (np. z dopasowanego tailoredResume.summary) */
+  summaryOverride?: string;
+}
+
 /**
  * Składa dokument CV wyłącznie z akapitów. Eksportowana do testów — download
  * to cienka nakładka na tej funkcji.
@@ -192,7 +197,8 @@ export function buildCvDocument(
   vault: MasterVault,
   layeredFacts: LayeredFactItem[],
   targetRole: string,
-  companyName: string
+  companyName: string,
+  options: BuildCvDocumentOptions = {}
 ): Document {
   const name = vault.personalInfo?.fullName?.trim() || 'Kandydat';
   const docTitle = targetRole || vault.personalInfo?.title || '';
@@ -218,9 +224,11 @@ export function buildCvDocument(
   if (contact) paragraphs.push(contactLineOptions(contact));
 
   // --- Podsumowanie ---
-  if (vault.personalInfo?.summary?.trim()) {
+  // Preferowana kolejność: tailored summary ze snapshotu/dopasowania -> vault.personalInfo.summary
+  const effectiveSummary = options.summaryOverride?.trim() || vault.personalInfo?.summary?.trim();
+  if (effectiveSummary) {
     paragraphs.push(h2SectionOptions('Podsumowanie zawodowe'));
-    paragraphs.push(bodyOptions(vault.personalInfo.summary, { after: 160 }));
+    paragraphs.push(bodyOptions(effectiveSummary, { after: 160 }));
   }
 
   // --- Doświadczenie ---
@@ -340,10 +348,11 @@ export async function downloadNativeDocxCv(
   vault: MasterVault,
   layeredFacts: LayeredFactItem[],
   targetRole: string,
-  companyName: string
+  companyName: string,
+  options: BuildCvDocumentOptions = {}
 ): Promise<void> {
   try {
-    const doc = buildCvDocument(vault, layeredFacts, targetRole, companyName);
+    const doc = buildCvDocument(vault, layeredFacts, targetRole, companyName, options);
     const blob = await Packer.toBlob(doc);
 
     const cleanName = (vault.personalInfo?.fullName || 'Kandydat').replace(/\s+/g, '_');

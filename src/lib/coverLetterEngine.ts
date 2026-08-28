@@ -94,16 +94,12 @@ export function generateAntiTemplateCoverLetter(
     }
   }
 
-  // Fallback metrics if empty vault history
-  if (proofPoints.length === 0) {
-    if (topSkillsStr) {
-      proofPoints.push(`• Specjalizuję się w: ${topSkillsStr}, budując stabilne i mierzalne rozwiązania.`);
-    }
-    proofPoints.push(`• Zoptymalizowałem kluczowe procesy zawodowe, podnosząc wydajność operacyjną o ponad 35%.`);
-    proofPoints.push(`• Wdrożyłem projekty produkcyjne dostosowane do specyficznych wymagań biznesowych.`);
+  // Jeśli brak dowodów z historii i projektów, opieramy się wyłącznie na zadeklarowanych umiejętnościach bez fabrykowania metryk
+  if (proofPoints.length === 0 && topSkillsStr) {
+    proofPoints.push(`• Praktyczną wiedzę opieram na znajomości: ${topSkillsStr}.`);
   }
 
-  // 4. Zdanie wprowadzające do dowodów (Proof Introduction)
+  // 4. Zdanie wprowadzające do dowodów (Proof Introduction) - tylko gdy mamy punkty dowodowe
   const proofIntros = getCoverLetterProofIntroductions();
   const proofIntroIdx = selectVariantIndex(typeof seed === 'number' ? seed : seed + '_intro', proofIntros.length);
   const proofIntro = proofIntros[proofIntroIdx];
@@ -118,9 +114,10 @@ export function generateAntiTemplateCoverLetter(
   const signOffIdx = selectVariantIndex(typeof seed === 'number' ? seed : seed + '_sign', signOffs.length);
   const signOff = signOffs[signOffIdx];
 
-  const contactInfo = [vault.personalInfo.phone && `Tel: ${vault.personalInfo.phone}`, vault.personalInfo.email && `Email: ${vault.personalInfo.email}`].filter(Boolean).join(' | ');
+  const contactInfo = [vault.personalInfo?.phone && `Tel: ${vault.personalInfo.phone}`, vault.personalInfo?.email && `Email: ${vault.personalInfo.email}`].filter(Boolean).join(' | ');
 
-  const fullText = `${salutation}\n\n${hook}\n\n${proofIntro}\n${proofPoints.join('\n')}\n\n${callToAction}\n\n${signOff}\n${name}\n${contactInfo}`;
+  const proofSection = proofPoints.length > 0 ? `\n\n${proofIntro}\n${proofPoints.join('\n')}` : '';
+  const fullText = `${salutation}\n\n${hook}${proofSection}\n\n${callToAction}\n\n${signOff}\n${name}\n${contactInfo}`;
 
   return {
     targetJobTitle: role,

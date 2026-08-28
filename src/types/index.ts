@@ -488,6 +488,31 @@ export interface ApplicationHistoryRecord {
  */
 export type ApplicationStatus = 'Do wysłania' | 'Wysłana' | 'Rozmowa' | 'Oferta' | 'Odrzucona';
 
+export interface ApplicationDocumentSnapshot {
+  /** Wersja schematu snapshotu (do kompatybilności wstecznej) */
+  schemaVersion: 1;
+  /** Znacznik czasu utworzenia snapshotu w formacie ISO 8601 */
+  createdAt: string;
+  /** Niezmienna migawka wygenerowanego dopasowanego CV */
+  tailoredResume: TailoredResume;
+  /** Niezmienna migawka wygenerowanego listu motywacyjnego */
+  coverLetter?: CoverLetter;
+  /** Niezmienna migawka stanu MasterVault z momentu zapisu aplikacji */
+  vaultSnapshot: MasterVault;
+  /** Niezmienna migawka oferty pracy z momentu zapisu */
+  jobOfferSnapshot: {
+    id?: string;
+    title: string;
+    company: string;
+    salary?: string;
+    location?: string;
+    description?: string;
+    url?: string;
+  };
+  /** Niezmienna migawka wyniku symulacji ATS z momentu zapisu */
+  atsResultSnapshot?: AtsCheckResult;
+}
+
 /**
  * Jedna aplikacja o pracę w Pipeline.
  *
@@ -531,4 +556,11 @@ export interface JobApplication {
   briefDoneAt?: string;
   /** Kiedy wysłano follow-up po rozmowie. */
   debriefSentAt?: string;
+
+  /**
+   * Niezmienna migawka wygenerowanych dokumentów aplikacyjnych (CV, List motywacyjny,
+   * stan MasterVault i oferty z chwili aplikacji).
+   * Opcjonalna dla aplikacji dodanych ręcznie w Pipeline.
+   */
+  documentSnapshot?: ApplicationDocumentSnapshot;
 }

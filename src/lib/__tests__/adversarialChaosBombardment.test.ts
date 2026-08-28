@@ -123,7 +123,11 @@ describe('Adversarial Chaos & Hallucination Bombardment Test Suite', () => {
     it('1.7 Skill Bridge Engine radzi sobie z brakującymi umiejętnościami i pustym Vaultem', () => {
       expect(generateSkillBridges([], null as unknown as MasterVault)).toEqual([]);
       expect(findSkillBridgeForGap('', {} as MasterVault)).toBeUndefined();
-      expect(findSkillBridgeForGap('Kafka', {} as MasterVault)).toBeDefined();
+      // Zero-Hallucination: pusty profil bez umiejętności nie tworzy mostu z nieistniejącym narzędziem
+      expect(findSkillBridgeForGap('Kafka', {} as MasterVault)).toBeUndefined();
+      // Profil z realną umiejętnością tworzy most
+      const vaultWithSkill = { skillsMatrix: { hardSkills: ['PostgreSQL'] } } as unknown as MasterVault;
+      expect(findSkillBridgeForGap('Kafka', vaultWithSkill)).toBeDefined();
     });
 
     it('1.8 Vault Import Merge radzi sobie z corrupt/undefined strukturami', () => {

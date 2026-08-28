@@ -25,6 +25,7 @@ import { Input, Textarea } from '../../components/ui/Field';
 import { Card } from '../../components/ui/Card';
 import { Modal } from '../../components/ui/Modal';
 import { PageHeader } from '../../components/ui/PageHeader';
+import { HistoricalDocumentModal } from './HistoricalDocumentModal';
 
 
 /**
@@ -83,6 +84,7 @@ export const ApplicationTracker: React.FC<ApplicationTrackerProps> = ({
   // Modals
   const [isAppModalOpen, setIsAppModalOpen] = useState(false);
   const [editingApp, setEditingApp] = useState<JobApplication | null>(null);
+  const [viewingDocApp, setViewingDocApp] = useState<JobApplication | null>(null);
 
   // Notes Drawer/Modal
   const [notesApp, setNotesApp] = useState<JobApplication | null>(null);
@@ -289,6 +291,7 @@ export const ApplicationTracker: React.FC<ApplicationTrackerProps> = ({
         }}
         onDelete={handleDeleteApp}
         onOpenNotes={handleOpenNotes}
+        onViewDocument={(app) => setViewingDocApp(app)}
       />
 
       {/* Create / Edit Application Modal */}
@@ -300,6 +303,13 @@ export const ApplicationTracker: React.FC<ApplicationTrackerProps> = ({
         }}
         onSave={handleSaveApp}
         initialData={editingApp}
+      />
+
+      {/* Historical Document Snapshot Modal (BUG-002) */}
+      <HistoricalDocumentModal
+        application={viewingDocApp}
+        isOpen={Boolean(viewingDocApp)}
+        onClose={() => setViewingDocApp(null)}
       />
 
       {/* Notes Modal */}

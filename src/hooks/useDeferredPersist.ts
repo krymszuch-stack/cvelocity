@@ -24,7 +24,7 @@ export function useDeferredPersist<T>(
   value: T,
   persist: (value: T) => void,
   delayMs: number = PERSIST_DELAY_MS
-): { flush: () => void } {
+): { flush: () => void; cancel: () => void } {
   const persistRef = useRef(persist);
   const writerRef = useRef<DeferredWriter<T> | null>(null);
 
@@ -49,6 +49,7 @@ export function useDeferredPersist<T>(
   }, [delayMs]);
 
   const flush = useCallback(() => writerRef.current?.flush(), []);
+  const cancel = useCallback(() => writerRef.current?.cancel(), []);
 
   // Efekt zgłaszający wartość jest zadeklarowany po efekcie tworzącym, więc
   // przy pierwszym renderowaniu writer już istnieje.
@@ -65,5 +66,5 @@ export function useDeferredPersist<T>(
     [flush]
   );
 
-  return { flush };
+  return { flush, cancel };
 }

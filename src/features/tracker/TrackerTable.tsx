@@ -8,6 +8,7 @@ import {
   Calendar,
   DollarSign,
   Briefcase,
+  Eye,
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { JobApplication } from './ApplicationModal';
@@ -26,6 +27,7 @@ export interface TrackerTableProps {
   onEdit: (app: JobApplication) => void;
   onDelete: (id: string) => void;
   onOpenNotes: (app: JobApplication) => void;
+  onViewDocument: (app: JobApplication) => void;
   className?: string;
 }
 
@@ -36,6 +38,7 @@ export const TrackerTable: React.FC<TrackerTableProps> = ({
   onEdit,
   onDelete,
   onOpenNotes,
+  onViewDocument,
   className = '',
 }) => {
   if (applications.length === 0) {
@@ -134,6 +137,25 @@ export const TrackerTable: React.FC<TrackerTableProps> = ({
 
                 {/* 6. Actions */}
                 <div className="col-span-1 flex items-center justify-end gap-1">
+                  {/* View Document Button */}
+                  <button
+                    type="button"
+                    onClick={() => onViewDocument(app)}
+                    className={`flex h-8 w-8 items-center justify-center rounded-lg border transition-colors ${
+                      app.documentSnapshot
+                        ? 'border-brand-300 bg-brand-50/70 text-brand-600 hover:bg-brand-100 hover:text-brand-700'
+                        : 'border-line text-muted hover:bg-surface hover:text-ink'
+                    }`}
+                    title={
+                      app.documentSnapshot
+                        ? 'Podgląd wysłanego CV i dokumentów'
+                        : 'Brak zapisanego snapshotu dokumentu'
+                    }
+                    aria-label={`Podgląd dokumentu: ${app.company}`}
+                  >
+                    <Eye className="h-3.5 w-3.5" />
+                  </button>
+
                   {/* Notes Button */}
                   <button
                     type="button"

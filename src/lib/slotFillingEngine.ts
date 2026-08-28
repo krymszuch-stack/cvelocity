@@ -74,9 +74,9 @@ export function extractSlotsFromHighlight(highlight: HighlightMetric | string): 
     return {
       template: '{action} {target}.',
       action: 'Realizowałem',
-      target: 'zadania operacyjne',
-      tool: 'narzędzia zawodowe',
-      metric: 'wysoką jakość wykonania',
+      target: 'powierzone obowiązki',
+      tool: '',
+      metric: '',
       keywords: [],
     };
   }
@@ -98,54 +98,38 @@ export function extractSlotsFromHighlight(highlight: HighlightMetric | string): 
 
 /**
  * Local 0-Token Slot Filling Transformer
- * Inverts sentence structure (Metric-First, Action-First, Tool-First, PAR) and injects target job keywords.
+ * Inverts sentence structure (Metric-First, Action-First, Tool-First, PAR) using only existing facts.
  */
 export function fillSlotSentence(
   slot: PhraseSlot,
-  targetKeywords: string[],
+  _targetKeywords: string[] = [],
   variant: 'ACTION_FIRST' | 'METRIC_FIRST' | 'TOOL_FIRST' | 'PAR_STRUCTURE' = 'ACTION_FIRST'
 ): string {
   const { target, tool, metric } = slot;
   let { action } = slot;
 
-  // Substitute action with synonym if applicable
-  const lowerAction = action.toLowerCase();
-  if (SYNONYM_MAP[lowerAction]) {
-    const synonyms = SYNONYM_MAP[lowerAction];
-    action = synonyms[Math.floor(Math.random() * synonyms.length)];
-    // Capitalize first letter
-    action = action.charAt(0).toUpperCase() + action.slice(1);
-  }
-
   // Purify fluff
   const cleanTarget = eliminateSlogans(target).purifiedText;
   const cleanMetric = eliminateSlogans(metric).purifiedText;
 
-  // Ensure target keywords correlation (Terminology matching without hallucination)
-  let matchedToolsStr = tool;
-  for (const kw of targetKeywords) {
-    const lowerKw = kw.toLowerCase();
-    if (
-      lowerKw.includes('sql') &&
-      tool.toLowerCase().includes('bazy') &&
-      !tool.toLowerCase().includes('sql')
-    ) {
-      matchedToolsStr = `${tool} (SQL Optimization)`;
-    } else if (
-      lowerKw.includes('docker') &&
-      tool.toLowerCase().includes('kontener') &&
-      !tool.toLowerCase().includes('docker')
-    ) {
-      matchedToolsStr = `${tool} (Docker/Kubernetes)`;
-    }
+  // Substitute action with synonym deterministycznie na bazie hash/długości celu
+  const lowerAction = action.toLowerCase();
+  if (SYNONYM_MAP[lowerAction]) {
+    const synonyms = SYNONYM_MAP[lowerAction];
+    const synonymIdx = Math.abs(cleanTarget.length) % synonyms.length;
+    action = synonyms[synonymIdx];
+    action = action.charAt(0).toUpperCase() + action.slice(1);
   }
+
+  // Zachowaj wyłącznie narzędzia rzeczywiście obecne w slocie (bez fabrykowania np. Kubernetes)
+  const matchedToolsStr = tool ? tool.trim() : '';
 
   // Build clean result sentence without empty parens or trailing clauses
   let result = `${action} ${cleanTarget}`.trim();
-  if (matchedToolsStr && matchedToolsStr.trim()) {
+  if (matchedToolsStr) {
     result += ` przy użyciu ${matchedToolsStr}`;
   }
-  if (cleanMetric && cleanMetric.trim()) {
+  if (cleanMetric) {
     result += `, co przyniosło ${cleanMetric}`;
   }
   if (!result.endsWith('.')) {

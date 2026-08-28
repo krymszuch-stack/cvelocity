@@ -1,4 +1,4 @@
-import { MasterVault, LayeredFactItem, PreFlightCheckItem, ApplicationHistoryRecord } from '../types';
+import { MasterVault, LayeredFactItem, PreFlightCheckItem } from '../types';
 import { reportClientError } from './errorReporter';
 
 /**

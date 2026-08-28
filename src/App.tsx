@@ -11,7 +11,9 @@ import {
   getActiveProfile,
   loadProfileVault,
   saveProfileVault,
+  type LocalProfile,
 } from './lib/localProfile';
+import { removeRaw, vaultKeyFor } from './lib/storage';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { useEntitlements, isProStatus } from './store/useEntitlements';
 import { ThemeProvider } from './providers/ThemeProvider';
@@ -80,14 +82,10 @@ function MainApp() {
   const { userVault, saveUserVault, user, isAuthenticated, mode } = useAuth();
 
   const [vault, setVault] = useState<MasterVault>(() => {
-    // Ślad po danych demonstracyjnych, które kiedyś wgrywały się same. Wpis
-    // z tym adresem nie jest niczyim CV, więc jest odrzucany zamiast wczytany.
-    const SAMPLE_EMAIL = 'jan.kowalski@example.com';
-
     const profile = getActiveProfile();
     const storedVault = loadProfileVault(profile?.id ?? ANONYMOUS_PROFILE_ID);
 
-    if (storedVault && storedVault.personalInfo.email !== SAMPLE_EMAIL) {
+    if (storedVault) {
       return storedVault;
     }
 
@@ -146,13 +144,46 @@ function MainApp() {
     }
   }, [refreshEntitlements]);
 
-  // Sync user vault when authenticated user changes
-  useEffect(() => {
-    if (userVault) {
-      setVault(userVault);
-    }
-  }, [userVault]);
+  // Jeden zapis, pod jednym kluczem. Wcześniej każda zmiana trafiała naraz do
+  // klucza globalnego i do klucza profilu, więc te same dane leżały w schowku
+  // w dwóch kopiach, które potrafiły się rozjechać.
+  //
+  // Zapis jest odłożony w czasie, bo utrwalanie to pełna serializacja drzewa,
+  // a edytor tworzy nowy obiekt vaultu przy każdej edycji pola — bez odłożenia
+  // `JSON.stringify` całych 38 kB wykonywał się przy każdym wpisanym znaku.
+  // `useDeferredPersist` dosyła zaległy zapis przy ukryciu karty, zamknięciu
+  // strony i odmontowaniu, więc opóźnienie nie tworzy okna utraty danych.
+  const persistVault = useCallback(
+    (current: MasterVault) => {
+      if (isAuthenticated && user) {
+        saveUserVault(current);
+      } else if (!user && !isAuthenticated) {
+        saveProfileVault(ANONYMOUS_PROFILE_ID, current);
+      }
+    },
+    [isAuthenticated, user, saveUserVault]
+  );
 
+  const { cancel: cancelVaultPersist } = useDeferredPersist(vault, persistVault);
+
+  const prevUserRef = useRef<LocalProfile | null>(user);
+
+  // Sync user vault when authenticated user changes, or reset on logout
+  useEffect(() => {
+    if (user && userVault) {
+      prevUserRef.current = user;
+      setVault(userVault);
+    } else if (!user && prevUserRef.current) {
+      // Wylogowanie lub zamknięcie profilu:
+      // 1. Natychmiast anulujemy oczekujące opóźnione zapisy starego profilu
+      cancelVaultPersist();
+      // 2. Skasuj klucz profilu anonimowego ze schowka
+      removeRaw(vaultKeyFor(ANONYMOUS_PROFILE_ID));
+      // 3. Zresetuj stan pamięciowy do czystego profilu
+      prevUserRef.current = null;
+      setVault(createEmptyVault());
+    }
+  }, [user, userVault, cancelVaultPersist]);
   /**
    * Pierwsze spotkanie lokalnego CV z kontem w chmurze.
    *
@@ -214,28 +245,6 @@ function MainApp() {
       aktywny = false;
     };
   }, [mode, user]);
-
-  // Jeden zapis, pod jednym kluczem. Wcześniej każda zmiana trafiała naraz do
-  // klucza globalnego i do klucza profilu, więc te same dane leżały w schowku
-  // w dwóch kopiach, które potrafiły się rozjechać.
-  //
-  // Zapis jest odłożony w czasie, bo utrwalanie to pełna serializacja drzewa,
-  // a edytor tworzy nowy obiekt vaultu przy każdej edycji pola — bez odłożenia
-  // `JSON.stringify` całych 38 kB wykonywał się przy każdym wpisanym znaku.
-  // `useDeferredPersist` dosyła zaległy zapis przy ukryciu karty, zamknięciu
-  // strony i odmontowaniu, więc opóźnienie nie tworzy okna utraty danych.
-  const persistVault = useCallback(
-    (current: MasterVault) => {
-      if (isAuthenticated && user) {
-        saveUserVault(current);
-      } else {
-        saveProfileVault(ANONYMOUS_PROFILE_ID, current);
-      }
-    },
-    [isAuthenticated, user, saveUserVault]
-  );
-
-  useDeferredPersist(vault, persistVault);
 
   const unlocks = useUnlocks(vault, applications);
 
