@@ -17,7 +17,6 @@ export {
   IconPipeline,
   IconPipeline as IconApplications,
   IconHeatmap,
-  IconGamificationXP,
   IconCompanyIntel,
 } from '../../icons/CvelIcons';
 
@@ -371,4 +370,3 @@ export const IconSun: React.FC<IconProps> = ({ size = 18, className = '', ...pro
     <line x1="18" y1="6" x2="19.78" y2="4.22" />
   </svg>
 );
-

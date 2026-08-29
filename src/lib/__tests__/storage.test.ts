@@ -193,6 +193,16 @@ describe('storage.ts - warstwa schowka przeglądarki', () => {
       expect(localStorage.getItem('skillvault_users_db_v1')).toBeNull();
       expect(localStorage.getItem('skillvault_master_vault_enc_v2')).toBeNull();
     });
+
+    it('usuwa dane po wycofanym module punktów', () => {
+      localStorage.setItem('cvelocity:gamification', '{"xp":1500}');
+      localStorage.setItem('cvelocity:xp-ledger', '{"entries":[]}');
+
+      migrateLegacyKeys();
+
+      expect(localStorage.getItem('cvelocity:gamification')).toBeNull();
+      expect(localStorage.getItem('cvelocity:xp-ledger')).toBeNull();
+    });
   });
 
   describe('wipeAppStorage', () => {

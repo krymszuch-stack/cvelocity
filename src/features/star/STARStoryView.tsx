@@ -26,7 +26,6 @@ import { Card } from '../../components/ui/Card';
 import { Button } from '../../components/ui/Button';
 import { Chip } from '../../components/ui/Chip';
 import { showToast } from '../../store/useToastStore';
-import { grantXp } from '../../store/useGamificationStore';
 
 export interface STARStoryViewProps {
   vault: MasterVault;
@@ -109,21 +108,9 @@ export const STARStoryView: React.FC<STARStoryViewProps> = ({
     setStories((prev) =>
       prev.map((s) => (s.id === storyId ? { ...s, durationSec } : s))
     );
-    // Bez kłamstwa o zapisie: czas służy tu pomiarowi próby i XP, nie
+    // Bez kłamstwa o zapisie: czas służy pomiarowi bieżącej próby, nie
     // aktualizacji dokumentu.
     showToast('Czas próby zmierzony', { message: `Wynik: ${durationSec}s.` });
-
-    // Punkty za odbytą próbę, a nie za otwarcie ekranu: zmierzony czas jest
-    // dowodem, że ktoś faktycznie opowiedział historię na głos.
-    // Cel to konkretna historia, dowodem jest zmierzony czas próby i długość
-    // treści — bez tego wystarczyłoby klikać „zapisz czas” w kółko.
-    if (durationSec > 0) {
-      const story = stories.find((s) => s.id === storyId);
-      const chars = story
-        ? [story.situation, story.task, story.action, story.result].join(' ').trim().length
-        : 0;
-      grantXp('star_completed', storyId, { dwellSeconds: durationSec, chars });
-    }
   };
 
   // Filtrowanie historii

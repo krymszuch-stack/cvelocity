@@ -4,7 +4,7 @@ import { JobApplication, MasterVault } from '../../types';
 import { Button } from '../../components/ui/Button';
 import { Card } from '../../components/ui/Card';
 import { ReactFloatingPanel } from '../../components/hud/ReactFloatingPanel';
-import { FeatureGate } from '../../components/gamification/FeatureGate';
+import { ApplicationPassGate } from '../../components/payments/ApplicationPassGate';
 import { useAppStore } from '../../store/useAppStore';
 import { useEntitlements } from '../../store/useEntitlements';
 import { InterviewLoopModal } from '../loop/InterviewLoopModal';
@@ -82,9 +82,8 @@ export const InterviewPanel: React.FC<InterviewPanelProps> = ({
   const [isHUDOpen, setHUDOpen] = useState(false);
   const { setActiveTab } = useAppStore();
   const [isLoopOpen, setLoopOpen] = useState(false);
-  // Karnet kupiony za pieniądze przechodzi obok progu rangi — bez tego
-  // obietnica z Centrum Kariery („karnet odblokowuje beta od razu”) byłaby
-  // tylko tekstem.
+  // Po zalogowaniu stan odświeża `/api/me`; ta bramka pozostaje wskazówką UI,
+  // nie zabezpieczeniem kodu wykonywanego w przeglądarce.
   const { hasActivePass } = useEntitlements();
 
   // Domyślnie najbliższa rozmowa z terminem; bez terminu — pierwsza z listy.
@@ -241,25 +240,18 @@ export const InterviewPanel: React.FC<InterviewPanelProps> = ({
         </div>
       )}
 
-      {/* Bramka rangi zamiast pustego kliknięcia: teleprompter jest funkcją beta
-          od poziomu 3, a użytkownik ma zobaczyć ile mu brakuje i czym to skrócić,
-          nie komunikat o braku uprawnień. */}
+      {/* Karnet jest jedyną drogą dostępu do funkcji płatnej. */}
       {isHUDOpen && (
-        <FeatureGate
-          feature="LIVE_HUD_TELEPROMPTER"
-          hasPaidPass={hasActivePass}
+        <ApplicationPassGate
+          hasActivePass={hasActivePass}
           pitch="Podpowiedzi z Twojego Vaultu na wierzchu ekranu w trakcie rozmowy — bez przeglądania notatek na oczach rekrutera."
-          onTrain={() => {
-            setHUDOpen(false);
-            setActiveTab('trenuj');
-          }}
           onBuyPass={() => {
             setHUDOpen(false);
             setActiveTab('pricing');
           }}
         >
           <ReactFloatingPanel isOpen onClose={() => setHUDOpen(false)} vault={vault} />
-        </FeatureGate>
+        </ApplicationPassGate>
       )}
       <InterviewLoopModal isOpen={isLoopOpen} onClose={() => setLoopOpen(false)} vault={vault} />
     </Card>

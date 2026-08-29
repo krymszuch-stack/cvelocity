@@ -15,7 +15,6 @@ import { meRouter } from "./src/server/routes/me.routes";
 import { vaultRouter } from "./src/server/routes/vault.routes";
 import { applicationsRouter } from "./src/server/routes/applications.routes";
 import { billingRouter } from "./src/server/routes/billing.routes";
-import { gamificationRouter } from "./src/server/routes/gamification.routes";
 import { intelRouter } from "./src/server/routes/intel.routes";
 import { errorsRouter } from "./src/server/routes/errors.routes";
 import { stripeWebhookRouter } from "./src/server/routes/stripe.routes";
@@ -140,7 +139,6 @@ async function startServer() {
   app.use("/api", vaultRouter);
   app.use("/api", applicationsRouter);
   app.use("/api", billingRouter);
-  app.use("/api", gamificationRouter);
 
   // Wiedza zbiorowa jest celowo bez `requireAuth`: wpis nie ma właściciela,
   // więc nie ma czego weryfikować, a wymaganie konta odcięłoby od korpusu

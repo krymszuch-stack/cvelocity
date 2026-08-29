@@ -32,7 +32,6 @@ import { DocumentRenderer } from './DocumentRenderer';
 import { simulateAtsCheck } from '../../lib/atsSimulator';
 import { generateAntiTemplateCoverLetter } from '../../lib/coverLetterEngine';
 import { triggerConfetti } from '../../lib/confetti';
-import { grantXp } from '../../store/useGamificationStore';
 import { consumeAiLocally } from '../../store/useEntitlements';
 import { contributeJobIntel } from '../../lib/crowdsourceIntel';
 import { PageHeader } from '../../components/ui/PageHeader';
@@ -199,13 +198,6 @@ export const JobMatcher: React.FC<JobMatcherProps> = ({
       tailored.atsScore = ats.overallScore;
       setAtsResult(ats);
 
-      // Punkty za realny wynik symulatora, nie za samo kliknięcie. Próg jest
-      // w `XP_EVENTS`, tutaj zostaje wyłącznie warunek — gdyby nagradzać każde
-      // dopasowanie, licznik przestałby cokolwiek znaczyć.
-      if (ats.overallScore >= 85) {
-        grantXp('ats_high_score', `${job.company}|${job.title}`);
-      }
-
       if (ats.overallScore >= 90) {
         triggerConfetti({ count: 90, durationMs: 3000 });
       }
@@ -313,13 +305,10 @@ export const JobMatcher: React.FC<JobMatcherProps> = ({
         parsedJd: parsed,
       };
 
-      // Ogłoszenie zostało rozpoznane — to jest moment, w którym coś realnie
-      // powstało, więc tu idą punkty i tu idzie cegiełka do wspólnej bazy.
+      // Ogłoszenie zostało rozpoznane — to jest moment, w którym powstaje
+      // cegiełka do wspólnej bazy.
       // Wysyłka jest anonimowa i „best effort": jej błąd nie może przerwać
       // dopasowania, które użytkownik właśnie uruchomił.
-      // Dowód pracy: adres ogłoszenia jako cel (drugie wklejenie tego samego
-      // linku nic nie daje) i długość treści, bo trzy zdania to nie ogłoszenie.
-      grantXp('jd_ingested', url, { chars: (fetched.descriptionRaw ?? '').trim().length });
       contributeJobIntel({ ...parsed, sourceUrl: url });
       setParsedJd(parsed);
 
