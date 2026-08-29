@@ -19,8 +19,6 @@ import { useEntitlements, isProStatus } from './store/useEntitlements';
 import { ThemeProvider } from './providers/ThemeProvider';
 import { AccessibilityProvider } from './providers/AccessibilityProvider';
 import { ToastHost } from './components/ui/ToastHost';
-import { XpToastHost } from './components/gamification/XpToastHost';
-import { syncGamificationWithServer } from './store/useGamificationStore';
 import { ApplicationFeedbackModal } from './features/tracker/ApplicationFeedbackModal';
 import { showToast } from './store/useToastStore';
 import { useAppStore } from './store/useAppStore';
@@ -116,7 +114,6 @@ function MainApp() {
   useEffect(() => {
     if (mode !== 'cloud' || !user) return;
     void refreshEntitlements();
-    void syncGamificationWithServer();
   }, [mode, user?.id, refreshEntitlements]);
 
   useEffect(() => {
@@ -498,9 +495,6 @@ export default function App() {
         <AuthProvider>
           <MainApp />
           <ToastHost />
-          {/* Osobny host nagród: stoi w innym rogu niż komunikaty systemowe,
-              żeby awans nie wyglądał jak potwierdzenie zapisu. */}
-          <XpToastHost />
         </AuthProvider>
       </AccessibilityProvider>
     </ThemeProvider>

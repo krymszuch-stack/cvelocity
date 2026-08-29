@@ -21,7 +21,6 @@ import {
 } from '../../store/usePendingApplication';
 import { useApplications } from '../../store/useApplications';
 import { showToast } from '../../store/useToastStore';
-import { grantXp } from '../../store/useGamificationStore';
 
 import { Button } from '../../components/ui/Button';
 import type { NavTabId } from '../../lib/navigation';
@@ -62,8 +61,6 @@ export const ApplicationFeedbackModal: React.FC<ApplicationFeedbackModalProps> =
   const [channel, setChannel] = useState<ApplicationChannel | null>(null);
   const [transparency, setTransparency] = useState<SalaryTransparency | null>(null);
   const [failure, setFailure] = useState<FailureReason | null>(null);
-  const [salaryMin, setSalaryMin] = useState('');
-  const [salaryMax, setSalaryMax] = useState('');
 
   const suggestedChannel = useMemo(() => guessChannel(pending?.sourceUrl), [pending?.sourceUrl]);
   const activeChannel = channel ?? suggestedChannel;
@@ -75,8 +72,6 @@ export const ApplicationFeedbackModal: React.FC<ApplicationFeedbackModalProps> =
     setChannel(null);
     setTransparency(null);
     setFailure(null);
-    setSalaryMin('');
-    setSalaryMax('');
   };
 
   /** Wpis w Pipeline: istniejący aktualizujemy, nowy dokładamy. */
@@ -89,19 +84,9 @@ export const ApplicationFeedbackModal: React.FC<ApplicationFeedbackModalProps> =
 
     if (existing) {
       patchApplication(existing.id, { status, notes: notes ?? existing.notes });
-      // XP tylko przy potwierdzeniu wysyłki: aktualizacja na „Do wysłania"
-      // opisuje nieudaną próbę, więc nagradzanie jej byłoby kłamstwem licznika.
-      if (status === 'Wysłana' && existing.status !== 'Wysłana') {
-        // Cel jest konieczny: bez niego deduplikacja w `xpGuard` opada na
-        // znacznik czasu i to samo zgłoszenie punktowałoby wielokrotnie —
-        // wystarczy cofnąć status i potwierdzić wysyłkę ponownie.
-        grantXp('application_added', `${existing.company}|${existing.position}`);
-      }
       return;
     }
 
-    // `saveApplication` przyznaje XP za nowy wpis (+200) — dlatego punktów nie
-    // ma tutaj drugi raz. Jedno źródło prawdy na fakt „doszła aplikacja".
     saveApplication(buildApplicationFromPending(pending, status, { notes }));
   };
 
@@ -114,22 +99,7 @@ export const ApplicationFeedbackModal: React.FC<ApplicationFeedbackModalProps> =
     setStep('success');
   };
 
-  /**
-   * Widełki są nagradzane osobno i tylko wtedy, gdy mają sens liczbowy.
-   * Walidację robi warstwa anty-farmingu — tutaj zostaje samo przekazanie
-   * liczb, żeby jedno źródło prawdy o regule „min < max" było w `xpGuard`.
-   */
-  const claimSalary = () => {
-    const min = Number.parseInt(salaryMin, 10);
-    const max = Number.parseInt(salaryMax, 10);
-    if (!salaryMin.trim() && !salaryMax.trim()) return;
-    grantXp('salary_reported', `${pending.company}|${pending.title}|widelki`, {
-      salary: { min, max, currency: 'PLN' },
-    });
-  };
-
   const handleFinishSuccess = (goToPipeline: boolean) => {
-    claimSalary();
     sendApplicationFeedback(
       buildFeedbackPayload(pending, {
         appliedSuccessfully: true,
@@ -257,42 +227,6 @@ export const ApplicationFeedbackModal: React.FC<ApplicationFeedbackModalProps> =
                     {option.label}
                   </button>
                 ))}
-              </div>
-            </fieldset>
-
-            <fieldset className="space-y-2">
-              <legend className="font-mono text-[10px] font-bold uppercase tracking-wider text-slate-400">
-                Widełki z ogłoszenia (opcjonalnie, +50 XP)
-              </legend>
-              <div className="flex items-center gap-2">
-                <label className="sr-only" htmlFor="salary-min">
-                  Dolna granica widełek w PLN
-                </label>
-                <input
-                  id="salary-min"
-                  type="number"
-                  inputMode="numeric"
-                  min={0}
-                  value={salaryMin}
-                  onChange={(event) => setSalaryMin(event.target.value)}
-                  placeholder="od"
-                  className="w-24 rounded-xl border border-slate-700 bg-slate-800/70 px-3 py-1.5 font-mono text-[12px] text-slate-100 placeholder:text-slate-500 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#F26440]/50"
-                />
-                <span className="font-mono text-[11px] text-slate-500">—</span>
-                <label className="sr-only" htmlFor="salary-max">
-                  Górna granica widełek w PLN
-                </label>
-                <input
-                  id="salary-max"
-                  type="number"
-                  inputMode="numeric"
-                  min={0}
-                  value={salaryMax}
-                  onChange={(event) => setSalaryMax(event.target.value)}
-                  placeholder="do"
-                  className="w-24 rounded-xl border border-slate-700 bg-slate-800/70 px-3 py-1.5 font-mono text-[12px] text-slate-100 placeholder:text-slate-500 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#F26440]/50"
-                />
-                <span className="font-mono text-[11px] text-slate-400">PLN brutto / mies.</span>
               </div>
             </fieldset>
 

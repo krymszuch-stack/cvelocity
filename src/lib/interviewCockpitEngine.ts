@@ -2,13 +2,11 @@
  * interviewCockpitEngine.ts
  *
  * Silnik edukacyjno-taktyczny modułu "Kokpit Rozmowy" (Interview Playbook).
- * Odpowiada za kalkulację poziomu gotowości, zarządzanie codziennymi wyzwaniami,
- * bazą skryptów negocjacyjnych, pytań Red Flags oraz stanem postępów kandydata.
+ * Odpowiada za bazę skryptów negocjacyjnych, pytania Red Flags oraz stan
+ * ukończenia materiałów treningowych.
  */
 
-import { MasterVault } from '../types';
 import { StorageKeys, readJson, writeJson } from './storage';
-import { loadDrillHistory } from './drillEngine';
 
 export type CockpitSectionId =
   | 'pitch'
@@ -16,25 +14,6 @@ export type CockpitSectionId =
   | 'traps'
   | 'questions'
   | 'tracker';
-
-export interface DailyChallenge {
-  id: string;
-  title: string;
-  description: string;
-  actionSection: CockpitSectionId;
-  xp: number;
-  completed: boolean;
-}
-
-export interface CockpitBadge {
-  id: string;
-  name: string;
-  description: string;
-  icon: string;
-  requirement: string;
-  unlocked: boolean;
-  unlockedAt?: string;
-}
 
 export interface TacticalVariant {
   title: string;
@@ -64,14 +43,12 @@ export interface RedFlagCategoryQuestion {
 
 export interface CockpitProgressState {
   completedLessons: string[];
-  completedChallenges: string[];
   lastPracticeDate?: string;
   notes: Record<string, string>;
 }
 
 const DEFAULT_PROGRESS: CockpitProgressState = {
   completedLessons: [],
-  completedChallenges: [],
   notes: {},
 };
 
@@ -185,129 +162,6 @@ export function getRedFlagQuestions(): RedFlagCategoryQuestion[] {
 }
 
 /**
- * Oblicza poziom gotowości do rozmowy (0-100%) na podstawie MasterVault i postępów
- */
-export function calculateInterviewReadiness(
-  vault: MasterVault,
-  progress: CockpitProgressState = DEFAULT_PROGRESS
-): number {
-  let score = 20; // Baza startowa
-
-  // 1. Wypełnienie profilu i metryk w MasterVault (+35%)
-  if (vault.personalInfo?.fullName && vault.personalInfo?.title) score += 10;
-  if ((vault.skillsMatrix?.hardSkills || []).length >= 3) score += 10;
-  const hasMetrics = (vault.history || []).some((h) =>
-    (h.highlights || []).some((hl) => Boolean(hl.metric))
-  );
-  if (hasMetrics) score += 15;
-
-  // 2. Aktywność edukacyjna i ukończone lekcje (+25%)
-  const lessonCount = progress.completedLessons.length;
-  score += Math.min(25, lessonCount * 5);
-
-  // 3. Historia ćwiczeń z mock-drill-mode (+20%)
-  const drills = loadDrillHistory();
-  if (drills.length > 0) score += 10;
-  if (drills.length >= 3) score += 10;
-
-  return Math.min(100, Math.max(0, score));
-}
-
-/**
- * Generuje listę codziennych wyzwań
- */
-export function getDailyChallenges(progress: CockpitProgressState = DEFAULT_PROGRESS): DailyChallenge[] {
-  return [
-    {
-      id: 'daily_pitch',
-      title: 'Ćwiczenie Elevator Pitch (30s)',
-      description: 'Przećwicz na głos 30-sekundowy wstęp z wpleceniem min. 1 twardej metryki liczbowej.',
-      actionSection: 'pitch',
-      xp: 50,
-      completed: progress.completedChallenges.includes('daily_pitch'),
-    },
-    {
-      id: 'daily_bridge',
-      title: 'Obrona luki: Zbuduj 1 Skill Bridge',
-      description: 'Wybierz technologię, której nie znasz i przećwicz most pojęciowy z opanowanym narzędziem.',
-      actionSection: 'bridging',
-      xp: 40,
-      completed: progress.completedChallenges.includes('daily_bridge'),
-    },
-    {
-      id: 'daily_trap',
-      title: 'Skrypt na pułapkę finansową',
-      description: 'Przeczytaj i przećwicz na głos zwrot pytania o widełki budżetowe do rekrutera.',
-      actionSection: 'traps',
-      xp: 30,
-      completed: progress.completedChallenges.includes('daily_trap'),
-    },
-  ];
-}
-
-/**
- * Generuje listę odznak i osiągnięć kandydata
- */
-export function getCockpitBadges(
-  vault: MasterVault,
-  progress: CockpitProgressState = DEFAULT_PROGRESS
-): CockpitBadge[] {
-  const drills = loadDrillHistory();
-  const readiness = calculateInterviewReadiness(vault, progress);
-
-  return [
-    {
-      id: 'badge_starter',
-      name: 'Gotowy do Boju',
-      description: 'Uzyskano minimum 50% poziomu gotowości do rozmowy.',
-      icon: '🎯',
-      requirement: 'Poziom gotowości ≥ 50%',
-      unlocked: readiness >= 50,
-    },
-    {
-      id: 'badge_pitch_master',
-      name: 'Mistrz Pitcha',
-      description: 'Ukończono trening sekcji Elevator Pitch.',
-      icon: '🎤',
-      requirement: 'Ukończ lekcję Elevator Pitch',
-      unlocked: progress.completedLessons.includes('pitch_completed'),
-    },
-    {
-      id: 'badge_bridge_architect',
-      name: 'Architekt Bridge’y',
-      description: 'Zbudowano i przećwiczono mosty kompetencyjne na brakujące skille.',
-      icon: '🌉',
-      requirement: 'Ukończ lekcję Skill Bridging',
-      unlocked: progress.completedLessons.includes('bridging_completed'),
-    },
-    {
-      id: 'badge_negotiator',
-      name: 'Twardy Negocjator',
-      description: 'Opanowano skrypty obrony stawek i odpowiedzi na trudne pytania.',
-      icon: '💬',
-      requirement: 'Ukończ lekcję Pułapki Rekrutacyjne',
-      unlocked: progress.completedLessons.includes('traps_completed'),
-    },
-    {
-      id: 'badge_drill_warrior',
-      name: 'Snajper Szybkich Odpowiedzi',
-      description: 'Zrealizowano co najmniej 3 sesje w Mock Drill Mode.',
-      icon: '⏱️',
-      requirement: 'Min. 3 próby w Drill Mode',
-      unlocked: drills.length >= 3,
-    },
-    {
-      id: 'badge_pro_ready',
-      name: 'Snajper Rekrutacyjny (100%)',
-      description: 'Osiągnięto perfekcyjny poziom gotowości taktycznej.',
-      icon: '🏆',
-      requirement: 'Poziom gotowości = 100%',
-      unlocked: readiness >= 100,
-    },
-  ];
-}
-
-/**
  * Wczytuje stan postępów kokpitu z LocalStorage
  */
 export function loadCockpitProgress(): CockpitProgressState {
@@ -315,7 +169,6 @@ export function loadCockpitProgress(): CockpitProgressState {
   if (!parsed) return { ...DEFAULT_PROGRESS };
   return {
     completedLessons: Array.isArray(parsed.completedLessons) ? parsed.completedLessons : [],
-    completedChallenges: Array.isArray(parsed.completedChallenges) ? parsed.completedChallenges : [],
     notes: typeof parsed.notes === 'object' && parsed.notes !== null ? parsed.notes : {},
     lastPracticeDate: parsed.lastPracticeDate,
   };
@@ -331,9 +184,7 @@ export function saveCockpitProgress(progress: CockpitProgressState): void {
   writeJson(StorageKeys.cockpitProgress, progress);
 }
 
-/**
- * Oznacza lekcję lub wyzwanie jako ukończone
- */
+/** Oznacza materiał treningowy jako ukończony albo przywraca go do pracy. */
 export function toggleLessonCompletion(lessonId: string): CockpitProgressState {
   const current = loadCockpitProgress();
   const exists = current.completedLessons.includes(lessonId);
@@ -344,23 +195,6 @@ export function toggleLessonCompletion(lessonId: string): CockpitProgressState {
   const updated: CockpitProgressState = {
     ...current,
     completedLessons: updatedLessons,
-    lastPracticeDate: new Date().toISOString(),
-  };
-
-  saveCockpitProgress(updated);
-  return updated;
-}
-
-export function toggleChallengeCompletion(challengeId: string): CockpitProgressState {
-  const current = loadCockpitProgress();
-  const exists = current.completedChallenges.includes(challengeId);
-  const updatedChallenges = exists
-    ? current.completedChallenges.filter((id) => id !== challengeId)
-    : [...current.completedChallenges, challengeId];
-
-  const updated: CockpitProgressState = {
-    ...current,
-    completedChallenges: updatedChallenges,
     lastPracticeDate: new Date().toISOString(),
   };
 

@@ -236,8 +236,7 @@ export function useEntitlements() {
     },
     source: state?.source || 'local',
     isPro,
-    // Karnet kupiony za pieniądze odblokowuje funkcje beta niezależnie od rangi
-    // XP — dokładnie tak, jak obiecuje Centrum Kariery.
+    // Karnet jest osobnym, jednorazowym uprawnieniem zwracanym przez backend.
     hasActivePass: state?.hasActivePass === true,
     refresh,
     consumeAi,

@@ -22,8 +22,6 @@ import {
 import { Button } from '../ui/Button';
 import { Chip } from '../ui/Chip';
 import { showToast } from '../../store/useToastStore';
-import { grantXp } from '../../store/useGamificationStore';
-import { XP_EVENTS } from '../../lib/gamification';
 import { contributeInterviewQuestion } from '../../lib/crowdsourceIntel';
 
 export interface PostCallDebriefViewProps {
@@ -77,7 +75,6 @@ export const PostCallDebriefView: React.FC<PostCallDebriefViewProps> = ({
     setQuestionDraft('');
 
     contributeInterviewQuestion(session.companyName, session.roleTitle ?? '', question);
-    grantXp('question_confirmed', `${session.companyName}|${question}`);
   };
 
 
@@ -224,7 +221,6 @@ export const PostCallDebriefView: React.FC<PostCallDebriefViewProps> = ({
           <p className="mt-1 text-[11px] text-muted">
             Zapisujemy je anonimowo — bez Twojego konta i bez notatek. Dzięki temu
             następna osoba idąca do {session.companyName} wie, na co się przygotować.
-            Za każde pytanie dostajesz {XP_EVENTS.question_confirmed.points} XP.
           </p>
         </div>
 

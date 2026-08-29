@@ -7,10 +7,8 @@ import {
   Clock,
   Play,
   RotateCcw,
-  Sparkles,
   Trophy,
   ArrowRight,
-  TrendingUp,
 } from 'lucide-react';
 import { MasterVault } from '../../types';
 import { PageHeader } from '../../components/ui/PageHeader';
@@ -23,17 +21,11 @@ import {
   CockpitSectionId,
   getNegotiationTrapScripts,
   getRedFlagQuestions,
-  calculateInterviewReadiness,
-  getDailyChallenges,
-  getCockpitBadges,
   loadCockpitProgress,
   toggleLessonCompletion,
-  toggleChallengeCompletion,
   CockpitProgressState,
 } from '../../lib/interviewCockpitEngine';
 import { loadDrillHistory } from '../../lib/drillEngine';
-import { grantXp } from '../../store/useGamificationStore';
-import { XP_EVENTS } from '../../lib/gamification';
 
 export interface InterviewCockpitViewProps {
   vault: MasterVault;
@@ -86,9 +78,6 @@ export const InterviewCockpitView: React.FC<InterviewCockpitViewProps> = ({
   const activeBridge = findOrGenerateBridge(missingSkillInput, vault);
   const commonSkills = getCommonSkillsList().slice(0, 10);
 
-  const readinessScore = calculateInterviewReadiness(vault, progress);
-  const challenges = getDailyChallenges(progress);
-  const badges = getCockpitBadges(vault, progress);
   const trapScripts = getNegotiationTrapScripts();
   const redFlagQuestions = getRedFlagQuestions();
   const drillHistory = loadDrillHistory();
@@ -109,18 +98,6 @@ export const InterviewCockpitView: React.FC<InterviewCockpitViewProps> = ({
     setProgress(updated);
   };
 
-  const handleToggleChallenge = (challengeId: string) => {
-    // Chip obiecywał „+50 XP”, a niczego nie przyznawał — punkty dostaje
-    // wyłącznie zaznaczenie wyzwania. Odznaczenie ich nie zabiera: cofnięcie
-    // kliknięcia nie jest „anulowaniem” faktu, że zadanie się wykonało.
-    const alreadyCompleted = progress.completedChallenges.includes(challengeId);
-    const updated = toggleChallengeCompletion(challengeId);
-    setProgress(updated);
-    if (!alreadyCompleted) {
-      grantXp('challenge_completed', challengeId);
-    }
-  };
-
   const navTabs = [
     { id: 'pitch' as CockpitSectionId, label: '1. Elevator Pitch', icon: Mic },
     { id: 'bridging' as CockpitSectionId, label: '2. Most kompetencyjny', icon: Zap },
@@ -138,122 +115,28 @@ export const InterviewCockpitView: React.FC<InterviewCockpitViewProps> = ({
         badge="Interview Tactical OS"
       />
 
-      {/* Gamification & Readiness Scorecard Bar */}
-      <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
-        {/* Readiness Gauge */}
-        <div className="rounded-2xl border border-line bg-surface p-5 shadow-xs flex flex-col justify-between">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-brand-50 text-brand-fg">
-                <TrendingUp className="h-5 w-5" />
-              </div>
-              <div>
-                <h2 className="font-sans text-sm font-bold text-ink">Poziom Gotowości</h2>
-                <p className="text-xs text-muted">Na bazie faktów z Vault i treningów</p>
-              </div>
-            </div>
-            <span className="font-mono text-2xl font-black text-brand-600">
-              {readinessScore}%
-            </span>
+      <div className="flex flex-col gap-4 rounded-2xl border border-line bg-surface p-5 shadow-xs sm:flex-row sm:items-center sm:justify-between">
+        <div className="flex items-center gap-3">
+          <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-success-soft text-success-fg">
+            <Trophy className="h-5 w-5" />
           </div>
-
-          <div className="mt-4 space-y-2">
-            <div className="h-2 w-full overflow-hidden rounded-full bg-sunken">
-              <div
-                className="h-full rounded-full bg-brand-grad transition-[width] duration-[var(--duration-state)]"
-                style={{ width: `${readinessScore}%` }}
-              />
-            </div>
-            <p className="text-right text-meta font-medium text-muted">
-              {readinessScore >= 80
-                ? '🏆 Stan: Pełna gotowość snajperska'
-                : readinessScore >= 50
-                ? '⚡ Stan: Dobre przygotowanie, uzupełnij mosty kompetencyjne'
-                : '🎯 Stan: Uzupełnij metryki i przećwicz pitch'}
-            </p>
+          <div>
+            <h2 className="font-sans text-sm font-bold text-ink">Narzędzia treningowe</h2>
+            <p className="text-xs text-muted">Przećwicz odpowiedź na czas albo dopracuj swój pitch.</p>
           </div>
         </div>
 
-        {/* Daily Tactical Challenge Banner */}
-        <div className="rounded-2xl border border-line bg-surface p-5 shadow-xs flex flex-col justify-between">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-accent-soft text-accent-fg">
-                <Sparkles className="h-5 w-5" />
-              </div>
-              <div>
-                <h2 className="font-sans text-sm font-bold text-ink">Codzienne Wyzwanie</h2>
-                {/* Kwota z XP_EVENTS, nie drugi literał — chip i przyznanie
-                    punktów nie mogą się rozjechać przy zmianie stawki. */}
-                <p className="text-xs text-muted">+{XP_EVENTS.challenge_completed.points} XP do dyscypliny</p>
-              </div>
-            </div>
-            <span className="rounded-full bg-accent-soft px-2.5 py-0.5 font-mono text-xs font-bold text-accent-fg">
-              Dziś
-            </span>
-          </div>
-
-          <div className="mt-3 flex items-center justify-between gap-3">
-            <div>
-              <p className="text-xs font-semibold text-ink">
-                {challenges[0]?.title}
-              </p>
-              <p className="text-meta text-muted line-clamp-1">
-                {challenges[0]?.description}
-              </p>
-            </div>
-            <Button
-              type="button"
-              variant={challenges[0]?.completed ? 'ghost' : 'primary'}
-              size="sm"
-              onClick={() => {
-                if (challenges[0]) handleToggleChallenge(challenges[0].id);
-                setActiveSection(challenges[0]?.actionSection || 'pitch');
-              }}
-            >
-              {challenges[0]?.completed ? '✓ Zrobione' : 'Wykonaj'}
+        <div className="flex flex-wrap items-center gap-2">
+          {onOpenDrill && (
+            <Button type="button" variant="secondary" size="sm" onClick={onOpenDrill}>
+              ⏱️ Drill (60s)
             </Button>
-          </div>
-        </div>
-
-        {/* Quick Tools Launch Tile */}
-        <div className="rounded-2xl border border-line bg-surface p-5 shadow-xs flex flex-col justify-between">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-success-soft text-success-fg">
-                <Trophy className="h-5 w-5" />
-              </div>
-              <div>
-                <h2 className="font-sans text-sm font-bold text-ink">Narzędzia Live</h2>
-                <p className="text-xs text-muted">Ćwicz w symulatorze</p>
-              </div>
-            </div>
-          </div>
-
-          <div className="mt-3 flex items-center gap-2">
-            {onOpenDrill && (
-              <Button
-                type="button"
-                variant="secondary"
-                size="sm"
-                className="flex-1"
-                onClick={onOpenDrill}
-              >
-                ⏱️ Drill (60s)
-              </Button>
-            )}
-            {onOpenPitch && (
-              <Button
-                type="button"
-                variant="secondary"
-                size="sm"
-                className="flex-1"
-                onClick={onOpenPitch}
-              >
-                🎤 Elevator Pitch
-              </Button>
-            )}
-          </div>
+          )}
+          {onOpenPitch && (
+            <Button type="button" variant="secondary" size="sm" onClick={onOpenPitch}>
+              🎤 Elevator Pitch
+            </Button>
+          )}
         </div>
       </div>
 
@@ -757,42 +640,6 @@ export const InterviewCockpitView: React.FC<InterviewCockpitViewProps> = ({
         </div>
       )}
 
-      {/* Badges and Achievements Grid */}
-      <div className="rounded-2xl border border-line bg-surface p-6 shadow-xs space-y-4">
-        <div className="flex items-center justify-between border-b border-line pb-3">
-          <div className="flex items-center gap-2">
-            <Trophy className="h-5 w-5 text-accent-fg" />
-            <h2 className="font-sans text-sm font-bold text-ink">Odznaczenia Taktyczne</h2>
-          </div>
-          <span className="text-xs font-mono text-muted">
-            Odblokowano: <strong className="text-ink">{badges.filter((b) => b.unlocked).length}/{badges.length}</strong>
-          </span>
-        </div>
-
-        <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
-          {badges.map((b) => (
-            <div
-              key={b.id}
-              className={`rounded-xl border p-3.5 text-center flex flex-col items-center justify-between transition-colors duration-[var(--duration-state)] ${
-                b.unlocked
-                  ? 'border-brand-500/30 bg-brand-50/40 dark:bg-brand-950/20 text-ink shadow-xs'
-                  : 'border-line bg-sunken/50 text-muted opacity-60'
-              }`}
-            >
-              <div className="text-2xl mb-1">{b.icon}</div>
-              <h5 className="text-xs font-bold">{b.name}</h5>
-              <p className="text-[10px] text-muted mt-1 leading-tight">{b.requirement}</p>
-              <span
-                className={`mt-2 rounded-full px-2 py-0.5 text-[9px] font-mono font-bold ${
-                  b.unlocked ? 'bg-success-soft text-success-fg' : 'bg-sunken text-muted'
-                }`}
-              >
-                {b.unlocked ? 'Zdobyto' : 'Zablokowane'}
-              </span>
-            </div>
-          ))}
-        </div>
-      </div>
     </div>
   );
 };

@@ -32,10 +32,6 @@ export const StorageKeys = {
   cockpitProgress: `${PREFIX}cockpit-progress`,
   uxMilestones: `${PREFIX}ux-milestones`,
   cvQuestionsSkipped: `${PREFIX}cv-questions-skipped`,
-  /** Punkty, poziom i osiągnięcia. Rejestr, żeby „usuń moje dane" je objęło. */
-  gamification: `${PREFIX}gamification`,
-  /** Rejestr akcji punktowych: deduplikacja i limity dobowe (anty-farming). */
-  xpLedger: `${PREFIX}xp-ledger`,
   /** Szkice formularzy per widok — giną przy zamknięciu przeglądarki (sessionStorage-semantyka w LS). */
   draftAtsLab: `${PREFIX}draft-ats-lab`,
   /** Historia Doradcy tylko na czas bieżącej sesji przeglądarki. */
@@ -360,6 +356,12 @@ export function migrateLegacyKeys(): void {
   // przeglądarce nie ma żadnego uzasadnienia.
   removeRaw('skillvault_users_db_v1');
   removeRaw('skillvault_master_vault_enc_v2');
+
+  // Moduł punktów został usunięty. Dane nie mają już konsumenta ani celu,
+  // dlatego znikają przy pierwszym uruchomieniu nowej wersji zamiast zalegać
+  // bezterminowo w przeglądarce.
+  removeRaw(`${PREFIX}gamification`);
+  removeRaw(`${PREFIX}xp-ledger`);
 }
 
 /**

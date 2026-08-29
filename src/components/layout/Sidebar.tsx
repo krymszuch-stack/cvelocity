@@ -16,7 +16,6 @@ import {
 import { NavItem } from './NavItem';
 import { Tooltip } from '../ui/Tooltip';
 import { CVelocityLogo } from '../CVelocityLogo';
-import { LevelWidget } from '../gamification/LevelWidget';
 import { SidebarShortcutsWidget } from './SidebarShortcutsWidget';
 import { PrivacyPolicyModal } from '../legal/PrivacyPolicyModal';
 import { SupportContactModal } from '../legal/SupportContactModal';
@@ -107,9 +106,6 @@ export const Sidebar: React.FC<SidebarProps> = ({
             {isCollapsed ? <PanelLeft className="h-4 w-4" /> : <PanelLeftClose className="h-4 w-4" />}
           </button>
         </div>
-
-        {/* Poziom kariery i ranga grywalizacji */}
-        <LevelWidget isCollapsed={isCollapsed} />
 
         {/* Główne 4 kroki procesu rekrutacji */}
         <nav className="flex flex-col gap-1 pt-1" aria-label="Główna nawigacja">

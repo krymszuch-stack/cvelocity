@@ -113,17 +113,6 @@ export const IconHeatmap: React.FC<CvelIconProps> = ({ accent = BRAND_ACCENT, ..
   </IconBase>
 );
 
-/** 6. XP — fasetowy kryształ energii z błyskawicą. */
-export const IconGamificationXP: React.FC<CvelIconProps> = ({ accent = BRAND_ACCENT, ...props }) => (
-  <IconBase {...props}>
-    <g transform="skewX(-10) translate(2 0)">
-      <path d="M12 2.6 19 8.4 12 21.4 5 8.4Z" />
-      <path d="M5 8.4h14" opacity="0.45" />
-      <path d="M12.9 9.4 10.1 13h2.6l-1.6 3.4" stroke={accent} strokeWidth="1.6" />
-    </g>
-  </IconBase>
-);
-
 /** 7. Baza wiedzy o pracodawcy — budynek spięty z węzłem grafu. */
 export const IconCompanyIntel: React.FC<CvelIconProps> = ({ accent = BRAND_ACCENT, ...props }) => (
   <IconBase {...props}>
