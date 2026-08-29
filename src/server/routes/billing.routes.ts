@@ -70,9 +70,8 @@ async function levelDiscountPercent(userId: string): Promise<number | null> {
 
     return privilegesForLevel(levelForXp(data.xp).level).discountPercent;
   } catch (err) {
-    // Migracja `user_gamification` (docs/migracje/0007) może jeszcze nie być
-    // aplikowana. Zakup nie może przez to się wysypać — wychodzi bez zniżki,
-    // a ostrzeżenie zostaje w logu po stronie operatora.
+    // Awaria magazynu gamifikacji nie może wysypać zakupu — sesja wychodzi
+    // wtedy bez zniżki, a ostrzeżenie zostaje w logu po stronie operatora.
     console.warn('[billing] Nie udało się odczytać rangi użytkownika — sesja bez zniżki:', err);
     return null;
   }
