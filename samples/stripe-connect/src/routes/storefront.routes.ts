@@ -85,6 +85,31 @@ storefrontRouter.get('/storefront', async (req: Request, res: Response) => {
             ? `<div class="karty">${karty}</div>`
             : '<p class="pusty">Brak produktów w sprzedaży. Dodaj je w zakładce „Produkty".</p>'
         }
+
+        <h2>Sprzedawcy w tym sklepie</h2>
+        ${
+          sprzedawcy.length === 0
+            ? '<p class="pusty">Żaden sprzedawca nie ma jeszcze konta.</p>'
+            : `<section class="panel" style="padding:0 6px">
+                 <table>
+                   <thead><tr><th>Sprzedawca</th><th>Konto połączone</th></tr></thead>
+                   <tbody>${sprzedawcy
+                     .map(
+                       (s) => `
+                     <tr>
+                       <td>${esc(s.displayName)}</td>
+                       <td><code>${esc(s.stripeAccountId)}</code></td>
+                     </tr>`
+                     )
+                     .join('')}</tbody>
+                 </table>
+               </section>
+               <p class="podpis">
+                 Konto na tej liście nie znaczy jeszcze „gotowe do sprzedaży" — status
+                 onboardingu jest po stronie <a href="/">panelu sprzedawców</a>, bo tylko
+                 tam pobieramy go z API.
+               </p>`
+        }
       `,
     })
   );
